@@ -43,101 +43,7 @@ const NCOL=["#fff3b0","#b6f7c1","#b0d4f1","#f7b6d2","#f7d6b0","#d4b0f7","#b0f7ef
 const HSYS=[{id:"mhrs",n:"MHRS",f:"tr",u:"https://mhrs.gov.tr"},{id:"nhs",n:"NHS",f:"gb",u:"https://www.nhs.uk"},{id:"mychart",n:"MyChart",f:"us",u:"https://www.mychart.com"},{id:"doctolib",n:"Doctolib",f:"fr",u:"https://www.doctolib.fr"},{id:"jameda",n:"Jameda",f:"de",u:"https://www.jameda.de"}];
 
 // Full-body female doctor avatar
-const Avatar = ({s=36}) => (
-  <svg width={s} height={s} viewBox="0 0 100 120">
-    <defs>
-      <linearGradient id="abg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#00b4d8"/><stop offset="100%" stopColor="#0077b6"/></linearGradient>
-      <linearGradient id="hblond" x1="0" y1="0" x2=".3" y2="1"><stop offset="0%" stopColor="#f0c840"/><stop offset="40%" stopColor="#e0b430"/><stop offset="100%" stopColor="#c89820"/></linearGradient>
-      <linearGradient id="hlit" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#f8d860"/><stop offset="100%" stopColor="#e0b430"/></linearGradient>
-      <linearGradient id="skinG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#fde8d0"/><stop offset="100%" stopColor="#f5d5b8"/></linearGradient>
-      <linearGradient id="coatG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#fff"/><stop offset="100%" stopColor="#f2f2f2"/></linearGradient>
-      <linearGradient id="scrubG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#00b4d8"/><stop offset="100%" stopColor="#0090b0"/></linearGradient>
-      <filter id="shd1"><feDropShadow dx="0" dy="1" stdDeviation="1.5" floodOpacity=".12"/></filter>
-    </defs>
-    <rect x="0" y="0" width="100" height="120" rx="18" fill="url(#abg)"/>
-    {/* Body — white coat */}
-    <path d="M30 60 Q50 54 70 60 L74 108 Q50 112 26 108 Z" fill="url(#coatG)" filter="url(#shd1)"/>
-    <path d="M40 60 L50 74 L60 60" fill="none" stroke="#e0e0e0" strokeWidth="1.2"/>
-    <path d="M41 60 Q50 57 59 60 L57 70 Q50 66 43 70 Z" fill="url(#scrubG)"/>
-    <circle cx="50" cy="78" r="1.2" fill="#ddd"/><circle cx="50" cy="85" r="1.2" fill="#ddd"/><circle cx="50" cy="92" r="1.2" fill="#ddd"/>
-    {/* Stethoscope */}
-    <path d="M44 63 Q40 68 39 76 Q38 82 41 86" fill="none" stroke="#607080" strokeWidth="1.8" strokeLinecap="round"/>
-    <path d="M56 63 Q60 68 61 76 Q62 82 59 86" fill="none" stroke="#607080" strokeWidth="1.8" strokeLinecap="round"/>
-    <path d="M41 86 Q50 92 59 86" fill="none" stroke="#607080" strokeWidth="1.8" strokeLinecap="round"/>
-    <ellipse cx="50" cy="92" rx="4" ry="3.5" fill="#607080"/><ellipse cx="50" cy="92" rx="2.5" ry="2" fill="#8899aa"/><circle cx="50" cy="92" r="1" fill="#aab5c0"/>
-    {/* ID Badge */}
-    <rect x="58" y="70" width="9" height="12" rx="2" fill="#fff" stroke="#ccc" strokeWidth=".6" filter="url(#shd1)"/>
-    <circle cx="62.5" cy="74" r="2" fill="#fde8d0"/><rect x="59.5" y="77" width="6" height="1.2" rx=".5" fill="#00b4d8"/><rect x="60" y="79" width="4" height="1" rx=".4" fill="#ccc"/>
-    {/* Neck */}
-    <path d="M44 48 Q47 52 50 53 Q53 52 56 48 L56 60 Q50 57 44 60 Z" fill="url(#skinG)"/>
-    {/* Hair back — blonde volume */}
-    <ellipse cx="50" cy="25" rx="26" ry="27" fill="url(#hblond)"/>
-    {/* Hair flowing over shoulders — modern layered */}
-    <path d="M26 28 Q22 42 20 58 Q22 62 26 58 Q27 45 30 35 Z" fill="url(#hblond)"/>
-    <path d="M74 28 Q78 42 80 58 Q78 62 74 58 Q73 45 70 35 Z" fill="url(#hblond)"/>
-    <path d="M24 55 Q22 65 25 72 Q27 68 26 60 Z" fill="#d4a828" opacity=".7"/>
-    <path d="M76 55 Q78 65 75 72 Q73 68 74 60 Z" fill="#d4a828" opacity=".7"/>
-    {/* Face — natural proportions */}
-    <ellipse cx="50" cy="32" rx="19" ry="21" fill="url(#skinG)"/>
-    {/* Modern side-swept bangs */}
-    <path d="M31 22 Q34 10 50 11 Q66 10 69 22 Q66 14 56 12 Q46 11 38 14 Q33 17 31 22" fill="url(#hlit)"/>
-    <path d="M31 22 Q35 16 42 14 Q38 20 35 26 Q32 24 31 22" fill="#e8bc38" opacity=".8"/>
-    <path d="M44 11 Q46 14 45 18" fill="none" stroke="#c89820" strokeWidth=".5" opacity=".5"/>
-    <path d="M36 16 Q38 22 37 28" fill="none" stroke="#f0d050" strokeWidth="1" opacity=".6" strokeLinecap="round"/>
-    <path d="M60 14 Q62 20 63 26" fill="none" stroke="#f0d050" strokeWidth=".8" opacity=".5" strokeLinecap="round"/>
-    {/* Ears + earrings */}
-    <ellipse cx="31" cy="33" rx="3" ry="4.5" fill="#f5d5b8"/><ellipse cx="69" cy="33" rx="3" ry="4.5" fill="#f5d5b8"/>
-    <circle cx="31" cy="37" r="1" fill="#ffd166"/><circle cx="69" cy="37" r="1" fill="#ffd166"/>
-    {/* Eyebrows — natural arched */}
-    <path d="M37 25 Q40 22.5 45 24.5" fill="none" stroke="#b8924a" strokeWidth="1.2" strokeLinecap="round"/>
-    <path d="M55 24.5 Q60 22.5 63 25" fill="none" stroke="#b8924a" strokeWidth="1.2" strokeLinecap="round"/>
-    {/* Eyes — expressive green */}
-    <ellipse cx="42" cy="30" rx="4" ry="4.2" fill="#fff"/><ellipse cx="58" cy="30" rx="4" ry="4.2" fill="#fff"/>
-    <circle cx="42.5" cy="30.2" r="2.8" fill="#3a8a4a"/><circle cx="57.5" cy="30.2" r="2.8" fill="#3a8a4a"/>
-    <circle cx="42.5" cy="30.2" r="1.8" fill="#2d7a3a"/><circle cx="57.5" cy="30.2" r="1.8" fill="#2d7a3a"/>
-    <circle cx="42.5" cy="30.2" r="1.1" fill="#1a3d1f"/><circle cx="57.5" cy="30.2" r="1.1" fill="#1a3d1f"/>
-    <circle cx="43.5" cy="29" r=".9" fill="#fff"/><circle cx="58.5" cy="29" r=".9" fill="#fff"/>
-    <circle cx="41.5" cy="31" r=".4" fill="#fff" opacity=".7"/><circle cx="56.5" cy="31" r=".4" fill="#fff" opacity=".7"/>
-    {/* Eyelid + lashes */}
-    <path d="M38 28 Q42 26.5 46 28.5" fill="none" stroke="#8a7040" strokeWidth=".7"/>
-    <path d="M54 28.5 Q58 26.5 62 28" fill="none" stroke="#8a7040" strokeWidth=".7"/>
-    <path d="M38 28 L36.5 26.5" stroke="#8a7040" strokeWidth=".6" strokeLinecap="round"/>
-    <path d="M39.5 27.2 L38.5 25.5" stroke="#8a7040" strokeWidth=".5" strokeLinecap="round"/>
-    <path d="M46 28.5 L47.5 26.5" stroke="#8a7040" strokeWidth=".6" strokeLinecap="round"/>
-    <path d="M54 28.5 L52.5 26.5" stroke="#8a7040" strokeWidth=".6" strokeLinecap="round"/>
-    <path d="M62 28 L63.5 26.5" stroke="#8a7040" strokeWidth=".6" strokeLinecap="round"/>
-    <path d="M60.5 27.5 L61.5 25.8" stroke="#8a7040" strokeWidth=".5" strokeLinecap="round"/>
-    {/* Nose — delicate */}
-    <path d="M50 33 L49 37.5 Q50 38.5 51 37.5 L50 33" fill="none" stroke="#d4a88a" strokeWidth=".6" strokeLinejoin="round"/>
-    <path d="M48 37.5 Q50 39 52 37.5" fill="none" stroke="#d4a88a" strokeWidth=".5"/>
-    {/* Lips — warm natural */}
-    <path d="M44 42 Q47 40.5 50 41 Q53 40.5 56 42" fill="none" stroke="#d4756b" strokeWidth=".6"/>
-    <path d="M44 42 Q50 47 56 42" fill="#e8868a" opacity=".45"/>
-    <path d="M44.5 42 Q50 46.5 55.5 42" fill="none" stroke="#c4656b" strokeWidth=".9" strokeLinecap="round"/>
-    <path d="M47 42.5 Q50 43.5 53 42.5" fill="#fff" opacity=".5"/>
-    {/* Blush */}
-    <ellipse cx="36" cy="37" rx="4" ry="2.5" fill="#ffb6c1" opacity=".18"/>
-    <ellipse cx="64" cy="37" rx="4" ry="2.5" fill="#ffb6c1" opacity=".18"/>
-    {/* Arms + coat sleeves */}
-    <path d="M30 64 Q24 78 27 96 Q28 98 30 96 Q28 80 32 66" fill="url(#coatG)" stroke="#e8e8e8" strokeWidth=".3"/>
-    <path d="M70 64 Q76 78 73 96 Q72 98 70 96 Q72 80 68 66" fill="url(#coatG)" stroke="#e8e8e8" strokeWidth=".3"/>
-    {/* Hands */}
-    <ellipse cx="28" cy="97" rx="3.5" ry="4" fill="url(#skinG)"/><ellipse cx="72" cy="97" rx="3.5" ry="4" fill="url(#skinG)"/>
-    {/* Clipboard in left hand */}
-    <rect x="18" y="88" width="12" height="16" rx="1.5" fill="#f5f5f5" stroke="#ccc" strokeWidth=".5" transform="rotate(-8 24 96)"/>
-    <rect x="20" y="91" width="8" height="1.2" rx=".4" fill="#00b4d8" transform="rotate(-8 24 96)"/>
-    <rect x="20" y="93.5" width="6" height="1" rx=".4" fill="#ddd" transform="rotate(-8 24 96)"/>
-    {/* Legs — navy */}
-    <path d="M40 108 L39 118 Q43 119 44 118 L44 108" fill="#1a3a5c"/>
-    <path d="M56 108 L56 118 Q60 119 61 118 L61 108" fill="#1a3a5c"/>
-    {/* White medical shoes */}
-    <ellipse cx="41.5" cy="119" rx="5.5" ry="2" fill="#fff" stroke="#e0e0e0" strokeWidth=".3"/>
-    <ellipse cx="58.5" cy="119" rx="5.5" ry="2" fill="#fff" stroke="#e0e0e0" strokeWidth=".3"/>
-    {/* Red cross pin */}
-    <circle cx="62" cy="64" r="3" fill="#fff" stroke="#e63946" strokeWidth=".6"/>
-    <rect x="61" y="62" width="2" height="4" rx=".3" fill="#e63946"/><rect x="60" y="63" width="4" height="2" rx=".3" fill="#e63946"/>
-  </svg>
-);
+const Avatar=({s=36})=><img src="/logo.svg" alt="AILVIE" style={{width:s,height:s,borderRadius:"50%",objectFit:"cover"}} />;
 
 
 // Flag component — renders Twemoji SVG for cross-platform flags
@@ -199,7 +105,16 @@ const rtl=lang==="ar";
 const lc=LC[lang]||"en-US";
 
 const[now,setNow]=useState(new Date());
-useEffect(()=>{const i=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(i)},[]);
+useEffect(()=>{const i=setInterval(()=>{
+setNow(new Date());
+const _n=new Date();
+const hhmm=String(_n.getHours()).padStart(2,'0')+':'+String(_n.getMinutes()).padStart(2,'0');
+if(_n.getSeconds()===0){
+meds.forEach(m=>{if(!m.taken&&m.time===hhmm&&(typeof m.count!=='number'||m.count>0)){speakAlarm((lang==='tr'?'İlaç zamanı: ':'Med time: ')+m.name);notify('💊 '+m.name);}});
+const isoD=_n.toISOString().split('T')[0];
+if(calAlarms[isoD]&&calAlarms[isoD]===hhmm){speakAlarm(lang==='tr'?'Takvim hatırlatması':'Calendar reminder');notify('📅 '+(calNotes[isoD]||'Alarm'));}
+}
+},1000);return()=>clearInterval(i)},[meds,lang,calAlarms,calNotes]);
 
 // Notifications
 const[notifs,setNotifs]=useState([]);
@@ -803,7 +718,7 @@ const renderHome=()=>{
           <Flag code={wordLang} size={22}/>
           <span style={{fontSize:fs+8,fontWeight:800,color:ac}}>{WORDS[wordIdx]?.[wordLang]||WORDS[wordIdx]?.en}</span>
         </div>
-        <div style={{fontSize:fs-3,color:mt,marginTop:4}}>{(LL_LOCAL[lang]||LL_LOCAL.en)[wordLang]} → {(LL_LOCAL[lang]||LL_LOCAL.en)[lang]}</div>
+        <div style={{fontSize:fs-3,color:mt,marginTop:4}}>{(LL_LOCAL[lang]||LL_LOCAL.en)[lang]} → {(LL_LOCAL[lang]||LL_LOCAL.en)[wordLang]}</div>
       </div>
     </div>
     {/* AI Translator */}
@@ -928,7 +843,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       </div>}
       {/* Actions */}
       <div style={{display:"flex",gap:6,marginTop:8}}>
-        <button onClick={()=>{setMeds(p=>p.map(x=>x.id===m.id?{...x,taken:true,count:Math.max(0,(x.count||30)-1)}:x));notify("✅ "+m.name+" "+(lang==="tr"?"alındı":"taken"));speakAlarm(m.name+" "+(lang==="tr"?"alındı":"taken"));}} style={{...BP,flex:1,padding:"10px",fontSize:fs,fontWeight:700}}>✅ {lang==="tr"?"Aldım":"Taken"}</button>
+        <button onClick={()=>{setMeds(p=>p.map(x=>x.id===m.id?{...x,taken:true,count:Math.max(0,(typeof x.count==='number'?x.count:30)-1)}:x));notify("✅ "+m.name+" "+(lang==="tr"?"alındı":"taken"));speakAlarm(m.name+" "+(lang==="tr"?"alındı":"taken"));}} style={{...BP,flex:1,padding:"10px",fontSize:fs,fontWeight:700}}>✅ {lang==="tr"?"Aldım":"Taken"}</button>
         <button onClick={()=>speakAlarm((pat.name||"")+", "+m.name+" "+m.dose+" "+(lang==="tr"?"saatin yaklaşıyor!":"time is near!"))} style={{background:`${ac}15`,border:`1px solid ${ac}`,borderRadius:10,padding:"10px 14px",cursor:"pointer",fontSize:16}}>🔊</button>
       </div>
     </div>);
@@ -1055,10 +970,10 @@ const renderNotes=()=>{const sorted=[...notes].sort((a,b)=>(b.pinned?1:0)-(a.pin
 
 const renderContacts=()=>{const filtered=catF==="all"?contacts:contacts.filter(c=>c.category===catF);return(<div style={{display:"flex",flexDirection:"column",gap:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:fs+2}}>📞 {t.contacts}</span><button onClick={()=>setShowAddC(true)} style={{...BP,padding:"7px 14px"}}>+ {t.add}</button></div><div style={{display:"flex",gap:6}}>{["all","doctor","taxi","special","emergency"].map(k=><button key={k} onClick={()=>setCatF(k)} style={pill(catF===k)}>{k==="all"?"🏠":k==="doctor"?"👨‍⚕️":k==="taxi"?"🚕":k==="special"?"⭐":"🚨"}</button>)}</div><div style={{...CS,background:`${dg}08`,border:`1px solid ${dg}22`}}><div style={{fontWeight:700,color:dg,marginBottom:6}}>🚨 {t.emN}</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{emNums.slice(0,5).map(en=><a key={en.id} href={`tel:${en.number}`} style={{padding:"5px 10px",borderRadius:8,background:`${dg}15`,color:dg,fontWeight:700,textDecoration:"none",fontSize:fs}}>{en.icon} {en.number}</a>)}</div></div>{filtered.length===0&&<div style={{textAlign:"center",color:mt,padding:20}}>{t.noC}</div>}{filtered.map(c=>(<div key={c.id} style={{...CS,display:"flex",alignItems:"center",gap:10}}><div style={{width:40,height:40,borderRadius:"50%",background:`${ac}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:ac}}>{c.name[0]}</div><div style={{flex:1}}><div style={{fontWeight:700}}>{c.name}</div><div style={{fontSize:fs-2,color:mt}}>{c.phone}</div></div><a href={`tel:${c.phone}`} style={{fontSize:22,textDecoration:"none"}}>📞</a><button onClick={()=>toTrash("contact",c)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:14}}>🗑️</button></div>))}{showAddC&&<div style={{...CS,border:`2px solid ${ac}`}}><input placeholder={t.nm} value={newC.name} onChange={e=>setNewC({...newC,name:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder="Phone" value={newC.phone} onChange={e=>setNewC({...newC,phone:e.target.value})} style={{...IS,marginBottom:6}}/><select value={newC.category} onChange={e=>setNewC({...newC,category:e.target.value})} style={{...IS,marginBottom:6}}><option value="doctor">👨‍⚕️</option><option value="taxi">🚕</option><option value="special">⭐</option><option value="emergency">🚨</option></select><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newC.name&&newC.phone){setContacts(p=>[...p,{id:Date.now(),...newC}]);setNewC({name:"",phone:"",category:"doctor",note:""});setShowAddC(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddC(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}</div>);};
 
-const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}><span style={{fontWeight:700,fontSize:fs+2}}>👥 {t.community}</span><div style={{padding:"6px 12px",borderRadius:10,background:`${dg}08`,fontSize:fs-1,color:dg}}>{t.warn}</div><div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:300,overflowY:"auto"}}>{msgs.map(m=>(<div key={m.id} style={CS}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontWeight:700,color:ac}}>{m.user}</span><span style={{fontSize:fs-2,color:mt}}>{m.time}</span></div><div style={{marginBottom:6}}>{m.text}</div><div style={{display:"flex",gap:6}}><button onClick={()=>setMsgs(p=>p.map(x=>x.id===m.id?{...x,likes:x.likes+1}:x))} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",color:tc}}>❤️ {m.likes}</button><button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>📋</button><SpeakBtn text={m.text}/></div></div>))}</div><div style={{display:"flex",gap:6,position:"relative"}}><MicBtn onResult={v=>setMsgIn(p=>p+v)}/><button onClick={()=>setShowEmoji(!showEmoji)} style={{...BP,padding:"8px 12px",fontSize:18}}>😊</button><input value={msgIn} onChange={e=>setMsgIn(e.target.value)} placeholder={t.wr} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter"&&msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn,likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}}/><button onClick={()=>{if(msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn,likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}} style={BP}>{t.send}</button>{showEmoji&&<EmojiPicker onPick={e=>setMsgIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}</div></div>);
+const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}><span style={{fontWeight:700,fontSize:fs+2}}>👥 {t.community}</span><div style={{padding:"6px 12px",borderRadius:10,background:`${dg}08`,fontSize:fs-1,color:dg}}>{t.warn}</div><div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:300,overflowY:"auto"}}>{msgs.map(m=>(<div key={m.id} style={CS}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontWeight:700,color:ac}}>{m.user}</span><span style={{fontSize:fs-2,color:mt}}>{m.time}</span></div><div style={{marginBottom:6,wordBreak:"break-word",overflowWrap:"break-word"}}>{m.text}</div><div style={{display:"flex",gap:6}}><button onClick={()=>setMsgs(p=>p.map(x=>x.id===m.id?{...x,likes:x.likes+1}:x))} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",color:tc}}>❤️ {m.likes}</button><button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>📋</button><SpeakBtn text={m.text}/></div></div>))}</div><div style={{display:"flex",gap:6,position:"relative"}}><MicBtn onResult={v=>setMsgIn(v)}/><button onClick={()=>setShowEmoji(!showEmoji)} style={{...BP,padding:"8px 12px",fontSize:18}}>😊</button><input value={msgIn} onChange={e=>setMsgIn(e.target.value)} placeholder={t.wr} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter"&&msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn,likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}}/><button onClick={()=>{if(msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn,likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}} style={BP}>{t.send}</button>{showEmoji&&<EmojiPicker onPick={e=>setMsgIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}</div></div>);
 
 const q1Dynamic=pat.name?`${pat.name.split(" ")[0]}, ${t.q1.toLowerCase()} ${lang==="tr"?"Umarım iyisindir 💙":"Hope you are well 💙"}`:t.q1;
-const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}><div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}</div><div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>{chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}{chatM.map((m,i)=>(<div key={i} style={{...CS,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc}}>{m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}<div style={{whiteSpace:"pre-wrap"}}>{m.text}</div>{m.role==="assistant"&&<div style={{display:"flex",gap:6,marginTop:6}}><button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:tc}}>📋</button><SpeakBtn text={m.text}/></div>}</div>))}{chatL&&<div style={{...CS,alignSelf:"flex-start"}}><span style={{animation:"pulse 1s infinite"}}>● </span><span style={{animation:"pulse 1s infinite .2s"}}>● </span><span style={{animation:"pulse 1s infinite .4s"}}>●</span></div>}</div><div style={{display:"flex",gap:6,flexShrink:0,position:"relative"}}><MicBtn onResult={v=>setChatIn(p=>p+v)}/><button onClick={()=>setShowEmoji(!showEmoji)} style={{...BP,padding:"8px 12px",fontSize:18}}>😊</button><input value={chatIn} onChange={e=>setChatIn(e.target.value)} placeholder={t.wr} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter")sendChat();}}/><button onClick={()=>sendChat()} disabled={chatL} style={BP}>{t.send}</button>{showEmoji&&<EmojiPicker onPick={e=>setChatIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}</div></div>);
+const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}><div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}</div><div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>{chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}{chatM.map((m,i)=>(<div key={i} style={{...CS,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc}}>{m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}<div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"break-word"}}>{m.text}</div>{m.role==="assistant"&&<div style={{display:"flex",gap:6,marginTop:6}}><button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:tc}}>📋</button><SpeakBtn text={m.text}/></div>}</div>))}{chatL&&<div style={{...CS,alignSelf:"flex-start"}}><span style={{animation:"pulse 1s infinite"}}>● </span><span style={{animation:"pulse 1s infinite .2s"}}>● </span><span style={{animation:"pulse 1s infinite .4s"}}>●</span></div>}</div><div style={{display:"flex",gap:6,flexShrink:0,position:"relative"}}><MicBtn onResult={v=>setChatIn(v)}/><button onClick={()=>setShowEmoji(!showEmoji)} style={{...BP,padding:"8px 12px",fontSize:18}}>😊</button><input value={chatIn} onChange={e=>setChatIn(e.target.value)} placeholder={t.wr} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter")sendChat();}}/><button onClick={()=>sendChat()} disabled={chatL} style={BP}>{t.send}</button>{showEmoji&&<EmojiPicker onPick={e=>setChatIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}</div></div>);
 
 // Privacy Policy page
 const renderPrivacy=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
