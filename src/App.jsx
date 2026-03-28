@@ -105,16 +105,7 @@ const rtl=lang==="ar";
 const lc=LC[lang]||"en-US";
 
 const[now,setNow]=useState(new Date());
-useEffect(()=>{const i=setInterval(()=>{
-setNow(new Date());
-const _n=new Date();
-const hhmm=String(_n.getHours()).padStart(2,'0')+':'+String(_n.getMinutes()).padStart(2,'0');
-if(_n.getSeconds()===0){
-meds.forEach(m=>{if(!m.taken&&m.time===hhmm&&(typeof m.count!=='number'||m.count>0)){speakAlarm((lang==='tr'?'İlaç zamanı: ':'Med time: ')+m.name);notify('💊 '+m.name);}});
-const isoD=_n.toISOString().split('T')[0];
-if(calAlarms[isoD]&&calAlarms[isoD]===hhmm){speakAlarm(lang==='tr'?'Takvim hatırlatması':'Calendar reminder');notify('📅 '+(calNotes[isoD]||'Alarm'));}
-}
-},1000);return()=>clearInterval(i)},[meds,lang,calAlarms,calNotes]);
+useEffect(()=>{const i=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(i)},[]);
 
 // Notifications
 const[notifs,setNotifs]=useState([]);
@@ -433,6 +424,17 @@ const[calAlarms,setCalAlarms]=useState({});
 const[selDate,setSelDate]=useState(null);
 const[calNoteText,setCalNoteText]=useState("");
 const[calAlarmTime,setCalAlarmTime]=useState("");
+
+// Med + Calendar Alarm Auto-Check (runs every second)
+useEffect(()=>{
+const _n=now;
+const hhmm=String(_n.getHours()).padStart(2,'0')+':'+String(_n.getMinutes()).padStart(2,'0');
+if(_n.getSeconds()===0){
+meds.forEach(m=>{if(!m.taken&&m.time===hhmm&&(typeof m.count!=='number'||m.count>0)){speakAlarm((lang==='tr'?'İlaç zamanı: ':'Med time: ')+m.name);notify('💊 '+m.name);}});
+const isoD=_n.toISOString().split('T')[0];
+if(calAlarms[isoD]&&calAlarms[isoD]===hhmm){speakAlarm(lang==='tr'?'Takvim hatırlatması':'Calendar reminder');notify('📅 '+(calNotes[isoD]||'Alarm'));}
+}
+},[now,meds,lang,calAlarms,calNotes]);
 
 // Health
 const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0});
