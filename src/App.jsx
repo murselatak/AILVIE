@@ -43,7 +43,7 @@ const NCOL=["#fff3b0","#b6f7c1","#b0d4f1","#f7b6d2","#f7d6b0","#d4b0f7","#b0f7ef
 const HSYS=[{id:"mhrs",n:"MHRS",f:"tr",u:"https://mhrs.gov.tr"},{id:"nhs",n:"NHS",f:"gb",u:"https://www.nhs.uk"},{id:"mychart",n:"MyChart",f:"us",u:"https://www.mychart.com"},{id:"doctolib",n:"Doctolib",f:"fr",u:"https://www.doctolib.fr"},{id:"jameda",n:"Jameda",f:"de",u:"https://www.jameda.de"}];
 
 // Full-body female doctor avatar
-const Avatar=({s=36})=><img src="/logo.svg" alt="AILVIE" style={{width:s,height:s,borderRadius:"50%",objectFit:"cover"}} />;
+const Avatar=({s=36})=><img src="/logo.png" alt="AILVIE" style={{width:s,height:s,borderRadius:"50%",objectFit:"cover"}} />;
 
 
 // Flag component — renders Twemoji SVG for cross-platform flags
@@ -1003,7 +1003,7 @@ const renderAbout=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>ℹ️ {t.about}</span></div>
   <div style={{...CS,textAlign:"center",padding:20}}>
     <Avatar s={64}/>
-    <img src="/logo-full.png" alt="AILVIE" style={{height:80,objectFit:"contain",marginTop:8}} />
+    <img src="/logo.png" alt="AILVIE" style={{height:80,objectFit:"contain",marginTop:8}} />
     <div style={{fontSize:fs-1,color:mt,marginTop:8}}>{t.version}: 9.0.0</div>
     <div style={{fontSize:fs-1,color:mt}}>© 2025-2026 AILVIE Health Technologies</div>
     <div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:`${ac}11`,fontSize:fs-2,color:ac}}>
@@ -1046,7 +1046,7 @@ return (
             <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0}}>☰</button>
             <Avatar s={34}/>
             <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
-              <img src="/logo-full.png" alt="AILVIE" style={{height:40,objectFit:"contain"}} />
+              <img src="/logo.png" alt="AILVIE" style={{height:40,objectFit:"contain"}} />
             </div>
           </div>
           <div style={{display:"flex",gap:7,alignItems:"center"}}>
@@ -1087,7 +1087,7 @@ return (
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
               <Avatar s={56}/>
               <div>
-                <img src="/logo-full.png" alt="AILVIE" style={{height:50,objectFit:"contain"}} />
+                <img src="/logo.png" alt="AILVIE" style={{height:50,objectFit:"contain"}} />
                 <div style={{fontSize:fs-1,color:mt}}>{pat.name||t.profile}</div>
                 <div style={{fontSize:fs-2,color:isLoggedIn?sc:mt}}>{isLoggedIn?"● "+t.loggedIn:"○ "+t.loggedOut}</div>
               </div>
