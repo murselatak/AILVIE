@@ -2,45 +2,41 @@
 title AILVIE - AI Personal Health Assistant
 echo.
 echo  ========================================
-echo   AILVIE - AI Kisisel Saglik Asistani
+echo   AILVIE - Baslatiliyor...
 echo  ========================================
 echo.
 
-:: If package.json is here, we're in the right folder
-if exist package.json (
-    echo [OK] package.json bulundu.
-    goto :INSTALL
-)
+:: Search for package.json up to 3 levels deep
+if exist package.json goto :FOUND
+if exist AILVIE-main\package.json (cd AILVIE-main && goto :FOUND)
+if exist AILVIE-main\AILVIE-main\package.json (cd AILVIE-main\AILVIE-main && goto :FOUND)
+if exist AILVIE\package.json (cd AILVIE && goto :FOUND)
+if exist AILVIE\AILVIE\package.json (cd AILVIE\AILVIE && goto :FOUND)
 
-:: If there's a subfolder with package.json, go there
-if exist AILVIE-main\package.json (
-    echo [!] Alt klasore giriliyor: AILVIE-main
-    cd AILVIE-main
-    goto :INSTALL
+:: Search any subfolder
+for /d %%i in (*) do (
+    if exist "%%i\package.json" (cd "%%i" && goto :FOUND)
+    for /d %%j in ("%%i\*") do (
+        if exist "%%j\package.json" (cd "%%j" && goto :FOUND)
+    )
 )
 
 echo [HATA] package.json bulunamadi!
+echo Bu dosyayi AILVIE klasorunun icine koyun.
 pause
 exit /b 1
 
-:INSTALL
+:FOUND
+echo [OK] Klasor: %CD%
 echo.
-echo [1/2] Bagimliliklar yukleniyor (npm install)...
-call npm install
-if errorlevel 1 (
-    echo [HATA] npm install basarisiz!
-    pause
-    exit /b 1
-)
-
+echo [1/2] npm install...
+call npm install --silent
 echo.
 echo [2/2] Uygulama baslatiliyor...
 echo.
 echo  ==========================================
 echo   Tarayicida ac: http://localhost:5173
-echo   Kapatmak icin bu pencereyi kapat
 echo  ==========================================
 echo.
 call npm run dev
-
 pause
