@@ -1003,8 +1003,7 @@ const renderAbout=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>ℹ️ {t.about}</span></div>
   <div style={{...CS,textAlign:"center",padding:20}}>
     <Avatar s={64}/>
-    <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:32,color:"#e8a817",marginTop:8,textShadow:"0 0 10px rgba(255,200,50,.5), 0 0 24px rgba(255,180,30,.2)",letterSpacing:3,WebkitTextStroke:"0.8px #e8a817"}}>AILVIE</div>
-    <div style={{fontSize:fs,color:mt,marginTop:4}}>{t.sl}</div>
+    <img src="/logo-full.png" alt="AILVIE" style={{height:80,objectFit:"contain",marginTop:8}} />
     <div style={{fontSize:fs-1,color:mt,marginTop:8}}>{t.version}: 9.0.0</div>
     <div style={{fontSize:fs-1,color:mt}}>© 2025-2026 AILVIE Health Technologies</div>
     <div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:`${ac}11`,fontSize:fs-2,color:ac}}>
@@ -1047,8 +1046,7 @@ return (
             <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0}}>☰</button>
             <Avatar s={34}/>
             <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
-              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:20,color:"#e8a817",letterSpacing:2,lineHeight:1,textShadow:"0 0 6px rgba(255,200,50,.6), 0 1px 2px rgba(0,0,0,.5), 0 0 20px rgba(255,180,30,.25)",WebkitTextStroke:"0.8px #e8a817"}}>AILVIE</div>
-              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:500,fontSize:9,color:"#fff",opacity:.95,marginTop:2,lineHeight:1,letterSpacing:.2,whiteSpace:"nowrap"}}>{t.sl}</div>
+              <img src="/logo-full.png" alt="AILVIE" style={{height:40,objectFit:"contain"}} />
             </div>
           </div>
           <div style={{display:"flex",gap:7,alignItems:"center"}}>
@@ -1089,7 +1087,7 @@ return (
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
               <Avatar s={56}/>
               <div>
-                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:fs+5,color:"#e8a817",letterSpacing:4,textShadow:"0 0 6px rgba(255,200,50,.4)"}}>AILVIE</div>
+                <img src="/logo-full.png" alt="AILVIE" style={{height:50,objectFit:"contain"}} />
                 <div style={{fontSize:fs-1,color:mt}}>{pat.name||t.profile}</div>
                 <div style={{fontSize:fs-2,color:isLoggedIn?sc:mt}}>{isLoggedIn?"● "+t.loggedIn:"○ "+t.loggedOut}</div>
               </div>
