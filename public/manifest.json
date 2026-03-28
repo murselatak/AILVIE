@@ -1,1 +1,15 @@
-{"name":"AILVIE","short_name":"AILVIE","description":"AI Personal Health Assistant - 9 Languages","start_url":"/","display":"standalone","background_color":"#0a0e14","theme_color":"#00b4d8","orientation":"portrait","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml"}]}
+{
+  "name": "AILVIE — AI Kişisel Sağlık Asistanı",
+  "short_name": "AILVIE",
+  "description": "AI-powered personal health assistant. 9 languages, medication management, appointment booking, health tracking. Every PRO subscription donates $1 to TEGV.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e14",
+  "theme_color": "#00b4d8",
+  "orientation": "portrait-primary",
+  "lang": "tr",
+  "categories": ["health", "medical", "lifestyle"],
+  "icons": [
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ]
+}

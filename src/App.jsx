@@ -1146,7 +1146,7 @@ return (
               if(window.responsiveVoice)responsiveVoice.cancel();
               if(recRef.current)try{recRef.current.abort();}catch(e){}
               setIsListen(false);
-            }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:20,cursor:"pointer",padding:0,background:"none",animation:voiceActive?"micPulse 2s infinite":"none",opacity:voiceActive?1:0.8}}>🎙️</button>
+            }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:20,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:voiceActive?1:0.8}}>🎙️</button>
             <button onClick={()=>goTo("home")} style={{background:"none",border:"none",color:"#fff",fontSize:20,cursor:"pointer",padding:0}}>🏠</button>
             <button onClick={()=>setDark(!dark)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0}}>{dark?"🌙":"☀️"}</button>
             <button onClick={()=>setShowLangPicker(true)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0,}}>🌏</button>
@@ -1189,7 +1189,7 @@ return (
               {icon:"ℹ️",label:t.about+" — v6.0",action:()=>{goTo("about");setShowMenu(false);}},
               {icon:"⚙️",label:t.settings,action:()=>{setSettingsTab("all");goTo("settings");setShowMenu(false);}},
             ].map((item,idx)=>(
-              <button key={idx} onClick={item.action} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:`1px solid ${bd}`,background:"none",border:"none",borderBottom:`1px solid ${bd}`,color:tc,cursor:"pointer",width:"100%",textAlign:"left",fontSize:fs}}>
+              <button key={idx} onClick={item.action} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",background:"none",border:"none",borderBottom:`1px solid ${bd}`,color:tc,cursor:"pointer",width:"100%",textAlign:"left",fontSize:fs}}>
                 <span style={{fontSize:20}}>{item.icon}</span>
                 <span style={{fontWeight:500}}>{item.label}</span>
               </button>
