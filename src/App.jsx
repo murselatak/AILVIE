@@ -1002,7 +1002,7 @@ const renderTerms=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
 const renderAbout=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>ℹ️ {t.about}</span></div>
   <div style={{...CS,textAlign:"center",padding:20}}>
-    <img src="/logo.png" alt="AILVIE" style={{height:120,objectFit:"contain",marginTop:8}} />
+    <img src="/logo.svg" alt="AILVIE" style={{height:120,objectFit:"contain",marginTop:8}} />
     <div style={{fontSize:fs-1,color:mt,marginTop:8}}>{t.version}: 9.0.0</div>
     <div style={{fontSize:fs-1,color:mt}}>© 2025-2026 AILVIE Health Technologies</div>
     <div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:`${ac}11`,fontSize:fs-2,color:ac}}>
@@ -1046,7 +1046,7 @@ return (
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <img src="/avatar.png" alt="" style={{width:36,height:36,borderRadius:"50%",objectFit:"cover"}} />
               <div style={{display:"flex",flexDirection:"column",lineHeight:1}}>
-                <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:18,color:"#e8a817",letterSpacing:2,textShadow:"0 0 8px rgba(255,200,50,.4)"}}>AILVIE</span>
+                <img src="/logo.svg" alt="AILVIE" style={{height:22,objectFit:"contain",filter:"drop-shadow(0 0 6px rgba(232,168,23,.5))"}} />
                 <span style={{fontSize:8,color:"#8899aa",fontWeight:500,letterSpacing:.3,whiteSpace:"nowrap",marginTop:1}}>{t.sl}</span>
               </div>
             </div>
@@ -1089,7 +1089,7 @@ return (
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
               <Avatar s={56}/>
               <div>
-                <img src="/logo.png" alt="AILVIE" style={{height:50,objectFit:"contain"}} />
+                <img src="/logo.svg" alt="AILVIE" style={{height:50,objectFit:"contain"}} />
                 <div style={{fontSize:fs-1,color:mt}}>{pat.name||t.profile}</div>
                 <div style={{fontSize:fs-2,color:isLoggedIn?sc:mt}}>{isLoggedIn?"● "+t.loggedIn:"○ "+t.loggedOut}</div>
               </div>
