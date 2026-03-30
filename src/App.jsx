@@ -1040,11 +1040,11 @@ const nav2=[{key:"pCard",icon:"🪪",label:t.pCard},{key:"notes",icon:"📝",lab
 return (
   <div style={{width:"100%",maxWidth:480,margin:"0 auto",height:"100dvh",display:"flex",flexDirection:"column",overflow:"hidden",background:bg,fontSize:fs,color:tc,fontFamily:"'SF Pro Display',-apple-system,'Segoe UI',system-ui,sans-serif",direction:rtl?"rtl":"ltr",position:"relative"}}>
         {/* HEADER */}
-        <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"6px 10px",paddingTop:"max(env(safe-area-inset-top),6px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:4,flex:1,minWidth:0}}>
-            <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:20,cursor:"pointer",padding:0,flexShrink:0}}>☰</button>
-            <img src="/avatar2.svg" alt="" style={{height:46,width:46,objectFit:"cover",flexShrink:0,borderRadius:4}} />
-            <img src="/yazi.svg" alt="AILVIE" style={{height:42,flex:1,minWidth:0,objectFit:"contain",objectPosition:"left center"}} />
+        <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"2px 10px",paddingTop:"max(env(safe-area-inset-top),2px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0}}>
+            <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:22,cursor:"pointer",padding:0,flexShrink:0}}>☰</button>
+            <img src="/avatar2.svg" alt="" style={{height:54,width:54,objectFit:"cover",flexShrink:0,borderRadius:6}} />
+            <img src="/yazi.svg" alt="AILVIE" style={{height:48,maxWidth:"40%",objectFit:"contain",objectPosition:"left center",flexShrink:0}} />
           </div>
           <div style={{display:"flex",gap:7,alignItems:"center"}}>
             {/* Home button moved here */}
@@ -1069,7 +1069,7 @@ return (
 
 
         {/* ZOOM CONTROLS */}
-        <div style={{position:"absolute",top:52,right:6,zIndex:90,display:"flex",flexDirection:"column",gap:2}}>
+        <div style={{position:"absolute",top:62,right:6,zIndex:90,display:"flex",flexDirection:"column",gap:2}}>
           <button onClick={()=>setFs(f=>Math.min(f+1,20))} style={{width:24,height:24,borderRadius:12,background:`${ac}22`,border:`1px solid ${bd}`,color:"#e8a817",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
           <button onClick={()=>setFs(f=>Math.max(f-1,10))} style={{width:24,height:24,borderRadius:12,background:`${ac}22`,border:`1px solid ${bd}`,color:"#e8a817",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
           {fs!==15&&<button onClick={()=>setFs(15)} style={{width:24,height:24,borderRadius:12,background:`${ac}44`,border:`1px solid ${bd}`,color:"#e8a817",fontSize:10,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>1x</button>}
