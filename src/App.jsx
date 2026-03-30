@@ -1002,7 +1002,8 @@ const renderTerms=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
 const renderAbout=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>ℹ️ {t.about}</span></div>
   <div style={{...CS,textAlign:"center",padding:20}}>
-    <img src="/logo.svg" alt="AILVIE" style={{height:120,objectFit:"contain",marginTop:8}} />
+    <img src="/avatar2.svg" alt="" style={{height:80,objectFit:"contain",marginTop:8}} />
+    <img src="/yazi.svg" alt="AILVIE" style={{height:40,objectFit:"contain",marginTop:8}} />
     <div style={{fontSize:fs-1,color:mt,marginTop:8}}>{t.version}: 9.0.0</div>
     <div style={{fontSize:fs-1,color:mt}}>© 2025-2026 AILVIE Health Technologies</div>
     <div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:`${ac}11`,fontSize:fs-2,color:ac}}>
@@ -1044,9 +1045,9 @@ return (
           <div style={{display:"flex",alignItems:"center",gap:6,flex:1,minWidth:0}}>
             <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:22,cursor:"pointer",padding:0,flexShrink:0}}>☰</button>
             <img src="/avatar2.svg" alt="" style={{height:54,width:54,objectFit:"cover",flexShrink:0,borderRadius:6}} />
-            <img src="/yazi.svg" alt="AILVIE" style={{height:48,maxWidth:"40%",objectFit:"contain",objectPosition:"left center",flexShrink:0}} />
+            <img src="/yazi.svg" alt="AILVIE" style={{height:48,flex:1,minWidth:0,objectFit:"contain",objectPosition:"left center"}} />
           </div>
-          <div style={{display:"flex",gap:7,alignItems:"center"}}>
+          <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
             {/* Home button moved here */}
             <button onClick={goBack} style={{background:"none",border:"none",color:histIdx>0?"#e8a817":"#ffffff66",fontSize:16,cursor:"pointer",padding:0}}>◀</button>
             <button onClick={goFwd} style={{background:"none",border:"none",color:histIdx<pageHist.length-1?"#e8a817":"#ffffff66",fontSize:16,cursor:"pointer",padding:0}}>▶</button>
@@ -1082,9 +1083,9 @@ return (
             <button onClick={()=>setShowMenu(false)} style={{position:"absolute",top:16,right:16,background:"none",border:"none",color:tc,fontSize:22,cursor:"pointer"}}>✕</button>
             {/* Profile */}
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
-              <Avatar s={56}/>
+              <img src="/avatar2.svg" alt="" style={{width:56,height:56,objectFit:"cover",borderRadius:8,flexShrink:0}} />
               <div>
-                <img src="/logo.svg" alt="AILVIE" style={{height:50,objectFit:"contain"}} />
+                <img src="/yazi.svg" alt="AILVIE" style={{height:36,objectFit:"contain"}} />
                 <div style={{fontSize:fs-1,color:mt}}>{pat.name||t.profile}</div>
                 <div style={{fontSize:fs-2,color:isLoggedIn?sc:mt}}>{isLoggedIn?"● "+t.loggedIn:"○ "+t.loggedOut}</div>
               </div>
