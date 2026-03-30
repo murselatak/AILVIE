@@ -1043,10 +1043,7 @@ return (
         <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"8px 10px",paddingTop:"max(env(safe-area-inset-top),8px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:3}}>
             <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0,marginRight:4}}>☰</button>
-            <div style={{display:"flex",flexDirection:"column",gap:0,marginLeft:6}}>
-              <img src="/logo.svg" alt="AILVIE" style={{height:26,objectFit:"contain",objectPosition:"left",filter:"drop-shadow(0 0 6px rgba(232,168,23,.5))"}} />
-              <span style={{fontSize:9,color:"rgba(255,255,255,0.85)",fontWeight:600,letterSpacing:.5,whiteSpace:"nowrap",lineHeight:1.2}}>{t.sl}</span>
-            </div>
+            <img src="/logo.svg" alt="AILVIE" style={{height:32,marginLeft:6,objectFit:"contain",objectPosition:"left center",display:"block",filter:"drop-shadow(0 0 6px rgba(232,168,23,.5))"}} />
           </div>
           <div style={{display:"flex",gap:7,alignItems:"center"}}>
             {/* Home button moved here */}
