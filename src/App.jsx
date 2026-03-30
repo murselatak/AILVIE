@@ -1041,9 +1041,10 @@ return (
   <div style={{width:"100%",maxWidth:480,margin:"0 auto",height:"100dvh",display:"flex",flexDirection:"column",overflow:"hidden",background:bg,fontSize:fs,color:tc,fontFamily:"'SF Pro Display',-apple-system,'Segoe UI',system-ui,sans-serif",direction:rtl?"rtl":"ltr",position:"relative"}}>
         {/* HEADER */}
         <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"4px 10px",paddingTop:"max(env(safe-area-inset-top),4px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:3}}>
-            <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0,marginRight:4}}>☰</button>
-            <img src="/logo.svg" alt="AILVIE" style={{height:44,marginLeft:6,objectFit:"contain",objectPosition:"left center",display:"block"}} />
+          <div style={{display:"flex",alignItems:"center",gap:4,flex:1,minWidth:0}}>
+            <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:20,cursor:"pointer",padding:0,flexShrink:0}}>☰</button>
+            <img src="/avatar2.svg" alt="" style={{height:46,width:46,objectFit:"cover",flexShrink:0,borderRadius:4}} />
+            <img src="/yazi.svg" alt="AILVIE" style={{height:34,flex:1,minWidth:0,objectFit:"contain",objectPosition:"left center"}} />
           </div>
           <div style={{display:"flex",gap:7,alignItems:"center"}}>
             {/* Home button moved here */}
