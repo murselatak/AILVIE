@@ -43,7 +43,7 @@ const NCOL=["#fff3b0","#b6f7c1","#b0d4f1","#f7b6d2","#f7d6b0","#d4b0f7","#b0f7ef
 const HSYS=[{id:"mhrs",n:"MHRS",f:"tr",u:"https://mhrs.gov.tr"},{id:"nhs",n:"NHS",f:"gb",u:"https://www.nhs.uk"},{id:"mychart",n:"MyChart",f:"us",u:"https://www.mychart.com"},{id:"doctolib",n:"Doctolib",f:"fr",u:"https://www.doctolib.fr"},{id:"jameda",n:"Jameda",f:"de",u:"https://www.jameda.de"}];
 
 // Full-body female doctor avatar
-const Avatar=({s=36})=><img src="/logo.png" alt="AILVIE" style={{width:s,height:s,borderRadius:"50%",objectFit:"cover"}} />;
+const Avatar=({s=36})=><img src="/avatar.png" alt="AILVIE" style={{width:s,height:s,borderRadius:"50%",objectFit:"cover"}} />;
 
 
 // Flag component — renders Twemoji SVG for cross-platform flags
@@ -1042,8 +1042,14 @@ return (
         {/* HEADER */}
         <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"8px 10px",paddingTop:"max(env(safe-area-inset-top),8px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:3}}>
-            <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0}}>☰</button>
-            <img src="/logo.png" alt="AILVIE" style={{height:44,objectFit:"contain"}} />
+            <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0,marginRight:4}}>☰</button>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <img src="/avatar.png" alt="" style={{width:36,height:36,borderRadius:"50%",objectFit:"cover"}} />
+              <div style={{display:"flex",flexDirection:"column",lineHeight:1}}>
+                <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:18,color:"#e8a817",letterSpacing:2,textShadow:"0 0 8px rgba(255,200,50,.4)"}}>AILVIE</span>
+                <span style={{fontSize:8,color:"#8899aa",fontWeight:500,letterSpacing:.3,whiteSpace:"nowrap",marginTop:1}}>{t.sl}</span>
+              </div>
+            </div>
           </div>
           <div style={{display:"flex",gap:7,alignItems:"center"}}>
             {/* Home button moved here */}
