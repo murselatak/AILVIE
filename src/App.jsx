@@ -1040,10 +1040,10 @@ const nav2=[{key:"pCard",icon:"🪪",label:t.pCard},{key:"notes",icon:"📝",lab
 return (
   <div style={{width:"100%",maxWidth:480,margin:"0 auto",height:"100dvh",display:"flex",flexDirection:"column",overflow:"hidden",background:bg,fontSize:fs,color:tc,fontFamily:"'SF Pro Display',-apple-system,'Segoe UI',system-ui,sans-serif",direction:rtl?"rtl":"ltr",position:"relative"}}>
         {/* HEADER */}
-        <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"8px 10px",paddingTop:"max(env(safe-area-inset-top),8px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+        <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"4px 10px",paddingTop:"max(env(safe-area-inset-top),4px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:3}}>
             <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0,marginRight:4}}>☰</button>
-            <img src="/logo.svg" alt="AILVIE" style={{height:32,marginLeft:6,objectFit:"contain",objectPosition:"left center",display:"block",filter:"drop-shadow(0 0 6px rgba(232,168,23,.5))"}} />
+            <img src="/logo.svg" alt="AILVIE" style={{height:44,marginLeft:6,objectFit:"contain",objectPosition:"left center",display:"block"}} />
           </div>
           <div style={{display:"flex",gap:7,alignItems:"center"}}>
             {/* Home button moved here */}
