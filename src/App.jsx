@@ -96,7 +96,7 @@ const[zoom,setZoom]=useState(1);
 const[voiceActive,setVoiceActive]=useState(false);
 const[adminMsgs,setAdminMsgs]=useState([]);
 const[adminIn,setAdminIn]=useState("");
-const[wordLang,setWordLang]=useState(lang);
+const[wordLang,setWordLang]=useState(lang==="tr"?"en":lang==="en"?"tr":"en");
 const[showWordLangPicker,setShowWordLangPicker]=useState(false);
 const alarmTimers=useRef([]);
 
@@ -1002,8 +1002,7 @@ const renderTerms=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
 const renderAbout=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>ℹ️ {t.about}</span></div>
   <div style={{...CS,textAlign:"center",padding:20}}>
-    <Avatar s={64}/>
-    <img src="/logo.png" alt="AILVIE" style={{height:80,objectFit:"contain",marginTop:8}} />
+    <img src="/logo.png" alt="AILVIE" style={{height:120,objectFit:"contain",marginTop:8}} />
     <div style={{fontSize:fs-1,color:mt,marginTop:8}}>{t.version}: 9.0.0</div>
     <div style={{fontSize:fs-1,color:mt}}>© 2025-2026 AILVIE Health Technologies</div>
     <div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:`${ac}11`,fontSize:fs-2,color:ac}}>
@@ -1044,10 +1043,7 @@ return (
         <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"8px 10px",paddingTop:"max(env(safe-area-inset-top),8px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:3}}>
             <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0}}>☰</button>
-            <Avatar s={34}/>
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
-              <img src="/logo.png" alt="AILVIE" style={{height:40,objectFit:"contain"}} />
-            </div>
+            <img src="/logo.png" alt="AILVIE" style={{height:44,objectFit:"contain"}} />
           </div>
           <div style={{display:"flex",gap:7,alignItems:"center"}}>
             {/* Home button moved here */}
