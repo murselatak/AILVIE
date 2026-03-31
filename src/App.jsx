@@ -1045,7 +1045,7 @@ return (
           <div style={{display:"flex",alignItems:"flex-end",gap:6,flex:1,minWidth:0}}>
             <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:22,cursor:"pointer",padding:0,flexShrink:0,alignSelf:"center"}}>☰</button>
             <img src="/avatar2.svg" alt="" style={{height:54,width:54,objectFit:"cover",flexShrink:0,borderRadius:6}} />
-            <img src="/yazi.svg" alt="AILVIE" style={{height:54,flex:1,minWidth:0,objectFit:"contain",objectPosition:"left bottom"}} />
+            <img src="/yazi.svg" alt="AILVIE" style={{height:68,flex:1,minWidth:0,objectFit:"contain",objectPosition:"left bottom"}} />
           </div>
           <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
             {/* Home button moved here */}
