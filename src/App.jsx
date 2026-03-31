@@ -406,15 +406,21 @@ const speakAlarm=(text)=>{
   const rvName=RV_VOICES[lang]||"UK English Female";
   try{if(window.responsiveVoice&&responsiveVoice.voiceSupport()){responsiveVoice.speak(text,rvName,{pitch:1.1,rate:0.9,volume:1});return;}}catch(e){}
   if(!window.speechSynthesis)return;
-  const u=new SpeechSynthesisUtterance(text);u.volume=1;
-  const voices=speechSynthesis.getVoices();const base=lc.split("-")[0];
-  const MALE=/tolga|onur|david|mark|male|erkek|man/i;const FEM=/female|kadın|woman|zira|samantha|yelda|filiz/i;
-  const lv=voices.filter(v=>v.lang.startsWith(base));
-  let pick=lv.filter(v=>FEM.test(v.name))[0]||lv.filter(v=>!MALE.test(v.name))[0];
-  if(!pick||MALE.test(pick?.name||"")){pick=voices.filter(v=>FEM.test(v.name))[0]||pick;}
-  if(pick){u.voice=pick;u.lang=pick.lang;u.pitch=MALE.test(pick.name)?1.8:1.15;u.rate=MALE.test(pick.name)?0.78:0.9;}
-  else{u.lang=lc;u.pitch=1.8;u.rate=0.78;}
-  speechSynthesis.speak(u);
+  const doAlarm=()=>{
+    const u=new SpeechSynthesisUtterance(text);u.volume=1;
+    const voices=speechSynthesis.getVoices();const base=lc.split("-")[0];
+    const MALE=/tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|george|richard|guy|rishi|fred|male|erkek|man|homme|männlich|мужской/i;
+    const FEM=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|veena|lekha|ting|meijia|yuna|paulina|monica|luciana|zosia|nora|sara|alva|ellen|amélie|virginie|cécile|céline|petra|katja|milena|weiblich|femme|женский|femenino|vrouwelijk/i;
+    const lv=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
+    let pick=lv.filter(v=>FEM.test(v.name))[0]||lv.filter(v=>!MALE.test(v.name))[0];
+    if(!pick||MALE.test(pick?.name||""))pick=voices.filter(v=>FEM.test(v.name))[0];
+    if(pick){u.voice=pick;u.lang=pick.lang;}else{u.lang=lc;}
+    const isMale=!pick||MALE.test(pick?.name||"")||!FEM.test(pick?.name||"");
+    u.pitch=isMale?1.9:1.15;u.rate=isMale?0.75:0.9;
+    speechSynthesis.speak(u);
+  };
+  if(speechSynthesis.getVoices().length===0){speechSynthesis.onvoiceschanged=()=>{doAlarm();speechSynthesis.onvoiceschanged=null;};setTimeout(doAlarm,500);}
+  else doAlarm();
 };
 
 // Calendar
@@ -531,8 +537,11 @@ const speak=(text)=>{
   setIsSpeak(true);
   const rvName=RV_VOICES[lang]||"UK English Female";
   try{
-    if(window.responsiveVoice&&responsiveVoice.voiceSupport()){
-      responsiveVoice.speak(text,rvName,{pitch:1.1,rate:0.9,onend:()=>setIsSpeak(false),onerror:()=>fallbackSpeak(text)});
+    if(window.responsiveVoice&&typeof responsiveVoice.speak==="function"&&responsiveVoice.voiceSupport()){
+      let started=false;
+      responsiveVoice.speak(text,rvName,{pitch:1.1,rate:0.9,onstart:()=>{started=true;},onend:()=>setIsSpeak(false),onerror:()=>fallbackSpeak(text)});
+      // If RV doesn't start within 2s, fallback (key might be invalid)
+      setTimeout(()=>{if(!started){try{responsiveVoice.cancel();}catch(e){}fallbackSpeak(text);}},2000);
       return;
     }
   }catch(e){}
@@ -541,22 +550,31 @@ const speak=(text)=>{
 const fallbackSpeak=(text)=>{
   if(!window.speechSynthesis){setIsSpeak(false);return;}
   speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  const voices=speechSynthesis.getVoices();
-  const base=lc.split("-")[0];
-  const MALE=/tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|male|erkek|man/i;
-  const FEM=/female|kadın|woman|zira|samantha|yelda|filiz|helena|anna|eva|hazel|jenny|aria/i;
-  const lv=voices.filter(v=>v.lang.startsWith(base));
-  let pick=lv.filter(v=>FEM.test(v.name))[0]||lv.filter(v=>!MALE.test(v.name))[0];
-  if(!pick||MALE.test(pick?.name||"")){
-    const en=voices.filter(v=>v.lang.startsWith("en"));
-    pick=en.filter(v=>FEM.test(v.name))[0]||en.filter(v=>!MALE.test(v.name))[0]||pick;
-  }
-  if(!pick||MALE.test(pick?.name||"")){pick=voices.filter(v=>FEM.test(v.name))[0]||pick;}
-  if(pick){u.voice=pick;u.lang=pick.lang;u.pitch=MALE.test(pick.name)?1.8:1.15;u.rate=MALE.test(pick.name)?0.78:0.9;}
-  else{u.lang=lc;u.pitch=1.8;u.rate=0.78;}
-  u.onend=()=>setIsSpeak(false);u.onerror=()=>setIsSpeak(false);
-  speechSynthesis.speak(u);
+  const doSpeak=()=>{
+    const u=new SpeechSynthesisUtterance(text);
+    const voices=speechSynthesis.getVoices();
+    const base=lc.split("-")[0];
+    const MALE=/tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|george|richard|guy|rishi|fred|male|erkek|man|homme|männlich|мужской/i;
+    const FEM=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|veena|lekha|ting|meijia|yuna|paulina|monica|luciana|zosia|nora|sara|alva|ellen|amélie|virginie|cécile|céline|petra|katja|milena|weiblich|femme|женский|kadın|femenino|vrouwelijk/i;
+    // 1. Female voice in current language
+    const lv=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
+    let pick=lv.filter(v=>FEM.test(v.name))[0];
+    // 2. Non-male voice in current language
+    if(!pick)pick=lv.filter(v=>!MALE.test(v.name))[0];
+    // 3. Any female voice (any language)
+    if(!pick||MALE.test(pick?.name||""))pick=voices.filter(v=>FEM.test(v.name)&&v.lang.startsWith(base))[0]||voices.filter(v=>FEM.test(v.name))[0];
+    // 4. English female
+    if(!pick||MALE.test(pick?.name||"")){const en=voices.filter(v=>v.lang.startsWith("en"));pick=en.filter(v=>FEM.test(v.name))[0]||en.filter(v=>!MALE.test(v.name))[0]||pick;}
+    // 5. Last resort — use whatever we have but pitch up heavily
+    if(pick){u.voice=pick;u.lang=pick.lang;}else{u.lang=lc;}
+    const isMale=!pick||MALE.test(pick?.name||"")||!FEM.test(pick?.name||"");
+    u.pitch=isMale?1.9:1.15;u.rate=isMale?0.75:0.9;u.volume=1;
+    u.onend=()=>setIsSpeak(false);u.onerror=()=>setIsSpeak(false);
+    speechSynthesis.speak(u);
+  };
+  // Voices load async — wait if needed
+  if(speechSynthesis.getVoices().length===0){speechSynthesis.onvoiceschanged=()=>{doSpeak();speechSynthesis.onvoiceschanged=null;};setTimeout(doSpeak,500);}
+  else doSpeak();
 };
 // Voice handled by ResponsiveVoice.js
 
