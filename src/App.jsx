@@ -1003,7 +1003,8 @@ const renderAbout=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>ℹ️ {t.about}</span></div>
   <div style={{...CS,textAlign:"center",padding:20}}>
     <img src="/avatar2.svg" alt="" style={{height:80,objectFit:"contain",marginTop:8}} />
-    <img src="/yazi.svg" alt="AILVIE" style={{height:40,objectFit:"contain",marginTop:8}} />
+    <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:32,color:"#e8a817",letterSpacing:4,WebkitTextStroke:"0.8px #e8a817",marginTop:10}}>AILVIE</div>
+    <div style={{fontSize:fs-1,color:mt,marginTop:2}}>AI Health Assistant</div>
     <div style={{fontSize:fs-1,color:mt,marginTop:8}}>{t.version}: 9.0.0</div>
     <div style={{fontSize:fs-1,color:mt}}>© 2025-2026 AILVIE Health Technologies</div>
     <div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:`${ac}11`,fontSize:fs-2,color:ac}}>
@@ -1045,7 +1046,10 @@ return (
           <div style={{display:"flex",alignItems:"flex-end",gap:6,flex:1,minWidth:0}}>
             <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:22,cursor:"pointer",padding:0,flexShrink:0,alignSelf:"center"}}>☰</button>
             <img src="/avatar2.svg" alt="" style={{height:54,width:54,objectFit:"cover",flexShrink:0,borderRadius:6}} />
-            <img src="/yazi.svg" alt="AILVIE" style={{height:68,flex:1,minWidth:0,objectFit:"contain",objectPosition:"left bottom"}} />
+            <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",lineHeight:1,minWidth:0}}>
+              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:22,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"0.5px #e8a817",textShadow:"0 1px 4px rgba(0,0,0,0.3)"}}>AILVIE</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,0.85)",letterSpacing:1.5,fontWeight:500,marginTop:1}}>AI Health Assistant</div>
+            </div>
           </div>
           <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
             {/* Home button moved here */}
@@ -1085,7 +1089,7 @@ return (
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
               <img src="/avatar2.svg" alt="" style={{width:56,height:56,objectFit:"cover",borderRadius:8,flexShrink:0}} />
               <div>
-                <img src="/yazi.svg" alt="AILVIE" style={{height:36,objectFit:"contain"}} />
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:24,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"0.5px #e8a817",lineHeight:1}}>AILVIE</div>
                 <div style={{fontSize:fs-1,color:mt}}>{pat.name||t.profile}</div>
                 <div style={{fontSize:fs-2,color:isLoggedIn?sc:mt}}>{isLoggedIn?"● "+t.loggedIn:"○ "+t.loggedOut}</div>
               </div>
