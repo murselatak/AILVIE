@@ -102,13 +102,6 @@ const alarmTimers=useRef([]);
 
 const t=T[lang]||T.en;
 
-// ═══ AUTO-SAVE/LOAD ═══
-useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
-if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
-if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));
-if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);
-}catch{}},[]); // load once
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,calNotes,calAlarms}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,calNotes,calAlarms]); // save on change
 const rtl=lang==="ar";
 const lc=LC[lang]||"en-US";
 
@@ -551,6 +544,14 @@ const hscore=(hd.pulse===0&&hd.weight===0)?0:Math.min(100,Math.round(
 (hd.bpS>=90&&hd.bpS<=120&&hd.bpD>=60&&hd.bpD<=80?30:hd.bpS>=85&&hd.bpS<=140&&hd.bpD>=55&&hd.bpD<=90?15:hd.bpS>0?5:0)+
 (medProg>=80?15:medProg>50?10:medProg>0?5:0)
 ));
+
+// ═══ AUTO-SAVE/LOAD ═══
+useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
+if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));
+if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);
+}catch{}},[]); // load once
+useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,calNotes,calAlarms}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,calNotes,calAlarms]); // save on change
 
 const sendChat=async(text)=>{
   const q=text||chatIn;if(!q.trim())return;
