@@ -581,16 +581,26 @@ const[contacts,setContacts]=useState([]);
 const[catF,setCatF]=useState("all");
 const[showAddC,setShowAddC]=useState(false);
 const COUNTRY_CODES=[
-  {code:"+90",flag:"tr",name:"Türkiye"},{code:"+1",flag:"us",name:"ABD/Kanada"},
-  {code:"+44",flag:"gb",name:"İngiltere"},{code:"+49",flag:"de",name:"Almanya"},
-  {code:"+33",flag:"fr",name:"Fransa"},{code:"+7",flag:"ru",name:"Rusya"},
-  {code:"+86",flag:"zh",name:"Çin"},{code:"+91",flag:"hi",name:"Hindistan"},
-  {code:"+31",flag:"nl",name:"Hollanda"},{code:"+34",flag:"es",name:"İspanya"},
-  {code:"+966",flag:"sa",name:"S.Arabistan"},{code:"+971",flag:"ar",name:"BAE"},
-  {code:"+39",flag:"es",name:"İtalya"},{code:"+81",flag:"zh",name:"Japonya"},
-  {code:"+82",flag:"zh",name:"G.Kore"},{code:"+55",flag:"es",name:"Brezilya"},
-  {code:"+61",flag:"en",name:"Avustralya"},{code:"+48",flag:"de",name:"Polonya"},
-  {code:"+46",flag:"nl",name:"İsveç"},{code:"+47",flag:"nl",name:"Norveç"},
+  {code:"+90",emoji:"🇹🇷",flag:"tr",n:{tr:"Türkiye",en:"Turkey",de:"Türkei",ru:"Турция",zh:"土耳其",hi:"तुर्की",nl:"Turkije",es:"Turquía",ar:"تركيا"}},
+  {code:"+1",emoji:"🇺🇸",flag:"us",n:{tr:"ABD",en:"USA",de:"USA",ru:"США",zh:"美国",hi:"अमेरिका",nl:"VS",es:"EE.UU.",ar:"أمريكا"}},
+  {code:"+44",emoji:"🇬🇧",flag:"gb",n:{tr:"İngiltere",en:"UK",de:"Großbritannien",ru:"Великобритания",zh:"英国",hi:"ब्रिटेन",nl:"VK",es:"Reino Unido",ar:"بريطانيا"}},
+  {code:"+49",emoji:"🇩🇪",flag:"de",n:{tr:"Almanya",en:"Germany",de:"Deutschland",ru:"Германия",zh:"德国",hi:"जर्मनी",nl:"Duitsland",es:"Alemania",ar:"ألمانيا"}},
+  {code:"+33",emoji:"🇫🇷",flag:"fr",n:{tr:"Fransa",en:"France",de:"Frankreich",ru:"Франция",zh:"法国",hi:"फ़्रांस",nl:"Frankrijk",es:"Francia",ar:"فرنسا"}},
+  {code:"+7",emoji:"🇷🇺",flag:"ru",n:{tr:"Rusya",en:"Russia",de:"Russland",ru:"Россия",zh:"俄罗斯",hi:"रूस",nl:"Rusland",es:"Rusia",ar:"روسيا"}},
+  {code:"+86",emoji:"🇨🇳",flag:"zh",n:{tr:"Çin",en:"China",de:"China",ru:"Китай",zh:"中国",hi:"चीन",nl:"China",es:"China",ar:"الصين"}},
+  {code:"+91",emoji:"🇮🇳",flag:"hi",n:{tr:"Hindistan",en:"India",de:"Indien",ru:"Индия",zh:"印度",hi:"भारत",nl:"India",es:"India",ar:"الهند"}},
+  {code:"+31",emoji:"🇳🇱",flag:"nl",n:{tr:"Hollanda",en:"Netherlands",de:"Niederlande",ru:"Нидерланды",zh:"荷兰",hi:"नीदरलैंड",nl:"Nederland",es:"Países Bajos",ar:"هولندا"}},
+  {code:"+34",emoji:"🇪🇸",flag:"es",n:{tr:"İspanya",en:"Spain",de:"Spanien",ru:"Испания",zh:"西班牙",hi:"स्पेन",nl:"Spanje",es:"España",ar:"إسبانيا"}},
+  {code:"+966",emoji:"🇸🇦",flag:"sa",n:{tr:"S. Arabistan",en:"Saudi Arabia",de:"Saudi-Arabien",ru:"С. Аравия",zh:"沙特",hi:"सऊदी",nl:"Saoedi-Arabië",es:"Arabia Saudí",ar:"السعودية"}},
+  {code:"+971",emoji:"🇦🇪",flag:"ar",n:{tr:"BAE",en:"UAE",de:"VAE",ru:"ОАЭ",zh:"阿联酋",hi:"यूएई",nl:"VAE",es:"EAU",ar:"الإمارات"}},
+  {code:"+39",emoji:"🇮🇹",flag:"fr",n:{tr:"İtalya",en:"Italy",de:"Italien",ru:"Италия",zh:"意大利",hi:"इटली",nl:"Italië",es:"Italia",ar:"إيطاليا"}},
+  {code:"+81",emoji:"🇯🇵",flag:"zh",n:{tr:"Japonya",en:"Japan",de:"Japan",ru:"Япония",zh:"日本",hi:"जापान",nl:"Japan",es:"Japón",ar:"اليابان"}},
+  {code:"+82",emoji:"🇰🇷",flag:"zh",n:{tr:"G. Kore",en:"S. Korea",de:"Südkorea",ru:"Ю. Корея",zh:"韩国",hi:"द. कोरिया",nl:"Z. Korea",es:"Corea del Sur",ar:"كوريا"}},
+  {code:"+55",emoji:"🇧🇷",flag:"es",n:{tr:"Brezilya",en:"Brazil",de:"Brasilien",ru:"Бразилия",zh:"巴西",hi:"ब्राज़ील",nl:"Brazilië",es:"Brasil",ar:"البرازيل"}},
+  {code:"+61",emoji:"🇦🇺",flag:"en",n:{tr:"Avustralya",en:"Australia",de:"Australien",ru:"Австралия",zh:"澳大利亚",hi:"ऑस्ट्रेलिया",nl:"Australië",es:"Australia",ar:"أستراليا"}},
+  {code:"+48",emoji:"🇵🇱",flag:"de",n:{tr:"Polonya",en:"Poland",de:"Polen",ru:"Польша",zh:"波兰",hi:"पोलैंड",nl:"Polen",es:"Polonia",ar:"بولندا"}},
+  {code:"+46",emoji:"🇸🇪",flag:"nl",n:{tr:"İsveç",en:"Sweden",de:"Schweden",ru:"Швеция",zh:"瑞典",hi:"स्वीडन",nl:"Zweden",es:"Suecia",ar:"السويد"}},
+  {code:"+47",emoji:"🇳🇴",flag:"nl",n:{tr:"Norveç",en:"Norway",de:"Norwegen",ru:"Норвегия",zh:"挪威",hi:"नॉर्वे",nl:"Noorwegen",es:"Noruega",ar:"النرويج"}},
 ];
 const[newC,setNewC]=useState({name:"",phone:"",countryCode:"+90",category:"doctor",note:""});
 
@@ -1207,8 +1217,8 @@ const renderNotes=()=>{const sorted=[...notes].sort((a,b)=>(b.pinned?1:0)-(a.pin
 
 const renderContacts=()=>{const filtered=catF==="all"?contacts:contacts.filter(c=>c.category===catF);return(<div style={{display:"flex",flexDirection:"column",gap:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:fs+2}}>📞 {t.contacts}</span><button onClick={()=>setShowAddC(true)} style={{...BP,padding:"7px 14px"}}>+ {t.add}</button></div><div style={{display:"flex",gap:6}}>{["all","doctor","taxi","special","emergency"].map(k=><button key={k} onClick={()=>setCatF(k)} style={pill(catF===k)}>{k==="all"?"🏠":k==="doctor"?"👨‍⚕️":k==="taxi"?"🚕":k==="special"?"⭐":"🚨"}</button>)}</div><div style={{...CS,background:`${dg}08`,border:`1px solid ${dg}22`}}><div style={{fontWeight:700,color:dg,marginBottom:6}}>🚨 {t.emN}</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{emNums.slice(0,5).map(en=><a key={en.id} href={`tel:${en.number}`} style={{padding:"5px 10px",borderRadius:8,background:`${dg}15`,color:dg,fontWeight:700,textDecoration:"none",fontSize:fs}}>{en.icon} {en.number}</a>)}</div></div>{filtered.length===0&&<div style={{textAlign:"center",color:mt,padding:20}}>{t.noC}</div>}{filtered.map(c=>(<div key={c.id} style={{...CS,display:"flex",alignItems:"center",gap:10}}><div style={{width:40,height:40,borderRadius:"50%",background:`${ac}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:ac}}>{c.name[0]}</div><div style={{flex:1}}><div style={{fontWeight:700}}>{c.name}</div><div style={{fontSize:fs-2,color:mt}}>{c.phone}</div></div><a href={`tel:${c.phone}`} style={{fontSize:22,textDecoration:"none"}}>📞</a><button onClick={()=>toTrash("contact",c)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:14}}>🗑️</button></div>))}{showAddC&&<div style={{...CS,border:`2px solid ${ac}`}}><input placeholder={t.nm} value={newC.name} onChange={e=>setNewC({...newC,name:e.target.value})} style={{...IS,marginBottom:6}}/>
 <div style={{display:"flex",gap:4,marginBottom:6,alignItems:"center"}}>
-  <select value={newC.countryCode} onChange={e=>{setNewC({...newC,countryCode:e.target.value});}} style={{...IS,flex:"0 0 auto",width:"auto",minWidth:90,maxWidth:140,padding:"9px 6px",fontSize:fs-1}}>
-    {COUNTRY_CODES.map(cc=><option key={cc.code+cc.name} value={cc.code}>{cc.name}</option>)}
+  <select value={newC.countryCode} onChange={e=>{setNewC({...newC,countryCode:e.target.value});}} style={{...IS,flex:"0 0 auto",width:"auto",minWidth:100,maxWidth:160,padding:"9px 6px",fontSize:fs-1}}>
+    {COUNTRY_CODES.map(cc=><option key={cc.code+cc.emoji} value={cc.code}>{cc.emoji} {cc.n[lang]||cc.n.en}</option>)}
   </select>
   <div style={{...IS,flex:"0 0 56px",textAlign:"center",fontWeight:700,padding:"9px 4px",color:ac,background:dark?"#0d1520":"#eef2f7"}}>{newC.countryCode}</div>
   <input placeholder="5XX XXX XXXX" value={newC.phone} onChange={e=>setNewC({...newC,phone:e.target.value.replace(/[^0-9\s]/g,"")})} type="tel" inputMode="numeric" style={{...IS,flex:1,letterSpacing:1}}/>
