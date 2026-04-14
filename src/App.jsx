@@ -500,21 +500,65 @@ if(today!==lastResetDay.current){
 },[now]);
 
 // Med + Calendar Alarm Auto-Check (runs every second)
+const firedAlarms=useRef(new Set());
+// Request notification permission on mount
+useEffect(()=>{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission();},[]);
+const sendNotification=(title,body)=>{
+  try{if('Notification' in window&&Notification.permission==='granted')new Notification(title,{body,icon:'/icon.svg',tag:title,requireInteraction:true});}catch(e){}
+};
 useEffect(()=>{
 const _n=now;
 const hhmm=String(_n.getHours()).padStart(2,'0')+':'+String(_n.getMinutes()).padStart(2,'0');
-const sec=_n.getSeconds();
-if(sec===0){
+const minKey=hhmm;
+// Reset fired set each new minute
+if(_n.getSeconds()===1)firedAlarms.current=new Set();
+if(_n.getSeconds()<=2){
+// Med alarms
 meds.forEach(m=>{
-  if(!m.taken&&m.time===hhmm){
+  if(!m.taken&&m.time===hhmm&&!firedAlarms.current.has('med-'+m.id)){
+    firedAlarms.current.add('med-'+m.id);
     const cnt=typeof m.count==='number'?m.count:30;
-    if(cnt>0){playAlarmBell();speakAlarm((lang==='tr'?'İlaç zamanı: ':'Med time: ')+m.name+' '+m.dose);notify('💊 '+m.name+' - '+m.dose);}
+    if(cnt>0){
+      playAlarmBell();
+      speakAlarm((lang==='tr'?'İlaç zamanı: ':'Med time: ')+m.name+' '+m.dose);
+      notify('💊 '+m.name+' - '+m.dose);
+      sendNotification('💊 '+(lang==='tr'?'İlaç Zamanı':'Med Time'),m.name+' '+m.dose+' — '+m.time);
+    }
+  }
+  // Pre-alarm: 10 min before
+  const[mH,mM]=(m.time||'00:00').split(':').map(Number);
+  let preH=mH,preM=mM-10;
+  if(preM<0){preM+=60;preH=(preH-1+24)%24;}
+  const preHHMM=String(preH).padStart(2,'0')+':'+String(preM).padStart(2,'0');
+  if(!m.taken&&preHHMM===hhmm&&!firedAlarms.current.has('pre-'+m.id)){
+    firedAlarms.current.add('pre-'+m.id);
+    notify('⏰ '+m.name+' — '+(lang==='tr'?'10 dk sonra!':'in 10 min!'));
+    sendNotification('⏰ '+(lang==='tr'?'İlaç Hatırlatma':'Med Reminder'),m.name+' '+(lang==='tr'?'10 dakika sonra':'in 10 minutes'));
   }
 });
+// Calendar alarms
 const isoD=_n.toISOString().split('T')[0];
-if(calAlarms[isoD]&&calAlarms[isoD]===hhmm){playAlarmBell();speakAlarm(lang==='tr'?'Takvim hatırlatması: ':'Calendar reminder: '+(calNotes[isoD]||''));notify('📅 '+(calNotes[isoD]||'Alarm'));}
+if(calAlarms[isoD]&&calAlarms[isoD]===hhmm&&!firedAlarms.current.has('cal-'+isoD)){
+  firedAlarms.current.add('cal-'+isoD);
+  playAlarmBell();
+  speakAlarm(lang==='tr'?'Takvim hatırlatması: ':'Calendar reminder: '+(calNotes[isoD]||''));
+  notify('📅 '+(calNotes[isoD]||'Alarm'));
+  sendNotification('📅 '+(lang==='tr'?'Takvim':'Calendar'),calNotes[isoD]||'Alarm');
 }
-},[now,meds,lang,calAlarms,calNotes]);
+// Appointment alarms (1 day + 6 hours before, and 1 hour before)
+appts.forEach(a=>{
+  const aDate=new Date(a.date+'T'+(a.time||'09:00'));
+  const diffMs=aDate-_n;
+  const diffMin=Math.round(diffMs/60000);
+  if(diffMin===60&&!firedAlarms.current.has('appt1h-'+a.id)){
+    firedAlarms.current.add('appt1h-'+a.id);
+    playAlarmBell();
+    notify('🏥 '+a.doctor+' — '+(lang==='tr'?'1 saat sonra!':'in 1 hour!'));
+    sendNotification('🏥 '+(lang==='tr'?'Randevu':'Appointment'),a.doctor+' — '+(lang==='tr'?'1 saat sonra':'in 1 hour'));
+  }
+});
+}
+},[now,meds,lang,calAlarms,calNotes,appts]);
 
 // Health
 const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0});
@@ -602,7 +646,7 @@ const sendChat=async(text)=>{
 8) İlaç etkileşimleri konusunda uyar.`,messages:history},apiKey);
     const reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
-    if(voiceActive){speak(reply);const wi=setInterval(()=>{if(!isSpeak&&voiceActive){clearInterval(wi);setTimeout(()=>{if(voiceActive&&!isListen)startVoice((t2)=>sendChat(t2));},500);}},500);setTimeout(()=>clearInterval(wi),30000);}
+    if(voiceActive){speak(reply);const wi=setInterval(()=>{if(!isSpeak&&voiceActive){clearInterval(wi);setTimeout(()=>{if(voiceActive&&!isListen)startVoice((t2)=>sendChat(t2),true);},600);}},500);setTimeout(()=>clearInterval(wi),60000);}
   }catch(e){
     const noKey=e.message==="NO_KEY";
     setChatM(p=>[...p,{role:"assistant",text:lang==="tr"
@@ -669,17 +713,34 @@ const fallbackSpeak=(text)=>{
 };
 // Voice handled by ResponsiveVoice.js
 
-// Voice — FIXED
-const startVoice=(cb)=>{
+// Voice — improved with continuous mode
+const startVoice=(cb,continuous=false)=>{
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){notify("⚠️ Bu tarayıcı ses tanımayı desteklemiyor. Chrome kullanın.");return;}
+  if(!SR){notify("⚠️ "+(lang==="tr"?"Bu tarayıcı ses tanımayı desteklemiyor. Chrome kullanın.":"Browser doesn't support voice. Use Chrome."));return;}
   if(isListen&&recRef.current){try{recRef.current.abort();}catch(e){}setIsListen(false);recRef.current=null;return;}
   try{
     const r=new SR();recRef.current=r;r.lang=lc;r.continuous=false;r.interimResults=false;r.maxAlternatives=1;
     r.onstart=()=>setIsListen(true);
-    r.onresult=(e)=>{cb(e.results[0][0].transcript);setIsListen(false);recRef.current=null;};
-    r.onerror=(e)=>{setIsListen(false);recRef.current=null;if(e.error==="not-allowed")notify("🎤 Mikrofon izni gerekli!");};
-    r.onend=()=>{setIsListen(false);recRef.current=null;};
+    r.onresult=(e)=>{
+      const txt=e.results[0][0].transcript;
+      setIsListen(false);recRef.current=null;
+      cb(txt);
+    };
+    r.onerror=(e)=>{
+      setIsListen(false);recRef.current=null;
+      if(e.error==="not-allowed")notify("🎤 "+(lang==="tr"?"Mikrofon izni gerekli!":"Microphone permission required!"));
+      else if(e.error==="no-speech"&&continuous&&voiceActive){
+        // In voice dialog mode, restart listening after no-speech
+        setTimeout(()=>{if(voiceActive)startVoice(cb,true);},500);
+      }
+    };
+    r.onend=()=>{
+      setIsListen(false);recRef.current=null;
+      // In voice dialog mode, restart after recognition ends naturally
+      if(continuous&&voiceActive&&!isSpeak){
+        setTimeout(()=>{if(voiceActive)startVoice(cb,true);},800);
+      }
+    };
     r.start();
   }catch(e){setIsListen(false);}
 };
@@ -1219,13 +1280,16 @@ return (
             <button onClick={goFwd} style={{background:"none",border:"none",color:histIdx<pageHist.length-1?"#e8a817":"#ffffff66",fontSize:16,cursor:"pointer",padding:0}}>▶</button>
             <button onClick={()=>{const newState=!voiceActive;setVoiceActive(newState);
             if(newState){
-              speak((t.voiceOn||"Sesli Diyalog")+" ON");
-              setTimeout(()=>{if(page!=="chat")goTo("chat");setTimeout(()=>startVoice((txt)=>{setChatIn(txt);sendChat(txt);}),2000);},1000);
-              setTimeout(()=>{if(!isListen)startVoice((transcript)=>{goTo("chat");sendChat(transcript);});},1500);
+              if(page!=="chat")goTo("chat");
+              speak((lang==="tr"?"Sesli diyalog başladı. Konuşabilirsiniz.":"Voice dialog started. You can speak."));
+              setTimeout(()=>{
+                startVoice((txt)=>{sendChat(txt);},true);
+              },2500);
             }else{
-              if(window.responsiveVoice)responsiveVoice.cancel();
+              try{speechSynthesis.cancel();}catch(e){}
+              if(window.responsiveVoice)try{responsiveVoice.cancel();}catch(e){}
               if(recRef.current)try{recRef.current.abort();}catch(e){}
-              setIsListen(false);
+              setIsListen(false);setIsSpeak(false);
             }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:20,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:voiceActive?1:0.8}}>🎙️</button>
             <button onClick={()=>goTo("home")} style={{background:"none",border:"none",color:"#fff",fontSize:20,cursor:"pointer",padding:0}}>🏠</button>
             <button onClick={()=>setDark(!dark)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0}}>{dark?"🌙":"☀️"}</button>
