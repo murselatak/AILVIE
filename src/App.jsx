@@ -580,7 +580,19 @@ const[newNApp,setNewNApp]=useState({name:"",url:"",icon:"📱"});
 const[contacts,setContacts]=useState([]);
 const[catF,setCatF]=useState("all");
 const[showAddC,setShowAddC]=useState(false);
-const[newC,setNewC]=useState({name:"",phone:"",category:"doctor",note:""});
+const COUNTRY_CODES=[
+  {code:"+90",flag:"tr",name:"Türkiye"},{code:"+1",flag:"us",name:"ABD/Kanada"},
+  {code:"+44",flag:"gb",name:"İngiltere"},{code:"+49",flag:"de",name:"Almanya"},
+  {code:"+33",flag:"fr",name:"Fransa"},{code:"+7",flag:"ru",name:"Rusya"},
+  {code:"+86",flag:"zh",name:"Çin"},{code:"+91",flag:"hi",name:"Hindistan"},
+  {code:"+31",flag:"nl",name:"Hollanda"},{code:"+34",flag:"es",name:"İspanya"},
+  {code:"+966",flag:"sa",name:"S.Arabistan"},{code:"+971",flag:"ar",name:"BAE"},
+  {code:"+39",flag:"es",name:"İtalya"},{code:"+81",flag:"zh",name:"Japonya"},
+  {code:"+82",flag:"zh",name:"G.Kore"},{code:"+55",flag:"es",name:"Brezilya"},
+  {code:"+61",flag:"en",name:"Avustralya"},{code:"+48",flag:"de",name:"Polonya"},
+  {code:"+46",flag:"nl",name:"İsveç"},{code:"+47",flag:"nl",name:"Norveç"},
+];
+const[newC,setNewC]=useState({name:"",phone:"",countryCode:"+90",category:"doctor",note:""});
 
 // Community
 const[msgs,setMsgs]=useState([{id:1,user:"Hasta_42",text:"Merhaba herkese! 👋",likes:3,time:"10:30"}]);
@@ -1193,7 +1205,14 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
 
 const renderNotes=()=>{const sorted=[...notes].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));return(<div style={{display:"flex",flexDirection:"column",gap:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:fs+2}}>📝 {t.notes}</span><button onClick={()=>setNotes(p=>[{id:Date.now(),title:"",content:"",color:NCOL[Math.floor(Math.random()*8)],pinned:false},...p])} style={{...BP,padding:"7px 14px"}}>+ {t.nNote}</button></div>{sorted.length===0&&<div style={{textAlign:"center",color:mt,padding:24}}>{t.noN}</div>}<div style={{display:"grid",gridTemplateColumns:"1fr",gap:8}}>{sorted.map(n=>(<div key={n.id} style={{background:dark?n.color+"18":n.color,borderRadius:12,padding:10,position:"relative",border:editNote===n.id?"2px solid "+ac:"1px solid "+bd}}>{n.pinned&&<span style={{position:"absolute",top:4,right:6,fontSize:14}}>📌</span>}{editNote===n.id?<div style={{display:"flex",flexDirection:"column",gap:4}}><input value={n.title} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,title:e.target.value}:x))} placeholder={t.nNote} style={{...IS,fontWeight:700,background:"transparent",border:"none",padding:0}}/><textarea value={n.content} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,content:e.target.value}:x))} onInput={autoResize} rows={Math.max(4,Math.ceil((n.content||"").length/20))} style={{...IS,background:"transparent",border:"none",padding:0,resize:"none",minHeight:80,width:"100%",wordBreak:"break-word",overflowWrap:"break-word",direction:lang==="ar"?"rtl":"ltr"}}/><div style={{display:"flex",gap:3,marginTop:4}}>{NCOL.map(c=><button key={c} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,color:c}:x))} style={{width:18,height:18,borderRadius:9,background:c,border:n.color===c?"2px solid "+ac:"2px solid transparent",cursor:"pointer"}}/>)}</div><button onClick={()=>{const note=notes.find(x=>x.id===n.id);if(note&&!note.title?.trim()&&!note.content?.trim()){setNotes(p=>p.filter(x=>x.id!==n.id));}setEditNote(null);}} style={{...BP,padding:"4px 10px",marginTop:4}}>✓</button></div>:<div onClick={()=>setEditNote(n.id)} style={{cursor:"pointer"}}><div style={{fontWeight:700,marginBottom:3,color:dark?tc:"#333"}}>{n.title||t.nNote}</div><div style={{fontSize:fs-2,color:dark?mt:"#555",whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"break-word"}}>{n.content}</div></div>}<div style={{display:"flex",gap:4,marginTop:6}}><button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} style={{background:"none",border:"none",cursor:"pointer",fontSize:14}}>📌</button><button onClick={()=>copyTxt(n.content)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14}}>📋</button><SpeakBtn text={n.content}/><button onClick={()=>toTrash("note",n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,color:dg}}>🗑️</button></div></div>))}</div><div style={{fontWeight:700,marginTop:4}}>{t.extA}</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{noteApps.map(a=><a key={a.name} href={a.url} target="_blank" rel="noopener noreferrer" style={{...CS,display:"flex",alignItems:"center",gap:6,textDecoration:"none",color:tc,padding:"8px 12px"}}><span style={{fontSize:18}}>{a.icon}</span><span style={{fontSize:fs-1}}>{a.name}</span></a>)}<button onClick={()=>setShowAddNApp(true)} style={{...CS,border:"2px dashed "+ac+"44",cursor:"pointer",padding:"8px 12px",color:ac}}>+ {t.addApp}</button></div>{showAddNApp&&<div style={{...CS,border:"2px solid "+ac}}><input placeholder="App Name" value={newNApp.name} onChange={e=>setNewNApp({...newNApp,name:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder="https://..." value={newNApp.url} onChange={e=>setNewNApp({...newNApp,url:e.target.value})} style={{...IS,marginBottom:6}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newNApp.name&&newNApp.url){setNoteApps(p=>[...p,newNApp]);setNewNApp({name:"",url:"",icon:"📱"});setShowAddNApp(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddNApp(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}</div>);};
 
-const renderContacts=()=>{const filtered=catF==="all"?contacts:contacts.filter(c=>c.category===catF);return(<div style={{display:"flex",flexDirection:"column",gap:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:fs+2}}>📞 {t.contacts}</span><button onClick={()=>setShowAddC(true)} style={{...BP,padding:"7px 14px"}}>+ {t.add}</button></div><div style={{display:"flex",gap:6}}>{["all","doctor","taxi","special","emergency"].map(k=><button key={k} onClick={()=>setCatF(k)} style={pill(catF===k)}>{k==="all"?"🏠":k==="doctor"?"👨‍⚕️":k==="taxi"?"🚕":k==="special"?"⭐":"🚨"}</button>)}</div><div style={{...CS,background:`${dg}08`,border:`1px solid ${dg}22`}}><div style={{fontWeight:700,color:dg,marginBottom:6}}>🚨 {t.emN}</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{emNums.slice(0,5).map(en=><a key={en.id} href={`tel:${en.number}`} style={{padding:"5px 10px",borderRadius:8,background:`${dg}15`,color:dg,fontWeight:700,textDecoration:"none",fontSize:fs}}>{en.icon} {en.number}</a>)}</div></div>{filtered.length===0&&<div style={{textAlign:"center",color:mt,padding:20}}>{t.noC}</div>}{filtered.map(c=>(<div key={c.id} style={{...CS,display:"flex",alignItems:"center",gap:10}}><div style={{width:40,height:40,borderRadius:"50%",background:`${ac}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:ac}}>{c.name[0]}</div><div style={{flex:1}}><div style={{fontWeight:700}}>{c.name}</div><div style={{fontSize:fs-2,color:mt}}>{c.phone}</div></div><a href={`tel:${c.phone}`} style={{fontSize:22,textDecoration:"none"}}>📞</a><button onClick={()=>toTrash("contact",c)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:14}}>🗑️</button></div>))}{showAddC&&<div style={{...CS,border:`2px solid ${ac}`}}><input placeholder={t.nm} value={newC.name} onChange={e=>setNewC({...newC,name:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder="Phone" value={newC.phone} onChange={e=>setNewC({...newC,phone:e.target.value})} style={{...IS,marginBottom:6}}/><select value={newC.category} onChange={e=>setNewC({...newC,category:e.target.value})} style={{...IS,marginBottom:6}}><option value="doctor">👨‍⚕️</option><option value="taxi">🚕</option><option value="special">⭐</option><option value="emergency">🚨</option></select><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newC.name&&newC.phone){setContacts(p=>[...p,{id:Date.now(),...newC}]);setNewC({name:"",phone:"",category:"doctor",note:""});setShowAddC(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddC(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}</div>);};
+const renderContacts=()=>{const filtered=catF==="all"?contacts:contacts.filter(c=>c.category===catF);return(<div style={{display:"flex",flexDirection:"column",gap:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:fs+2}}>📞 {t.contacts}</span><button onClick={()=>setShowAddC(true)} style={{...BP,padding:"7px 14px"}}>+ {t.add}</button></div><div style={{display:"flex",gap:6}}>{["all","doctor","taxi","special","emergency"].map(k=><button key={k} onClick={()=>setCatF(k)} style={pill(catF===k)}>{k==="all"?"🏠":k==="doctor"?"👨‍⚕️":k==="taxi"?"🚕":k==="special"?"⭐":"🚨"}</button>)}</div><div style={{...CS,background:`${dg}08`,border:`1px solid ${dg}22`}}><div style={{fontWeight:700,color:dg,marginBottom:6}}>🚨 {t.emN}</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{emNums.slice(0,5).map(en=><a key={en.id} href={`tel:${en.number}`} style={{padding:"5px 10px",borderRadius:8,background:`${dg}15`,color:dg,fontWeight:700,textDecoration:"none",fontSize:fs}}>{en.icon} {en.number}</a>)}</div></div>{filtered.length===0&&<div style={{textAlign:"center",color:mt,padding:20}}>{t.noC}</div>}{filtered.map(c=>(<div key={c.id} style={{...CS,display:"flex",alignItems:"center",gap:10}}><div style={{width:40,height:40,borderRadius:"50%",background:`${ac}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:ac}}>{c.name[0]}</div><div style={{flex:1}}><div style={{fontWeight:700}}>{c.name}</div><div style={{fontSize:fs-2,color:mt}}>{c.phone}</div></div><a href={`tel:${c.phone}`} style={{fontSize:22,textDecoration:"none"}}>📞</a><button onClick={()=>toTrash("contact",c)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:14}}>🗑️</button></div>))}{showAddC&&<div style={{...CS,border:`2px solid ${ac}`}}><input placeholder={t.nm} value={newC.name} onChange={e=>setNewC({...newC,name:e.target.value})} style={{...IS,marginBottom:6}}/>
+<div style={{display:"flex",gap:4,marginBottom:6}}>
+  <select value={newC.countryCode} onChange={e=>setNewC({...newC,countryCode:e.target.value})} style={{...IS,width:105,padding:"9px 4px",fontSize:fs-1,flexShrink:0}}>
+    {COUNTRY_CODES.map(cc=><option key={cc.code} value={cc.code}>{cc.code} {cc.name}</option>)}
+  </select>
+  <input placeholder="5XX XXX XXXX" value={newC.phone} onChange={e=>setNewC({...newC,phone:e.target.value.replace(/[^0-9\s]/g,"")})} type="tel" style={{...IS,flex:1,letterSpacing:1}}/>
+</div>
+<select value={newC.category} onChange={e=>setNewC({...newC,category:e.target.value})} style={{...IS,marginBottom:6}}><option value="doctor">👨‍⚕️ {lang==="tr"?"Doktor":"Doctor"}</option><option value="taxi">🚕 {lang==="tr"?"Taksi":"Taxi"}</option><option value="special">⭐ {lang==="tr"?"Özel":"Special"}</option><option value="emergency">🚨 {lang==="tr"?"Acil":"Emergency"}</option></select><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newC.name&&newC.phone){const fullPhone=newC.countryCode+" "+newC.phone;setContacts(p=>[...p,{id:Date.now(),name:newC.name,phone:fullPhone,category:newC.category,note:""}]);setNewC({name:"",phone:"",countryCode:"+90",category:"doctor",note:""});setShowAddC(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddC(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}</div>);};
 
 const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}><span style={{fontWeight:700,fontSize:fs+2}}>👥 {t.community}</span><div style={{padding:"6px 12px",borderRadius:10,background:`${dg}08`,fontSize:fs-1,color:dg}}>{t.warn}</div><div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:"none",overflowY:"visible"}}>{msgs.map(m=>(<div key={m.id} style={CS}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontWeight:700,color:ac}}>{m.user}</span><span style={{fontSize:fs-2,color:mt}}>{m.time}</span></div><div style={{marginBottom:6,wordBreak:"break-word",overflowWrap:"break-word"}}>{m.text}</div><div style={{display:"flex",gap:6}}><button onClick={()=>setMsgs(p=>p.map(x=>x.id===m.id?{...x,likes:[...(x.likes_arr||[]),pat.name||"Ben"].length}:x))} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",color:tc}}>❤️ {m.likes}</button><button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>📋</button><SpeakBtn text={m.text}/>{(m.user===(pat.name||"Ben"))&&<><button onClick={()=>{const nv=prompt(lang==="tr"?"Mesajı düzenle:":"Edit message:",m.text);if(nv!==null)setMsgs(p=>p.map(x=>x.id===m.id?{...x,text:nv,edited:true}:x));}} style={{background:"none",border:`1px solid ${ac}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:ac}}>✏️</button><button onClick={()=>setMsgs(p=>p.filter(x=>x.id!==m.id))} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:dg}}>🗑️</button></>}</div></div>))}</div><div style={{display:"flex",gap:6,position:"relative"}}><MicBtn onResult={v=>setMsgIn(v)} currentValue={msgIn}/><button onClick={()=>setShowEmoji(!showEmoji)} style={{...BP,padding:"8px 12px",fontSize:18}}>😊</button><input value={msgIn} onChange={e=>setMsgIn(e.target.value)} placeholder={t.wr} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter"&&msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn,likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}}/><button onClick={()=>{if(msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn,likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}} style={BP}>{t.send}</button>{showEmoji&&<EmojiPicker onPick={e=>setMsgIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}</div></div>);
 
@@ -1306,38 +1325,45 @@ return (
           {fs!==15&&<button onClick={()=>setFs(15)} style={{width:24,height:24,borderRadius:12,background:`${ac}44`,border:`1px solid ${bd}`,color:"#e8a817",fontSize:10,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>1x</button>}
         </div>
 
-        {/* LEFT SIDE MENU */}
+        {/* LEFT SIDE MENU — compact */}
         {showMenu&&<>
-          <div onClick={()=>setShowMenu(false)} style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)",zIndex:400}}/>
-          <div style={{position:"absolute",top:0,left:0,bottom:80,width:"75%",background:cd,zIndex:450,padding:"60px 20px 20px",overflowY:"auto",borderRadius:"0 0 16px 0",boxShadow:"4px 0 20px rgba(0,0,0,.3)"}}>
-            <button onClick={()=>setShowMenu(false)} style={{position:"absolute",top:16,right:16,background:"none",border:"none",color:tc,fontSize:22,cursor:"pointer"}}>✕</button>
-            {/* Profile */}
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
-              <img src="/avatar2.svg" alt="" style={{width:56,height:56,objectFit:"cover",borderRadius:8,flexShrink:0}} />
-              <div>
-                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:24,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"0.5px #e8a817",lineHeight:1}}>AILVIE</div>
-                <div style={{fontSize:fs-1,color:mt}}>{pat.name||t.profile}</div>
-                <div style={{fontSize:fs-2,color:isLoggedIn?sc:mt}}>{isLoggedIn?"● "+t.loggedIn:"○ "+t.loggedOut}</div>
+          <div onClick={()=>setShowMenu(false)} style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",zIndex:400,animation:"fadeIn .2s"}}/>
+          <div style={{position:"absolute",top:0,left:0,bottom:0,width:"65%",maxWidth:260,background:cd,zIndex:450,padding:"0",overflowY:"auto",boxShadow:"4px 0 24px rgba(0,0,0,.4)",animation:"slideRight .25s ease-out"}}>
+            {/* Header */}
+            <div style={{padding:"12px 14px 10px",background:`linear-gradient(135deg,${ac},${a2})`,display:"flex",alignItems:"center",gap:10}}>
+              <img src="/avatar2.svg" alt="" style={{width:36,height:36,objectFit:"cover",borderRadius:6,flexShrink:0}} />
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:16,color:"#e8a817",letterSpacing:2,lineHeight:1}}>AILVIE</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,.8)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{pat.name||t.profile}</div>
               </div>
+              <button onClick={()=>setShowMenu(false)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0,flexShrink:0}}>✕</button>
             </div>
+            {/* Status */}
+            <div style={{padding:"6px 14px",fontSize:11,color:isLoggedIn?sc:mt,borderBottom:`1px solid ${bd}`}}>{isLoggedIn?"● "+t.loggedIn:"○ "+t.loggedOut}</div>
             {/* Menu Items */}
+            <div style={{padding:"4px 0"}}>
             {[
               {icon:"👤",label:t.profile,action:()=>{goTo("pCard");setShowMenu(false);}},
               {icon:isLoggedIn?"🚪":"🔑",label:isLoggedIn?t.logout:t.login,action:()=>{setIsLoggedIn(!isLoggedIn);notify(isLoggedIn?t.loggedOut:t.loggedIn);setShowMenu(false);}},
+              null,
               {icon:"🔒",label:t.permissions,action:()=>{setSettingsTab("perms");goTo("settings");setShowMenu(false);}},
               {icon:"💎",label:t.subscription,action:()=>{setSettingsTab("subs");goTo("settings");setShowMenu(false);}},
               {icon:"🗑️",label:t.trash,action:()=>{setSettingsTab("trash");goTo("settings");setShowMenu(false);}},
+              null,
               {icon:"⚖️",label:t.legal,action:()=>{setSettingsTab("legal");goTo("settings");setShowMenu(false);}},
               {icon:"📜",label:t.privPolicy,action:()=>{goTo("privacy");setShowMenu(false);}},
               {icon:"📋",label:t.terms,action:()=>{goTo("terms");setShowMenu(false);}},
-              {icon:"ℹ️",label:t.about+" — v6.0",action:()=>{goTo("about");setShowMenu(false);}},
+              null,
+              {icon:"ℹ️",label:t.about+" — v9.1",action:()=>{goTo("about");setShowMenu(false);}},
               {icon:"⚙️",label:t.settings,action:()=>{setSettingsTab("all");goTo("settings");setShowMenu(false);}},
             ].map((item,idx)=>(
-              <button key={idx} onClick={item.action} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",background:"none",border:"none",borderBottom:`1px solid ${bd}`,color:tc,cursor:"pointer",width:"100%",textAlign:"left",fontSize:fs}}>
-                <span style={{fontSize:20}}>{item.icon}</span>
+              item===null?<div key={`d${idx}`} style={{height:1,background:bd,margin:"2px 14px"}}/>:
+              <button key={idx} onClick={item.action} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",background:"none",border:"none",color:tc,cursor:"pointer",width:"100%",textAlign:"left",fontSize:fs-1,transition:"background .15s"}} onMouseOver={e=>e.currentTarget.style.background=`${ac}11`} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
+                <span style={{fontSize:15,width:20,textAlign:"center"}}>{item.icon}</span>
                 <span style={{fontWeight:500}}>{item.label}</span>
               </button>
             ))}
+            </div>
           </div>
         </>}
 
@@ -1378,6 +1404,8 @@ return (
       @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
       @keyframes slideD{from{transform:translateX(-50%) translateY(-10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
       @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(230,57,70,.5)}50%{box-shadow:0 0 0 10px rgba(230,57,70,0)}}
+      @keyframes slideRight{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+      @keyframes fadeIn{from{opacity:0}to{opacity:1}}
       @keyframes globeSpin{0%{transform:rotateY(0deg)}100%{transform:rotateY(360deg)}}
       textarea{min-height:36px;max-height:150px;overflow-y:auto;transition:height 0.1s}
       @keyframes scanLine{0%{top:10%}50%{top:85%}100%{top:10%}}
