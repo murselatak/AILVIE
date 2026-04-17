@@ -111,7 +111,10 @@ const[isListen,setIsListen]=useState(false);
 const[isSpeak,setIsSpeak]=useState(false);
 const[zoom,setZoom]=useState(1);
 const[voiceActive,setVoiceActive]=useState(false);
-const[adminMsgs,setAdminMsgs]=useState([]);
+// Admin support — per-user (keyed by user id)
+const userId=(()=>{try{let id=localStorage.getItem("ailvie_uid");if(!id){id="u_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);localStorage.setItem("ailvie_uid",id);}return id;}catch{return"u_anon";}})();
+const[adminMsgs,setAdminMsgs]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_support_"+userId)||"[]");}catch{return[];}});
+useEffect(()=>{try{localStorage.setItem("ailvie_support_"+userId,JSON.stringify(adminMsgs));}catch{}},[adminMsgs,userId]);
 const[adminIn,setAdminIn]=useState("");
 const[wordLang,setWordLang]=useState(lang==="tr"?"en":lang==="en"?"tr":"en");
 const[showWordLangPicker,setShowWordLangPicker]=useState(false);
@@ -564,6 +567,7 @@ appts.forEach(a=>{
 const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0});
 const[editH,setEditH]=useState(null);
 const[tmpH,setTmpH]=useState("");
+const[wellness,setWellness]=useState({water:0,sleep:0,mood:0,steps:0,exercise:0,waterGoal:8,sleepGoal:8,stepsGoal:10000});
 
 // Notes
 const[notes,setNotes]=useState([]);
@@ -632,10 +636,10 @@ const hscore=(hd.pulse===0&&hd.weight===0)?0:Math.min(100,Math.round(
 // ═══ AUTO-SAVE/LOAD ═══
 useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
-if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);
 }catch{}},[]); // load once
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,calNotes,calAlarms}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,calNotes,calAlarms]); // save on change
+useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms]); // save on change
 
 const sendChat=async(text)=>{
   const q=text||chatIn;if(!q.trim())return;
@@ -1185,9 +1189,18 @@ const pulseRef=(()=>{
   return{min:60,max:100,label:"60-100"};
 })();
 const pulseOk=hd.pulse>=pulseRef.min&&hd.pulse<=pulseRef.max;
+const waterPct=Math.min(100,(wellness.water/wellness.waterGoal)*100);
+const sleepPct=Math.min(100,(wellness.sleep/wellness.sleepGoal)*100);
+const stepsPct=Math.min(100,(wellness.steps/wellness.stepsGoal)*100);
+const moods=[{v:1,e:"😢",l:lang==="tr"?"Çok Kötü":"Very Bad"},{v:2,e:"😕",l:lang==="tr"?"Kötü":"Bad"},{v:3,e:"😐",l:lang==="tr"?"Normal":"Normal"},{v:4,e:"🙂",l:lang==="tr"?"İyi":"Good"},{v:5,e:"😄",l:lang==="tr"?"Harika":"Great"}];
 return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <span style={{fontWeight:700,fontSize:fs+2}}>📊 {t.health}</span>
-  {/* Birth Date + Age */}
+  {/* Info Banner */}
+  <div style={{padding:"8px 12px",borderRadius:10,background:`${ac}10`,border:`1px solid ${ac}33`,fontSize:fs-2,color:ac,display:"flex",alignItems:"center",gap:6}}>
+    <span>💡</span><span>{lang==="tr"?"Verileriniz Hasta Karnesi ile otomatik senkronize":"Data auto-syncs with Patient Card"}</span>
+  </div>
+  {/* Body Measurements */}
+  <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>📏 {lang==="tr"?"Vücut Ölçümleri":"Body Measurements"}</div>
   <div style={{...CS,display:"flex",alignItems:"center",gap:10}}>
     <span style={{fontSize:22}}>🎂</span>
     <div style={{flex:1}}>
@@ -1197,8 +1210,18 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   </div>
   <HField icon="📏" label={t.ht} field="height" unit={t.cm}/>
   <HField icon="⚖️" label={t.wt} field="weight" unit={t.kg}/>
-  {bmi>0&&<div style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,fontSize:fs+1}}>BMI</span><span style={{fontSize:fs+6,fontWeight:800,color:bmi>=18.5&&bmi<25?sc:dg}}>{bmi}</span></div><div style={{height:8,borderRadius:4,background:`linear-gradient(90deg,${ac},${sc},#e9c46a,${dg})`,marginTop:8,position:"relative"}}><div style={{position:"absolute",left:`${Math.min(100,Math.max(0,((bmi-10)/35)*100))}%`,top:-4,width:16,height:16,borderRadius:"50%",background:"#fff",border:`3px solid ${ac}`,transform:"translateX(-50%)"}}/></div></div>}
-  {/* Pulse with reference */}
+  {bmi>0&&<div style={CS}>
+    <div style={{display:"flex",justifyContent:"space-between"}}>
+      <span style={{fontWeight:700,fontSize:fs+1}}>BMI</span>
+      <span style={{fontSize:fs+6,fontWeight:800,color:bmi>=18.5&&bmi<25?sc:dg}}>{bmi}</span>
+    </div>
+    <div style={{height:8,borderRadius:4,background:`linear-gradient(90deg,${ac},${sc},#e9c46a,${dg})`,marginTop:8,position:"relative"}}>
+      <div style={{position:"absolute",left:`${Math.min(100,Math.max(0,((bmi-10)/35)*100))}%`,top:-4,width:16,height:16,borderRadius:"50%",background:"#fff",border:`3px solid ${ac}`,transform:"translateX(-50%)"}}/>
+    </div>
+    <div style={{fontSize:fs-3,color:mt,marginTop:6,textAlign:"center"}}>{bmi<18.5?(lang==="tr"?"Zayıf — Kilo almanız önerilir":"Underweight — weight gain recommended"):bmi<25?(lang==="tr"?"✓ Normal":"✓ Normal"):bmi<30?(lang==="tr"?"Fazla kilolu":"Overweight"):(lang==="tr"?"Obez — Doktora başvurun":"Obese — Consult doctor")}</div>
+  </div>}
+  {/* Vital Signs */}
+  <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🫀 {lang==="tr"?"Yaşamsal Değerler":"Vital Signs"}</div>
   <div style={{...CS,display:"flex",alignItems:"center",gap:10}}>
     <span style={{fontSize:22}}>❤️</span>
     <div style={{flex:1}}>
@@ -1209,12 +1232,96 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     </div>
     {hd.pulse>0&&<span style={{padding:"3px 8px",borderRadius:6,fontSize:fs-3,fontWeight:600,background:pulseOk?`${sc}22`:`${dg}22`,color:pulseOk?sc:dg}}>{pulseOk?t.norm:t.caut}</span>}
   </div>
-  {/* BP */}
-  <div style={CS}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:22}}>🩺</span><span style={{fontWeight:700,fontSize:fs+1}}>{t.bp} (SYS / DIA)</span></div><div style={{display:"flex",gap:10,alignItems:"center"}}><input type="number" value={hd.bpS||""} placeholder="SYS" onChange={e=>setHd({...hd,bpS:Number(e.target.value)})} style={{...IS,width:70,textAlign:"center",fontWeight:700}}/><span style={{fontSize:20,color:mt}}>/</span><input type="number" value={hd.bpD||""} placeholder="DIA" onChange={e=>setHd({...hd,bpD:Number(e.target.value)})} style={{...IS,width:70,textAlign:"center",fontWeight:700}}/>{hd.bpS>0&&<span style={{padding:"4px 10px",borderRadius:8,fontSize:fs-2,fontWeight:600,background:hd.bpS>=90&&hd.bpS<=140?`${sc}22`:`${dg}22`,color:hd.bpS>=90&&hd.bpS<=140?sc:dg}}>{hd.bpS>=90&&hd.bpS<=140?t.norm:t.caut}</span>}</div>{hd.bpS>0&&<div style={{fontSize:fs-3,color:mt,marginTop:4}}>{lang==="tr"?"Referans: 90-120 / 60-80 mmHg":"Ref: 90-120 / 60-80 mmHg"}</div>}</div>
-  {/* Health Score — Expanded */}
+  <div style={CS}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:22}}>🩺</span><span style={{fontWeight:700,fontSize:fs+1}}>{t.bp} (SYS / DIA)</span></div>
+    <div style={{display:"flex",gap:10,alignItems:"center"}}>
+      <input type="number" value={hd.bpS||""} placeholder="SYS" onChange={e=>setHd({...hd,bpS:Number(e.target.value)})} style={{...IS,width:70,textAlign:"center",fontWeight:700}}/>
+      <span style={{fontSize:20,color:mt}}>/</span>
+      <input type="number" value={hd.bpD||""} placeholder="DIA" onChange={e=>setHd({...hd,bpD:Number(e.target.value)})} style={{...IS,width:70,textAlign:"center",fontWeight:700}}/>
+      {hd.bpS>0&&<span style={{padding:"4px 10px",borderRadius:8,fontSize:fs-2,fontWeight:600,background:hd.bpS>=90&&hd.bpS<=140?`${sc}22`:`${dg}22`,color:hd.bpS>=90&&hd.bpS<=140?sc:dg}}>{hd.bpS>=90&&hd.bpS<=140?t.norm:t.caut}</span>}
+    </div>
+    {hd.bpS>0&&<div style={{fontSize:fs-3,color:mt,marginTop:4}}>{lang==="tr"?"Referans: 90-120 / 60-80 mmHg":"Ref: 90-120 / 60-80 mmHg"}</div>}
+  </div>
+  {/* Daily Wellness Tracking */}
+  <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🌱 {lang==="tr"?"Günlük Sağlık Takibi":"Daily Wellness Tracking"}</div>
+  {/* Water */}
+  <div style={{...CS,border:`1px solid ${ac}33`}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>💧 {lang==="tr"?"Su Takibi":"Water Intake"}</span>
+      <span style={{fontSize:fs-2,color:mt}}>{wellness.water}/{wellness.waterGoal} {lang==="tr"?"bardak":"glasses"}</span>
+    </div>
+    <div style={{height:10,background:`${mt}20`,borderRadius:5,overflow:"hidden",marginBottom:8}}>
+      <div style={{height:"100%",width:`${waterPct}%`,background:`linear-gradient(90deg,#38bdf8,#0ea5e9)`,borderRadius:5,transition:"width .3s"}}/>
+    </div>
+    <div style={{display:"flex",gap:6,justifyContent:"space-between"}}>
+      <button onClick={()=>setWellness(w=>({...w,water:Math.max(0,w.water-1)}))} style={{...BP,background:mt,padding:"6px 12px",flex:1}}>−</button>
+      <div style={{display:"flex",gap:3,flex:3,justifyContent:"center"}}>{[...Array(wellness.waterGoal)].map((_,i)=><span key={i} style={{fontSize:20,opacity:i<wellness.water?1:0.2}}>💧</span>)}</div>
+      <button onClick={()=>setWellness(w=>({...w,water:w.water+1}))} style={{...BP,padding:"6px 12px",flex:1}}>+</button>
+    </div>
+  </div>
+  {/* Sleep */}
+  <div style={{...CS,border:`1px solid #8b5cf633`}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>😴 {lang==="tr"?"Uyku":"Sleep"}</span>
+      <span style={{fontSize:fs-2,color:mt}}>{wellness.sleep}/{wellness.sleepGoal}h</span>
+    </div>
+    <div style={{height:10,background:`${mt}20`,borderRadius:5,overflow:"hidden",marginBottom:8}}>
+      <div style={{height:"100%",width:`${sleepPct}%`,background:`linear-gradient(90deg,#8b5cf6,#6366f1)`,borderRadius:5,transition:"width .3s"}}/>
+    </div>
+    <input type="range" min="0" max="12" step="0.5" value={wellness.sleep} onChange={e=>setWellness(w=>({...w,sleep:Number(e.target.value)}))} style={{width:"100%"}}/>
+    <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:2}}>{wellness.sleep>=7&&wellness.sleep<=9?(lang==="tr"?"✓ İdeal":"✓ Ideal"):wellness.sleep<6?(lang==="tr"?"⚠️ Yetersiz":"⚠️ Insufficient"):wellness.sleep>10?(lang==="tr"?"⚠️ Çok fazla":"⚠️ Too much"):(lang==="tr"?"Orta":"Average")}</div>
+  </div>
+  {/* Steps */}
+  <div style={{...CS,border:`1px solid ${sc}33`}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>👟 {lang==="tr"?"Adım":"Steps"}</span>
+      <span style={{fontSize:fs-2,color:mt}}>{wellness.steps.toLocaleString()}/{wellness.stepsGoal.toLocaleString()}</span>
+    </div>
+    <div style={{height:10,background:`${mt}20`,borderRadius:5,overflow:"hidden",marginBottom:8}}>
+      <div style={{height:"100%",width:`${stepsPct}%`,background:`linear-gradient(90deg,${sc},#14b8a6)`,borderRadius:5,transition:"width .3s"}}/>
+    </div>
+    <input type="number" value={wellness.steps||""} placeholder="0" onChange={e=>setWellness(w=>({...w,steps:Number(e.target.value)||0}))} style={{...IS,textAlign:"center"}}/>
+  </div>
+  {/* Mood */}
+  <div style={{...CS,border:`1px solid #f59e0b33`}}>
+    <div style={{fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>🧠 {lang==="tr"?"Ruh Hali":"Mood"}</div>
+    <div style={{display:"flex",justifyContent:"space-between",gap:4}}>
+      {moods.map(m=><button key={m.v} onClick={()=>setWellness(w=>({...w,mood:m.v}))} style={{flex:1,padding:"10px 4px",borderRadius:10,border:wellness.mood===m.v?`2px solid #f59e0b`:`1px solid ${bd}`,background:wellness.mood===m.v?"#f59e0b15":"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}><span style={{fontSize:24}}>{m.e}</span><span style={{fontSize:fs-4,color:mt}}>{m.l}</span></button>)}
+    </div>
+  </div>
+  {/* Exercise Minutes */}
+  <div style={{...CS,border:`1px solid ${dg}33`}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>🏃 {lang==="tr"?"Egzersiz":"Exercise"}</span>
+      <span style={{fontSize:fs-2,color:mt}}>{wellness.exercise} {lang==="tr"?"dakika":"min"}</span>
+    </div>
+    <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+      {[0,15,30,45,60,90].map(v=><button key={v} onClick={()=>setWellness(w=>({...w,exercise:v}))} style={pill(wellness.exercise===v)}>{v}{lang==="tr"?"dk":"m"}</button>)}
+    </div>
+    <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Hedef: Günde 30 dakika":"Goal: 30 minutes/day"}</div>
+  </div>
+  {/* Symptoms Quick Log */}
+  <div style={{...CS,border:`1px solid ${bd}`}}>
+    <div style={{fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>🤒 {lang==="tr"?"Hızlı Semptom Kaydı":"Quick Symptom Log"}</div>
+    <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+      {(lang==="tr"?["Baş ağrısı","Mide ağrısı","Yorgunluk","Ateş","Öksürük","Bulantı","Baş dönmesi","Kas ağrısı"]:["Headache","Stomachache","Fatigue","Fever","Cough","Nausea","Dizziness","Muscle pain"]).map(s=><button key={s} onClick={()=>{setNotes(p=>[{id:Date.now(),title:s,content:`${now.toLocaleString(lc)} — ${s}`,color:NCOL[0],pinned:false},...p]);notify("📝 "+s+" "+(lang==="tr"?"not olarak eklendi":"added as note"));}} style={pill(false)}>{s}</button>)}
+    </div>
+  </div>
+  {/* Reminders */}
+  <div style={{...CS,border:`1px solid ${ac}33`,background:`${ac}05`}}>
+    <div style={{fontWeight:700,marginBottom:8,color:ac}}>🔔 {lang==="tr"?"Sağlık Hatırlatıcıları":"Health Reminders"}</div>
+    <div style={{display:"flex",flexDirection:"column",gap:5,fontSize:fs-2}}>
+      <div>💧 {lang==="tr"?`Günde ${wellness.waterGoal} bardak su içmeyi hedefleyin`:`Aim for ${wellness.waterGoal} glasses of water daily`}</div>
+      <div>😴 {lang==="tr"?"7-9 saat kaliteli uyku sağlığınız için kritiktir":"7-9 hours of quality sleep is critical for health"}</div>
+      <div>🏃 {lang==="tr"?"Haftada en az 150 dakika orta düzey egzersiz":"At least 150 min moderate exercise per week"}</div>
+      <div>🥗 {lang==="tr"?"Günde 5 porsiyon meyve ve sebze tüketin":"5 servings of fruit & vegetables daily"}</div>
+      <div>🧘 {lang==="tr"?"Günde 10 dakika meditasyon stres azaltır":"10 min meditation daily reduces stress"}</div>
+    </div>
+  </div>
+  {/* Health Score */}
+  <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🏆 {t.hScore}</div>
   <div style={{...CS,padding:14,border:`1px solid ${ac}33`}}>
     <div style={{textAlign:"center",marginBottom:10}}>
-      <div style={{fontSize:fs-1,color:mt,marginBottom:4}}>{t.hScore}</div>
       <div style={{fontSize:fs+16,fontWeight:800,color:hscore>70?sc:hscore>40?ac:hscore>0?dg:mt}}>{hscore||"—"}<span style={{fontSize:fs-1,color:mt,fontWeight:400}}>/100</span></div>
       <div style={{fontSize:fs,fontWeight:600,color:hscore>80?sc:hscore>60?ac:hscore>40?"#f0a030":hscore>0?dg:mt,marginTop:2}}>
         {hscore>80?(lang==="tr"?"Mükemmel 🌟":"Excellent 🌟"):hscore>60?(lang==="tr"?"İyi 💪":"Good 💪"):hscore>40?(lang==="tr"?"Orta ⚠️":"Average ⚠️"):hscore>0?(lang==="tr"?"Dikkat! 🔴":"Attention! 🔴"):(lang==="tr"?"Veri girin":"Enter data")}
@@ -1246,7 +1353,92 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   </div>
 </div>);};
 
-const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}><span style={{fontWeight:700,fontSize:fs+2}}>🪪 {t.pCard}</span><div style={CS}>{[["fName","name","text"],["bDate","birthDate","date"],["bType","bloodType","text"],["allrg","allergies","text"],["chron","chronic","text"],["insu","insu","text"],["emCon","emContact","text"],["","emPhone","tel"]].map(([label,field,type])=>(<div key={field} style={{marginBottom:8}}><div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||field}{field==="birthDate"&&patAge?` (${patAge} ${t.age})`:""}</div><input type={type} value={pat[field]||""} onChange={e=>setPat(p=>({...p,[field]:e.target.value}))} placeholder={t[label]||field} style={{...IS,padding:"8px 10px"}}/></div>))}</div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700}}>{t.diag} / {t.lab}</span><button onClick={()=>setShowAddRec(true)} style={{...BP,padding:"6px 14px"}}>+ {t.add}</button></div>{records.map(r=>(<div key={r.id} style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,color:ac}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-2,color:mt}}>{r.date}</span></div><div style={{fontSize:fs-1,color:mt}}>{r.doctor} — {r.hospital}</div><div style={{marginTop:4}}>{r.content}</div><button onClick={()=>toTrash("record",r)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:13,marginTop:4}}>🗑️ {t.del}</button></div>))}{showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><textarea placeholder="İçerik / Sonuç" value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"vertical"}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newRec.content){setRecords(p=>[...p,{id:Date.now(),...newRec}]);setNewRec({type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""});setShowAddRec(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddRec(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}</div>);
+const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
+  <span style={{fontWeight:700,fontSize:fs+2}}>🪪 {t.pCard}</span>
+  {/* Kimlik Bilgileri */}
+  <div style={{...CS,border:`1px solid ${ac}33`}}>
+    <div style={{fontWeight:700,color:ac,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>👤 {lang==="tr"?"Kimlik Bilgileri":"Identity Info"}</div>
+    {[["fName","name","text"],["bDate","birthDate","date"],["bType","bloodType","text"]].map(([label,field,type])=>(
+      <div key={field} style={{marginBottom:8}}>
+        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||field}{field==="birthDate"&&patAge?` (${patAge} ${t.age})`:""}</div>
+        <input type={type} value={pat[field]||""} onChange={e=>setPat(p=>({...p,[field]:e.target.value}))} placeholder={t[label]||field} style={{...IS,padding:"8px 10px"}}/>
+      </div>
+    ))}
+  </div>
+  {/* Vücut Ölçüleri — Sağlık ile senkronize */}
+  <div style={{...CS,border:`1px solid ${sc}33`,background:`${sc}05`}}>
+    <div style={{fontWeight:700,color:sc,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>📏 {lang==="tr"?"Vücut Ölçüleri":"Body Measurements"} <span style={{fontSize:fs-4,color:mt,fontWeight:400}}>↔ {t.health}</span></div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+      <div>
+        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>📏 {t.ht} ({t.cm})</div>
+        <input type="number" value={hd.height||""} onChange={e=>setHd(p=>({...p,height:Number(e.target.value)}))} placeholder={t.ht} style={{...IS,padding:"8px 10px"}}/>
+      </div>
+      <div>
+        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>⚖️ {t.wt} ({t.kg})</div>
+        <input type="number" value={hd.weight||""} onChange={e=>setHd(p=>({...p,weight:Number(e.target.value)}))} placeholder={t.wt} style={{...IS,padding:"8px 10px"}}/>
+      </div>
+    </div>
+    {bmi>0&&<div style={{padding:"6px 10px",borderRadius:8,background:bmi>=18.5&&bmi<25?`${sc}15`:`${dg}15`,color:bmi>=18.5&&bmi<25?sc:dg,fontSize:fs-2,fontWeight:600,textAlign:"center",marginBottom:6}}>BMI: {bmi} — {bmi<18.5?(lang==="tr"?"Zayıf":"Underweight"):bmi<25?(lang==="tr"?"Normal":"Normal"):bmi<30?(lang==="tr"?"Fazla kilolu":"Overweight"):(lang==="tr"?"Obez":"Obese")}</div>}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      <div>
+        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>❤️ {t.pulse} ({t.bpm})</div>
+        <input type="number" value={hd.pulse||""} onChange={e=>setHd(p=>({...p,pulse:Number(e.target.value)}))} placeholder={t.pulse} style={{...IS,padding:"8px 10px"}}/>
+      </div>
+      <div>
+        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>🩺 {t.bp}</div>
+        <div style={{display:"flex",gap:4,alignItems:"center"}}>
+          <input type="number" value={hd.bpS||""} placeholder="SYS" onChange={e=>setHd({...hd,bpS:Number(e.target.value)})} style={{...IS,padding:"8px 4px",textAlign:"center",fontWeight:700}}/>
+          <span style={{color:mt}}>/</span>
+          <input type="number" value={hd.bpD||""} placeholder="DIA" onChange={e=>setHd({...hd,bpD:Number(e.target.value)})} style={{...IS,padding:"8px 4px",textAlign:"center",fontWeight:700}}/>
+        </div>
+      </div>
+    </div>
+  </div>
+  {/* Sağlık Durumu */}
+  <div style={{...CS,border:`1px solid ${dg}33`,background:`${dg}05`}}>
+    <div style={{fontWeight:700,color:dg,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>⚠️ {lang==="tr"?"Sağlık Durumu":"Health Conditions"}</div>
+    {[["allrg","allergies","text"],["chron","chronic","text"]].map(([label,field,type])=>(
+      <div key={field} style={{marginBottom:8}}>
+        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||field}</div>
+        <input type={type} value={pat[field]||""} onChange={e=>setPat(p=>({...p,[field]:e.target.value}))} placeholder={lang==="tr"?(field==="allergies"?"Örn: Penisilin, fıstık":"Örn: Diyabet, hipertansiyon"):(field==="allergies"?"e.g. Penicillin, nuts":"e.g. Diabetes, hypertension")} style={{...IS,padding:"8px 10px"}}/>
+      </div>
+    ))}
+  </div>
+  {/* Kullandığı İlaçlar — meds state'den okuyor */}
+  <div style={{...CS,border:`1px solid ${ac}33`,background:`${ac}05`}}>
+    <div style={{fontWeight:700,color:ac,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <span style={{display:"flex",alignItems:"center",gap:6}}>💊 {lang==="tr"?"Kullandığı İlaçlar":"Current Medications"} <span style={{fontSize:fs-4,color:mt,fontWeight:400}}>↔ {t.meds}</span></span>
+      <button onClick={()=>goTo("meds")} style={{...BP,padding:"4px 10px",fontSize:fs-2}}>+ {t.add}</button>
+    </div>
+    {meds.length===0?<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:8}}>{t.noM}</div>:
+      <div style={{display:"flex",flexDirection:"column",gap:5}}>
+        {meds.map(m=><div key={m.id} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 8px",borderRadius:6,background:dark?"#0d1520":"#f8fafc",fontSize:fs-2}}>
+          <span>💊</span>
+          <span style={{fontWeight:600,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</span>
+          <span style={{color:mt}}>{m.dose}</span>
+          <span style={{color:ac,fontWeight:600}}>{m.time}</span>
+        </div>)}
+      </div>
+    }
+  </div>
+  {/* Sigorta & Acil İletişim */}
+  <div style={{...CS,border:`1px solid ${bd}`}}>
+    <div style={{fontWeight:700,color:mt,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>📋 {lang==="tr"?"Sigorta & Acil":"Insurance & Emergency"}</div>
+    {[["insu","insu","text"],["emCon","emContact","text"],["","emPhone","tel"]].map(([label,field,type])=>(
+      <div key={field} style={{marginBottom:8}}>
+        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||(field==="emPhone"?(lang==="tr"?"Acil Telefon":"Emergency Phone"):field)}</div>
+        <input type={type} value={pat[field]||""} onChange={e=>setPat(p=>({...p,[field]:e.target.value}))} placeholder={t[label]||field} style={{...IS,padding:"8px 10px"}}/>
+      </div>
+    ))}
+  </div>
+  {/* Tıbbi Kayıtlar */}
+  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <span style={{fontWeight:700}}>📋 {t.diag} / {t.lab}</span>
+    <button onClick={()=>setShowAddRec(true)} style={{...BP,padding:"6px 14px"}}>+ {t.add}</button>
+  </div>
+  {records.map(r=>(<div key={r.id} style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,color:ac}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-2,color:mt}}>{r.date}</span></div><div style={{fontSize:fs-1,color:mt}}>{r.doctor} — {r.hospital}</div><div style={{marginTop:4,wordBreak:"break-word"}}>{r.content}</div><button onClick={()=>toTrash("record",r)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:13,marginTop:4}}>🗑️ {t.del}</button></div>))}
+  {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><textarea placeholder={lang==="tr"?"İçerik / Sonuç":"Content / Result"} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newRec.content){setRecords(p=>[...p,{id:Date.now(),...newRec}]);setNewRec({type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""});setShowAddRec(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddRec(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
+</div>);
 
 const renderNotes=()=>{const sorted=[...notes].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));return(<div style={{display:"flex",flexDirection:"column",gap:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:fs+2}}>📝 {t.notes}</span><button onClick={()=>setNotes(p=>[{id:Date.now(),title:"",content:"",color:NCOL[Math.floor(Math.random()*8)],pinned:false},...p])} style={{...BP,padding:"7px 14px"}}>+ {t.nNote}</button></div>{sorted.length===0&&<div style={{textAlign:"center",color:mt,padding:24}}>{t.noN}</div>}<div style={{display:"grid",gridTemplateColumns:"1fr",gap:8}}>{sorted.map(n=>(<div key={n.id} style={{background:dark?n.color+"18":n.color,borderRadius:12,padding:10,position:"relative",border:editNote===n.id?"2px solid "+ac:"1px solid "+bd,overflow:"hidden",minWidth:0,maxWidth:"100%"}}>{n.pinned&&<span style={{position:"absolute",top:4,right:6,fontSize:14}}>📌</span>}{editNote===n.id?<div style={{display:"flex",flexDirection:"column",gap:4}}><input value={n.title} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,title:e.target.value}:x))} placeholder={t.nNote} style={{...IS,fontWeight:700,background:"transparent",border:"none",padding:0}}/><textarea value={n.content} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,content:e.target.value}:x))} onInput={autoResize} rows={Math.max(4,Math.ceil((n.content||"").length/20))} style={{...IS,background:"transparent",border:"none",padding:0,resize:"none",minHeight:80,width:"100%",wordBreak:"break-word",overflowWrap:"break-word",direction:lang==="ar"?"rtl":"ltr"}}/><div style={{display:"flex",gap:3,marginTop:4}}>{NCOL.map(c=><button key={c} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,color:c}:x))} style={{width:18,height:18,borderRadius:9,background:c,border:n.color===c?"2px solid "+ac:"2px solid transparent",cursor:"pointer"}}/>)}</div><button onClick={()=>{const note=notes.find(x=>x.id===n.id);if(note&&!note.title?.trim()&&!note.content?.trim()){setNotes(p=>p.filter(x=>x.id!==n.id));}setEditNote(null);}} style={{...BP,padding:"4px 10px",marginTop:4}}>✓</button></div>:<div onClick={()=>setEditNote(n.id)} style={{cursor:"pointer"}}><div style={{fontWeight:700,marginBottom:3,color:dark?tc:"#333"}}>{n.title||t.nNote}</div><div style={{fontSize:fs-2,color:dark?mt:"#555",whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"break-word"}}>{n.content}</div></div>}<div style={{display:"flex",gap:4,marginTop:6}}><button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} style={{background:"none",border:"none",cursor:"pointer",fontSize:14}}>📌</button><button onClick={()=>copyTxt(n.content)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14}}>📋</button><SpeakBtn text={n.content}/><button onClick={()=>toTrash("note",n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,color:dg}}>🗑️</button></div></div>))}</div><div style={{fontWeight:700,marginTop:4}}>{t.extA}</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{noteApps.map(a=><a key={a.name} href={a.url} target="_blank" rel="noopener noreferrer" style={{...CS,display:"flex",alignItems:"center",gap:6,textDecoration:"none",color:tc,padding:"8px 12px"}}><span style={{fontSize:18}}>{a.icon}</span><span style={{fontSize:fs-1}}>{a.name}</span></a>)}<button onClick={()=>setShowAddNApp(true)} style={{...CS,border:"2px dashed "+ac+"44",cursor:"pointer",padding:"8px 12px",color:ac}}>+ {t.addApp}</button></div>{showAddNApp&&<div style={{...CS,border:"2px solid "+ac}}><input placeholder="App Name" value={newNApp.name} onChange={e=>setNewNApp({...newNApp,name:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder="https://..." value={newNApp.url} onChange={e=>setNewNApp({...newNApp,url:e.target.value})} style={{...IS,marginBottom:6}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newNApp.name&&newNApp.url){setNoteApps(p=>[...p,newNApp]);setNewNApp({name:"",url:"",icon:"📱"});setShowAddNApp(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddNApp(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}</div>);};
 
@@ -1260,10 +1452,10 @@ const renderContacts=()=>{const filtered=catF==="all"?contacts:contacts.filter(c
 </div>
 <select value={newC.category} onChange={e=>setNewC({...newC,category:e.target.value})} style={{...IS,marginBottom:6}}><option value="doctor">👨‍⚕️ {lang==="tr"?"Doktor":"Doctor"}</option><option value="taxi">🚕 {lang==="tr"?"Taksi":"Taxi"}</option><option value="special">⭐ {lang==="tr"?"Özel":"Special"}</option><option value="emergency">🚨 {lang==="tr"?"Acil":"Emergency"}</option></select><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newC.name&&newC.phone){const fullPhone=newC.countryCode+" "+newC.phone;setContacts(p=>[...p,{id:Date.now(),name:newC.name,phone:fullPhone,category:newC.category,note:""}]);setNewC({name:"",phone:"",countryCode:"+90",category:"doctor",note:""});setShowAddC(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddC(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}</div>);};
 
-const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}><span style={{fontWeight:700,fontSize:fs+2}}>👥 {t.community}</span><div style={{padding:"6px 12px",borderRadius:10,background:`${dg}08`,fontSize:fs-1,color:dg}}>{t.warn}</div><div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:"none",overflowY:"visible"}}>{msgs.map(m=>(<div key={m.id} style={CS}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontWeight:700,color:ac}}>{m.user}</span><span style={{fontSize:fs-2,color:mt}}>{m.time}</span></div><div style={{marginBottom:6,wordBreak:"break-word",overflowWrap:"break-word"}}>{m.text}</div><div style={{display:"flex",gap:6}}><button onClick={()=>setMsgs(p=>p.map(x=>x.id===m.id?{...x,likes:[...(x.likes_arr||[]),pat.name||"Ben"].length}:x))} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",color:tc}}>❤️ {m.likes}</button><button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>📋</button><SpeakBtn text={m.text}/>{(m.user===(pat.name||"Ben"))&&<><button onClick={()=>{const nv=prompt(lang==="tr"?"Mesajı düzenle:":"Edit message:",m.text);if(nv!==null)setMsgs(p=>p.map(x=>x.id===m.id?{...x,text:nv,edited:true}:x));}} style={{background:"none",border:`1px solid ${ac}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:ac}}>✏️</button><button onClick={()=>setMsgs(p=>p.filter(x=>x.id!==m.id))} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:dg}}>🗑️</button></>}</div></div>))}</div><div style={{display:"flex",gap:6,position:"relative"}}><MicBtn onResult={v=>setMsgIn(v)} currentValue={msgIn}/><button onClick={()=>setShowEmoji(!showEmoji)} style={{...BP,padding:"8px 12px",fontSize:18}}>😊</button><input value={msgIn} onChange={e=>setMsgIn(e.target.value)} placeholder={t.wr} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter"&&msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn,likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}}/><button onClick={()=>{if(msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn,likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}} style={BP}>{t.send}</button>{showEmoji&&<EmojiPicker onPick={e=>setMsgIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}</div></div>);
+const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}><span style={{fontWeight:700,fontSize:fs+2}}>👥 {t.community}</span><div style={{padding:"6px 12px",borderRadius:10,background:`${dg}08`,fontSize:fs-1,color:dg}}>{t.warn}</div><div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:"none",overflowY:"visible"}}>{msgs.map(m=>(<div key={m.id} className="msg-card" style={CS}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontWeight:700,color:ac}}>{m.user}</span><span style={{fontSize:fs-2,color:mt}}>{m.time}</span></div><div style={{marginBottom:6,wordBreak:"break-word",overflowWrap:"break-word"}}>{m.text}</div><div style={{display:"flex",gap:6}}><button onClick={()=>setMsgs(p=>p.map(x=>x.id===m.id?{...x,likes:[...(x.likes_arr||[]),pat.name||"Ben"].length}:x))} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",color:tc}}>❤️ {m.likes}</button><button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>📋</button><SpeakBtn text={m.text}/>{(m.user===(pat.name||"Ben"))&&<><button onClick={()=>{const nv=prompt(lang==="tr"?"Mesajı düzenle:":"Edit message:",m.text);if(nv!==null)setMsgs(p=>p.map(x=>x.id===m.id?{...x,text:nv,edited:true}:x));}} style={{background:"none",border:`1px solid ${ac}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:ac}}>✏️</button><button onClick={()=>setMsgs(p=>p.filter(x=>x.id!==m.id))} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:dg}}>🗑️</button></>}</div></div>))}</div><div style={{display:"flex",gap:6,position:"relative"}}><MicBtn onResult={v=>setMsgIn(v)} currentValue={msgIn}/><button onClick={()=>setShowEmoji(!showEmoji)} style={{...BP,padding:"8px 12px",fontSize:18}}>😊</button><input value={msgIn} onChange={e=>setMsgIn(e.target.value)} placeholder={t.wr} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter"&&msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn,likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}}/><button onClick={()=>{if(msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn,likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}} style={BP}>{t.send}</button>{showEmoji&&<EmojiPicker onPick={e=>setMsgIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}</div></div>);
 
 const q1Dynamic=pat.name?`${pat.name.split(" ")[0]}, ${t.q1.toLowerCase()} ${lang==="tr"?"Umarım iyisindir 💙":"Hope you are well 💙"}`:t.q1;
-const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}><div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}</div><div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>{chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}{chatM.map((m,i)=>(<div key={i} style={{...CS,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc}}>{m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}<div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"break-word"}}>{m.text}</div><div style={{display:"flex",gap:6,marginTop:6}}>{m.role==="assistant"&&<><button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:tc}}>📋</button><SpeakBtn text={m.text}/></>}<button onClick={()=>setChatM(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:dg}}>🗑️</button></div></div>))}{chatL&&<div style={{...CS,alignSelf:"flex-start"}}><span style={{animation:"pulse 1s infinite"}}>● </span><span style={{animation:"pulse 1s infinite .2s"}}>● </span><span style={{animation:"pulse 1s infinite .4s"}}>●</span></div>}</div><div style={{display:"flex",gap:6,flexShrink:0,position:"relative"}}><MicBtn onResult={v=>setChatIn(v)} currentValue={chatIn}/><button onClick={()=>setShowEmoji(!showEmoji)} style={{...BP,padding:"8px 12px",fontSize:18}}>😊</button><input value={chatIn} onChange={e=>setChatIn(e.target.value)} placeholder={t.wr} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter")sendChat();}}/><button onClick={()=>sendChat()} disabled={chatL} style={BP}>{t.send}</button>{showEmoji&&<EmojiPicker onPick={e=>setChatIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}</div></div>);
+const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}><div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}</div><div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>{chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}{chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc}}>{m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}<div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"break-word"}}>{m.text}</div><div style={{display:"flex",gap:6,marginTop:6}}>{m.role==="assistant"&&<><button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:tc}}>📋</button><SpeakBtn text={m.text}/></>}<button onClick={()=>setChatM(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:dg}}>🗑️</button></div></div>))}{chatL&&<div style={{...CS,alignSelf:"flex-start"}}><span style={{animation:"pulse 1s infinite"}}>● </span><span style={{animation:"pulse 1s infinite .2s"}}>● </span><span style={{animation:"pulse 1s infinite .4s"}}>●</span></div>}</div><div style={{display:"flex",gap:6,flexShrink:0,position:"relative"}}><MicBtn onResult={v=>setChatIn(v)} currentValue={chatIn}/><button onClick={()=>setShowEmoji(!showEmoji)} style={{...BP,padding:"8px 12px",fontSize:18}}>😊</button><input value={chatIn} onChange={e=>setChatIn(e.target.value)} placeholder={t.wr} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter")sendChat();}}/><button onClick={()=>sendChat()} disabled={chatL} style={BP}>{t.send}</button>{showEmoji&&<EmojiPicker onPick={e=>setChatIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}</div></div>);
 
 // Privacy Policy page
 const renderPrivacy=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -1309,15 +1501,24 @@ const renderAbout=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
 const renderAdmin=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}>
   <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
     <div style={{width:36,height:36,borderRadius:12,background:`linear-gradient(135deg,#f59e0b,#f97316)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>💬</div>
-    <div><div style={{fontWeight:700,fontSize:fs+1}}>{t.adminCh}</div><div style={{fontSize:fs-2,color:sc}}>● Online</div></div>
+    <div style={{flex:1,minWidth:0}}>
+      <div style={{fontWeight:700,fontSize:fs+1}}>{t.adminCh}</div>
+      <div style={{fontSize:fs-3,color:sc}}>● Online • 🔒 {lang==="tr"?"Özel Kanal":"Private Channel"}</div>
+    </div>
   </div>
+  {/* Privacy Notice */}
+  <div style={{padding:"6px 10px",borderRadius:8,background:`${ac}08`,border:`1px solid ${ac}22`,fontSize:fs-3,color:mt,display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+    <span>🔒</span>
+    <span>{lang==="tr"?"Bu kanaldaki mesajlar sadece size ve AILVIE destek ekibine görünür. Başka kullanıcılar göremez.":"Messages in this channel are visible only to you and AILVIE support. Other users cannot see them."}</span>
+  </div>
+  <div style={{fontSize:fs-4,color:mt,textAlign:"center",flexShrink:0}}>ID: <span style={{fontFamily:"monospace"}}>{userId}</span></div>
   <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>
-    {adminMsgs.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><span style={{fontSize:40}}>💬</span><div style={{marginTop:8,color:mt}}>{t.adminWelcome||"Merhaba! Size nasıl yardımcı olabilirim?"}</div></div>}
-    {adminMsgs.map((m,i)=>(<div key={i} style={{...CS,maxWidth:"85%",alignSelf:m.from==="user"?"flex-end":"flex-start",background:m.from==="user"?`linear-gradient(135deg,#f59e0b,#f97316)`:cd,color:m.from==="user"?"#fff":tc,animation:"slideD .3s"}}><div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"break-word",fontSize:fs}}>{m.text}{m.edited&&<span style={{fontSize:fs-4,color:mt,marginLeft:4}}>(düzenlendi)</span>}</div><div style={{display:"flex",gap:4,marginTop:3}}>{m.from==="user"&&<button onClick={()=>setAdminMsgs(p=>p.filter(x=>x!==m))} style={{background:"none",border:"none",fontSize:11,color:dg,cursor:"pointer",padding:0}}>🗑️</button>}</div><div style={{fontSize:fs-3,color:m.from==="user"?"rgba(255,255,255,.7)":mt,marginTop:4}}>{m.time}</div></div>))}
+    {adminMsgs.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><span style={{fontSize:40}}>💬</span><div style={{marginTop:8,color:mt}}>{t.adminWelcome||(lang==="tr"?"Merhaba! Size nasıl yardımcı olabilirim?":"Hello! How can I help you?")}</div></div>}
+    {adminMsgs.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:m.from==="user"?"flex-end":"flex-start",background:m.from==="user"?`linear-gradient(135deg,#f59e0b,#f97316)`:cd,color:m.from==="user"?"#fff":tc,animation:"slideD .3s"}}><div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.text}{m.edited&&<span style={{fontSize:fs-4,color:mt,marginLeft:4}}>({lang==="tr"?"düzenlendi":"edited"})</span>}</div><div style={{display:"flex",gap:4,marginTop:3}}>{m.from==="user"&&<button onClick={()=>setAdminMsgs(p=>p.filter(x=>x!==m))} style={{background:"none",border:"none",fontSize:11,color:m.from==="user"?"#fff":dg,cursor:"pointer",padding:0,opacity:0.7}}>🗑️</button>}</div><div style={{fontSize:fs-3,color:m.from==="user"?"rgba(255,255,255,.7)":mt,marginTop:4}}>{m.time}</div></div>))}
   </div>
   <div style={{display:"flex",gap:6,flexShrink:0}}>
-    <textarea value={adminIn} onChange={e=>setAdminIn(e.target.value)} onInput={autoResize} placeholder={t.wr} style={{...IS,flex:1,minHeight:36,maxHeight:150,resize:"none",overflowY:"auto"}} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(adminIn.trim()){setAdminMsgs(p=>[...p,{from:"user",text:adminIn.trim(),time:now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}]);const msg=adminIn.trim();setAdminIn("");setAdminMsgs(p=>[...p,{from:"system",text:(lang==="tr"?"✅ Mesajınız kaydedildi. AILVIE ekibi en kısa sürede yanıt verecektir.":"✅ Message saved. AILVIE team will respond shortly."),time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}]);}}}}/>
-    <button onClick={()=>{if(adminIn.trim()){setAdminMsgs(p=>[...p,{from:"user",text:adminIn.trim(),time:now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}]);const msg=adminIn.trim();setAdminIn("");setAdminMsgs(p=>[...p,{from:"system",text:(lang==="tr"?"✅ Mesajınız kaydedildi. AILVIE ekibi en kısa sürede yanıt verecektir.":"✅ Message saved. AILVIE team will respond shortly."),time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}]);}}} style={{...BP,background:`linear-gradient(135deg,#f59e0b,#f97316)`,padding:"8px 14px"}}>{t.send}</button>
+    <textarea value={adminIn} onChange={e=>setAdminIn(e.target.value)} onInput={autoResize} placeholder={t.wr} style={{...IS,flex:1,minHeight:36,maxHeight:150,resize:"none",overflowY:"auto"}} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(adminIn.trim()){const ts=now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});setAdminMsgs(p=>[...p,{from:"user",text:adminIn.trim(),time:ts}]);setAdminIn("");setTimeout(()=>setAdminMsgs(p=>[...p,{from:"system",text:(lang==="tr"?"✅ Mesajınız alındı (Ticket #"+userId.slice(-6)+"). AILVIE ekibi en kısa sürede size özel olarak yanıt verecektir.":"✅ Message received (Ticket #"+userId.slice(-6)+"). AILVIE team will respond privately."),time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}]),300);}}}}/>
+    <button onClick={()=>{if(adminIn.trim()){const ts=now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});setAdminMsgs(p=>[...p,{from:"user",text:adminIn.trim(),time:ts}]);setAdminIn("");setTimeout(()=>setAdminMsgs(p=>[...p,{from:"system",text:(lang==="tr"?"✅ Mesajınız alındı (Ticket #"+userId.slice(-6)+"). AILVIE ekibi en kısa sürede size özel olarak yanıt verecektir.":"✅ Message received (Ticket #"+userId.slice(-6)+"). AILVIE team will respond privately."),time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}]),300);}}} style={{...BP,background:`linear-gradient(135deg,#f59e0b,#f97316)`,padding:"8px 14px"}}>{t.send}</button>
   </div>
 </div>);
 
@@ -1456,6 +1657,9 @@ return (
       textarea{min-height:36px;max-height:150px;overflow-y:auto;transition:height 0.1s}
       @keyframes scanLine{0%{top:10%}50%{top:85%}100%{top:10%}}
       *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;word-wrap:break-word;overflow-wrap:break-word}
+      .msg-card{max-width:100%;overflow-wrap:anywhere;word-break:break-word;hyphens:auto}
+      .msg-card *{max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+      textarea,input{max-width:100%;word-break:break-word;overflow-wrap:anywhere}
       html{height:100%;height:100dvh}
       body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;overscroll-behavior:none}
       #root{height:100%;height:100dvh}
