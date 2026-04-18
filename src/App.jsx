@@ -68,15 +68,76 @@ tr:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#E30A17"/><circle
 en:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#012169"/><path d="M0,0L30,20M30,0L0,20" stroke="#fff" strokeWidth="3.5"/><path d="M0,0L30,20M30,0L0,20" stroke="#C8102E" strokeWidth="2"/><path d="M15,0V20M0,10H30" stroke="#fff" strokeWidth="6"/><path d="M15,0V20M0,10H30" stroke="#C8102E" strokeWidth="3.5"/></svg>,
 de:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#000"/><rect y="7" width="30" height="6" fill="#DD0000"/><rect y="13" width="30" height="7" fill="#FFCC00"/></svg>,
 ru:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#fff"/><rect y="7" width="30" height="6" fill="#0039A6"/><rect y="13" width="30" height="7" fill="#D52B1E"/></svg>,
-zh:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#DE2910"/><polygon points="5,3 5.9,5.8 3,4.2 7,4.2 4.1,5.8" fill="#FFDE00"/><polygon points="10,1.5 10.4,2.7 9.2,2 10.8,2 9.6,2.7" fill="#FFDE00"/><polygon points="12,3.5 12.4,4.7 11.2,4 12.8,4 11.6,4.7" fill="#FFDE00"/><polygon points="12,6.5 12.4,7.7 11.2,7 12.8,7 11.6,7.7" fill="#FFDE00"/><polygon points="10,8.5 10.4,9.7 9.2,9 10.8,9 9.6,9.7" fill="#FFDE00"/></svg>,
+zh:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#DE2910"/><polygon points="5,3 5.9,5.8 3,4.2 7,4.2 4.1,5.8" fill="#FFDE00"/></svg>,
+cn:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#DE2910"/><polygon points="5,3 5.9,5.8 3,4.2 7,4.2 4.1,5.8" fill="#FFDE00"/></svg>,
 hi:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#FF9933"/><rect y="7" width="30" height="6" fill="#fff"/><rect y="13" width="30" height="7" fill="#138808"/><circle cx="15" cy="10" r="2.5" fill="none" stroke="#000080" strokeWidth=".5"/></svg>,
+in:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#FF9933"/><rect y="7" width="30" height="6" fill="#fff"/><rect y="13" width="30" height="7" fill="#138808"/><circle cx="15" cy="10" r="2.5" fill="none" stroke="#000080" strokeWidth=".5"/></svg>,
 nl:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#AE1C28"/><rect y="7" width="30" height="6" fill="#fff"/><rect y="13" width="30" height="7" fill="#21468B"/></svg>,
 es:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="5" fill="#AA151B"/><rect y="5" width="30" height="10" fill="#F1BF00"/><rect y="15" width="30" height="5" fill="#AA151B"/></svg>,
-ar:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#006C35"/><rect x="0" y="0" width="7" height="20" fill="#fff"/><text x="18" y="13" fontSize="7" fill="#fff" fontFamily="serif">لا</text></svg>,
+ar:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#006C35"/><rect x="0" y="0" width="7" height="20" fill="#fff"/></svg>,
 us:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#B22234"/><rect y="1.5" width="30" height="1.5" fill="#fff"/><rect y="4.5" width="30" height="1.5" fill="#fff"/><rect y="7.5" width="30" height="1.5" fill="#fff"/><rect y="10.5" width="30" height="1.5" fill="#fff"/><rect y="13.5" width="30" height="1.5" fill="#fff"/><rect y="16.5" width="30" height="1.5" fill="#fff"/><rect width="12" height="10.5" fill="#3C3B6E"/></svg>,
+ca:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#fff"/><rect width="8" height="20" fill="#FF0000"/><rect x="22" width="8" height="20" fill="#FF0000"/><polygon points="15,5 16,8 19,7 17,10 19,13 16,12 15,15 14,12 11,13 13,10 11,7 14,8" fill="#FF0000"/></svg>,
 fr:<svg viewBox="0 0 30 20"><rect x="0" width="10" height="20" fill="#002395"/><rect x="10" width="10" height="20" fill="#fff"/><rect x="20" width="10" height="20" fill="#ED2939"/></svg>,
 gb:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#012169"/><path d="M0,0L30,20M30,0L0,20" stroke="#fff" strokeWidth="3.5"/><path d="M0,0L30,20M30,0L0,20" stroke="#C8102E" strokeWidth="2"/><path d="M15,0V20M0,10H30" stroke="#fff" strokeWidth="6"/><path d="M15,0V20M0,10H30" stroke="#C8102E" strokeWidth="3.5"/></svg>,
-sa:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#006C35"/><rect x="0" y="0" width="7" height="20" fill="#fff"/><text x="18" y="13" fontSize="7" fill="#fff" fontFamily="serif">لا</text></svg>
+sa:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#006C35"/></svg>,
+it:<svg viewBox="0 0 30 20"><rect x="0" width="10" height="20" fill="#009246"/><rect x="10" width="10" height="20" fill="#fff"/><rect x="20" width="10" height="20" fill="#CE2B37"/></svg>,
+jp:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="5" fill="#BC002D"/></svg>,
+kr:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="4" fill="#CD2E3A"/><path d="M15,6 a4,4 0 0 1 0,8 a2,2 0 0 1 0,-4 a2,2 0 0 0 0,-4" fill="#0047A0"/></svg>,
+br:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#009739"/><polygon points="15,3 27,10 15,17 3,10" fill="#FFCC29"/><circle cx="15" cy="10" r="3.5" fill="#002776"/></svg>,
+au:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#012169"/><rect width="15" height="10" fill="#012169"/><path d="M0,0L15,10M15,0L0,10" stroke="#fff" strokeWidth="2"/><path d="M0,0L15,10M15,0L0,10" stroke="#C8102E" strokeWidth="1"/><path d="M7.5,0V10M0,5H15" stroke="#fff" strokeWidth="3"/><path d="M7.5,0V10M0,5H15" stroke="#C8102E" strokeWidth="2"/></svg>,
+nz:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#012169"/><rect width="15" height="10" fill="#012169"/><path d="M0,0L15,10M15,0L0,10" stroke="#fff" strokeWidth="2"/><path d="M7.5,0V10M0,5H15" stroke="#fff" strokeWidth="3"/><path d="M7.5,0V10M0,5H15" stroke="#C8102E" strokeWidth="2"/></svg>,
+pl:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="10" fill="#fff"/><rect y="10" width="30" height="10" fill="#DC143C"/></svg>,
+se:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#006AA7"/><rect x="9" width="3" height="20" fill="#FECC00"/><rect y="8.5" width="30" height="3" fill="#FECC00"/></svg>,
+no:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#EF2B2D"/><rect x="8" width="3" height="20" fill="#fff"/><rect y="8.5" width="30" height="3" fill="#fff"/><rect x="9" width="1" height="20" fill="#002868"/><rect y="9.5" width="30" height="1" fill="#002868"/></svg>,
+fi:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#fff"/><rect x="8" width="4" height="20" fill="#003580"/><rect y="8" width="30" height="4" fill="#003580"/></svg>,
+dk:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#C8102E"/><rect x="8" width="3" height="20" fill="#fff"/><rect y="8.5" width="30" height="3" fill="#fff"/></svg>,
+ie:<svg viewBox="0 0 30 20"><rect x="0" width="10" height="20" fill="#169B62"/><rect x="10" width="10" height="20" fill="#fff"/><rect x="20" width="10" height="20" fill="#FF883E"/></svg>,
+pt:<svg viewBox="0 0 30 20"><rect x="0" width="12" height="20" fill="#006600"/><rect x="12" width="18" height="20" fill="#FF0000"/></svg>,
+gr:<svg viewBox="0 0 30 20"><rect width="30" height="2.2" fill="#0D5EAF"/><rect y="2.2" width="30" height="2.2" fill="#fff"/><rect y="4.4" width="30" height="2.2" fill="#0D5EAF"/><rect y="6.6" width="30" height="2.2" fill="#fff"/><rect y="8.8" width="30" height="2.2" fill="#0D5EAF"/><rect y="11" width="30" height="2.2" fill="#fff"/><rect y="13.2" width="30" height="2.2" fill="#0D5EAF"/><rect y="15.4" width="30" height="2.2" fill="#fff"/><rect y="17.6" width="30" height="2.4" fill="#0D5EAF"/><rect width="12" height="11" fill="#0D5EAF"/><rect x="5" width="2" height="11" fill="#fff"/><rect y="4.5" width="12" height="2" fill="#fff"/></svg>,
+eg:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#CE1126"/><rect y="7" width="30" height="6" fill="#fff"/><rect y="13" width="30" height="7" fill="#000"/></svg>,
+at:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#ED2939"/><rect y="7" width="30" height="6" fill="#fff"/><rect y="13" width="30" height="7" fill="#ED2939"/></svg>,
+ch:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#D52B1E"/><rect x="13" y="7" width="4" height="6" fill="#fff"/><rect x="11" y="9" width="8" height="2" fill="#fff"/></svg>,
+be:<svg viewBox="0 0 30 20"><rect x="0" width="10" height="20" fill="#000"/><rect x="10" width="10" height="20" fill="#FAE042"/><rect x="20" width="10" height="20" fill="#ED2939"/></svg>,
+cz:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="10" fill="#fff"/><rect y="10" width="30" height="10" fill="#D7141A"/><polygon points="0,0 15,10 0,20" fill="#11457E"/></svg>,
+sk:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#fff"/><rect y="7" width="30" height="6" fill="#0B4EA2"/><rect y="13" width="30" height="7" fill="#EE1C25"/></svg>,
+hu:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#CE2939"/><rect y="7" width="30" height="6" fill="#fff"/><rect y="13" width="30" height="7" fill="#477050"/></svg>,
+ro:<svg viewBox="0 0 30 20"><rect x="0" width="10" height="20" fill="#002B7F"/><rect x="10" width="10" height="20" fill="#FCD116"/><rect x="20" width="10" height="20" fill="#CE1126"/></svg>,
+bg:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#fff"/><rect y="7" width="30" height="6" fill="#00966E"/><rect y="13" width="30" height="7" fill="#D62612"/></svg>,
+ua:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="10" fill="#005BBB"/><rect y="10" width="30" height="10" fill="#FFD500"/></svg>,
+mx:<svg viewBox="0 0 30 20"><rect x="0" width="10" height="20" fill="#006847"/><rect x="10" width="10" height="20" fill="#fff"/><rect x="20" width="10" height="20" fill="#CE1126"/></svg>,
+id:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="10" fill="#FF0000"/><rect y="10" width="30" height="10" fill="#fff"/></svg>,
+th:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="4" fill="#ED1C24"/><rect y="4" width="30" height="4" fill="#fff"/><rect y="8" width="30" height="4" fill="#241D4F"/><rect y="12" width="30" height="4" fill="#fff"/><rect y="16" width="30" height="4" fill="#ED1C24"/></svg>,
+vn:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#DA251D"/><polygon points="15,5 16.5,9 20.5,9 17,11.5 18.5,15.5 15,13 11.5,15.5 13,11.5 9.5,9 13.5,9" fill="#FFFF00"/></svg>,
+my:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="1.4" fill="#CC0000"/><rect y="1.4" width="30" height="1.4" fill="#fff"/><rect y="2.8" width="30" height="1.4" fill="#CC0000"/><rect y="4.2" width="30" height="1.4" fill="#fff"/><rect y="5.6" width="30" height="1.4" fill="#CC0000"/><rect y="7" width="30" height="1.4" fill="#fff"/><rect y="8.4" width="30" height="1.4" fill="#CC0000"/><rect y="9.8" width="30" height="1.4" fill="#fff"/><rect y="11.2" width="30" height="1.4" fill="#CC0000"/><rect y="12.6" width="30" height="1.4" fill="#fff"/><rect y="14" width="30" height="1.4" fill="#CC0000"/><rect y="15.4" width="30" height="1.4" fill="#fff"/><rect y="16.8" width="30" height="3.2" fill="#CC0000"/><rect width="15" height="11.2" fill="#000066"/></svg>,
+sg:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="10" fill="#ED2939"/><rect y="10" width="30" height="10" fill="#fff"/></svg>,
+ph:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="10" fill="#0038A8"/><rect y="10" width="30" height="10" fill="#CE1126"/><polygon points="0,0 12,10 0,20" fill="#fff"/></svg>,
+pk:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#01411C"/><rect width="7" height="20" fill="#fff"/></svg>,
+bd:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#006A4E"/><circle cx="13" cy="10" r="5" fill="#F42A41"/></svg>,
+ir:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#239F40"/><rect y="7" width="30" height="6" fill="#fff"/><rect y="13" width="30" height="7" fill="#DA0000"/></svg>,
+iq:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#CE1126"/><rect y="7" width="30" height="6" fill="#fff"/><rect y="13" width="30" height="7" fill="#000"/></svg>,
+il:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#fff"/><rect y="3" width="30" height="2" fill="#0038B8"/><rect y="15" width="30" height="2" fill="#0038B8"/><polygon points="13,7 17,7 15,11" fill="none" stroke="#0038B8" strokeWidth=".8"/><polygon points="13,13 17,13 15,9" fill="none" stroke="#0038B8" strokeWidth=".8"/></svg>,
+jo:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#000"/><rect y="7" width="30" height="6" fill="#fff"/><rect y="13" width="30" height="7" fill="#007A3D"/><polygon points="0,0 11,10 0,20" fill="#CE1126"/></svg>,
+lb:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="5" fill="#EE161F"/><rect y="5" width="30" height="10" fill="#fff"/><rect y="15" width="30" height="5" fill="#EE161F"/></svg>,
+sy:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#CE1126"/><rect y="7" width="30" height="6" fill="#fff"/><rect y="13" width="30" height="7" fill="#000"/></svg>,
+ae:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#00732F"/><rect y="7" width="30" height="6" fill="#fff"/><rect y="13" width="30" height="7" fill="#000"/><rect width="8" height="20" fill="#FF0000"/></svg>,
+qa:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#8A1538"/><rect width="10" height="20" fill="#fff"/></svg>,
+kw:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#007A3D"/><rect y="7" width="30" height="6" fill="#fff"/><rect y="13" width="30" height="7" fill="#CE1126"/><polygon points="0,0 9,7 9,13 0,20" fill="#000"/></svg>,
+bh:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#CE1126"/><polygon points="0,0 10,0 6,3 10,5 6,7 10,9 6,11 10,13 6,15 10,17 6,19 10,20 0,20" fill="#fff"/></svg>,
+om:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#fff"/><rect y="7" width="30" height="6" fill="#CE1126"/><rect y="13" width="30" height="7" fill="#009739"/><rect width="10" height="20" fill="#CE1126"/></svg>,
+az:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#0092BC"/><rect y="7" width="30" height="6" fill="#E00034"/><rect y="13" width="30" height="7" fill="#00AF66"/></svg>,
+ge:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#fff"/><rect x="13" width="4" height="20" fill="#FF0000"/><rect y="8" width="30" height="4" fill="#FF0000"/></svg>,
+am:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#D90012"/><rect y="7" width="30" height="6" fill="#0033A0"/><rect y="13" width="30" height="7" fill="#F2A800"/></svg>,
+za:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#007A4D"/><polygon points="0,0 12,10 0,20" fill="#000"/><polygon points="0,3 10,10 0,17" fill="#FFB915"/><rect x="12" y="0" width="18" height="5" fill="#DE3831"/><rect x="12" y="15" width="18" height="5" fill="#002395"/><path d="M12,5 L30,5 L30,15 L12,15" fill="#fff"/></svg>,
+ma:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#C1272D"/><polygon points="15,6 16,10 19,10 16.5,12 17.5,15 15,13 12.5,15 13.5,12 11,10 14,10" fill="none" stroke="#006233" strokeWidth=".5"/></svg>,
+tn:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#E70013"/><circle cx="15" cy="10" r="5" fill="#fff"/><circle cx="15" cy="10" r="3" fill="#E70013"/></svg>,
+dz:<svg viewBox="0 0 30 20"><rect x="0" width="15" height="20" fill="#006233"/><rect x="15" width="15" height="20" fill="#fff"/><circle cx="14" cy="10" r="3" fill="#D21034"/></svg>,
+ng:<svg viewBox="0 0 30 20"><rect x="0" width="10" height="20" fill="#008751"/><rect x="10" width="10" height="20" fill="#fff"/><rect x="20" width="10" height="20" fill="#008751"/></svg>,
+ke:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="6" fill="#000"/><rect y="6" width="30" height="2" fill="#fff"/><rect y="8" width="30" height="4" fill="#BB0000"/><rect y="12" width="30" height="2" fill="#fff"/><rect y="14" width="30" height="6" fill="#006600"/></svg>,
+ag:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="6.7" fill="#75AADB"/><rect y="6.7" width="30" height="6.7" fill="#fff"/><rect y="13.4" width="30" height="6.6" fill="#75AADB"/></svg>,
+cl:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="10" fill="#fff"/><rect y="10" width="30" height="10" fill="#D52B1E"/><rect width="10" height="10" fill="#0039A6"/></svg>,
+co:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="10" fill="#FCD116"/><rect y="10" width="30" height="5" fill="#003893"/><rect y="15" width="30" height="5" fill="#CE1126"/></svg>,
+ve:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="6.7" fill="#FFCC00"/><rect y="6.7" width="30" height="6.7" fill="#00247D"/><rect y="13.4" width="30" height="6.6" fill="#CF142B"/></svg>,
+pe:<svg viewBox="0 0 30 20"><rect x="0" width="10" height="20" fill="#D91023"/><rect x="10" width="10" height="20" fill="#fff"/><rect x="20" width="10" height="20" fill="#D91023"/></svg>
 };
 const Flag=({code,size=20})=>{const k=code?.toLowerCase();const s=FlagSVG[k];return s?<span style={{display:"inline-block",width:size,height:Math.round(size*0.67),verticalAlign:"middle",borderRadius:2,overflow:"hidden",border:"1px solid rgba(255,255,255,0.2)",lineHeight:0}}>{React.cloneElement(s,{width:size,height:Math.round(size*0.67)})}</span>:<span style={{fontSize:size*0.6,fontWeight:700}}>{code?.toUpperCase()}</span>;};
 
@@ -150,6 +211,9 @@ const[perms,setPerms]=useState({notif:true,loc:true,mic:true,cam:false});
 // Meds + Alarms
 const[meds,setMeds]=useState([]);
 const[showAddMed,setShowAddMed]=useState(false);
+const[editMedId,setEditMedId]=useState(null);
+const[editApptId,setEditApptId]=useState(null);
+const[editRecId,setEditRecId]=useState(null);
 const[newMed,setNewMed]=useState({name:"",dose:"",time:"",startDate:"",alarmType:"both",count:30,timesPerDay:1,recurring:true});
 const WORD_TOPICS={
 health:[
@@ -568,6 +632,51 @@ const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0});
 const[editH,setEditH]=useState(null);
 const[tmpH,setTmpH]=useState("");
 const[wellness,setWellness]=useState({water:0,sleep:0,mood:0,steps:0,exercise:0,waterGoal:8,sleepGoal:8,stepsGoal:10000});
+const[stepAuto,setStepAuto]=useState(()=>{try{return localStorage.getItem("ailvie_step_auto")==="1";}catch{return false;}});
+const stepRef=React.useRef({last:0,baseSteps:0,count:0,lastMag:0});
+// Auto step counter via DeviceMotion
+useEffect(()=>{
+  if(!stepAuto)return;
+  if(typeof window==="undefined"||!window.DeviceMotionEvent)return;
+  const handler=(e)=>{
+    const a=e.accelerationIncludingGravity||e.acceleration;
+    if(!a)return;
+    const mag=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);
+    const now=Date.now();
+    // Detect step: peak above 12 m/s², at least 300ms since last
+    if(mag>12&&stepRef.current.lastMag<=12&&now-stepRef.current.last>300){
+      stepRef.current.last=now;
+      stepRef.current.count++;
+      if(stepRef.current.count%10===0){
+        setWellness(w=>({...w,steps:w.steps+10}));
+      }
+    }
+    stepRef.current.lastMag=mag;
+  };
+  // Request permission on iOS 13+
+  if(typeof DeviceMotionEvent.requestPermission==="function"){
+    DeviceMotionEvent.requestPermission().then(p=>{if(p==="granted")window.addEventListener("devicemotion",handler);}).catch(()=>{});
+  }else{
+    window.addEventListener("devicemotion",handler);
+  }
+  return()=>{try{window.removeEventListener("devicemotion",handler);}catch{}};
+},[stepAuto]);
+useEffect(()=>{try{localStorage.setItem("ailvie_step_auto",stepAuto?"1":"0");}catch{}},[stepAuto]);
+// Reset steps at midnight
+useEffect(()=>{
+  const check=()=>{try{
+    const lastDay=localStorage.getItem("ailvie_step_day");
+    const today=new Date().toDateString();
+    if(lastDay!==today){
+      setWellness(w=>({...w,steps:0}));
+      stepRef.current.count=0;
+      localStorage.setItem("ailvie_step_day",today);
+    }
+  }catch{}};
+  check();
+  const int=setInterval(check,60000);
+  return()=>clearInterval(int);
+},[]);
 
 // Notes
 const[notes,setNotes]=useState([]);
@@ -587,26 +696,75 @@ const[showAddC,setShowAddC]=useState(false);
 const[editContactId,setEditContactId]=useState(null);
 const[showCountryPicker,setShowCountryPicker]=useState(false);
 const COUNTRY_CODES=[
-  {code:"+90",emoji:"🇹🇷",flag:"tr",n:{tr:"Türkiye",en:"Turkiye",de:"Türkei",ru:"Турция",zh:"土耳其",hi:"तुर्की",nl:"Turkije",es:"Turquía",ar:"تركيا"}},
-  {code:"+1",emoji:"🇺🇸",flag:"us",n:{tr:"ABD",en:"USA",de:"USA",ru:"США",zh:"美国",hi:"अमेरिका",nl:"VS",es:"EE.UU.",ar:"أمريكا"}},
-  {code:"+44",emoji:"🇬🇧",flag:"gb",n:{tr:"İngiltere",en:"UK",de:"Großbritannien",ru:"Великобритания",zh:"英国",hi:"ब्रिटेन",nl:"VK",es:"Reino Unido",ar:"بريطانيا"}},
-  {code:"+49",emoji:"🇩🇪",flag:"de",n:{tr:"Almanya",en:"Germany",de:"Deutschland",ru:"Германия",zh:"德国",hi:"जर्मनी",nl:"Duitsland",es:"Alemania",ar:"ألمانيا"}},
-  {code:"+33",emoji:"🇫🇷",flag:"fr",n:{tr:"Fransa",en:"France",de:"Frankreich",ru:"Франция",zh:"法国",hi:"फ़्रांस",nl:"Frankrijk",es:"Francia",ar:"فرنسا"}},
-  {code:"+7",emoji:"🇷🇺",flag:"ru",n:{tr:"Rusya",en:"Russia",de:"Russland",ru:"Россия",zh:"俄罗斯",hi:"रूस",nl:"Rusland",es:"Rusia",ar:"روسيا"}},
-  {code:"+86",emoji:"🇨🇳",flag:"zh",n:{tr:"Çin",en:"China",de:"China",ru:"Китай",zh:"中国",hi:"चीन",nl:"China",es:"China",ar:"الصين"}},
-  {code:"+91",emoji:"🇮🇳",flag:"hi",n:{tr:"Hindistan",en:"India",de:"Indien",ru:"Индия",zh:"印度",hi:"भारत",nl:"India",es:"India",ar:"الهند"}},
-  {code:"+31",emoji:"🇳🇱",flag:"nl",n:{tr:"Hollanda",en:"Netherlands",de:"Niederlande",ru:"Нидерланды",zh:"荷兰",hi:"नीदरलैंड",nl:"Nederland",es:"Países Bajos",ar:"هولندا"}},
-  {code:"+34",emoji:"🇪🇸",flag:"es",n:{tr:"İspanya",en:"Spain",de:"Spanien",ru:"Испания",zh:"西班牙",hi:"स्पेन",nl:"Spanje",es:"España",ar:"إسبانيا"}},
-  {code:"+966",emoji:"🇸🇦",flag:"sa",n:{tr:"S. Arabistan",en:"Saudi Arabia",de:"Saudi-Arabien",ru:"С. Аравия",zh:"沙特",hi:"सऊदी",nl:"Saoedi-Arabië",es:"Arabia Saudí",ar:"السعودية"}},
-  {code:"+971",emoji:"🇦🇪",flag:"ar",n:{tr:"BAE",en:"UAE",de:"VAE",ru:"ОАЭ",zh:"阿联酋",hi:"यूएई",nl:"VAE",es:"EAU",ar:"الإمارات"}},
-  {code:"+39",emoji:"🇮🇹",flag:"fr",n:{tr:"İtalya",en:"Italy",de:"Italien",ru:"Италия",zh:"意大利",hi:"इटली",nl:"Italië",es:"Italia",ar:"إيطاليا"}},
-  {code:"+81",emoji:"🇯🇵",flag:"zh",n:{tr:"Japonya",en:"Japan",de:"Japan",ru:"Япония",zh:"日本",hi:"जापान",nl:"Japan",es:"Japón",ar:"اليابان"}},
-  {code:"+82",emoji:"🇰🇷",flag:"zh",n:{tr:"G. Kore",en:"S. Korea",de:"Südkorea",ru:"Ю. Корея",zh:"韩国",hi:"द. कोरिया",nl:"Z. Korea",es:"Corea del Sur",ar:"كوريا"}},
-  {code:"+55",emoji:"🇧🇷",flag:"es",n:{tr:"Brezilya",en:"Brazil",de:"Brasilien",ru:"Бразилия",zh:"巴西",hi:"ब्राज़ील",nl:"Brazilië",es:"Brasil",ar:"البرازيل"}},
-  {code:"+61",emoji:"🇦🇺",flag:"en",n:{tr:"Avustralya",en:"Australia",de:"Australien",ru:"Австралия",zh:"澳大利亚",hi:"ऑस्ट्रेलिया",nl:"Australië",es:"Australia",ar:"أستراليا"}},
-  {code:"+48",emoji:"🇵🇱",flag:"de",n:{tr:"Polonya",en:"Poland",de:"Polen",ru:"Польша",zh:"波兰",hi:"पोलैंड",nl:"Polen",es:"Polonia",ar:"بولندا"}},
-  {code:"+46",emoji:"🇸🇪",flag:"nl",n:{tr:"İsveç",en:"Sweden",de:"Schweden",ru:"Швеция",zh:"瑞典",hi:"स्वीडन",nl:"Zweden",es:"Suecia",ar:"السويد"}},
-  {code:"+47",emoji:"🇳🇴",flag:"nl",n:{tr:"Norveç",en:"Norway",de:"Norwegen",ru:"Норвегия",zh:"挪威",hi:"नॉर्वे",nl:"Noorwegen",es:"Noruega",ar:"النرويج"}},
+  {code:"+90",flag:"tr",n:{tr:"Türkiye",en:"Turkiye",de:"Türkei",ru:"Турция",zh:"土耳其",hi:"तुर्की",nl:"Turkije",es:"Turquía",ar:"تركيا"}},
+  {code:"+1",flag:"us",n:{tr:"ABD",en:"USA",de:"USA",ru:"США",zh:"美国",hi:"अमेरिका",nl:"VS",es:"EE.UU.",ar:"أمريكا"}},
+  {code:"+1",flag:"ca",n:{tr:"Kanada",en:"Canada",de:"Kanada",ru:"Канада",zh:"加拿大",hi:"कनाडा",nl:"Canada",es:"Canadá",ar:"كندا"}},
+  {code:"+44",flag:"gb",n:{tr:"İngiltere",en:"UK",de:"Großbritannien",ru:"Великобритания",zh:"英国",hi:"ब्रिटेन",nl:"VK",es:"Reino Unido",ar:"بريطانيا"}},
+  {code:"+49",flag:"de",n:{tr:"Almanya",en:"Germany",de:"Deutschland",ru:"Германия",zh:"德国",hi:"जर्मनी",nl:"Duitsland",es:"Alemania",ar:"ألمانيا"}},
+  {code:"+33",flag:"fr",n:{tr:"Fransa",en:"France",de:"Frankreich",ru:"Франция",zh:"法国",hi:"फ़्रांस",nl:"Frankrijk",es:"Francia",ar:"فرنسا"}},
+  {code:"+39",flag:"it",n:{tr:"İtalya",en:"Italy",de:"Italien",ru:"Италия",zh:"意大利",hi:"इटली",nl:"Italië",es:"Italia",ar:"إيطاليا"}},
+  {code:"+34",flag:"es",n:{tr:"İspanya",en:"Spain",de:"Spanien",ru:"Испания",zh:"西班牙",hi:"स्पेन",nl:"Spanje",es:"España",ar:"إسبانيا"}},
+  {code:"+31",flag:"nl",n:{tr:"Hollanda",en:"Netherlands",de:"Niederlande",ru:"Нидерланды",zh:"荷兰",hi:"नीदरलैंड",nl:"Nederland",es:"Países Bajos",ar:"هولندا"}},
+  {code:"+32",flag:"be",n:{tr:"Belçika",en:"Belgium",de:"Belgien",ru:"Бельгия",zh:"比利时",hi:"बेल्जियम",nl:"België",es:"Bélgica",ar:"بلجيكا"}},
+  {code:"+41",flag:"ch",n:{tr:"İsviçre",en:"Switzerland",de:"Schweiz",ru:"Швейцария",zh:"瑞士",hi:"स्विट्ज़रलैंड",nl:"Zwitserland",es:"Suiza",ar:"سويسرا"}},
+  {code:"+43",flag:"at",n:{tr:"Avusturya",en:"Austria",de:"Österreich",ru:"Австрия",zh:"奥地利",hi:"ऑस्ट्रिया",nl:"Oostenrijk",es:"Austria",ar:"النمسا"}},
+  {code:"+45",flag:"dk",n:{tr:"Danimarka",en:"Denmark",de:"Dänemark",ru:"Дания",zh:"丹麦",hi:"डेनमार्क",nl:"Denemarken",es:"Dinamarca",ar:"الدنمارك"}},
+  {code:"+46",flag:"se",n:{tr:"İsveç",en:"Sweden",de:"Schweden",ru:"Швеция",zh:"瑞典",hi:"स्वीडन",nl:"Zweden",es:"Suecia",ar:"السويد"}},
+  {code:"+47",flag:"no",n:{tr:"Norveç",en:"Norway",de:"Norwegen",ru:"Норвегия",zh:"挪威",hi:"नॉर्वे",nl:"Noorwegen",es:"Noruega",ar:"النرويج"}},
+  {code:"+358",flag:"fi",n:{tr:"Finlandiya",en:"Finland",de:"Finnland",ru:"Финляндия",zh:"芬兰",hi:"फ़िनलैंड",nl:"Finland",es:"Finlandia",ar:"فنلندا"}},
+  {code:"+353",flag:"ie",n:{tr:"İrlanda",en:"Ireland",de:"Irland",ru:"Ирландия",zh:"爱尔兰",hi:"आयरलैंड",nl:"Ierland",es:"Irlanda",ar:"أيرلندا"}},
+  {code:"+351",flag:"pt",n:{tr:"Portekiz",en:"Portugal",de:"Portugal",ru:"Португалия",zh:"葡萄牙",hi:"पुर्तगाल",nl:"Portugal",es:"Portugal",ar:"البرتغال"}},
+  {code:"+30",flag:"gr",n:{tr:"Yunanistan",en:"Greece",de:"Griechenland",ru:"Греция",zh:"希腊",hi:"ग्रीस",nl:"Griekenland",es:"Grecia",ar:"اليونان"}},
+  {code:"+48",flag:"pl",n:{tr:"Polonya",en:"Poland",de:"Polen",ru:"Польша",zh:"波兰",hi:"पोलैंड",nl:"Polen",es:"Polonia",ar:"بولندا"}},
+  {code:"+420",flag:"cz",n:{tr:"Çekya",en:"Czechia",de:"Tschechien",ru:"Чехия",zh:"捷克",hi:"चेकिया",nl:"Tsjechië",es:"Chequia",ar:"التشيك"}},
+  {code:"+421",flag:"sk",n:{tr:"Slovakya",en:"Slovakia",de:"Slowakei",ru:"Словакия",zh:"斯洛伐克",hi:"स्लोवाकिया",nl:"Slowakije",es:"Eslovaquia",ar:"سلوفاكيا"}},
+  {code:"+36",flag:"hu",n:{tr:"Macaristan",en:"Hungary",de:"Ungarn",ru:"Венгрия",zh:"匈牙利",hi:"हंगरी",nl:"Hongarije",es:"Hungría",ar:"المجر"}},
+  {code:"+40",flag:"ro",n:{tr:"Romanya",en:"Romania",de:"Rumänien",ru:"Румыния",zh:"罗马尼亚",hi:"रोमानिया",nl:"Roemenië",es:"Rumania",ar:"رومانيا"}},
+  {code:"+359",flag:"bg",n:{tr:"Bulgaristan",en:"Bulgaria",de:"Bulgarien",ru:"Болгария",zh:"保加利亚",hi:"बुल्गारिया",nl:"Bulgarije",es:"Bulgaria",ar:"بلغاريا"}},
+  {code:"+7",flag:"ru",n:{tr:"Rusya",en:"Russia",de:"Russland",ru:"Россия",zh:"俄罗斯",hi:"रूस",nl:"Rusland",es:"Rusia",ar:"روسيا"}},
+  {code:"+380",flag:"ua",n:{tr:"Ukrayna",en:"Ukraine",de:"Ukraine",ru:"Украина",zh:"乌克兰",hi:"यूक्रेन",nl:"Oekraïne",es:"Ucrania",ar:"أوكرانيا"}},
+  {code:"+86",flag:"cn",n:{tr:"Çin",en:"China",de:"China",ru:"Китай",zh:"中国",hi:"चीन",nl:"China",es:"China",ar:"الصين"}},
+  {code:"+81",flag:"jp",n:{tr:"Japonya",en:"Japan",de:"Japan",ru:"Япония",zh:"日本",hi:"जापान",nl:"Japan",es:"Japón",ar:"اليابان"}},
+  {code:"+82",flag:"kr",n:{tr:"G. Kore",en:"S. Korea",de:"Südkorea",ru:"Ю. Корея",zh:"韩国",hi:"द. कोरिया",nl:"Z. Korea",es:"Corea del Sur",ar:"كوريا"}},
+  {code:"+91",flag:"in",n:{tr:"Hindistan",en:"India",de:"Indien",ru:"Индия",zh:"印度",hi:"भारत",nl:"India",es:"India",ar:"الهند"}},
+  {code:"+92",flag:"pk",n:{tr:"Pakistan",en:"Pakistan",de:"Pakistan",ru:"Пакистан",zh:"巴基斯坦",hi:"पाकिस्तान",nl:"Pakistan",es:"Pakistán",ar:"باكستان"}},
+  {code:"+880",flag:"bd",n:{tr:"Bangladeş",en:"Bangladesh",de:"Bangladesch",ru:"Бангладеш",zh:"孟加拉",hi:"बांग्लादेश",nl:"Bangladesh",es:"Bangladés",ar:"بنغلاديش"}},
+  {code:"+62",flag:"id",n:{tr:"Endonezya",en:"Indonesia",de:"Indonesien",ru:"Индонезия",zh:"印尼",hi:"इंडोनेशिया",nl:"Indonesië",es:"Indonesia",ar:"إندونيسيا"}},
+  {code:"+60",flag:"my",n:{tr:"Malezya",en:"Malaysia",de:"Malaysia",ru:"Малайзия",zh:"马来西亚",hi:"मलेशिया",nl:"Maleisië",es:"Malasia",ar:"ماليزيا"}},
+  {code:"+65",flag:"sg",n:{tr:"Singapur",en:"Singapore",de:"Singapur",ru:"Сингапур",zh:"新加坡",hi:"सिंगापुर",nl:"Singapore",es:"Singapur",ar:"سنغافورة"}},
+  {code:"+66",flag:"th",n:{tr:"Tayland",en:"Thailand",de:"Thailand",ru:"Таиланд",zh:"泰国",hi:"थाईलैंड",nl:"Thailand",es:"Tailandia",ar:"تايلاند"}},
+  {code:"+84",flag:"vn",n:{tr:"Vietnam",en:"Vietnam",de:"Vietnam",ru:"Вьетнам",zh:"越南",hi:"वियतनाम",nl:"Vietnam",es:"Vietnam",ar:"فيتنام"}},
+  {code:"+63",flag:"ph",n:{tr:"Filipinler",en:"Philippines",de:"Philippinen",ru:"Филиппины",zh:"菲律宾",hi:"फ़िलीपींस",nl:"Filipijnen",es:"Filipinas",ar:"الفلبين"}},
+  {code:"+61",flag:"au",n:{tr:"Avustralya",en:"Australia",de:"Australien",ru:"Австралия",zh:"澳大利亚",hi:"ऑस्ट्रेलिया",nl:"Australië",es:"Australia",ar:"أستراليا"}},
+  {code:"+64",flag:"nz",n:{tr:"Y. Zelanda",en:"New Zealand",de:"Neuseeland",ru:"Н. Зеландия",zh:"新西兰",hi:"न्यूज़ीलैंड",nl:"N. Zeeland",es:"N. Zelanda",ar:"نيوزيلندا"}},
+  {code:"+966",flag:"sa",n:{tr:"S. Arabistan",en:"Saudi Arabia",de:"Saudi-Arabien",ru:"С. Аравия",zh:"沙特",hi:"सऊदी",nl:"Saoedi-Arabië",es:"Arabia Saudí",ar:"السعودية"}},
+  {code:"+971",flag:"ae",n:{tr:"BAE",en:"UAE",de:"VAE",ru:"ОАЭ",zh:"阿联酋",hi:"यूएई",nl:"VAE",es:"EAU",ar:"الإمارات"}},
+  {code:"+974",flag:"qa",n:{tr:"Katar",en:"Qatar",de:"Katar",ru:"Катар",zh:"卡塔尔",hi:"कतर",nl:"Qatar",es:"Catar",ar:"قطر"}},
+  {code:"+965",flag:"kw",n:{tr:"Kuveyt",en:"Kuwait",de:"Kuwait",ru:"Кувейт",zh:"科威特",hi:"कुवैत",nl:"Koeweit",es:"Kuwait",ar:"الكويت"}},
+  {code:"+973",flag:"bh",n:{tr:"Bahreyn",en:"Bahrain",de:"Bahrain",ru:"Бахрейн",zh:"巴林",hi:"बहरीन",nl:"Bahrein",es:"Baréin",ar:"البحرين"}},
+  {code:"+968",flag:"om",n:{tr:"Umman",en:"Oman",de:"Oman",ru:"Оман",zh:"阿曼",hi:"ओमान",nl:"Oman",es:"Omán",ar:"عُمان"}},
+  {code:"+98",flag:"ir",n:{tr:"İran",en:"Iran",de:"Iran",ru:"Иран",zh:"伊朗",hi:"ईरान",nl:"Iran",es:"Irán",ar:"إيران"}},
+  {code:"+964",flag:"iq",n:{tr:"Irak",en:"Iraq",de:"Irak",ru:"Ирак",zh:"伊拉克",hi:"इराक़",nl:"Irak",es:"Irak",ar:"العراق"}},
+  {code:"+972",flag:"il",n:{tr:"İsrail",en:"Israel",de:"Israel",ru:"Израиль",zh:"以色列",hi:"इज़राइल",nl:"Israël",es:"Israel",ar:"إسرائيل"}},
+  {code:"+962",flag:"jo",n:{tr:"Ürdün",en:"Jordan",de:"Jordanien",ru:"Иордания",zh:"约旦",hi:"जॉर्डन",nl:"Jordanië",es:"Jordania",ar:"الأردن"}},
+  {code:"+961",flag:"lb",n:{tr:"Lübnan",en:"Lebanon",de:"Libanon",ru:"Ливан",zh:"黎巴嫩",hi:"लेबनान",nl:"Libanon",es:"Líbano",ar:"لبنان"}},
+  {code:"+963",flag:"sy",n:{tr:"Suriye",en:"Syria",de:"Syrien",ru:"Сирия",zh:"叙利亚",hi:"सीरिया",nl:"Syrië",es:"Siria",ar:"سوريا"}},
+  {code:"+994",flag:"az",n:{tr:"Azerbaycan",en:"Azerbaijan",de:"Aserbaidschan",ru:"Азербайджан",zh:"阿塞拜疆",hi:"अज़रबैजान",nl:"Azerbeidzjan",es:"Azerbaiyán",ar:"أذربيجان"}},
+  {code:"+995",flag:"ge",n:{tr:"Gürcistan",en:"Georgia",de:"Georgien",ru:"Грузия",zh:"格鲁吉亚",hi:"जॉर्जिया",nl:"Georgië",es:"Georgia",ar:"جورجيا"}},
+  {code:"+374",flag:"am",n:{tr:"Ermenistan",en:"Armenia",de:"Armenien",ru:"Армения",zh:"亚美尼亚",hi:"आर्मेनिया",nl:"Armenië",es:"Armenia",ar:"أرمينيا"}},
+  {code:"+20",flag:"eg",n:{tr:"Mısır",en:"Egypt",de:"Ägypten",ru:"Египет",zh:"埃及",hi:"मिस्र",nl:"Egypte",es:"Egipto",ar:"مصر"}},
+  {code:"+212",flag:"ma",n:{tr:"Fas",en:"Morocco",de:"Marokko",ru:"Марокко",zh:"摩洛哥",hi:"मोरक्को",nl:"Marokko",es:"Marruecos",ar:"المغرب"}},
+  {code:"+216",flag:"tn",n:{tr:"Tunus",en:"Tunisia",de:"Tunesien",ru:"Тунис",zh:"突尼斯",hi:"ट्यूनीशिया",nl:"Tunesië",es:"Túnez",ar:"تونس"}},
+  {code:"+213",flag:"dz",n:{tr:"Cezayir",en:"Algeria",de:"Algerien",ru:"Алжир",zh:"阿尔及利亚",hi:"अल्जीरिया",nl:"Algerije",es:"Argelia",ar:"الجزائر"}},
+  {code:"+234",flag:"ng",n:{tr:"Nijerya",en:"Nigeria",de:"Nigeria",ru:"Нигерия",zh:"尼日利亚",hi:"नाइजीरिया",nl:"Nigeria",es:"Nigeria",ar:"نيجيريا"}},
+  {code:"+254",flag:"ke",n:{tr:"Kenya",en:"Kenya",de:"Kenia",ru:"Кения",zh:"肯尼亚",hi:"केन्या",nl:"Kenia",es:"Kenia",ar:"كينيا"}},
+  {code:"+27",flag:"za",n:{tr:"G. Afrika",en:"S. Africa",de:"Südafrika",ru:"ЮАР",zh:"南非",hi:"द. अफ्रीका",nl:"Zuid-Afrika",es:"Sudáfrica",ar:"جنوب أفريقيا"}},
+  {code:"+52",flag:"mx",n:{tr:"Meksika",en:"Mexico",de:"Mexiko",ru:"Мексика",zh:"墨西哥",hi:"मेक्सिको",nl:"Mexico",es:"México",ar:"المكسيك"}},
+  {code:"+55",flag:"br",n:{tr:"Brezilya",en:"Brazil",de:"Brasilien",ru:"Бразилия",zh:"巴西",hi:"ब्राज़ील",nl:"Brazilië",es:"Brasil",ar:"البرازيل"}},
+  {code:"+54",flag:"ag",n:{tr:"Arjantin",en:"Argentina",de:"Argentinien",ru:"Аргентина",zh:"阿根廷",hi:"अर्जेंटीना",nl:"Argentinië",es:"Argentina",ar:"الأرجنتين"}},
+  {code:"+56",flag:"cl",n:{tr:"Şili",en:"Chile",de:"Chile",ru:"Чили",zh:"智利",hi:"चिली",nl:"Chili",es:"Chile",ar:"تشيلي"}},
+  {code:"+57",flag:"co",n:{tr:"Kolombiya",en:"Colombia",de:"Kolumbien",ru:"Колумбия",zh:"哥伦比亚",hi:"कोलंबिया",nl:"Colombia",es:"Colombia",ar:"كولومبيا"}},
+  {code:"+51",flag:"pe",n:{tr:"Peru",en:"Peru",de:"Peru",ru:"Перу",zh:"秘鲁",hi:"पेरू",nl:"Peru",es:"Perú",ar:"بيرو"}},
 ];
 const[newC,setNewC]=useState({name:"",phone:"",countryCode:"+90",category:"doctor",note:""});
 
@@ -696,9 +854,17 @@ const sendChat=async(text)=>{
     if(voiceActive){speak(reply);const wi=setInterval(()=>{if(!isSpeak&&voiceActive){clearInterval(wi);setTimeout(()=>{if(voiceActive&&!isListen)startVoice((t2)=>sendChat(t2),true);},600);}},500);setTimeout(()=>clearInterval(wi),60000);}
   }catch(e){
     const noKey=e.message==="NO_KEY";
-    setChatM(p=>[...p,{role:"assistant",text:lang==="tr"
-      ?(noKey?"⚠️ AI servisi şu an yapılandırılmamış.\n\n⚙️ Ayarlar → API Key bölümünden Anthropic API anahtarınızı girebilirsiniz.\n\n🔑 console.anthropic.com":"Üzgünüm, şu an yanıt veremiyorum. Lütfen tekrar deneyin. 💙")
-      :(noKey?"⚠️ AI service not configured.\n\n⚙️ Go to Settings → API Key.\n\n🔑 console.anthropic.com":"Sorry, I cannot respond right now. Please try again. 💙")}]);
+    let errorText;
+    if(lang==="tr"){
+      errorText=noKey
+        ?"👋 Merhaba! Ben AILVIE.\n\nSizinle sohbet edebilmem için önce AI servisinin ayarlanması gerekiyor. İki seçeneğiniz var:\n\n🔧 KOLAY YOL — Ayarlar → AI API Anahtarı bölümüne Anthropic API anahtarınızı girin (sadece sizde saklanır).\n\n☁️ KURUMSAL YOL — Uygulama yöneticisi Cloudflare Pages üzerinde ANTHROPIC_API_KEY ortam değişkenini yapılandırabilir.\n\n🔗 Anahtar almak için: console.anthropic.com/settings/keys"
+        :"Üzgünüm, şu an yanıt veremiyorum. Lütfen tekrar deneyin. 💙";
+    }else{
+      errorText=noKey
+        ?"👋 Hello! I'm AILVIE.\n\nTo chat with you, AI service needs to be set up. Two options:\n\n🔧 EASY — Settings → AI API Key — enter your Anthropic API key (stored only on your device).\n\n☁️ ENTERPRISE — Admin can configure ANTHROPIC_API_KEY on Cloudflare Pages.\n\n🔗 Get a key: console.anthropic.com/settings/keys"
+        :"Sorry, I cannot respond right now. Please try again. 💙";
+    }
+    setChatM(p=>[...p,{role:"assistant",text:errorText}]);
   }
   setChatL(false);
 };
@@ -945,7 +1111,46 @@ const renderHome=()=>{
       <div style={{fontWeight:700,fontSize:fs-1,marginBottom:6}}><img src={GLOBE_IMG} style={{width:18,height:18,verticalAlign:"middle",marginRight:4,borderRadius:9}}/> {lang==="tr"?"Çeviri":lang==="en"?"Translator":lang==="de"?"Übersetzer":lang==="ru"?"Переводчик":lang==="zh"?"翻译":lang==="hi"?"अनुवादक":lang==="nl"?"Vertaler":lang==="es"?"Traductor":lang==="ar"?"مترجم":"Translator"} <span style={{fontSize:fs-3,color:ac,fontWeight:500}}>9 {t.lang}</span></div>
       <textarea value={trIn} onChange={e=>setTrIn(e.target.value)} onInput={autoResize} placeholder={lang==="tr"?"Çevirmek istediğiniz metni yazın...":lang==="en"?"Enter text to translate...":lang==="de"?"Text eingeben...":lang==="ru"?"Введите текст...":lang==="zh"?"输入文本...":lang==="hi"?"अनुवाद के लिए टेक्स्ट...":lang==="nl"?"Voer tekst in...":lang==="es"?"Ingrese texto...":lang==="ar"?"أدخل النص...":"Enter text..."} rows={2} style={{...IS,marginBottom:6,resize:"none",fontSize:fs-1}}/>
       <div style={{display:"flex",gap:6,marginBottom:6}}>
-        <button onClick={async()=>{if(!trIn.trim())return;setTrLoad(true);try{const d=await callAI({model:"claude-sonnet-4-20250514",max_tokens:600,messages:[{role:"user",content:`Translate "${trIn}" to these 9 languages. Return ONLY a JSON array like: [{"flag":"tr","lang":"Türkçe","text":"..."},{"flag":"en","lang":"English","text":"..."},{"flag":"de","lang":"Deutsch","text":"..."},{"flag":"ru","lang":"Русский","text":"..."},{"flag":"zh","lang":"中文","text":"..."},{"flag":"hi","lang":"हिन्दी","text":"..."},{"flag":"nl","lang":"Nederlands","text":"..."},{"flag":"es","lang":"Español","text":"..."},{"flag":"ar","lang":"العربية","text":"..."}]. ONLY JSON, no markdown.`}]},apiKey);const txt=d.content?.map(c=>c.text||"").join("")||"[]";const parsed=JSON.parse(txt.replace(/```json|```/g,"").trim());setTrOut(Array.isArray(parsed)?parsed:[{flag:"❌",lang:"Error",text:txt}]);}catch(err){setTrOut([{flag:"❌",lang:"Error",text:err.message==="NO_KEY"?(lang==="tr"?"⚙️ Ayarlar → API Key gerekli":"⚙️ Settings → API Key required"):(lang==="tr"?"Çeviri servisi şu an kullanılamıyor. Lütfen daha sonra tekrar deneyin.":"Translation service unavailable. Please try again later.")}]);}setTrLoad(false);}} disabled={trLoad} style={{...BP,flex:1,padding:"8px",fontSize:fs-1}}>{trLoad?"⏳":(lang==="tr"?"Çevir":lang==="en"?"Translate":lang==="de"?"Übersetzen":lang==="ru"?"Перевести":lang==="zh"?"翻译":lang==="hi"?"अनुवाद":lang==="nl"?"Vertalen":lang==="es"?"Traducir":lang==="ar"?"ترجمة":"Translate")}</button>
+        <button onClick={async()=>{if(!trIn.trim())return;setTrLoad(true);
+          // First try AI (if API key exists), otherwise fallback to MyMemory free API (no key required)
+          const targets=[{flag:"tr",lang:"Türkçe",code:"tr"},{flag:"en",lang:"English",code:"en"},{flag:"de",lang:"Deutsch",code:"de"},{flag:"ru",lang:"Русский",code:"ru"},{flag:"zh",lang:"中文",code:"zh-CN"},{flag:"hi",lang:"हिन्दी",code:"hi"},{flag:"nl",lang:"Nederlands",code:"nl"},{flag:"es",lang:"Español",code:"es"},{flag:"ar",lang:"العربية",code:"ar"}];
+          try{
+            // Try AI first (better quality, if key available)
+            if(apiKey){
+              const d=await callAI({model:"claude-sonnet-4-20250514",max_tokens:600,messages:[{role:"user",content:`Translate "${trIn}" to these 9 languages. Return ONLY a JSON array: [{"flag":"tr","lang":"Türkçe","text":"..."},{"flag":"en","lang":"English","text":"..."},{"flag":"de","lang":"Deutsch","text":"..."},{"flag":"ru","lang":"Русский","text":"..."},{"flag":"zh","lang":"中文","text":"..."},{"flag":"hi","lang":"हिन्दी","text":"..."},{"flag":"nl","lang":"Nederlands","text":"..."},{"flag":"es","lang":"Español","text":"..."},{"flag":"ar","lang":"العربية","text":"..."}]. ONLY JSON.`}]},apiKey);
+              const txt=d.content?.map(c=>c.text||"").join("")||"[]";
+              const parsed=JSON.parse(txt.replace(/```json|```/g,"").trim());
+              setTrOut(Array.isArray(parsed)?parsed:[{flag:"❌",lang:"Error",text:txt}]);
+            }else{
+              // Fallback to MyMemory free API — no key required, detects source automatically
+              const srcCode=lang==="zh"?"zh-CN":lang;
+              const results=await Promise.all(targets.map(async(tgt)=>{
+                try{
+                  const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trIn)}&langpair=${srcCode}|${tgt.code}`);
+                  const j=await res.json();
+                  return{flag:tgt.flag,lang:tgt.lang,text:j?.responseData?.translatedText||"—"};
+                }catch(e){return{flag:tgt.flag,lang:tgt.lang,text:"—"};}
+              }));
+              setTrOut(results);
+            }
+          }catch(err){
+            // Last resort: try MyMemory even if AI failed
+            try{
+              const srcCode=lang==="zh"?"zh-CN":lang;
+              const results=await Promise.all(targets.map(async(tgt)=>{
+                try{
+                  const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trIn)}&langpair=${srcCode}|${tgt.code}`);
+                  const j=await res.json();
+                  return{flag:tgt.flag,lang:tgt.lang,text:j?.responseData?.translatedText||"—"};
+                }catch(e){return{flag:tgt.flag,lang:tgt.lang,text:"—"};}
+              }));
+              setTrOut(results);
+            }catch(e2){
+              setTrOut([{flag:"❌",lang:"Error",text:lang==="tr"?"Çeviri servisi şu an kullanılamıyor.":"Translation service unavailable."}]);
+            }
+          }
+          setTrLoad(false);
+        }} disabled={trLoad} style={{...BP,flex:1,padding:"8px",fontSize:fs-1}}>{trLoad?"⏳":(lang==="tr"?"Çevir":lang==="en"?"Translate":lang==="de"?"Übersetzen":lang==="ru"?"Перевести":lang==="zh"?"翻译":lang==="hi"?"अनुवाद":lang==="nl"?"Vertalen":lang==="es"?"Traducir":lang==="ar"?"ترجمة":"Translate")}</button>
         {trOut&&<button onClick={()=>{setTrIn("");setTrOut(null);}} style={{...BP,background:mt,padding:"8px 12px"}}>✕</button>}
       </div>
       {trOut&&Array.isArray(trOut)&&<div style={{background:dark?"#0d1520":"#f8fafc",borderRadius:8,padding:6,maxHeight:140,overflowY:"auto"}}>
@@ -992,12 +1197,12 @@ const renderAppts=()=>{
       <input placeholder={t.hosp} value={newAppt.hospital} onChange={e=>setNewAppt({...newAppt,hospital:e.target.value})} style={{...IS,marginBottom:6}}/>
       <input placeholder={t.clin} value={newAppt.clinic} onChange={e=>setNewAppt({...newAppt,clinic:e.target.value})} style={{...IS,marginBottom:6}}/>
       <div style={{display:"flex",gap:6,marginBottom:6}}><input type="date" value={newAppt.date} onChange={e=>setNewAppt({...newAppt,date:e.target.value})} style={{...IS,flex:1}}/><input type="time" value={newAppt.time} onChange={e=>setNewAppt({...newAppt,time:e.target.value})} style={{...IS,flex:1}}/></div>
-      <div style={{display:"flex",gap:6}}><button onClick={()=>{if(newAppt.doctor&&newAppt.date){setAppts(p=>[...p,{id:Date.now(),...newAppt,source:""}]);notify(`📅⏰ ${newAppt.doctor} — ${t.alarmSet}`);setNewAppt({doctor:"",hospital:"",clinic:"",date:"",time:""});setShowAddAppt(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddAppt(false)} style={{...BP,background:mt}}>{t.cancel}</button></div>
+      <div style={{display:"flex",gap:6}}><button onClick={()=>{if(newAppt.doctor&&newAppt.date){if(editApptId){setAppts(p=>p.map(x=>x.id===editApptId?{...x,...newAppt}:x));notify("✅ "+(lang==="tr"?"Randevu güncellendi":"Appointment updated"));}else{setAppts(p=>[...p,{id:Date.now(),...newAppt,source:""}]);notify(`📅⏰ ${newAppt.doctor} — ${t.alarmSet}`);}setNewAppt({doctor:"",hospital:"",clinic:"",date:"",time:""});setEditApptId(null);setShowAddAppt(false);}}} style={BP}>{editApptId?(lang==="tr"?"Güncelle":"Update"):t.save}</button><button onClick={()=>{setShowAddAppt(false);setEditApptId(null);}} style={{...BP,background:mt}}>{t.cancel}</button></div>
     </div>}
     {/* 3. Upcoming / Past */}
     <div style={{display:"flex",gap:6}}>{["up","past"].map(tab=><button key={tab} onClick={()=>goTo(tab==="up"?"appts":"appts")} style={pill(true)}>{t[tab]}</button>)}</div>
     {appts.filter(a=>a.date>=today).length===0&&<div style={{textAlign:"center",color:mt,padding:16}}>{t.noA}</div>}
-    {appts.filter(a=>a.date>=today).map(a=>(<div key={a.id} style={CS}><div style={{fontWeight:700,fontSize:fs+1}}>{a.doctor}</div><div style={{fontSize:fs-1,color:mt}}>🏥 {a.hospital} • {a.clinic}</div><div style={{color:ac}}>📅 {a.date} ⏰ {a.time}</div><div style={{fontSize:fs-3,color:sc,marginTop:2}}>🔔 1 gün + 6 saat önce alarm</div><div style={{display:"flex",gap:6,marginTop:6}}><a href={`https://www.google.com/maps/search/${encodeURIComponent(a.hospital)}`} target="_blank" rel="noopener noreferrer" style={{...BP,padding:"6px 12px",textDecoration:"none"}}>🗺️ {t.dir}</a><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.hospital)}&travelmode=transit`} target="_blank" rel="noopener noreferrer" style={{...BP,padding:"6px 12px",background:sc,textDecoration:"none"}}>🚌</a><button onClick={()=>toTrash("appt",a)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>🗑️</button></div></div>))}
+    {appts.filter(a=>a.date>=today).map(a=>(<div key={a.id} style={CS}><div style={{fontWeight:700,fontSize:fs+1}}>{a.doctor}</div><div style={{fontSize:fs-1,color:mt}}>🏥 {a.hospital} • {a.clinic}</div><div style={{color:ac}}>📅 {a.date} ⏰ {a.time}</div><div style={{fontSize:fs-3,color:sc,marginTop:2}}>🔔 1 gün + 6 saat önce alarm</div><div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}><a href={`https://www.google.com/maps/search/${encodeURIComponent(a.hospital)}`} target="_blank" rel="noopener noreferrer" style={{...BP,padding:"6px 12px",textDecoration:"none"}}>🗺️ {t.dir}</a><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.hospital)}&travelmode=transit`} target="_blank" rel="noopener noreferrer" style={{...BP,padding:"6px 12px",background:sc,textDecoration:"none"}}>🚌</a><button onClick={()=>{setEditApptId(a.id);setNewAppt({doctor:a.doctor||"",hospital:a.hospital||"",clinic:a.clinic||"",date:a.date||"",time:a.time||""});setShowAddAppt(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:ac,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button><button onClick={()=>toTrash("appt",a)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>🗑️</button></div></div>))}
     {/* 4. AI Location + Transit */}
     <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
       <button onClick={getLoc} style={{...BP,padding:"6px 12px"}}>📍 {t.loc}</button>
@@ -1148,8 +1353,9 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
   {meds.length===0&&!showScanner&&<div style={{textAlign:"center",color:mt,padding:24}}>{t.noM}</div>}
   {meds.map(m=>(<div key={m.id} style={{...CS,display:"flex",alignItems:"center",gap:10,opacity:m.taken?0.5:1}}>
     <div style={{textAlign:"center"}}><span style={{fontSize:22}}>{m.taken?"✅":"💊"}</span>{m.count>0&&!m.taken&&<div style={{fontSize:fs-4,color:m.count<=5?dg:sc,fontWeight:700,marginTop:1}}>{m.count}</div>}</div>
-    <div style={{flex:1}}><div style={{fontWeight:700}}>{m.name}</div><div style={{fontSize:fs-2,color:mt}}>{m.dose} — ⏰ {m.time}</div><div style={{fontSize:fs-3,color:sc}}>{m.alarmType==="ring"?"🔔":m.alarmType==="vibrate"?"📳":"🔔📳"} {m.count>0&&<span style={{color:m.count<=5?dg:mt}}>({lang==="tr"?"Kalan":"Left"}: {m.count})</span>}</div></div>
+    <div style={{flex:1,minWidth:0}}><div style={{fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</div><div style={{fontSize:fs-2,color:mt}}>{m.dose} — ⏰ {m.time}</div><div style={{fontSize:fs-3,color:sc}}>{m.alarmType==="ring"?"🔔":m.alarmType==="vibrate"?"📳":"🔔📳"} {m.count>0&&<span style={{color:m.count<=5?dg:mt}}>({lang==="tr"?"Kalan":"Left"}: {m.count})</span>}</div></div>
     {!m.taken&&<button onClick={()=>{setMeds(p=>p.map(x=>x.id===m.id?{...x,taken:true,count:Math.max(0,(x.count??30)-1)}:x));notify(`✅ ${m.name} ${t.taken}${(m.count??30)>1?` (${lang==="tr"?"Kalan":"Left"}: ${(m.count??30)-1})`:""}`);}} style={{...BP,padding:"6px 12px"}}>✓</button>}
+    <button onClick={()=>{setEditMedId(m.id);setNewMed({name:m.name||"",dose:m.dose||"",time:m.time||"",startDate:m.startDate||"",alarmType:m.alarmType||"both",count:m.count||30,timesPerDay:m.timesPerDay||1,recurring:m.recurring!==false});setShowAddMed(true);}} style={{background:"none",border:`1px solid ${ac}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:ac}}>✏️</button>
     <button onClick={()=>toTrash("med",m)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:16}}>🗑️</button>
   </div>))}
   {showAddMed&&<div style={{...CS,border:`2px solid ${ac}`}}>
@@ -1167,7 +1373,7 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
     <div style={{marginBottom:6}}><div style={{fontSize:fs-2,color:mt,marginBottom:4}}>⏰ {t.alarmType}</div><div style={{display:"flex",gap:6}}>{["ring","vibrate","both"].map(at=><button key={at} onClick={()=>setNewMed({...newMed,alarmType:at})} style={pill(newMed.alarmType===at)}>{at==="ring"?"🔔 "+t.ring:at==="vibrate"?"📳 "+t.vibrate:"🔔📳 "+t.both}</button>)}</div></div>
     <div style={{display:"flex",gap:6,marginBottom:6,alignItems:"center",flexWrap:"wrap"}}><span style={{fontSize:fs-2,color:mt}}>💊 {lang==="tr"?"Kutu adedi":"Box count"}:</span><input type="number" min="1" value={newMed.count} onChange={e=>setNewMed({...newMed,count:Number(e.target.value)})} style={{...IS,width:65,textAlign:"center",fontWeight:700}}/><span style={{fontSize:fs-2,color:mt}}>🔁 {lang==="tr"?"Günde":"Per day"}:</span><input type="number" min="1" max="6" value={newMed.timesPerDay||1} onChange={e=>setNewMed({...newMed,timesPerDay:Number(e.target.value)})} style={{...IS,width:50,textAlign:"center",fontWeight:700}}/></div>
     {(newMed.timesPerDay||1)>1&&<div style={{fontSize:fs-3,color:ac,marginBottom:6,padding:"4px 8px",background:`${ac}08`,borderRadius:6}}>💡 {lang==="tr"?`Günde ${newMed.timesPerDay} doz: Her doz için ayrı saat girerek ekleyin.`:`${newMed.timesPerDay} doses/day: Add each dose with a different time.`}</div>}
-    <div style={{display:"flex",gap:8}}><button onClick={()=>{if(newMed.name){const today=new Date().toISOString().split("T")[0];setMeds(p=>[...p,{id:Date.now(),...newMed,startDate:newMed.startDate||today,recurring:newMed.recurring!==false,taken:false}]);notify(`💊⏰ ${newMed.name} — ${t.alarmSet} (${newMed.time})${newMed.recurring!==false?" 🔁":""}${newMed.count?` • ${newMed.count} ${lang==="tr"?"adet":"pcs"}`:""}`);setNewMed({name:"",dose:"",time:"",startDate:"",alarmType:"both",count:30,timesPerDay:1,recurring:true});setShowAddMed(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddMed(false)} style={{...BP,background:mt}}>{t.cancel}</button></div>
+    <div style={{display:"flex",gap:8}}><button onClick={()=>{if(newMed.name){const today=new Date().toISOString().split("T")[0];if(editMedId){setMeds(p=>p.map(x=>x.id===editMedId?{...x,...newMed}:x));notify("✅ "+(lang==="tr"?"İlaç güncellendi":"Medication updated"));}else{setMeds(p=>[...p,{id:Date.now(),...newMed,startDate:newMed.startDate||today,recurring:newMed.recurring!==false,taken:false}]);notify(`💊⏰ ${newMed.name} — ${t.alarmSet} (${newMed.time})${newMed.recurring!==false?" 🔁":""}${newMed.count?` • ${newMed.count} ${lang==="tr"?"adet":"pcs"}`:""}`);}setNewMed({name:"",dose:"",time:"",startDate:"",alarmType:"both",count:30,timesPerDay:1,recurring:true});setEditMedId(null);setShowAddMed(false);}}} style={BP}>{editMedId?(lang==="tr"?"Güncelle":"Update"):t.save}</button><button onClick={()=>{setShowAddMed(false);setEditMedId(null);}} style={{...BP,background:mt}}>{t.cancel}</button></div>
   </div>}
   <div style={{...CS,border:`2px dashed ${ac}33`}}><div style={{fontWeight:700,marginBottom:8}}>🔍 {t.drugR}</div><div style={{display:"flex",gap:8}}><input placeholder={t.drugN} value={drugQ} onChange={e=>setDrugQ(e.target.value)} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter")analyzeDrug();}}/><button onClick={analyzeDrug} disabled={drugLoad} style={BP}>{drugLoad?"⏳":t.anlz}</button></div>{drugRes&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:5}}>{[[t.cls,"class"],[t.usg,"usage"],[t.dose,"dose"],[t.sEff,"sideEffects"],[t.wrn,"warnings"],[t.intr,"interactions"]].map(([l,k])=><div key={k} style={{fontSize:fs-1}}><span style={{fontWeight:700,color:ac}}>{l}: </span><span>{drugRes[k]}</span></div>)}</div>}</div>
 </div>);
@@ -1295,13 +1501,28 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   {/* Steps */}
   <div style={{...CS,border:`1px solid ${sc}33`}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>👟 {lang==="tr"?"Adım":"Steps"}</span>
+      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>👟 {lang==="tr"?"Adım":"Steps"}{stepAuto&&<span style={{fontSize:fs-3,color:sc,fontWeight:500}}>🔴 {lang==="tr"?"Otomatik":"Auto"}</span>}</span>
       <span style={{fontSize:fs-2,color:mt}}>{wellness.steps.toLocaleString()}/{wellness.stepsGoal.toLocaleString()}</span>
     </div>
     <div style={{height:10,background:`${mt}20`,borderRadius:5,overflow:"hidden",marginBottom:8}}>
       <div style={{height:"100%",width:`${stepsPct}%`,background:`linear-gradient(90deg,${sc},#14b8a6)`,borderRadius:5,transition:"width .3s"}}/>
     </div>
-    <input type="number" value={wellness.steps||""} placeholder="0" onChange={e=>setWellness(w=>({...w,steps:Number(e.target.value)||0}))} style={{...IS,textAlign:"center"}}/>
+    {/* Auto toggle */}
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,padding:"8px 10px",borderRadius:8,background:stepAuto?`${sc}12`:`${mt}08`,border:`1px solid ${stepAuto?sc:bd}`,cursor:"pointer"}} onClick={()=>{
+      if(!stepAuto&&typeof DeviceMotionEvent!=="undefined"&&typeof DeviceMotionEvent.requestPermission==="function"){
+        DeviceMotionEvent.requestPermission().then(p=>{if(p==="granted")setStepAuto(true);else notify("⚠️ "+(lang==="tr"?"Hareket sensörü izni reddedildi":"Motion sensor permission denied"));}).catch(()=>{});
+      }else{setStepAuto(!stepAuto);}
+    }}>
+      <div style={{width:36,height:20,borderRadius:10,background:stepAuto?sc:bd,position:"relative",flexShrink:0,transition:"background .2s"}}>
+        <div style={{width:14,height:14,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:stepAuto?19:3,transition:"left .2s"}}/>
+      </div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:fs-1,fontWeight:600,color:stepAuto?sc:mt}}>📱 {lang==="tr"?"Otomatik Adım Sayımı":"Automatic Step Counting"}</div>
+        <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Telefonunuzun hareket sensörünü kullanır":"Uses phone motion sensor"}</div>
+      </div>
+    </div>
+    <input type="number" value={wellness.steps||""} placeholder="0" onChange={e=>setWellness(w=>({...w,steps:Number(e.target.value)||0}))} disabled={stepAuto} style={{...IS,textAlign:"center",opacity:stepAuto?0.5:1}}/>
+    {stepAuto&&<div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:4}}>{lang==="tr"?"Manuel giriş devre dışı":"Manual entry disabled"}</div>}
   </div>
   {/* Mood */}
   <div style={{...CS,border:`1px solid #f59e0b33`}}>
@@ -1473,8 +1694,8 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
     <span style={{fontWeight:700}}>📋 {t.diag} / {t.lab}</span>
     <button onClick={()=>setShowAddRec(true)} style={{...BP,padding:"6px 14px"}}>+ {t.add}</button>
   </div>
-  {records.map(r=>(<div key={r.id} style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,color:ac}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-2,color:mt}}>{r.date}</span></div><div style={{fontSize:fs-1,color:mt}}>{r.doctor} — {r.hospital}</div><div style={{marginTop:4,wordBreak:"break-word"}}>{r.content}</div><button onClick={()=>toTrash("record",r)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:13,marginTop:4}}>🗑️ {t.del}</button></div>))}
-  {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><textarea placeholder={lang==="tr"?"İçerik / Sonuç":"Content / Result"} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newRec.content){setRecords(p=>[...p,{id:Date.now(),...newRec}]);setNewRec({type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""});setShowAddRec(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddRec(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
+  {records.map(r=>(<div key={r.id} style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,color:ac}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-2,color:mt}}>{r.date}</span></div><div style={{fontSize:fs-1,color:mt}}>{r.doctor} — {r.hospital}</div><div style={{marginTop:4,wordBreak:"break-word"}}>{r.content}</div><div style={{display:"flex",gap:6,marginTop:4}}><button onClick={()=>{setEditRecId(r.id);setNewRec({type:r.type||"diag",doctor:r.doctor||"",hospital:r.hospital||"",date:r.date||"",content:r.content||"",notes:r.notes||""});setShowAddRec(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:ac,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button><button onClick={()=>toTrash("record",r)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>🗑️ {t.del}</button></div></div>))}
+  {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><div style={{fontWeight:700,marginBottom:8,color:ac}}>{editRecId?"✏️ "+(lang==="tr"?"Kaydı Düzenle":"Edit Record"):"+ "+(lang==="tr"?"Yeni Kayıt":"New Record")}</div><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><textarea placeholder={lang==="tr"?"İçerik / Sonuç":"Content / Result"} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newRec.content){if(editRecId){setRecords(p=>p.map(x=>x.id===editRecId?{...x,...newRec}:x));notify("✅ "+(lang==="tr"?"Kayıt güncellendi":"Record updated"));}else{setRecords(p=>[...p,{id:Date.now(),...newRec}]);}setNewRec({type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""});setEditRecId(null);setShowAddRec(false);}}} style={BP}>{editRecId?(lang==="tr"?"Güncelle":"Update"):t.save}</button><button onClick={()=>{setShowAddRec(false);setEditRecId(null);}} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
 </div>);
 
 const renderNotes=()=>{
@@ -1558,26 +1779,31 @@ const renderContacts=()=>{
       <input placeholder={t.nm} value={newC.name} onChange={e=>setNewC({...newC,name:e.target.value})} style={{...IS,marginBottom:6}}/>
       {/* CUSTOM COUNTRY PICKER - real flags */}
       <div style={{marginBottom:6,position:"relative"}}>
-        <div style={{display:"flex",gap:4,alignItems:"stretch"}}>
-          <button type="button" onClick={()=>setShowCountryPicker(!showCountryPicker)} style={{...IS,flex:"0 0 auto",minWidth:120,padding:"8px 8px",display:"flex",alignItems:"center",gap:6,cursor:"pointer",background:dark?"#0d1520":"#f8fafc"}}>
-            <Flag code={currentCC.flag} size={22}/>
-            <span style={{flex:1,fontSize:fs-1,textAlign:"left",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{currentCC.n[lang]||currentCC.n.en}</span>
-            <span style={{color:mt,fontSize:fs-2}}>▾</span>
-          </button>
-          <div style={{...IS,flex:"0 0 60px",textAlign:"center",fontWeight:700,padding:"9px 4px",color:ac,background:dark?"#0d1520":"#eef2f7",display:"flex",alignItems:"center",justifyContent:"center"}}>{newC.countryCode}</div>
-          <input placeholder="5XX XXX XXXX" value={newC.phone} onChange={e=>setNewC({...newC,phone:e.target.value.replace(/[^0-9\s]/g,"")})} type="tel" inputMode="numeric" style={{...IS,flex:1,letterSpacing:1,minWidth:0}}/>
-        </div>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:3}}>🌍 {lang==="tr"?"Ülke":"Country"}</div>
+        <button type="button" onClick={()=>setShowCountryPicker(!showCountryPicker)} style={{...IS,width:"100%",padding:"9px 10px",display:"flex",alignItems:"center",gap:8,cursor:"pointer",background:dark?"#0d1520":"#f8fafc"}}>
+          <Flag code={currentCC.flag} size={22}/>
+          <span style={{flex:1,fontSize:fs-1,textAlign:"left",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{currentCC.n[lang]||currentCC.n.en}</span>
+          <span style={{color:ac,fontWeight:700,fontSize:fs-2}}>{currentCC.code}</span>
+          <span style={{color:mt,fontSize:fs-2}}>▾</span>
+        </button>
         {showCountryPicker&&<>
           <div onClick={()=>setShowCountryPicker(false)} style={{position:"fixed",inset:0,zIndex:100}}/>
-          <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:cd,border:`1px solid ${ac}`,borderRadius:10,maxHeight:260,overflowY:"auto",zIndex:101,boxShadow:"0 8px 24px rgba(0,0,0,.3)"}}>
-            {COUNTRY_CODES.map(cc=><button type="button" key={cc.code+cc.flag} onClick={()=>{setNewC({...newC,countryCode:cc.code});setShowCountryPicker(false);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"9px 12px",background:newC.countryCode===cc.code?`${ac}15`:"transparent",border:"none",borderBottom:`1px solid ${bd}`,cursor:"pointer",color:tc,fontSize:fs-1,textAlign:"left"}}>
+          <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:cd,border:`1px solid ${ac}`,borderRadius:10,maxHeight:280,overflowY:"auto",zIndex:101,boxShadow:"0 8px 24px rgba(0,0,0,.3)"}}>
+            {COUNTRY_CODES.map((cc,i)=><button type="button" key={cc.code+cc.flag+i} onClick={()=>{setNewC({...newC,countryCode:cc.code,_ccIdx:i});setShowCountryPicker(false);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"9px 12px",background:(newC._ccIdx!==undefined?newC._ccIdx===i:newC.countryCode===cc.code)?`${ac}15`:"transparent",border:"none",borderBottom:`1px solid ${bd}`,cursor:"pointer",color:tc,fontSize:fs-1,textAlign:"left"}}>
               <Flag code={cc.flag} size={22}/>
-              <span style={{flex:1,fontWeight:newC.countryCode===cc.code?700:400}}>{cc.n[lang]||cc.n.en}</span>
+              <span style={{flex:1,fontWeight:newC.countryCode===cc.code?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{cc.n[lang]||cc.n.en}</span>
               <span style={{color:ac,fontWeight:700,fontSize:fs-2}}>{cc.code}</span>
-              {newC.countryCode===cc.code&&<span style={{color:ac}}>✓</span>}
             </button>)}
           </div>
         </>}
+      </div>
+      {/* Phone row - code + number */}
+      <div style={{marginBottom:6}}>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:3}}>📞 {lang==="tr"?"Telefon Numarası":"Phone Number"}</div>
+        <div style={{display:"flex",gap:4,alignItems:"stretch"}}>
+          <div style={{...IS,flex:"0 0 70px",textAlign:"center",fontWeight:700,padding:"9px 4px",color:ac,background:dark?"#0d1520":"#eef2f7",display:"flex",alignItems:"center",justifyContent:"center"}}>{newC.countryCode}</div>
+          <input placeholder="5XX XXX XXXX" value={newC.phone} onChange={e=>setNewC({...newC,phone:e.target.value.replace(/[^0-9\s]/g,"")})} type="tel" inputMode="numeric" style={{...IS,flex:1,letterSpacing:1,minWidth:0}}/>
+        </div>
       </div>
       <select value={newC.category} onChange={e=>setNewC({...newC,category:e.target.value})} style={{...IS,marginBottom:6}}>
         {catOptions.map(([k,ic,lb])=><option key={k} value={k}>{ic} {lb}</option>)}
