@@ -584,6 +584,8 @@ const[newNApp,setNewNApp]=useState({name:"",url:"",icon:"📱"});
 const[contacts,setContacts]=useState([]);
 const[catF,setCatF]=useState("all");
 const[showAddC,setShowAddC]=useState(false);
+const[editContactId,setEditContactId]=useState(null);
+const[showCountryPicker,setShowCountryPicker]=useState(false);
 const COUNTRY_CODES=[
   {code:"+90",emoji:"🇹🇷",flag:"tr",n:{tr:"Türkiye",en:"Turkiye",de:"Türkei",ru:"Турция",zh:"土耳其",hi:"तुर्की",nl:"Turkije",es:"Turquía",ar:"تركيا"}},
   {code:"+1",emoji:"🇺🇸",flag:"us",n:{tr:"ABD",en:"USA",de:"USA",ru:"США",zh:"美国",hi:"अमेरिका",nl:"VS",es:"EE.UU.",ar:"أمريكا"}},
@@ -626,12 +628,31 @@ const[trashItems,setTrashItems]=useState([]);
 const[trashDays,setTrashDays]=useState(30);
 
 const bmi=hd.weight>0&&hd.height>0?(hd.weight/((hd.height/100)**2)).toFixed(1):0;
-const hscore=(hd.pulse===0&&hd.weight===0)?0:Math.min(100,Math.round(
-(hd.pulse>=60&&hd.pulse<=100?30:hd.pulse>=50&&hd.pulse<=110?15:hd.pulse>0?5:0)+
-(bmi>=18.5&&bmi<25?25:bmi>=17&&bmi<30?12:bmi>0?5:0)+
-(hd.bpS>=90&&hd.bpS<=120&&hd.bpD>=60&&hd.bpD<=80?30:hd.bpS>=85&&hd.bpS<=140&&hd.bpD>=55&&hd.bpD<=90?15:hd.bpS>0?5:0)+
-(medProg>=80?15:medProg>50?10:medProg>0?5:0)
-));
+// Risk factors from patient history
+const allergyCount=(pat.allergies||"").split(/[,;]/).filter(x=>x.trim()).length;
+const chronicCount=(pat.chronic||"").split(/[,;]/).filter(x=>x.trim()).length;
+const medsCount=meds.length;
+const recordsCount=records.length;
+// Risk penalty: each chronic -3, each allergy -1 (max -15)
+const riskPenalty=Math.min(15,chronicCount*3+allergyCount*1);
+// Wellness bonus: water/sleep/steps
+const wellnessBonus=(()=>{
+  let b=0;
+  if(wellness.water>=wellness.waterGoal*0.8)b+=3;
+  if(wellness.sleep>=7&&wellness.sleep<=9)b+=3;
+  if(wellness.steps>=wellness.stepsGoal*0.8)b+=3;
+  if(wellness.mood>=4)b+=2;
+  if(wellness.exercise>=30)b+=2;
+  return Math.min(13,b);
+})();
+const hscore=(hd.pulse===0&&hd.weight===0&&!pat.birthDate)?0:Math.max(0,Math.min(100,Math.round(
+(hd.pulse>=60&&hd.pulse<=100?25:hd.pulse>=50&&hd.pulse<=110?12:hd.pulse>0?5:0)+
+(bmi>=18.5&&bmi<25?22:bmi>=17&&bmi<30?10:bmi>0?5:0)+
+(hd.bpS>=90&&hd.bpS<=120&&hd.bpD>=60&&hd.bpD<=80?25:hd.bpS>=85&&hd.bpS<=140&&hd.bpD>=55&&hd.bpD<=90?12:hd.bpS>0?5:0)+
+(medProg>=80?15:medProg>50?10:medProg>0?5:0)+
+wellnessBonus-
+riskPenalty
+)));
 
 // ═══ AUTO-SAVE/LOAD ═══
 useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
@@ -1349,6 +1370,22 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     {hscore>0&&hscore<=60&&<div style={{marginTop:8,padding:"8px 10px",borderRadius:8,background:`${ac}08`,fontSize:fs-2,color:ac}}>
       💡 {lang==="tr"?"Skorunuzu artırmak için: Değerlerinizi referans aralığına getirin ve ilaçlarınızı düzenli kullanın.":"To improve: Keep values in reference range and take medications regularly."}
     </div>}
+    {/* Risk factors from history */}
+    {(allergyCount>0||chronicCount>0||medsCount>0||recordsCount>0)&&<div style={{marginTop:8,padding:"8px 10px",borderRadius:8,background:`${dg}08`,border:`1px solid ${dg}22`}}>
+      <div style={{fontSize:fs-2,fontWeight:700,color:dg,marginBottom:4}}>⚠️ {lang==="tr"?"Risk Faktörleri (Hasta Karnesinden)":"Risk Factors (from Patient Card)"}</div>
+      <div style={{fontSize:fs-3,color:mt,display:"flex",flexDirection:"column",gap:2}}>
+        {allergyCount>0&&<div>🤧 {lang==="tr"?"Alerji":"Allergies"}: <strong>{allergyCount}</strong> {lang==="tr"?"kayıt":"entries"} (−{allergyCount*1} {lang==="tr"?"puan":"pts"})</div>}
+        {chronicCount>0&&<div>🩺 {lang==="tr"?"Kronik Hastalık":"Chronic Condition"}: <strong>{chronicCount}</strong> {lang==="tr"?"kayıt":"entries"} (−{chronicCount*3} {lang==="tr"?"puan":"pts"})</div>}
+        {medsCount>0&&<div>💊 {lang==="tr"?"Kullanılan İlaç":"Active Medications"}: <strong>{medsCount}</strong></div>}
+        {recordsCount>0&&<div>📋 {lang==="tr"?"Tıbbi Kayıt":"Medical Records"}: <strong>{recordsCount}</strong></div>}
+        <div style={{marginTop:2,color:dg}}>{lang==="tr"?`Toplam risk cezası: −${riskPenalty} puan`:`Total risk penalty: −${riskPenalty} pts`}</div>
+      </div>
+    </div>}
+    {/* Wellness bonus */}
+    {wellnessBonus>0&&<div style={{marginTop:6,padding:"8px 10px",borderRadius:8,background:`${sc}08`,border:`1px solid ${sc}22`}}>
+      <div style={{fontSize:fs-2,fontWeight:700,color:sc,marginBottom:4}}>✨ {lang==="tr"?"Wellness Bonusu":"Wellness Bonus"}</div>
+      <div style={{fontSize:fs-3,color:mt}}>+{wellnessBonus} {lang==="tr"?"puan (su, uyku, adım, ruh hali, egzersiz)":"pts (water, sleep, steps, mood, exercise)"}</div>
+    </div>}
     <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Kaynak: acibadem.com.tr referans değerleri":"Source: acibadem.com.tr reference values"}</div>
   </div>
 </div>);};
@@ -1440,22 +1477,196 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><textarea placeholder={lang==="tr"?"İçerik / Sonuç":"Content / Result"} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newRec.content){setRecords(p=>[...p,{id:Date.now(),...newRec}]);setNewRec({type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""});setShowAddRec(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddRec(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
 </div>);
 
-const renderNotes=()=>{const sorted=[...notes].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));return(<div style={{display:"flex",flexDirection:"column",gap:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:fs+2}}>📝 {t.notes}</span><button onClick={()=>setNotes(p=>[{id:Date.now(),title:"",content:"",color:NCOL[Math.floor(Math.random()*8)],pinned:false},...p])} style={{...BP,padding:"7px 14px"}}>+ {t.nNote}</button></div>{sorted.length===0&&<div style={{textAlign:"center",color:mt,padding:24}}>{t.noN}</div>}<div style={{display:"grid",gridTemplateColumns:"1fr",gap:8}}>{sorted.map(n=>(<div key={n.id} style={{background:dark?n.color+"18":n.color,borderRadius:12,padding:10,position:"relative",border:editNote===n.id?"2px solid "+ac:"1px solid "+bd,overflow:"hidden",minWidth:0,maxWidth:"100%"}}>{n.pinned&&<span style={{position:"absolute",top:4,right:6,fontSize:14}}>📌</span>}{editNote===n.id?<div style={{display:"flex",flexDirection:"column",gap:4}}><input value={n.title} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,title:e.target.value}:x))} placeholder={t.nNote} style={{...IS,fontWeight:700,background:"transparent",border:"none",padding:0}}/><textarea value={n.content} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,content:e.target.value}:x))} onInput={autoResize} rows={Math.max(4,Math.ceil((n.content||"").length/20))} style={{...IS,background:"transparent",border:"none",padding:0,resize:"none",minHeight:80,width:"100%",wordBreak:"break-word",overflowWrap:"break-word",direction:lang==="ar"?"rtl":"ltr"}}/><div style={{display:"flex",gap:3,marginTop:4}}>{NCOL.map(c=><button key={c} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,color:c}:x))} style={{width:18,height:18,borderRadius:9,background:c,border:n.color===c?"2px solid "+ac:"2px solid transparent",cursor:"pointer"}}/>)}</div><button onClick={()=>{const note=notes.find(x=>x.id===n.id);if(note&&!note.title?.trim()&&!note.content?.trim()){setNotes(p=>p.filter(x=>x.id!==n.id));}setEditNote(null);}} style={{...BP,padding:"4px 10px",marginTop:4}}>✓</button></div>:<div onClick={()=>setEditNote(n.id)} style={{cursor:"pointer"}}><div style={{fontWeight:700,marginBottom:3,color:dark?tc:"#333"}}>{n.title||t.nNote}</div><div style={{fontSize:fs-2,color:dark?mt:"#555",whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"break-word"}}>{n.content}</div></div>}<div style={{display:"flex",gap:4,marginTop:6}}><button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} style={{background:"none",border:"none",cursor:"pointer",fontSize:14}}>📌</button><button onClick={()=>copyTxt(n.content)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14}}>📋</button><SpeakBtn text={n.content}/><button onClick={()=>toTrash("note",n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,color:dg}}>🗑️</button></div></div>))}</div><div style={{fontWeight:700,marginTop:4}}>{t.extA}</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{noteApps.map(a=><a key={a.name} href={a.url} target="_blank" rel="noopener noreferrer" style={{...CS,display:"flex",alignItems:"center",gap:6,textDecoration:"none",color:tc,padding:"8px 12px"}}><span style={{fontSize:18}}>{a.icon}</span><span style={{fontSize:fs-1}}>{a.name}</span></a>)}<button onClick={()=>setShowAddNApp(true)} style={{...CS,border:"2px dashed "+ac+"44",cursor:"pointer",padding:"8px 12px",color:ac}}>+ {t.addApp}</button></div>{showAddNApp&&<div style={{...CS,border:"2px solid "+ac}}><input placeholder="App Name" value={newNApp.name} onChange={e=>setNewNApp({...newNApp,name:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder="https://..." value={newNApp.url} onChange={e=>setNewNApp({...newNApp,url:e.target.value})} style={{...IS,marginBottom:6}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newNApp.name&&newNApp.url){setNoteApps(p=>[...p,newNApp]);setNewNApp({name:"",url:"",icon:"📱"});setShowAddNApp(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddNApp(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}</div>);};
+const renderNotes=()=>{
+  const sorted=[...notes].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
+  return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <span style={{fontWeight:700,fontSize:fs+2}}>📝 {t.notes}</span>
+      <button onClick={()=>{const id=Date.now();setNotes(p=>[{id,title:"",content:"",color:NCOL[Math.floor(Math.random()*8)],pinned:false},...p]);setEditNote(id);}} style={{...BP,padding:"7px 14px"}}>+ {t.nNote}</button>
+    </div>
+    {sorted.length===0&&<div style={{textAlign:"center",color:mt,padding:24}}>{t.noN}</div>}
+    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+      {sorted.map(n=>{
+        const isEditing=editNote===n.id;
+        return(<div key={n.id} style={{background:dark?n.color+"22":n.color,borderRadius:12,padding:12,border:isEditing?"2px solid "+ac:"1px solid "+(dark?bd:n.color),width:"100%",maxWidth:"100%",boxSizing:"border-box",overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",gap:6}}>
+          {n.pinned&&<span style={{position:"absolute",top:6,right:8,fontSize:14}}>📌</span>}
+          {isEditing?<>
+            <input value={n.title} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,title:e.target.value}:x))} placeholder={lang==="tr"?"Başlık":"Title"} style={{fontWeight:700,background:"transparent",border:"none",padding:0,color:dark?tc:"#1a1a1a",fontSize:fs+1,outline:"none",width:"100%",boxSizing:"border-box"}}/>
+            <textarea value={n.content} onChange={e=>{setNotes(p=>p.map(x=>x.id===n.id?{...x,content:e.target.value}:x));const el=e.target;el.style.height='auto';el.style.height=Math.max(60,el.scrollHeight)+'px';}} placeholder={lang==="tr"?"Not al...":"Take a note..."} style={{background:"transparent",border:"none",padding:0,resize:"none",minHeight:60,width:"100%",maxWidth:"100%",boxSizing:"border-box",color:dark?tc:"#333",fontSize:fs-1,outline:"none",fontFamily:"inherit",wordBreak:"break-word",overflowWrap:"anywhere",whiteSpace:"pre-wrap",direction:lang==="ar"?"rtl":"ltr",overflow:"hidden"}} ref={el=>{if(el){el.style.height='auto';el.style.height=Math.max(60,el.scrollHeight)+'px';}}}/>
+            <div style={{display:"flex",gap:3,flexWrap:"wrap",marginTop:4}}>{NCOL.map(c=><button key={c} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,color:c}:x))} style={{width:20,height:20,borderRadius:10,background:c,border:n.color===c?"2px solid "+ac:"2px solid transparent",cursor:"pointer",flexShrink:0}}/>)}</div>
+            <div style={{display:"flex",gap:6,marginTop:4}}>
+              <button onClick={()=>{const note=notes.find(x=>x.id===n.id);if(note&&!note.title?.trim()&&!note.content?.trim()){setNotes(p=>p.filter(x=>x.id!==n.id));}setEditNote(null);}} style={{...BP,padding:"6px 14px",fontSize:fs-1}}>✓ {lang==="tr"?"Kaydet":"Save"}</button>
+              <button onClick={()=>setEditNote(null)} style={{...BP,background:mt,padding:"6px 14px",fontSize:fs-1}}>{t.cancel}</button>
+            </div>
+          </>:<>
+            <div onClick={()=>setEditNote(n.id)} style={{cursor:"pointer",width:"100%",maxWidth:"100%",overflow:"hidden"}}>
+              {n.title&&<div style={{fontWeight:700,marginBottom:4,color:dark?tc:"#1a1a1a",fontSize:fs+1,wordBreak:"break-word",overflowWrap:"anywhere"}}>{n.title}</div>}
+              <div style={{fontSize:fs-1,color:dark?mt:"#444",whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:180,overflow:"hidden"}}>{n.content||(lang==="tr"?"Boş not":"Empty note")}</div>
+            </div>
+            <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
+              <button onClick={()=>setEditNote(n.id)} style={{background:`${ac}22`,border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:fs-2,color:ac,fontWeight:600}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button>
+              <button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,opacity:n.pinned?1:0.5}}>📌</button>
+              <button onClick={()=>copyTxt(n.content)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14}}>📋</button>
+              <SpeakBtn text={n.content}/>
+              <button onClick={()=>toTrash("note",n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,color:dg,marginLeft:"auto"}}>🗑️</button>
+            </div>
+          </>}
+        </div>);
+      })}
+    </div>
+    <div style={{fontWeight:700,marginTop:4}}>{t.extA}</div>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{noteApps.map(a=><a key={a.name} href={a.url} target="_blank" rel="noopener noreferrer" style={{...CS,display:"flex",alignItems:"center",gap:6,textDecoration:"none",color:tc,padding:"8px 12px"}}><span style={{fontSize:18}}>{a.icon}</span><span style={{fontSize:fs-1}}>{a.name}</span></a>)}<button onClick={()=>setShowAddNApp(true)} style={{...CS,border:"2px dashed "+ac+"44",cursor:"pointer",padding:"8px 12px",color:ac}}>+ {t.addApp}</button></div>
+    {showAddNApp&&<div style={{...CS,border:"2px solid "+ac}}><input placeholder="App Name" value={newNApp.name} onChange={e=>setNewNApp({...newNApp,name:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder="https://..." value={newNApp.url} onChange={e=>setNewNApp({...newNApp,url:e.target.value})} style={{...IS,marginBottom:6}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newNApp.name&&newNApp.url){setNoteApps(p=>[...p,newNApp]);setNewNApp({name:"",url:"",icon:"📱"});setShowAddNApp(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddNApp(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
+  </div>);
+};
 
-const renderContacts=()=>{const filtered=catF==="all"?contacts:contacts.filter(c=>c.category===catF);return(<div style={{display:"flex",flexDirection:"column",gap:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:fs+2}}>📞 {t.contacts}</span><button onClick={()=>setShowAddC(true)} style={{...BP,padding:"7px 14px"}}>+ {t.add}</button></div><div style={{display:"flex",gap:6}}>{["all","doctor","taxi","special","emergency"].map(k=><button key={k} onClick={()=>setCatF(k)} style={pill(catF===k)}>{k==="all"?"🏠":k==="doctor"?"👨‍⚕️":k==="taxi"?"🚕":k==="special"?"⭐":"🚨"}</button>)}</div><div style={{...CS,background:`${dg}08`,border:`1px solid ${dg}22`}}><div style={{fontWeight:700,color:dg,marginBottom:6}}>🚨 {t.emN}</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{emNums.slice(0,5).map(en=><a key={en.id} href={`tel:${en.number}`} style={{padding:"5px 10px",borderRadius:8,background:`${dg}15`,color:dg,fontWeight:700,textDecoration:"none",fontSize:fs}}>{en.icon} {en.number}</a>)}</div></div>{filtered.length===0&&<div style={{textAlign:"center",color:mt,padding:20}}>{t.noC}</div>}{filtered.map(c=>(<div key={c.id} style={{...CS,display:"flex",alignItems:"center",gap:10}}><div style={{width:40,height:40,borderRadius:"50%",background:`${ac}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:ac}}>{c.name[0]}</div><div style={{flex:1}}><div style={{fontWeight:700}}>{c.name}</div><div style={{fontSize:fs-2,color:mt}}>{c.phone}</div></div><a href={`tel:${c.phone}`} style={{fontSize:22,textDecoration:"none"}}>📞</a><button onClick={()=>toTrash("contact",c)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:14}}>🗑️</button></div>))}{showAddC&&<div style={{...CS,border:`2px solid ${ac}`}}><input placeholder={t.nm} value={newC.name} onChange={e=>setNewC({...newC,name:e.target.value})} style={{...IS,marginBottom:6}}/>
-<div style={{display:"flex",gap:4,marginBottom:6,alignItems:"center"}}>
-  <select value={newC.countryCode} onChange={e=>{setNewC({...newC,countryCode:e.target.value});}} style={{...IS,flex:"0 0 auto",width:"auto",minWidth:100,maxWidth:160,padding:"9px 6px",fontSize:fs-1}}>
-    {COUNTRY_CODES.map(cc=><option key={cc.code+cc.emoji} value={cc.code}>{cc.emoji} {cc.n[lang]||cc.n.en}</option>)}
-  </select>
-  <div style={{...IS,flex:"0 0 56px",textAlign:"center",fontWeight:700,padding:"9px 4px",color:ac,background:dark?"#0d1520":"#eef2f7"}}>{newC.countryCode}</div>
-  <input placeholder="5XX XXX XXXX" value={newC.phone} onChange={e=>setNewC({...newC,phone:e.target.value.replace(/[^0-9\s]/g,"")})} type="tel" inputMode="numeric" style={{...IS,flex:1,letterSpacing:1}}/>
-</div>
-<select value={newC.category} onChange={e=>setNewC({...newC,category:e.target.value})} style={{...IS,marginBottom:6}}><option value="doctor">👨‍⚕️ {lang==="tr"?"Doktor":"Doctor"}</option><option value="taxi">🚕 {lang==="tr"?"Taksi":"Taxi"}</option><option value="special">⭐ {lang==="tr"?"Özel":"Special"}</option><option value="emergency">🚨 {lang==="tr"?"Acil":"Emergency"}</option></select><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newC.name&&newC.phone){const fullPhone=newC.countryCode+" "+newC.phone;setContacts(p=>[...p,{id:Date.now(),name:newC.name,phone:fullPhone,category:newC.category,note:""}]);setNewC({name:"",phone:"",countryCode:"+90",category:"doctor",note:""});setShowAddC(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddC(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}</div>);};
+const renderContacts=()=>{
+  const filtered=catF==="all"?contacts:contacts.filter(c=>c.category===catF);
+  const currentCC=COUNTRY_CODES.find(c=>c.code===newC.countryCode)||COUNTRY_CODES[0];
+  const catOptions=[["doctor","👨‍⚕️",lang==="tr"?"Doktor":"Doctor"],["taxi","🚕",lang==="tr"?"Taksi":"Taxi"],["special","⭐",lang==="tr"?"Özel":"Special"],["emergency","🚨",lang==="tr"?"Acil":"Emergency"]];
+  return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <span style={{fontWeight:700,fontSize:fs+2}}>📞 {t.contacts}</span>
+      <button onClick={()=>{setEditContactId(null);setNewC({name:"",phone:"",countryCode:"+90",category:"doctor",note:""});setShowAddC(true);}} style={{...BP,padding:"7px 14px"}}>+ {t.add}</button>
+    </div>
+    <div style={{display:"flex",gap:6}}>{["all","doctor","taxi","special","emergency"].map(k=><button key={k} onClick={()=>setCatF(k)} style={pill(catF===k)}>{k==="all"?"🏠":k==="doctor"?"👨‍⚕️":k==="taxi"?"🚕":k==="special"?"⭐":"🚨"}</button>)}</div>
+    <div style={{...CS,background:`${dg}08`,border:`1px solid ${dg}22`}}>
+      <div style={{fontWeight:700,color:dg,marginBottom:6}}>🚨 {t.emN}</div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{emNums.slice(0,5).map(en=><a key={en.id} href={`tel:${en.number}`} style={{padding:"5px 10px",borderRadius:8,background:`${dg}15`,color:dg,fontWeight:700,textDecoration:"none",fontSize:fs}}>{en.icon} {en.number}</a>)}</div>
+    </div>
+    {filtered.length===0&&<div style={{textAlign:"center",color:mt,padding:20}}>{t.noC}</div>}
+    {filtered.map(c=>(<div key={c.id} style={{...CS,display:"flex",alignItems:"center",gap:10}}>
+      <div style={{width:40,height:40,borderRadius:"50%",background:`${ac}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:ac,flexShrink:0}}>{c.name[0]}</div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</div>
+        <div style={{fontSize:fs-2,color:mt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.phone}</div>
+      </div>
+      <a href={`tel:${c.phone}`} style={{fontSize:22,textDecoration:"none"}}>📞</a>
+      <button onClick={()=>{
+        // Edit — parse phone to countryCode + rest
+        const parts=(c.phone||"").split(" ");
+        const cc=parts[0]&&parts[0].startsWith("+")?parts[0]:"+90";
+        const rest=parts[0]&&parts[0].startsWith("+")?parts.slice(1).join(" "):c.phone;
+        setEditContactId(c.id);
+        setNewC({name:c.name,phone:rest,countryCode:cc,category:c.category,note:c.note||""});
+        setShowAddC(true);
+      }} style={{background:"none",border:`1px solid ${ac}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:ac}}>✏️</button>
+      <button onClick={()=>toTrash("contact",c)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:14}}>🗑️</button>
+    </div>))}
+    {showAddC&&<div style={{...CS,border:`2px solid ${ac}`}}>
+      <div style={{fontWeight:700,marginBottom:8,color:ac}}>{editContactId?"✏️ "+(lang==="tr"?"Kişiyi Düzenle":"Edit Contact"):"+ "+(lang==="tr"?"Yeni Kişi":"New Contact")}</div>
+      <input placeholder={t.nm} value={newC.name} onChange={e=>setNewC({...newC,name:e.target.value})} style={{...IS,marginBottom:6}}/>
+      {/* CUSTOM COUNTRY PICKER - real flags */}
+      <div style={{marginBottom:6,position:"relative"}}>
+        <div style={{display:"flex",gap:4,alignItems:"stretch"}}>
+          <button type="button" onClick={()=>setShowCountryPicker(!showCountryPicker)} style={{...IS,flex:"0 0 auto",minWidth:120,padding:"8px 8px",display:"flex",alignItems:"center",gap:6,cursor:"pointer",background:dark?"#0d1520":"#f8fafc"}}>
+            <Flag code={currentCC.flag} size={22}/>
+            <span style={{flex:1,fontSize:fs-1,textAlign:"left",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{currentCC.n[lang]||currentCC.n.en}</span>
+            <span style={{color:mt,fontSize:fs-2}}>▾</span>
+          </button>
+          <div style={{...IS,flex:"0 0 60px",textAlign:"center",fontWeight:700,padding:"9px 4px",color:ac,background:dark?"#0d1520":"#eef2f7",display:"flex",alignItems:"center",justifyContent:"center"}}>{newC.countryCode}</div>
+          <input placeholder="5XX XXX XXXX" value={newC.phone} onChange={e=>setNewC({...newC,phone:e.target.value.replace(/[^0-9\s]/g,"")})} type="tel" inputMode="numeric" style={{...IS,flex:1,letterSpacing:1,minWidth:0}}/>
+        </div>
+        {showCountryPicker&&<>
+          <div onClick={()=>setShowCountryPicker(false)} style={{position:"fixed",inset:0,zIndex:100}}/>
+          <div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:cd,border:`1px solid ${ac}`,borderRadius:10,maxHeight:260,overflowY:"auto",zIndex:101,boxShadow:"0 8px 24px rgba(0,0,0,.3)"}}>
+            {COUNTRY_CODES.map(cc=><button type="button" key={cc.code+cc.flag} onClick={()=>{setNewC({...newC,countryCode:cc.code});setShowCountryPicker(false);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"9px 12px",background:newC.countryCode===cc.code?`${ac}15`:"transparent",border:"none",borderBottom:`1px solid ${bd}`,cursor:"pointer",color:tc,fontSize:fs-1,textAlign:"left"}}>
+              <Flag code={cc.flag} size={22}/>
+              <span style={{flex:1,fontWeight:newC.countryCode===cc.code?700:400}}>{cc.n[lang]||cc.n.en}</span>
+              <span style={{color:ac,fontWeight:700,fontSize:fs-2}}>{cc.code}</span>
+              {newC.countryCode===cc.code&&<span style={{color:ac}}>✓</span>}
+            </button>)}
+          </div>
+        </>}
+      </div>
+      <select value={newC.category} onChange={e=>setNewC({...newC,category:e.target.value})} style={{...IS,marginBottom:6}}>
+        {catOptions.map(([k,ic,lb])=><option key={k} value={k}>{ic} {lb}</option>)}
+      </select>
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={()=>{
+          if(newC.name&&newC.phone){
+            const fullPhone=newC.countryCode+" "+newC.phone;
+            if(editContactId){
+              setContacts(p=>p.map(x=>x.id===editContactId?{...x,name:newC.name,phone:fullPhone,category:newC.category,note:newC.note}:x));
+              notify("✅ "+(lang==="tr"?"Kişi güncellendi":"Contact updated"));
+            }else{
+              setContacts(p=>[...p,{id:Date.now(),name:newC.name,phone:fullPhone,category:newC.category,note:""}]);
+              notify("✅ "+(lang==="tr"?"Kişi eklendi":"Contact added"));
+            }
+            setNewC({name:"",phone:"",countryCode:"+90",category:"doctor",note:""});
+            setEditContactId(null);
+            setShowAddC(false);
+          }
+        }} style={BP}>{editContactId?(lang==="tr"?"Güncelle":"Update"):t.save}</button>
+        <button onClick={()=>{setShowAddC(false);setEditContactId(null);}} style={{...BP,background:mt}}>{t.cancel}</button>
+      </div>
+    </div>}
+  </div>);
+};
 
-const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}><span style={{fontWeight:700,fontSize:fs+2}}>👥 {t.community}</span><div style={{padding:"6px 12px",borderRadius:10,background:`${dg}08`,fontSize:fs-1,color:dg}}>{t.warn}</div><div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:"none",overflowY:"visible"}}>{msgs.map(m=>(<div key={m.id} className="msg-card" style={CS}><div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontWeight:700,color:ac}}>{m.user}</span><span style={{fontSize:fs-2,color:mt}}>{m.time}</span></div><div style={{marginBottom:6,wordBreak:"break-word",overflowWrap:"break-word"}}>{m.text}</div><div style={{display:"flex",gap:6}}><button onClick={()=>setMsgs(p=>p.map(x=>x.id===m.id?{...x,likes:[...(x.likes_arr||[]),pat.name||"Ben"].length}:x))} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",color:tc}}>❤️ {m.likes}</button><button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>📋</button><SpeakBtn text={m.text}/>{(m.user===(pat.name||"Ben"))&&<><button onClick={()=>{const nv=prompt(lang==="tr"?"Mesajı düzenle:":"Edit message:",m.text);if(nv!==null)setMsgs(p=>p.map(x=>x.id===m.id?{...x,text:nv,edited:true}:x));}} style={{background:"none",border:`1px solid ${ac}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:ac}}>✏️</button><button onClick={()=>setMsgs(p=>p.filter(x=>x.id!==m.id))} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:dg}}>🗑️</button></>}</div></div>))}</div><div style={{display:"flex",gap:6,position:"relative"}}><MicBtn onResult={v=>setMsgIn(v)} currentValue={msgIn}/><button onClick={()=>setShowEmoji(!showEmoji)} style={{...BP,padding:"8px 12px",fontSize:18}}>😊</button><input value={msgIn} onChange={e=>setMsgIn(e.target.value)} placeholder={t.wr} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter"&&msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn,likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}}/><button onClick={()=>{if(msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn,likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}} style={BP}>{t.send}</button>{showEmoji&&<EmojiPicker onPick={e=>setMsgIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}</div></div>);
+const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}>
+  <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+    <div style={{width:36,height:36,borderRadius:12,background:`linear-gradient(135deg,${ac},${a2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>👥</div>
+    <div style={{flex:1,minWidth:0}}>
+      <div style={{fontWeight:700,fontSize:fs+1}}>{t.community}</div>
+      <div style={{fontSize:fs-3,color:dg}}>{t.warn}</div>
+    </div>
+  </div>
+  <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>
+    {msgs.length===0&&<div style={{...CS,textAlign:"center",padding:20,color:mt}}>{lang==="tr"?"Henüz mesaj yok":"No messages yet"}</div>}
+    {msgs.map(m=>{
+      const isMine=m.user===(pat.name||"Ben");
+      return(<div key={m.id} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:isMine?"flex-end":"flex-start",background:isMine?`linear-gradient(135deg,${ac},${a2})`:cd,color:isMine?"#fff":tc,animation:"slideD .3s"}}>
+        {!isMine&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><span style={{fontWeight:700,color:ac,fontSize:fs-2}}>{m.user}</span><span style={{fontSize:fs-3,color:mt}}>{m.time}</span></div>}
+        <div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.text}{m.edited&&<span style={{fontSize:fs-4,color:isMine?"rgba(255,255,255,.6)":mt,marginLeft:4}}>({lang==="tr"?"düzenlendi":"edited"})</span>}</div>
+        <div style={{display:"flex",gap:4,marginTop:4,flexWrap:"wrap"}}>
+          <button onClick={()=>setMsgs(p=>p.map(x=>x.id===m.id?{...x,likes:(x.likes||0)+1}:x))} style={{background:isMine?"rgba(255,255,255,.15)":"none",border:`1px solid ${isMine?"rgba(255,255,255,.3)":bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:isMine?"#fff":tc}}>❤️ {m.likes||0}</button>
+          <button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${isMine?"rgba(255,255,255,.3)":bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:isMine?"#fff":tc}}>📋</button>
+          {!isMine&&<SpeakBtn text={m.text}/>}
+          {isMine&&<>
+            <button onClick={()=>{const nv=prompt(lang==="tr"?"Mesajı düzenle:":"Edit message:",m.text);if(nv!==null&&nv.trim())setMsgs(p=>p.map(x=>x.id===m.id?{...x,text:nv,edited:true}:x));}} style={{background:"none",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>✏️</button>
+            <button onClick={()=>setMsgs(p=>p.filter(x=>x.id!==m.id))} style={{background:"none",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>🗑️</button>
+          </>}
+        </div>
+        {isMine&&<div style={{fontSize:fs-3,color:"rgba(255,255,255,.7)",marginTop:3,textAlign:"right"}}>{m.time}</div>}
+      </div>);
+    })}
+  </div>
+  <div style={{display:"flex",gap:6,flexShrink:0,position:"relative",alignItems:"flex-end"}}>
+    <MicBtn onResult={v=>setMsgIn(v)} currentValue={msgIn}/>
+    <button onClick={()=>setShowEmoji(!showEmoji)} style={{...BP,padding:"8px 12px",fontSize:18,flexShrink:0}}>😊</button>
+    <textarea value={msgIn} onChange={e=>setMsgIn(e.target.value)} onInput={autoResize} placeholder={t.wr} style={{...IS,flex:1,minHeight:38,maxHeight:150,resize:"none",overflowY:"auto",wordBreak:"break-word",overflowWrap:"anywhere"}} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey&&msgIn.trim()){e.preventDefault();setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn.trim(),likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}}/>
+    <button onClick={()=>{if(msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn.trim(),likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}} style={{...BP,flexShrink:0}}>{t.send}</button>
+    {showEmoji&&<EmojiPicker onPick={e=>setMsgIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}
+  </div>
+</div>);
 
 const q1Dynamic=pat.name?`${pat.name.split(" ")[0]}, ${t.q1.toLowerCase()} ${lang==="tr"?"Umarım iyisindir 💙":"Hope you are well 💙"}`:t.q1;
-const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}><div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}</div><div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>{chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}{chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc}}>{m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}<div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"break-word"}}>{m.text}</div><div style={{display:"flex",gap:6,marginTop:6}}>{m.role==="assistant"&&<><button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:tc}}>📋</button><SpeakBtn text={m.text}/></>}<button onClick={()=>setChatM(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:dg}}>🗑️</button></div></div>))}{chatL&&<div style={{...CS,alignSelf:"flex-start"}}><span style={{animation:"pulse 1s infinite"}}>● </span><span style={{animation:"pulse 1s infinite .2s"}}>● </span><span style={{animation:"pulse 1s infinite .4s"}}>●</span></div>}</div><div style={{display:"flex",gap:6,flexShrink:0,position:"relative"}}><MicBtn onResult={v=>setChatIn(v)} currentValue={chatIn}/><button onClick={()=>setShowEmoji(!showEmoji)} style={{...BP,padding:"8px 12px",fontSize:18}}>😊</button><input value={chatIn} onChange={e=>setChatIn(e.target.value)} placeholder={t.wr} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter")sendChat();}}/><button onClick={()=>sendChat()} disabled={chatL} style={BP}>{t.send}</button>{showEmoji&&<EmojiPicker onPick={e=>setChatIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}</div></div>);
+const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}>
+  <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}</div>
+  <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>
+    {chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}
+    {chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:"slideD .3s"}}>
+      {m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}
+      <div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.text}</div>
+      <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
+        {m.role==="assistant"&&<>
+          <button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:tc}}>📋</button>
+          <SpeakBtn text={m.text}/>
+        </>}
+        <button onClick={()=>setChatM(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:`1px solid ${m.role==="user"?"rgba(255,255,255,.3)":dg+"33"}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:m.role==="user"?"#fff":dg}}>🗑️</button>
+      </div>
+    </div>))}
+    {chatL&&<div style={{...CS,alignSelf:"flex-start"}}><span style={{animation:"pulse 1s infinite"}}>● </span><span style={{animation:"pulse 1s infinite .2s"}}>● </span><span style={{animation:"pulse 1s infinite .4s"}}>●</span></div>}
+  </div>
+  <div style={{display:"flex",gap:6,flexShrink:0,position:"relative",alignItems:"flex-end"}}>
+    <MicBtn onResult={v=>setChatIn(v)} currentValue={chatIn}/>
+    <button onClick={()=>setShowEmoji(!showEmoji)} style={{...BP,padding:"8px 12px",fontSize:18,flexShrink:0}}>😊</button>
+    <textarea value={chatIn} onChange={e=>setChatIn(e.target.value)} onInput={autoResize} placeholder={t.wr} style={{...IS,flex:1,minHeight:38,maxHeight:150,resize:"none",overflowY:"auto",wordBreak:"break-word",overflowWrap:"anywhere"}} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat();}}}/>
+    <button onClick={()=>sendChat()} disabled={chatL} style={{...BP,flexShrink:0}}>{t.send}</button>
+    {showEmoji&&<EmojiPicker onPick={e=>setChatIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}
+  </div>
+</div>);
 
 // Privacy Policy page
 const renderPrivacy=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
