@@ -21,24 +21,24 @@ const LL_NATIVE={tr:"Türkçe",en:"English",de:"Deutsch",ru:"Русский",zh:
 // Extended language pool for Word of Day + Translation — 60 languages with flag codes
 const EXT_LANGS=[
   {k:"tr",n:"Türkçe",flag:"tr",code:"tr"},
-  {k:"en",n:"English",flag:"us",code:"en"},
+  {k:"en",n:"English (US)",flag:"us",code:"en"},
   {k:"gb",n:"English (UK)",flag:"gb",code:"en-GB"},
   {k:"de",n:"Deutsch",flag:"de",code:"de"},
   {k:"fr",n:"Français",flag:"fr",code:"fr"},
   {k:"es",n:"Español",flag:"es",code:"es"},
   {k:"mx",n:"Español (MX)",flag:"mx",code:"es-MX"},
-  {k:"ar2",n:"Español (AR)",flag:"ag",code:"es-AR"},
+  {k:"esar",n:"Español (AR)",flag:"arg",code:"es-AR"},
   {k:"it",n:"Italiano",flag:"it",code:"it"},
-  {k:"pt",n:"Português",flag:"pt",code:"pt-PT"},
+  {k:"pt",n:"Português (PT)",flag:"pt",code:"pt-PT"},
   {k:"br",n:"Português (BR)",flag:"br",code:"pt-BR"},
   {k:"ru",n:"Русский",flag:"ru",code:"ru"},
   {k:"ua",n:"Українська",flag:"ua",code:"uk"},
   {k:"zh",n:"中文 (简体)",flag:"cn",code:"zh-CN"},
-  {k:"tw",n:"中文 (繁體)",flag:"cn",code:"zh-TW"},
+  {k:"tw",n:"中文 (繁體)",flag:"tw",code:"zh-TW"},
   {k:"ja",n:"日本語",flag:"jp",code:"ja"},
   {k:"ko",n:"한국어",flag:"kr",code:"ko"},
   {k:"ar",n:"العربية",flag:"sa",code:"ar"},
-  {k:"eg",n:"Arabic (Egypt)",flag:"eg",code:"ar-EG"},
+  {k:"areg",n:"العربية (Mısır)",flag:"eg",code:"ar-EG"},
   {k:"hi",n:"हिन्दी",flag:"in",code:"hi"},
   {k:"bn",n:"বাংলা",flag:"bd",code:"bn"},
   {k:"ur",n:"اردو",flag:"pk",code:"ur"},
@@ -69,20 +69,20 @@ const EXT_LANGS=[
   {k:"az",n:"Azərbaycan",flag:"az",code:"az"},
   {k:"ka",n:"ქართული",flag:"ge",code:"ka"},
   {k:"hy",n:"Հայերեն",flag:"am",code:"hy"},
-  {k:"ma",n:"Arabic (Morocco)",flag:"ma",code:"ar-MA"},
+  {k:"arma",n:"العربية (Fas)",flag:"ma",code:"ar-MA"},
   {k:"sw",n:"Kiswahili",flag:"ke",code:"sw"},
   {k:"ha",n:"Hausa",flag:"ng",code:"ha"},
   {k:"af",n:"Afrikaans",flag:"za",code:"af"},
-  {k:"am",n:"አማርኛ",flag:"et",code:"am"},
+  {k:"amh",n:"አማርኛ (Amharca)",flag:"et",code:"am"},
   {k:"yo",n:"Yorùbá",flag:"ng",code:"yo"},
-  {k:"ca",n:"Català",flag:"es",code:"ca"},
-  {k:"eu",n:"Euskara",flag:"es",code:"eu"},
-  {k:"gl",n:"Galego",flag:"es",code:"gl"},
+  {k:"ca",n:"Català",flag:"cat",code:"ca"},
+  {k:"eu",n:"Euskara",flag:"eus",code:"eu"},
+  {k:"gl",n:"Galego",flag:"gal",code:"gl"},
   {k:"lt",n:"Lietuvių",flag:"lt",code:"lt"},
   {k:"lv",n:"Latviešu",flag:"lv",code:"lv"},
   {k:"et",n:"Eesti",flag:"ee",code:"et"},
   {k:"mt",n:"Malti",flag:"mt",code:"mt"},
-  {k:"cy",n:"Cymraeg",flag:"gb",code:"cy"}
+  {k:"cy",n:"Cymraeg",flag:"wls",code:"cy"}
 ];
 const LL_LOCAL={
 tr:{tr:"Türkçe",en:"İngilizce",de:"Almanca",ru:"Rusça",zh:"Çince",hi:"Hintçe",nl:"Felemenkçe",es:"İspanyolca",ar:"Arapça"},
@@ -212,7 +212,13 @@ et:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#078930"/><r
 lt:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#FDB913"/><rect y="7" width="30" height="6" fill="#006A44"/><rect y="13" width="30" height="7" fill="#C1272D"/></svg>,
 lv:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="8" fill="#9E3039"/><rect y="8" width="30" height="4" fill="#fff"/><rect y="12" width="30" height="8" fill="#9E3039"/></svg>,
 ee:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#0072CE"/><rect y="7" width="30" height="6" fill="#000"/><rect y="13" width="30" height="7" fill="#fff"/></svg>,
-mt:<svg viewBox="0 0 30 20"><rect x="0" width="15" height="20" fill="#fff"/><rect x="15" width="15" height="20" fill="#CC0000"/></svg>
+mt:<svg viewBox="0 0 30 20"><rect x="0" width="15" height="20" fill="#fff"/><rect x="15" width="15" height="20" fill="#CC0000"/></svg>,
+tw:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#FE0000"/><rect width="15" height="10" fill="#000095"/><circle cx="7.5" cy="5" r="3" fill="#fff"/><circle cx="7.5" cy="5" r="2" fill="#000095"/></svg>,
+arg:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="7" fill="#75AADB"/><rect y="7" width="30" height="6" fill="#fff"/><rect y="13" width="30" height="7" fill="#75AADB"/><circle cx="15" cy="10" r="2" fill="#F6B40E"/></svg>,
+cat:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#FCDD09"/><rect y="2" width="30" height="2" fill="#DA121A"/><rect y="6" width="30" height="2" fill="#DA121A"/><rect y="10" width="30" height="2" fill="#DA121A"/><rect y="14" width="30" height="2" fill="#DA121A"/><rect y="18" width="30" height="2" fill="#DA121A"/></svg>,
+eus:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#D52B1E"/><path d="M0,0 L30,20 M30,0 L0,20" stroke="#009E49" strokeWidth="4"/><path d="M15,0 V20 M0,10 H30" stroke="#fff" strokeWidth="4"/></svg>,
+gal:<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#fff"/><path d="M0,0 L30,20" stroke="#0093DD" strokeWidth="4"/></svg>,
+wls:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="10" fill="#fff"/><rect y="10" width="30" height="10" fill="#008A00"/><circle cx="15" cy="10" r="4" fill="#D30731"/></svg>
 };
 const Flag=({code,size=20})=>{const k=code?.toLowerCase();const s=FlagSVG[k];return s?<span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:size,height:Math.round(size*0.67),verticalAlign:"middle",borderRadius:3,overflow:"hidden",border:"1px solid rgba(255,255,255,0.15)",boxShadow:"0 1px 2px rgba(0,0,0,0.15)",flexShrink:0,lineHeight:0}}>{React.cloneElement(s,{width:size,height:Math.round(size*0.67),preserveAspectRatio:"xMidYMid slice",style:{display:"block"}})}</span>:<span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:size,height:Math.round(size*0.67),background:"linear-gradient(135deg,#334155,#1e293b)",color:"#fff",fontSize:Math.round(size*0.4),fontWeight:700,borderRadius:3,flexShrink:0,border:"1px solid rgba(255,255,255,0.15)"}}>{code?.toUpperCase().slice(0,2)}</span>;};
 
@@ -232,6 +238,12 @@ const goFwd=()=>{if(histIdx<pageHist.length-1){setHistIdx(histIdx+1);setPage(pag
 const[trIn,setTrIn]=useState("");
 const[trOut,setTrOut]=useState(null);
 const[trLoad,setTrLoad]=useState(false);
+const[trSrc,setTrSrc]=useState("tr"); // source EXT_LANGS key
+const[trTgt,setTrTgt]=useState("en"); // target EXT_LANGS key
+const[trShowSrcPick,setTrShowSrcPick]=useState(false);
+const[trShowTgtPick,setTrShowTgtPick]=useState(false);
+const[trResult,setTrResult]=useState(""); // single translation result
+const[trSearch,setTrSearch]=useState("");
 const[showLangPicker,setShowLangPicker]=useState(false);
 const[settingsTab,setSettingsTab]=useState("all");
 const[promoIn,setPromoIn]=useState("");
@@ -972,7 +984,7 @@ const restoreItem=(item)=>{if(item._t==="med")setMeds(p=>[...p,item]);if(item._t
 const[calY,setCalY]=useState(now.getFullYear());
 
 // Speech — FEMALE ONLY
-const speak=(text)=>{
+const speak=(text,overrideLang)=>{
   if(!text)return;
   if(isSpeak){
     try{speechSynthesis.cancel();}catch(e){}
@@ -980,44 +992,39 @@ const speak=(text)=>{
     setIsSpeak(false);return;
   }
   setIsSpeak(true);
-  const rvName=RV_VOICES[lang]||"UK English Female";
+  const useLang=overrideLang||lang;
+  const rvName=RV_VOICES[useLang]||RV_VOICES[useLang?.split("-")[0]]||"UK English Female";
   try{
     if(window.responsiveVoice&&typeof responsiveVoice.speak==="function"&&responsiveVoice.voiceSupport()){
       let started=false;
-      responsiveVoice.speak(text,rvName,{pitch:1.1,rate:0.9,onstart:()=>{started=true;},onend:()=>setIsSpeak(false),onerror:()=>fallbackSpeak(text)});
-      // If RV doesn't start within 2s, fallback (key might be invalid)
-      setTimeout(()=>{if(!started){try{responsiveVoice.cancel();}catch(e){}fallbackSpeak(text);}},2000);
+      responsiveVoice.speak(text,rvName,{pitch:1.1,rate:0.9,onstart:()=>{started=true;},onend:()=>setIsSpeak(false),onerror:()=>fallbackSpeak(text,overrideLang)});
+      setTimeout(()=>{if(!started){try{responsiveVoice.cancel();}catch(e){}fallbackSpeak(text,overrideLang);}},2000);
       return;
     }
   }catch(e){}
-  fallbackSpeak(text);
+  fallbackSpeak(text,overrideLang);
 };
-const fallbackSpeak=(text)=>{
+const fallbackSpeak=(text,overrideLang)=>{
   if(!window.speechSynthesis){setIsSpeak(false);return;}
   speechSynthesis.cancel();
   const doSpeak=()=>{
     const u=new SpeechSynthesisUtterance(text);
     const voices=speechSynthesis.getVoices();
-    const base=lc.split("-")[0];
+    const useLc=overrideLang||lc;
+    const base=useLc.toLowerCase().split("-")[0];
     const MALE=/tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|george|richard|guy|rishi|fred|male|erkek|man|homme|männlich|мужской/i;
     const FEM=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|veena|lekha|ting|meijia|yuna|paulina|monica|luciana|zosia|nora|sara|alva|ellen|amélie|virginie|cécile|céline|petra|katja|milena|weiblich|femme|женский|kadın|femenino|vrouwelijk/i;
-    // 1. Female voice in current language
     const lv=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
     let pick=lv.filter(v=>FEM.test(v.name))[0];
-    // 2. Non-male voice in current language
     if(!pick)pick=lv.filter(v=>!MALE.test(v.name))[0];
-    // 3. Any female voice (any language)
     if(!pick||MALE.test(pick?.name||""))pick=voices.filter(v=>FEM.test(v.name)&&v.lang.startsWith(base))[0]||voices.filter(v=>FEM.test(v.name))[0];
-    // 4. English female
     if(!pick||MALE.test(pick?.name||"")){const en=voices.filter(v=>v.lang.startsWith("en"));pick=en.filter(v=>FEM.test(v.name))[0]||en.filter(v=>!MALE.test(v.name))[0]||pick;}
-    // 5. Last resort — use whatever we have but pitch up heavily
-    if(pick){u.voice=pick;u.lang=pick.lang;}else{u.lang=lc;}
+    if(pick){u.voice=pick;u.lang=pick.lang;}else{u.lang=useLc;}
     const isMale=!pick||MALE.test(pick?.name||"")||!FEM.test(pick?.name||"");
     u.pitch=isMale?1.9:1.15;u.rate=isMale?0.75:0.9;u.volume=1;
     u.onend=()=>setIsSpeak(false);u.onerror=()=>setIsSpeak(false);
     speechSynthesis.speak(u);
   };
-  // Voices load async — wait if needed
   if(speechSynthesis.getVoices().length===0){speechSynthesis.onvoiceschanged=()=>{doSpeak();speechSynthesis.onvoiceschanged=null;};setTimeout(doSpeak,500);}
   else doSpeak();
 };
@@ -1079,7 +1086,7 @@ const greetTxt=hr<6?t.gn:hr<12?t.gm:hr<18?t.hi:hr<22?t.ga:t.gn;
 const MicBtn=({onResult,inputRef,currentValue})=>{
   return <button onClick={()=>startVoice((txt)=>{if(inputRef?.current){const el=inputRef.current;const s=el.selectionStart||0,e=el.selectionEnd||0;if(s!==e){const v=el.value;onResult(v.substring(0,s)+txt+v.substring(e));}else{const v=el.value;onResult(v.substring(0,s)+txt+v.substring(s));}}else if(typeof currentValue==='string'&&currentValue.length>0){onResult(currentValue+" "+txt);}else{onResult(txt);}})} style={{background:isListen?`${dg}22`:`${ac}15`,border:`1px solid ${isListen?dg:bd}`,borderRadius:8,padding:"8px 12px",cursor:"pointer",fontSize:18,animation:isListen?"micPulse 2s infinite":"none"}}>{isListen?"🔴":"🎤"}</button>;
 };
-const SpeakBtn=({text})=>(<button onClick={(e)=>{e.stopPropagation();speak(text);}} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"3px 7px",cursor:"pointer",fontSize:13,color:isSpeak?dg:tc}}>{isSpeak?"⏹":"🔊"}</button>);
+const SpeakBtn=({text,langCode})=>(<button onClick={(e)=>{e.stopPropagation();speak(text,langCode);}} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"3px 7px",cursor:"pointer",fontSize:13,color:isSpeak?dg:tc}}>{isSpeak?"⏹":"🔊"}</button>);
 const EmojiPicker=({onPick,onClose})=>(<div style={{position:"absolute",bottom:52,left:0,right:0,background:cd,border:`1px solid ${bd}`,borderRadius:14,padding:12,zIndex:400,boxShadow:"0 -4px 20px rgba(0,0,0,.3)"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontWeight:700}}>{t.emj}</span><button onClick={onClose} style={{background:"none",border:"none",color:tc,cursor:"pointer",fontSize:18}}>✕</button></div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{EMOJIS.map(e=><button key={e} onClick={()=>{onPick(e);onClose();}} style={{fontSize:22,background:"none",border:"none",cursor:"pointer",padding:3,borderRadius:6}}>{e}</button>)}</div></div>);
 
 const HField=({icon,label,field,unit})=>{
@@ -1238,76 +1245,105 @@ const renderHome=()=>{
         <div style={{fontSize:fs-3,color:mt,marginTop:4}}>{(LL_LOCAL[lang]||LL_LOCAL.en)[lang]} → {(LL_LOCAL[lang]||LL_LOCAL.en)[wordLang]}</div>
       </div>
     </div>
-    {/* AI Translator */}
-    <div style={{...CS,padding:"10px 12px"}}>
-      <div style={{fontWeight:700,fontSize:fs-1,marginBottom:6}}><img src={GLOBE_IMG} style={{width:18,height:18,verticalAlign:"middle",marginRight:4,borderRadius:9}}/> {lang==="tr"?"Çeviri":lang==="en"?"Translator":lang==="de"?"Übersetzer":lang==="ru"?"Переводчик":lang==="zh"?"翻译":lang==="hi"?"अनुवादक":lang==="nl"?"Vertaler":lang==="es"?"Traductor":lang==="ar"?"مترجم":"Translator"} <span style={{fontSize:fs-3,color:ac,fontWeight:500}}>9 {t.lang}</span></div>
-      <textarea value={trIn} onChange={e=>setTrIn(e.target.value)} onInput={autoResize} placeholder={lang==="tr"?"Çevirmek istediğiniz metni yazın...":lang==="en"?"Enter text to translate...":lang==="de"?"Text eingeben...":lang==="ru"?"Введите текст...":lang==="zh"?"输入文本...":lang==="hi"?"अनुवाद के लिए टेक्स्ट...":lang==="nl"?"Voer tekst in...":lang==="es"?"Ingrese texto...":lang==="ar"?"أدخل النص...":"Enter text..."} rows={2} style={{...IS,marginBottom:6,resize:"none",fontSize:fs-1}}/>
-      <div style={{display:"flex",gap:6,marginBottom:6}}>
-        <button onClick={async()=>{if(!trIn.trim())return;setTrLoad(true);
-          // First try AI (if API key exists), otherwise fallback to MyMemory free API (no key required)
-          const targets=EXT_LANGS.filter(l=>l.k!=="gb"&&l.k!=="tw").map(l=>({flag:l.flag,lang:l.n,code:l.code}));
-          try{
-            // Try AI first (better quality, if key available)
-            if(apiKey){
-              const d=await callAI({model:"claude-sonnet-4-20250514",max_tokens:600,messages:[{role:"user",content:`Translate "${trIn}" to these 9 languages. Return ONLY a JSON array: [{"flag":"tr","lang":"Türkçe","text":"..."},{"flag":"en","lang":"English","text":"..."},{"flag":"de","lang":"Deutsch","text":"..."},{"flag":"ru","lang":"Русский","text":"..."},{"flag":"zh","lang":"中文","text":"..."},{"flag":"hi","lang":"हिन्दी","text":"..."},{"flag":"nl","lang":"Nederlands","text":"..."},{"flag":"es","lang":"Español","text":"..."},{"flag":"ar","lang":"العربية","text":"..."}]. ONLY JSON.`}]},apiKey);
-              const txt=d.content?.map(c=>c.text||"").join("")||"[]";
-              const parsed=JSON.parse(txt.replace(/```json|```/g,"").trim());
-              setTrOut(Array.isArray(parsed)?parsed:[{flag:"❌",lang:"Error",text:txt}]);
-            }else{
-              // Fallback to MyMemory free API — no key required
-              const srcCode=lang==="zh"?"zh-CN":lang;
-              const results=await Promise.all(targets.map(async(tgt)=>{
-                // If target is same as source, return original
-                if(tgt.code===srcCode||tgt.code.split("-")[0]===srcCode.split("-")[0]){
-                  return{flag:tgt.flag,lang:tgt.lang,text:trIn};
-                }
-                try{
-                  const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trIn)}&langpair=${srcCode}|${tgt.code}&de=ailvie@example.com`);
-                  const j=await res.json();
-                  const tx=j?.responseData?.translatedText||"";
-                  // MyMemory sometimes returns error messages in translatedText
-                  if(tx&&!tx.includes("PLEASE SELECT")&&!tx.includes("INVALID")&&!tx.includes("MYMEMORY WARNING")){
-                    return{flag:tgt.flag,lang:tgt.lang,text:tx};
-                  }
-                  return{flag:tgt.flag,lang:tgt.lang,text:"—"};
-                }catch(e){return{flag:tgt.flag,lang:tgt.lang,text:"—"};}
-              }));
-              setTrOut(results);
-            }
-          }catch(err){
-            // Last resort: try MyMemory even if AI failed
-            try{
-              const srcCode=lang==="zh"?"zh-CN":lang;
-              const results=await Promise.all(targets.map(async(tgt)=>{
-                if(tgt.code===srcCode||tgt.code.split("-")[0]===srcCode.split("-")[0]){
-                  return{flag:tgt.flag,lang:tgt.lang,text:trIn};
-                }
-                try{
-                  const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trIn)}&langpair=${srcCode}|${tgt.code}&de=ailvie@example.com`);
-                  const j=await res.json();
-                  const tx=j?.responseData?.translatedText||"";
-                  if(tx&&!tx.includes("PLEASE SELECT")&&!tx.includes("INVALID")&&!tx.includes("MYMEMORY WARNING")){
-                    return{flag:tgt.flag,lang:tgt.lang,text:tx};
-                  }
-                  return{flag:tgt.flag,lang:tgt.lang,text:"—"};
-                }catch(e){return{flag:tgt.flag,lang:tgt.lang,text:"—"};}
-              }));
-              setTrOut(results);
-            }catch(e2){
-              setTrOut([{flag:"❌",lang:"Error",text:lang==="tr"?"Çeviri servisi şu an kullanılamıyor.":"Translation service unavailable."}]);
-            }
-          }
-          setTrLoad(false);
-        }} disabled={trLoad} style={{...BP,flex:1,padding:"8px",fontSize:fs-1}}>{trLoad?"⏳":(lang==="tr"?"Çevir":lang==="en"?"Translate":lang==="de"?"Übersetzen":lang==="ru"?"Перевести":lang==="zh"?"翻译":lang==="hi"?"अनुवाद":lang==="nl"?"Vertalen":lang==="es"?"Traducir":lang==="ar"?"ترجمة":"Translate")}</button>
-        {trOut&&<button onClick={()=>{setTrIn("");setTrOut(null);}} style={{...BP,background:mt,padding:"8px 12px"}}>✕</button>}
+    {/* AI Translator — Google Translate Style 2-Panel */}
+    <div style={{...CS,padding:10,position:"relative"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+        <div style={{fontWeight:700,fontSize:fs,display:"flex",alignItems:"center",gap:6}}><img src={GLOBE_IMG} style={{width:20,height:20,borderRadius:10}}/> {lang==="tr"?"Çeviri":lang==="en"?"Translator":lang==="de"?"Übersetzer":lang==="ru"?"Переводчик":lang==="zh"?"翻译":lang==="hi"?"अनुवादक":lang==="nl"?"Vertaler":lang==="es"?"Traductor":lang==="ar"?"مترجم":"Translator"}</div>
+        <span style={{fontSize:fs-3,color:ac,fontWeight:500}}>60+ {lang==="tr"?"Dil":"Lang"}</span>
       </div>
-      {trOut&&Array.isArray(trOut)&&<div style={{background:dark?"#0d1520":"#f8fafc",borderRadius:8,padding:6,maxHeight:300,overflowY:"auto"}}>
-        {trOut.map((r,i)=><div key={i} style={{padding:"6px 8px",borderBottom:i<trOut.length-1?`1px solid ${bd}`:"none",display:"flex",gap:8,alignItems:"center"}}>
-          <Flag code={r.flag} size={22}/>
-          <span style={{fontWeight:700,color:ac,fontSize:fs-2,minWidth:70,flexShrink:0}}>{r.lang}</span>
-          <span style={{fontSize:fs-1,color:tc,flex:1,wordBreak:"break-word"}}>{r.text}</span>
-        </div>)}
+      {/* Language selector bar — src ↔ tgt */}
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
+        {/* Source selector */}
+        <button onClick={()=>{setTrShowSrcPick(!trShowSrcPick);setTrShowTgtPick(false);setTrSearch("");}} style={{flex:1,padding:"9px 10px",borderRadius:10,border:`1px solid ${trShowSrcPick?ac:bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:fs-2,minWidth:0}}>
+          {(()=>{const s=EXT_LANGS.find(l=>l.k===trSrc);return s?<><Flag code={s.flag} size={20}/><span style={{flex:1,textAlign:"left",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",fontWeight:600}}>{s.n}</span></>:null;})()}
+          <span style={{color:mt,fontSize:fs-2}}>▾</span>
+        </button>
+        {/* Swap button */}
+        <button onClick={()=>{const nSrc=trTgt,nTgt=trSrc;setTrSrc(nSrc);setTrTgt(nTgt);setTrIn(trResult||"");setTrResult(trIn||"");}} style={{padding:"8px 10px",borderRadius:10,border:`1px solid ${ac}44`,background:`${ac}11`,color:ac,cursor:"pointer",fontSize:16,flexShrink:0}} title={lang==="tr"?"Dilleri Değiştir":"Swap languages"}>⇄</button>
+        {/* Target selector */}
+        <button onClick={()=>{setTrShowTgtPick(!trShowTgtPick);setTrShowSrcPick(false);setTrSearch("");}} style={{flex:1,padding:"9px 10px",borderRadius:10,border:`1px solid ${trShowTgtPick?ac:bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:fs-2,minWidth:0}}>
+          {(()=>{const s=EXT_LANGS.find(l=>l.k===trTgt);return s?<><Flag code={s.flag} size={20}/><span style={{flex:1,textAlign:"left",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",fontWeight:600}}>{s.n}</span></>:null;})()}
+          <span style={{color:mt,fontSize:fs-2}}>▾</span>
+        </button>
+      </div>
+      {/* Language picker dropdown */}
+      {(trShowSrcPick||trShowTgtPick)&&<div style={{position:"absolute",top:88,left:10,right:10,background:cd,border:`1px solid ${ac}`,borderRadius:10,boxShadow:"0 8px 24px rgba(0,0,0,.3)",zIndex:200,padding:6,maxHeight:340,overflow:"hidden",display:"flex",flexDirection:"column"}}>
+        <input autoFocus placeholder={lang==="tr"?"Dil ara...":"Search language..."} value={trSearch} onChange={e=>setTrSearch(e.target.value)} style={{...IS,marginBottom:6,fontSize:fs-1}}/>
+        <div style={{overflowY:"auto",maxHeight:270}}>
+          {EXT_LANGS.filter(l=>{
+            const q=trSearch.toLowerCase().trim();
+            if(!q)return true;
+            return l.n.toLowerCase().includes(q)||l.k.includes(q)||l.code.toLowerCase().includes(q);
+          }).map(l=><button key={l.k} onClick={()=>{if(trShowSrcPick){setTrSrc(l.k);setTrShowSrcPick(false);}else{setTrTgt(l.k);setTrShowTgtPick(false);}setTrSearch("");}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"8px 10px",background:((trShowSrcPick&&trSrc===l.k)||(trShowTgtPick&&trTgt===l.k))?`${ac}22`:"transparent",border:"none",borderRadius:6,cursor:"pointer",color:tc,fontSize:fs-1,textAlign:"left"}}>
+            <Flag code={l.flag} size={22}/>
+            <span style={{flex:1,fontWeight:((trShowSrcPick&&trSrc===l.k)||(trShowTgtPick&&trTgt===l.k))?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.n}</span>
+            {((trShowSrcPick&&trSrc===l.k)||(trShowTgtPick&&trTgt===l.k))&&<span style={{color:ac}}>✓</span>}
+          </button>)}
+        </div>
       </div>}
+      {/* Two-panel editor — source | target */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
+        {/* Source panel */}
+        <div style={{background:dark?"#0d1520":"#f8fafc",borderRadius:10,padding:8,border:`1px solid ${bd}`,minHeight:120,display:"flex",flexDirection:"column"}}>
+          <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:4,fontSize:fs-3,color:mt}}>
+            <Flag code={(EXT_LANGS.find(l=>l.k===trSrc)||{}).flag} size={14}/>
+            <span style={{fontWeight:600}}>{(EXT_LANGS.find(l=>l.k===trSrc)||{n:trSrc}).n}</span>
+          </div>
+          <textarea value={trIn} onChange={e=>{setTrIn(e.target.value);setTrResult("");}} placeholder={lang==="tr"?"Metin girin...":"Enter text..."} style={{flex:1,border:"none",background:"transparent",color:tc,fontSize:fs-1,outline:"none",resize:"none",minHeight:80,fontFamily:"inherit",wordBreak:"break-word",direction:trSrc==="ar"||trSrc==="he"||trSrc==="fa"||trSrc==="ur"?"rtl":"ltr"}}/>
+          {trIn&&<div style={{display:"flex",gap:4,marginTop:4}}>
+            <SpeakBtn text={trIn}/>
+            <button onClick={()=>copyTxt(trIn)} title={lang==="tr"?"Kopyala":"Copy"} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:12,color:tc}}>📋</button>
+            <button onClick={()=>{setTrIn("");setTrResult("");}} title={lang==="tr"?"Temizle":"Clear"} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:12,color:mt,marginLeft:"auto"}}>✕</button>
+          </div>}
+        </div>
+        {/* Target panel */}
+        <div style={{background:dark?"#12344d":"#e8f4fd",borderRadius:10,padding:8,border:`1px solid ${ac}44`,minHeight:120,display:"flex",flexDirection:"column"}}>
+          <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:4,fontSize:fs-3,color:ac}}>
+            <Flag code={(EXT_LANGS.find(l=>l.k===trTgt)||{}).flag} size={14}/>
+            <span style={{fontWeight:700}}>{(EXT_LANGS.find(l=>l.k===trTgt)||{n:trTgt}).n}</span>
+          </div>
+          <div style={{flex:1,fontSize:fs-1,color:tc,whiteSpace:"pre-wrap",wordBreak:"break-word",direction:trTgt==="ar"||trTgt==="he"||trTgt==="fa"||trTgt==="ur"?"rtl":"ltr"}}>
+            {trLoad?<span style={{color:mt,fontStyle:"italic"}}>⏳ {lang==="tr"?"Çevriliyor...":"Translating..."}</span>:(trResult||<span style={{color:mt,fontStyle:"italic"}}>{lang==="tr"?"Çeviri burada görünecek":"Translation appears here"}</span>)}
+          </div>
+          {trResult&&<div style={{display:"flex",gap:4,marginTop:4}}>
+            <SpeakBtn text={trResult} langCode={(EXT_LANGS.find(l=>l.k===trTgt)||{code:"en"}).code}/>
+            <button onClick={()=>copyTxt(trResult)} title={lang==="tr"?"Kopyala":"Copy"} style={{background:"none",border:`1px solid ${ac}44`,borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:12,color:ac}}>📋</button>
+          </div>}
+        </div>
+      </div>
+      {/* Translate button */}
+      <button onClick={async()=>{
+        if(!trIn.trim())return;
+        if(trSrc===trTgt){setTrResult(trIn);return;}
+        setTrLoad(true);
+        const srcObj=EXT_LANGS.find(l=>l.k===trSrc);
+        const tgtObj=EXT_LANGS.find(l=>l.k===trTgt);
+        const srcCode=srcObj?.code||"auto";
+        const tgtCode=tgtObj?.code||"en";
+        try{
+          // Try AI first if apiKey
+          if(apiKey){
+            const d=await callAI({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`Translate the following text from ${srcObj?.n||srcCode} to ${tgtObj?.n||tgtCode}. Return ONLY the translated text, no explanations, no quotes.\n\nText: ${trIn}`}]},apiKey);
+            const out=d.content?.map(c=>c.text||"").join("").trim()||"";
+            if(out){setTrResult(out);setTrLoad(false);return;}
+          }
+          // Fallback MyMemory
+          const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trIn)}&langpair=${encodeURIComponent(srcCode)}|${encodeURIComponent(tgtCode)}&de=ailvie@example.com`);
+          const j=await res.json();
+          const tx=j?.responseData?.translatedText||"";
+          if(tx&&!tx.includes("PLEASE SELECT")&&!tx.includes("INVALID")&&!tx.includes("MYMEMORY WARNING")&&!tx.includes("IS AN INVALID")){
+            setTrResult(tx);
+          }else{
+            setTrResult(lang==="tr"?"⚠️ Çeviri başarısız. Dil kombinasyonu desteklenmeyebilir.":"⚠️ Translation failed. Language pair may not be supported.");
+          }
+        }catch(err){
+          setTrResult(lang==="tr"?"⚠️ Çeviri servisi şu an kullanılamıyor.":"⚠️ Translation service unavailable.");
+        }
+        setTrLoad(false);
+      }} disabled={trLoad||!trIn.trim()} style={{...BP,width:"100%",padding:"10px",fontSize:fs,fontWeight:700,opacity:(trLoad||!trIn.trim())?0.6:1}}>
+        {trLoad?"⏳ "+(lang==="tr"?"Çevriliyor...":"Translating..."):"🌐 "+(lang==="tr"?"Çevir":lang==="en"?"Translate":lang==="de"?"Übersetzen":lang==="ru"?"Перевести":lang==="zh"?"翻译":lang==="hi"?"अनुवाद":lang==="nl"?"Vertalen":lang==="es"?"Traducir":lang==="ar"?"ترجمة":"Translate")}
+      </button>
+      <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:4}}>{lang==="tr"?"60+ dilde anında çeviri • MyMemory + AILVIE AI":"60+ languages • MyMemory + AILVIE AI"}</div>
     </div>
     {/* Emergency + Location */}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
