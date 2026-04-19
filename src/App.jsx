@@ -159,6 +159,7 @@ const[trOut,setTrOut]=useState(null);
 const[trLoad,setTrLoad]=useState(false);
 const[showLangPicker,setShowLangPicker]=useState(false);
 const[settingsTab,setSettingsTab]=useState("all");
+const[promoIn,setPromoIn]=useState("");
 const[apiKey,setApiKey]=useState(()=>{try{return localStorage.getItem("ailvie_api_key")||"";}catch(e){return"";}});
 const[showNotif,setShowNotif]=useState(false);
 const[showEmergency,setShowEmergency]=useState(false);
@@ -592,6 +593,23 @@ meds.forEach(m=>{
       sendNotification('💊 '+(lang==='tr'?'İlaç Zamanı':'Med Time'),m.name+' '+m.dose+' — '+m.time);
     }
   }
+  // Late med warning — every 15 min for unmissed meds past their time
+  if(!m.taken&&m.time){
+    const[mH,mM]=m.time.split(':').map(Number);
+    const medMins=mH*60+mM;
+    const nowMins=_n.getHours()*60+_n.getMinutes();
+    const diff=nowMins-medMins;
+    if(diff>0&&diff<=240&&diff%15===0&&!firedAlarms.current.has('late-'+m.id+'-'+diff)){
+      firedAlarms.current.add('late-'+m.id+'-'+diff);
+      const timeStr=diff>=60?`${Math.floor(diff/60)} ${lang==='tr'?'saat':'hr'} ${diff%60} ${lang==='tr'?'dk':'min'}`:`${diff} ${lang==='tr'?'dakika':'min'}`;
+      const msg=lang==='tr'
+        ?`İlaç saatin ${timeStr} geçti. ${m.name} ilacını kullandıysan onay ver.`
+        :`Medication time passed by ${timeStr}. If you took ${m.name}, please confirm.`;
+      notify('⚠️ '+msg);
+      sendNotification('⚠️ '+(lang==='tr'?'İlaç Gecikmesi':'Medication Late'),msg);
+      speakAlarm(msg);
+    }
+  }
   // Pre-alarm: 10 min before
   const[mH,mM]=(m.time||'00:00').split(':').map(Number);
   let preH=mH,preM=mM-10;
@@ -815,10 +833,12 @@ riskPenalty
 // ═══ AUTO-SAVE/LOAD ═══
 useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
-if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(d.chatM?.length)setChatM(d.chatM);
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);
 }catch{}},[]); // load once
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms]); // save on change
+useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM]); // enhanced auto-save
+// Auto-cleanup empty notes that are not being edited
+useEffect(()=>{const tm=setTimeout(()=>{setNotes(p=>p.filter(n=>(n.title?.trim()||n.content?.trim()||editNote===n.id)));},3000);return()=>clearTimeout(tm);},[notes,editNote]);
 
 const sendChat=async(text)=>{
   const q=text||chatIn;if(!q.trim())return;
@@ -1122,13 +1142,22 @@ const renderHome=()=>{
               const parsed=JSON.parse(txt.replace(/```json|```/g,"").trim());
               setTrOut(Array.isArray(parsed)?parsed:[{flag:"❌",lang:"Error",text:txt}]);
             }else{
-              // Fallback to MyMemory free API — no key required, detects source automatically
+              // Fallback to MyMemory free API — no key required
               const srcCode=lang==="zh"?"zh-CN":lang;
               const results=await Promise.all(targets.map(async(tgt)=>{
+                // If target is same as source, return original
+                if(tgt.code===srcCode||tgt.code.split("-")[0]===srcCode.split("-")[0]){
+                  return{flag:tgt.flag,lang:tgt.lang,text:trIn};
+                }
                 try{
-                  const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trIn)}&langpair=${srcCode}|${tgt.code}`);
+                  const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trIn)}&langpair=${srcCode}|${tgt.code}&de=ailvie@example.com`);
                   const j=await res.json();
-                  return{flag:tgt.flag,lang:tgt.lang,text:j?.responseData?.translatedText||"—"};
+                  const tx=j?.responseData?.translatedText||"";
+                  // MyMemory sometimes returns error messages in translatedText
+                  if(tx&&!tx.includes("PLEASE SELECT")&&!tx.includes("INVALID")&&!tx.includes("MYMEMORY WARNING")){
+                    return{flag:tgt.flag,lang:tgt.lang,text:tx};
+                  }
+                  return{flag:tgt.flag,lang:tgt.lang,text:"—"};
                 }catch(e){return{flag:tgt.flag,lang:tgt.lang,text:"—"};}
               }));
               setTrOut(results);
@@ -1138,10 +1167,17 @@ const renderHome=()=>{
             try{
               const srcCode=lang==="zh"?"zh-CN":lang;
               const results=await Promise.all(targets.map(async(tgt)=>{
+                if(tgt.code===srcCode||tgt.code.split("-")[0]===srcCode.split("-")[0]){
+                  return{flag:tgt.flag,lang:tgt.lang,text:trIn};
+                }
                 try{
-                  const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trIn)}&langpair=${srcCode}|${tgt.code}`);
+                  const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trIn)}&langpair=${srcCode}|${tgt.code}&de=ailvie@example.com`);
                   const j=await res.json();
-                  return{flag:tgt.flag,lang:tgt.lang,text:j?.responseData?.translatedText||"—"};
+                  const tx=j?.responseData?.translatedText||"";
+                  if(tx&&!tx.includes("PLEASE SELECT")&&!tx.includes("INVALID")&&!tx.includes("MYMEMORY WARNING")){
+                    return{flag:tgt.flag,lang:tgt.lang,text:tx};
+                  }
+                  return{flag:tgt.flag,lang:tgt.lang,text:"—"};
                 }catch(e){return{flag:tgt.flag,lang:tgt.lang,text:"—"};}
               }));
               setTrOut(results);
@@ -1389,14 +1425,53 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>setEmNums(p=>p.filter(x=>x.id!==en.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🔒 {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button onClick={()=>setPerms(p=>({...p,[k]:!p[k]}))} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
   {(all||s==="subs")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>💎 {t.subscription}</div>
+    {/* Promo Code Redemption */}
+    <div style={{padding:"10px 12px",borderRadius:10,background:`${ac}10`,border:`1px solid ${ac}44`,marginBottom:10}}>
+      <div style={{fontWeight:700,marginBottom:6,color:ac,fontSize:fs-1}}>🎁 {lang==="tr"?"PRO Kodu Kullan":"Redeem PRO Code"}</div>
+      <div style={{display:"flex",gap:6}}>
+        <input placeholder={lang==="tr"?"AILVIE-XXXX-XXXX":"AILVIE-XXXX-XXXX"} value={promoIn||""} onChange={e=>setPromoIn(e.target.value.toUpperCase())} style={{...IS,flex:1,fontFamily:"monospace",letterSpacing:1}}/>
+        <button onClick={()=>{
+          const code=(promoIn||"").trim().toUpperCase();
+          if(!code){notify("⚠️ "+(lang==="tr"?"Kod girin":"Enter a code"));return;}
+          try{
+            const codes=JSON.parse(localStorage.getItem("ailvie_pro_codes")||"{}");
+            const used=JSON.parse(localStorage.getItem("ailvie_pro_codes_used")||"[]");
+            if(used.includes(code)){notify("⚠️ "+(lang==="tr"?"Bu kod zaten kullanılmış":"Code already used"));return;}
+            if(codes[code]){
+              const plan=codes[code];
+              localStorage.setItem("ailvie_active_plan",plan);
+              localStorage.setItem("ailvie_pro_codes_used",JSON.stringify([...used,code]));
+              notify("✅ "+(lang==="tr"?`${plan} aktif edildi!`:`${plan} activated!`));
+              setPromoIn("");
+            }else{
+              notify("❌ "+(lang==="tr"?"Geçersiz kod":"Invalid code"));
+            }
+          }catch(err){notify("❌ "+(lang==="tr"?"Hata":"Error"));}
+        }} style={{...BP,padding:"8px 14px"}}>✓</button>
+      </div>
+      <div style={{fontSize:fs-3,color:mt,marginTop:4}}>{lang==="tr"?"Geçerli bir promosyon kodu girerek PRO özelliklerine erişin":"Enter a valid promo code to unlock PRO features"}</div>
+    </div>
     {[
-{n:t.free,p:"$0",d:t.freePlan,c:sc,active:true},
-{n:"PRO "+(lang==="tr"?"Aylık":"Monthly"),p:"$4.99/"+t.monthly,d:t.premPlan,c:ac,active:false},
-{n:"PRO "+(lang==="tr"?"Yıllık":"Yearly"),p:"$44.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"⚡ %25 İndirim! Yıllık tek ödeme":"⚡ 25% Off! Annual single payment"),c:"#e8a817",active:false,badge:lang==="tr"?"EN POPÜLER":"BEST VALUE"},
-{n:"PRO "+(lang==="tr"?"Paylaşımlı":"Shared"),p:"",d:(lang==="tr"?"2 Kişi: $77.99/yıl • 3 Kişi: $119.99/yıl • 5 Kişi: $194.99/yıl • 10 Kişi: $344.99/yıl":"2 Users: $77.99/yr • 3 Users: $119.99/yr • 5 Users: $194.99/yr • 10 Users: $344.99/yr"),c:"#e8a817",active:false},
-{n:(lang==="tr"?"Kurumsal Aylık":"Enterprise Monthly"),p:"$12.99/"+t.monthly,d:t.entPlan,c:a2,active:false},
-{n:(lang==="tr"?"Kurumsal Yıllık":"Enterprise Yearly"),p:"$116.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"⚡ %25 İndirim! Yıllık tek ödeme":"⚡ 25% Off! Annual single payment"),c:a2,active:false}
-].map(plan=>(<div key={plan.n} style={{padding:"8px 10px",borderRadius:10,border:`1px solid ${plan.c}33`,marginBottom:6,background:`${plan.c}08`}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,color:plan.c}}>{plan.n}{plan.badge&&<span style={{marginLeft:6,fontSize:fs-4,padding:"1px 6px",borderRadius:4,background:plan.c,color:"#fff",fontWeight:700}}>{plan.badge}</span>}</span><div style={{display:"flex",alignItems:"center",gap:6}}>{!plan.active&&<span style={{fontSize:fs-3,padding:"2px 8px",borderRadius:8,background:`${mt}22`,color:mt,fontWeight:600}}>{lang==="tr"?"Yakında":"Coming Soon"}</span>}<span style={{fontWeight:700}}>{plan.p}</span></div></div><div style={{fontSize:fs-2,color:mt,marginTop:2}}>{plan.d}</div>{plan.active&&<div style={{fontSize:fs-3,color:sc,marginTop:4,fontWeight:600}}>✓ {lang==="tr"?"Aktif Plan":"Active Plan"}</div>}</div>))}
+{n:t.free,p:"$0",d:t.freePlan,c:sc,active:true,features:lang==="tr"?["3 ilaç takibi","5 not","Temel sağlık takibi","Reklamlı","Topluluk erişimi","Manuel veri girişi"]:["3 medications","5 notes","Basic health tracking","Ads supported","Community access","Manual data entry"]},
+{n:"PRO "+(lang==="tr"?"Aylık":"Monthly"),p:"$4.99/"+t.monthly,d:t.premPlan,c:ac,active:false,features:lang==="tr"?["Sınırsız ilaç","Sınırsız not","Sınırsız AI sohbet","Çeviri (60+ dil)","Sesli asistan","Otomatik adım sayar","Reklamsız","9 dilde çeviri","TEGV bağışı: $1/ay"]:["Unlimited medications","Unlimited notes","Unlimited AI chat","Translation (60+ languages)","Voice assistant","Auto step counter","Ad-free","TEGV donation: $1/mo"]},
+{n:"PRO "+(lang==="tr"?"Yıllık":"Yearly"),p:"$44.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"⚡ %25 İndirim! Yıllık tek ödeme":"⚡ 25% Off! Annual single payment"),c:"#e8a817",active:false,badge:lang==="tr"?"EN POPÜLER":"BEST VALUE",features:lang==="tr"?["PRO Aylık'taki TÜM özellikler","Öncelikli AI yanıtları","Gelişmiş sağlık analizleri","Özel PRO rozeti","TEGV bağışı: $2.99/yıl"]:["ALL Monthly PRO features","Priority AI responses","Advanced health analytics","Exclusive PRO badge","TEGV donation: $2.99/yr"]},
+{n:"PRO "+(lang==="tr"?"Paylaşımlı 2 Kişi":"Shared 2 Users"),p:"$77.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"Kişi başı $38.99/yıl — %13 İNDİRİM":"$38.99/user/yr — 13% OFF"),c:"#e8a817",active:false,features:lang==="tr"?["2 ayrı kullanıcı profili","Tüm PRO Yıllık özellikleri","Aile sağlık panosu","Paylaşımlı takvim"]:["2 separate user profiles","All PRO Yearly features","Family health dashboard","Shared calendar"]},
+{n:"PRO "+(lang==="tr"?"Paylaşımlı 3 Kişi":"Shared 3 Users"),p:"$119.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"Kişi başı $39.99/yıl":"$39.99/user/yr"),c:"#e8a817",active:false,features:lang==="tr"?["3 ayrı kullanıcı profili","Tüm PRO Yıllık özellikleri","Aile sağlık panosu"]:["3 separate user profiles","All PRO Yearly features","Family health dashboard"]},
+{n:"PRO "+(lang==="tr"?"Paylaşımlı 5 Kişi":"Shared 5 Users"),p:"$194.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"Kişi başı $38.99/yıl — %13 İNDİRİM":"$38.99/user/yr — 13% OFF"),c:"#e8a817",active:false,features:lang==="tr"?["5 ayrı kullanıcı profili","Tüm PRO Yıllık özellikleri","Aile sağlık panosu","Çocuk hesapları"]:["5 separate user profiles","All PRO Yearly features","Family dashboard","Child accounts"]},
+{n:"PRO "+(lang==="tr"?"Paylaşımlı 10 Kişi":"Shared 10 Users"),p:"$344.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"Kişi başı $34.50/yıl — %23 İNDİRİM":"$34.50/user/yr — 23% OFF"),c:"#e8a817",active:false,features:lang==="tr"?["10 ayrı kullanıcı profili","Tüm PRO Yıllık özellikleri","Geniş aile/grup kullanımı","Grup sağlık analizleri"]:["10 separate user profiles","All PRO Yearly features","Extended family/group","Group health analytics"]},
+{n:(lang==="tr"?"Kurumsal Aylık":"Enterprise Monthly"),p:"$12.99/"+t.monthly,d:t.entPlan,c:a2,active:false,features:lang==="tr"?["Kurum içi sınırsız kullanıcı","Özel kurum markası","API entegrasyonu","7/24 öncelikli destek","Özel veri analizi","GDPR/KVKK eğitim kitleri","Sağlık raporu dışa aktarımı"]:["Unlimited enterprise users","Custom branding","API integration","24/7 priority support","Custom data analytics","GDPR/KVKK training","Health report exports"]},
+{n:(lang==="tr"?"Kurumsal Yıllık":"Enterprise Yearly"),p:"$116.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"⚡ %25 İndirim! Kurumsal yıllık":"⚡ 25% Off! Annual enterprise"),c:a2,active:false,features:lang==="tr"?["Tüm Kurumsal Aylık özellikleri","Dedike hesap yöneticisi","SLA garantisi","Gelişmiş güvenlik"]:["All Monthly Enterprise features","Dedicated account manager","SLA guarantee","Enhanced security"]}
+    ].map(plan=>(<div key={plan.n} style={{padding:"10px 12px",borderRadius:10,border:`1px solid ${plan.c}44`,marginBottom:8,background:`${plan.c}08`}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+        <span style={{fontWeight:700,color:plan.c}}>{plan.n}{plan.badge&&<span style={{marginLeft:6,fontSize:fs-4,padding:"1px 6px",borderRadius:4,background:plan.c,color:"#fff",fontWeight:700}}>{plan.badge}</span>}</span>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>{!plan.active&&<span style={{fontSize:fs-3,padding:"2px 8px",borderRadius:8,background:`${mt}22`,color:mt,fontWeight:600}}>{lang==="tr"?"Yakında":"Soon"}</span>}<span style={{fontWeight:700}}>{plan.p}</span></div>
+      </div>
+      <div style={{fontSize:fs-2,color:mt,marginBottom:6}}>{plan.d}</div>
+      {plan.features&&<ul style={{margin:"4px 0 0 0",padding:"0 0 0 18px",fontSize:fs-2,color:tc}}>
+        {plan.features.map((f,i)=><li key={i} style={{marginBottom:2}}>{f}</li>)}
+      </ul>}
+      {plan.active&&<div style={{fontSize:fs-3,color:sc,marginTop:4,fontWeight:600}}>✓ {lang==="tr"?"Aktif Plan":"Active Plan"}</div>}
+    </div>))}
   </div>}
   {(all||s==="trash")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🗑️ {t.trash}</div><div style={{display:"flex",gap:8,marginBottom:8}}>{[30,60,90].map(d=><button key={d} onClick={()=>setTrashDays(d)} style={pill(trashDays===d)}>{d} {t.trD}</button>)}</div>{trashItems.length===0&&<div style={{color:mt,textAlign:"center",padding:12}}>🗑️ {t.trE}</div>}{trashItems.map(item=>(<div key={item.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`,opacity:.7}}><span style={{fontSize:fs-1}}>{item.name||item.title||item.doctor||item.content?.substring(0,20)||"—"}</span><button onClick={()=>restoreItem(item)} style={{...BP,padding:"4px 10px",fontSize:fs-2}}>{t.rest}</button></div>))}{trashItems.length>0&&<button onClick={()=>setTrashItems([])} style={{...BD,width:"100%",marginTop:8}}>{t.empT}</button>}</div>}
   {(all||s==="legal")&&<div style={CS}><div style={{fontWeight:700,marginBottom:6}}>⚖️ {t.legal}</div><div style={{fontSize:fs-2,color:mt,lineHeight:1.4}}>{t.legalText}</div></div>}
@@ -1846,7 +1921,10 @@ const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",ga
         {!isMine&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><span style={{fontWeight:700,color:ac,fontSize:fs-2}}>{m.user}</span><span style={{fontSize:fs-3,color:mt}}>{m.time}</span></div>}
         <div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.text}{m.edited&&<span style={{fontSize:fs-4,color:isMine?"rgba(255,255,255,.6)":mt,marginLeft:4}}>({lang==="tr"?"düzenlendi":"edited"})</span>}</div>
         <div style={{display:"flex",gap:4,marginTop:4,flexWrap:"wrap"}}>
-          <button onClick={()=>setMsgs(p=>p.map(x=>x.id===m.id?{...x,likes:(x.likes||0)+1}:x))} style={{background:isMine?"rgba(255,255,255,.15)":"none",border:`1px solid ${isMine?"rgba(255,255,255,.3)":bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:isMine?"#fff":tc}}>❤️ {m.likes||0}</button>
+          <button onClick={()=>{
+            const me=pat.name||"Ben";
+            setMsgs(p=>p.map(x=>{if(x.id!==m.id)return x;const arr=x.likedBy||[];const has=arr.includes(me);return{...x,likedBy:has?arr.filter(u=>u!==me):[...arr,me],likes:has?Math.max(0,(x.likes||0)-1):(x.likes||0)+1};}));
+          }} style={{background:(m.likedBy||[]).includes(pat.name||"Ben")?(isMine?"rgba(255,255,255,.3)":`${dg}22`):(isMine?"rgba(255,255,255,.15)":"none"),border:`1px solid ${isMine?"rgba(255,255,255,.3)":bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:(m.likedBy||[]).includes(pat.name||"Ben")?(isMine?"#fff":dg):(isMine?"#fff":tc),fontWeight:(m.likedBy||[]).includes(pat.name||"Ben")?700:400}}>{(m.likedBy||[]).includes(pat.name||"Ben")?"❤️":"🤍"} {m.likes||0}</button>
           <button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${isMine?"rgba(255,255,255,.3)":bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:isMine?"#fff":tc}}>📋</button>
           {!isMine&&<SpeakBtn text={m.text}/>}
           {isMine&&<>
@@ -1951,7 +2029,17 @@ const renderAdmin=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,
   <div style={{fontSize:fs-4,color:mt,textAlign:"center",flexShrink:0}}>ID: <span style={{fontFamily:"monospace"}}>{userId}</span></div>
   <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>
     {adminMsgs.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><span style={{fontSize:40}}>💬</span><div style={{marginTop:8,color:mt}}>{t.adminWelcome||(lang==="tr"?"Merhaba! Size nasıl yardımcı olabilirim?":"Hello! How can I help you?")}</div></div>}
-    {adminMsgs.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:m.from==="user"?"flex-end":"flex-start",background:m.from==="user"?`linear-gradient(135deg,#f59e0b,#f97316)`:cd,color:m.from==="user"?"#fff":tc,animation:"slideD .3s"}}><div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.text}{m.edited&&<span style={{fontSize:fs-4,color:mt,marginLeft:4}}>({lang==="tr"?"düzenlendi":"edited"})</span>}</div><div style={{display:"flex",gap:4,marginTop:3}}>{m.from==="user"&&<button onClick={()=>setAdminMsgs(p=>p.filter(x=>x!==m))} style={{background:"none",border:"none",fontSize:11,color:m.from==="user"?"#fff":dg,cursor:"pointer",padding:0,opacity:0.7}}>🗑️</button>}</div><div style={{fontSize:fs-3,color:m.from==="user"?"rgba(255,255,255,.7)":mt,marginTop:4}}>{m.time}</div></div>))}
+    {adminMsgs.length>0&&<div style={{display:"flex",justifyContent:"flex-end",flexShrink:0}}>
+      <button onClick={()=>{if(confirm(lang==="tr"?"Tüm mesajları silmek istediğinize emin misiniz?":"Are you sure you want to delete all messages?"))setAdminMsgs([]);}} style={{background:"none",border:`1px solid ${dg}44`,color:dg,borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:fs-2}}>🗑️ {lang==="tr"?"Tümünü Sil":"Clear All"}</button>
+    </div>}
+    {adminMsgs.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:m.from==="user"?"flex-end":"flex-start",background:m.from==="user"?`linear-gradient(135deg,#f59e0b,#f97316)`:cd,color:m.from==="user"?"#fff":tc,animation:"slideD .3s"}}>
+      <div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.text}{m.edited&&<span style={{fontSize:fs-4,color:m.from==="user"?"rgba(255,255,255,.7)":mt,marginLeft:4,fontStyle:"italic"}}>({lang==="tr"?"düzenlendi":"edited"})</span>}</div>
+      {m.from==="user"&&<div style={{display:"flex",gap:4,marginTop:4,flexWrap:"wrap"}}>
+        <button onClick={()=>{const nv=prompt(lang==="tr"?"Mesajı düzenle:":"Edit message:",m.text);if(nv!==null&&nv.trim())setAdminMsgs(p=>p.map((x,j)=>j===i?{...x,text:nv.trim(),edited:true}:x));}} style={{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button>
+        <button onClick={()=>setAdminMsgs(p=>p.filter((_,j)=>j!==i))} style={{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>🗑️ {lang==="tr"?"Sil":"Delete"}</button>
+      </div>}
+      <div style={{fontSize:fs-3,color:m.from==="user"?"rgba(255,255,255,.7)":mt,marginTop:4,textAlign:m.from==="user"?"right":"left"}}>{m.time}</div>
+    </div>))}
   </div>
   <div style={{display:"flex",gap:6,flexShrink:0}}>
     <textarea value={adminIn} onChange={e=>setAdminIn(e.target.value)} onInput={autoResize} placeholder={t.wr} style={{...IS,flex:1,minHeight:36,maxHeight:150,resize:"none",overflowY:"auto"}} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(adminIn.trim()){const ts=now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});setAdminMsgs(p=>[...p,{from:"user",text:adminIn.trim(),time:ts}]);setAdminIn("");setTimeout(()=>setAdminMsgs(p=>[...p,{from:"system",text:(lang==="tr"?"✅ Mesajınız alındı (Ticket #"+userId.slice(-6)+"). AILVIE ekibi en kısa sürede size özel olarak yanıt verecektir.":"✅ Message received (Ticket #"+userId.slice(-6)+"). AILVIE team will respond privately."),time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}]),300);}}}}/>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>AILVIE — PRO Kod Üretici (Admin)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,Segoe UI,sans-serif}
+body{background:#0b0f17;color:#e4e8ee;padding:24px;min-height:100vh}
+.container{max-width:980px;margin:0 auto}
+h1{color:#29b6f6;margin-bottom:6px;font-size:24px}
+.sub{color:#94a3b8;margin-bottom:20px}
+.card{background:#151d2b;border:1px solid #29b6f644;border-radius:12px;padding:16px;margin-bottom:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+select,input,button{padding:9px 12px;border-radius:8px;border:1px solid #2d3a4f;background:#0d1520;color:#e4e8ee;font-size:14px;font-family:inherit}
+button{background:linear-gradient(135deg,#29b6f6,#0288d1);border:none;cursor:pointer;font-weight:600;padding:9px 18px}
+button:hover{opacity:0.9}
+button.danger{background:linear-gradient(135deg,#e53935,#c62828)}
+button.copy{background:linear-gradient(135deg,#43a047,#2e7d32)}
+.codes{max-height:400px;overflow-y:auto;background:#0b1018;border-radius:8px;padding:8px;font-family:'SF Mono',monospace;font-size:13px}
+.code-item{display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px solid #1a2334}
+.code-item:hover{background:#1a2334}
+.tag{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}
+.tag-monthly{background:#29b6f633;color:#29b6f6}
+.tag-yearly{background:#e8a81733;color:#e8a817}
+.tag-ent{background:#8e24aa33;color:#8e24aa}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px}
+.stat{background:#0d1520;padding:10px;border-radius:8px;text-align:center}
+.stat-val{font-size:24px;font-weight:800;color:#29b6f6}
+.stat-lbl{font-size:11px;color:#94a3b8;margin-top:2px}
+.json-out{background:#0b1018;border-radius:8px;padding:10px;margin-top:10px;font-family:monospace;font-size:12px;max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+.warn{background:#e5393522;border:1px solid #e53935;color:#ffcdd2;padding:10px;border-radius:8px;margin-bottom:16px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎁 AILVIE PRO Kod Üretici</h1>
+  <div class="sub">Yönetici aracı — PRO kodları üretin, dışa aktarın ve uygulama localStorage'ına yükleyin</div>
+
+  <div class="warn">⚠️ <strong>Bu sayfayı herkese açık paylaşmayın.</strong> Kodlar tek kullanımlık olmalıdır. Üretilen kodlar aşağıdan kopyalanabilir veya doğrudan uygulama localStorage'ına yazılabilir.</div>
+
+  <div class="card">
+    <div class="row">
+      <label>Plan: <select id="plan">
+        <option value="PRO Monthly">PRO Aylık ($4.99)</option>
+        <option value="PRO Yearly" selected>PRO Yıllık ($44.99)</option>
+        <option value="PRO Shared 2">PRO Paylaşımlı 2 ($77.99)</option>
+        <option value="PRO Shared 3">PRO Paylaşımlı 3 ($119.99)</option>
+        <option value="PRO Shared 5">PRO Paylaşımlı 5 ($194.99)</option>
+        <option value="PRO Shared 10">PRO Paylaşımlı 10 ($344.99)</option>
+        <option value="Enterprise Monthly">Kurumsal Aylık ($12.99)</option>
+        <option value="Enterprise Yearly">Kurumsal Yıllık ($116.99)</option>
+      </select></label>
+      <label>Adet: <input type="number" id="count" value="100" min="1" max="1000" style="width:80px"></label>
+      <label>Prefix: <input type="text" id="prefix" value="AILVIE" maxlength="10" style="width:100px"></label>
+      <button onclick="generate()">🎲 Üret</button>
+      <button class="danger" onclick="clearAll()">🗑️ Tümünü Temizle</button>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <strong>📋 Üretilen Kodlar (<span id="codeCount">0</span>)</strong>
+      <div class="row" style="margin:0">
+        <button class="copy" onclick="copyAll()">📋 Hepsini Kopyala</button>
+        <button class="copy" onclick="downloadCSV()">📥 CSV İndir</button>
+        <button class="copy" onclick="downloadJSON()">📥 JSON İndir</button>
+      </div>
+    </div>
+    <div class="codes" id="codes"></div>
+  </div>
+
+  <div class="card">
+    <strong>⚙️ localStorage JSON (uygulamada aktifleştirmek için):</strong>
+    <div style="font-size:12px;color:#94a3b8;margin:6px 0">Kodları uygulamada çalışır hale getirmek için:<br>1. Tarayıcıda AILVIE uygulamasını aç<br>2. F12 → Console'da şu kodu yapıştır:</div>
+    <div class="json-out" id="jsonOut">// Önce kod üretin</div>
+    <button class="copy" onclick="copyJSON()" style="margin-top:6px">📋 Console Kodu Kopyala</button>
+  </div>
+</div>
+
+<script>
+let codes = JSON.parse(localStorage.getItem('ailvie_gen_codes') || '{}');
+function generate(){
+  const plan = document.getElementById('plan').value;
+  const count = parseInt(document.getElementById('count').value) || 100;
+  const prefix = document.getElementById('prefix').value.toUpperCase() || 'AILVIE';
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let added = 0;
+  for(let i=0; i<count; i++){
+    let code;
+    let attempts = 0;
+    do {
+      let a='', b='';
+      for(let j=0;j<4;j++) a += chars[Math.floor(Math.random()*chars.length)];
+      for(let j=0;j<4;j++) b += chars[Math.floor(Math.random()*chars.length)];
+      code = `${prefix}-${a}-${b}`;
+      attempts++;
+      if(attempts>50) break;
+    } while(codes[code]);
+    if(!codes[code]){ codes[code] = plan; added++; }
+  }
+  localStorage.setItem('ailvie_gen_codes', JSON.stringify(codes));
+  render();
+  alert(`✅ ${added} yeni kod üretildi`);
+}
+function clearAll(){
+  if(!confirm('TÜM üretilmiş kodları silmek istediğinizden emin misiniz?')) return;
+  codes = {};
+  localStorage.removeItem('ailvie_gen_codes');
+  render();
+}
+function render(){
+  const el = document.getElementById('codes');
+  const list = Object.entries(codes).sort((a,b)=>a[1].localeCompare(b[1]));
+  document.getElementById('codeCount').textContent = list.length;
+  const tagClass = p => p.includes('Enterprise') ? 'tag-ent' : (p.includes('Yearly') || p.includes('Shared') ? 'tag-yearly' : 'tag-monthly');
+  el.innerHTML = list.map(([c,p]) => `<div class="code-item"><span>${c}</span><span class="tag ${tagClass(p)}">${p}</span></div>`).join('') || '<div style="padding:16px;text-align:center;color:#94a3b8">Henüz kod yok</div>';
+  // stats
+  const counts = {};
+  for(const p of Object.values(codes)) counts[p] = (counts[p]||0)+1;
+  document.getElementById('stats').innerHTML = Object.entries(counts).map(([p,c]) => `<div class="stat"><div class="stat-val">${c}</div><div class="stat-lbl">${p}</div></div>`).join('') || `<div class="stat"><div class="stat-val">0</div><div class="stat-lbl">Hiç kod yok</div></div>`;
+  // json
+  const snippet = `// AILVIE PRO kodlarını localStorage'a yükle\nlocalStorage.setItem('ailvie_pro_codes', ${JSON.stringify(JSON.stringify(codes))});\nconsole.log('✅ ${list.length} PRO kodu yüklendi');`;
+  document.getElementById('jsonOut').textContent = snippet;
+}
+function copyAll(){
+  const txt = Object.entries(codes).map(([c,p])=>`${c}\t${p}`).join('\n');
+  navigator.clipboard.writeText(txt).then(()=>alert('✅ Panoya kopyalandı'));
+}
+function copyJSON(){
+  const txt = document.getElementById('jsonOut').textContent;
+  navigator.clipboard.writeText(txt).then(()=>alert('✅ Console kodu panoya kopyalandı'));
+}
+function downloadCSV(){
+  const csv = 'Code,Plan\n' + Object.entries(codes).map(([c,p])=>`${c},${p}`).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ailvie-pro-codes-${Date.now()}.csv`; a.click();
+}
+function downloadJSON(){
+  const blob = new Blob([JSON.stringify(codes,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ailvie-pro-codes-${Date.now()}.json`; a.click();
+}
+render();
+</script>
+</body>
+</html>
