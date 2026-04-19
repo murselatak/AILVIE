@@ -689,6 +689,8 @@ useEffect(()=>{
       setWellness(w=>({...w,steps:0}));
       stepRef.current.count=0;
       localStorage.setItem("ailvie_step_day",today);
+      // Reset recurring meds: taken:false so they can be taken again today
+      setMeds(p=>p.map(m=>m.recurring!==false?{...m,taken:false}:m));
     }
   }catch{}};
   check();
@@ -1030,11 +1032,46 @@ const renderHome=()=>{
       </div>
     </div>
     {/* Health + Med Progress strip */}
-    <div style={{...CS,display:"flex",alignItems:"center",justifyContent:"space-around",padding:"10px 8px",cursor:"pointer"}} onClick={()=>goTo("health")}>
-      <div style={{textAlign:"center"}}><div style={{fontSize:fs+4,fontWeight:800,color:hscore>70?sc:hscore>0?ac:mt}}>{hscore||"—"}</div><div style={{fontSize:fs-4,color:mt}}>{t.hScore}</div></div>
-      {hd.pulse>0&&<div style={{textAlign:"center"}}><div style={{fontWeight:700,fontSize:fs}}>❤️ {hd.pulse}</div><div style={{fontSize:fs-4,color:mt}}>{t.bpm}</div></div>}
-      {bmi>0&&<div style={{textAlign:"center"}}><div style={{fontWeight:700,fontSize:fs,color:bmi>=18.5&&bmi<25?sc:dg}}>⚖️ {bmi}</div><div style={{fontSize:fs-4,color:mt}}>BMI</div></div>}
-      {meds.length>0&&<div style={{textAlign:"center"}}><div style={{fontWeight:700,fontSize:fs,color:medProg===100?sc:ac}}>💊 {medProg}%</div><div style={{fontSize:fs-4,color:mt}}>{t.prog}</div></div>}
+    {/* Comprehensive Health Score Card — matches Health page */}
+    <div style={{...CS,padding:14,border:`1px solid ${ac}33`,cursor:"pointer"}} onClick={()=>goTo("health")}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+        <span style={{fontWeight:700,fontSize:fs+1,display:"flex",alignItems:"center",gap:6}}>🏆 {t.hScore}</span>
+        <span style={{fontSize:fs-3,color:mt}}>→</span>
+      </div>
+      <div style={{textAlign:"center",marginBottom:10}}>
+        <div style={{fontSize:fs+20,fontWeight:800,color:hscore>70?sc:hscore>40?ac:hscore>0?dg:mt,lineHeight:1}}>{hscore||"—"}<span style={{fontSize:fs-1,color:mt,fontWeight:400}}>/100</span></div>
+        <div style={{fontSize:fs,fontWeight:600,color:hscore>80?sc:hscore>60?ac:hscore>40?"#f0a030":hscore>0?dg:mt,marginTop:4}}>
+          {hscore>80?(lang==="tr"?"Mükemmel 🌟":"Excellent 🌟"):hscore>60?(lang==="tr"?"İyi 💪":"Good 💪"):hscore>40?(lang==="tr"?"Orta ⚠️":"Average ⚠️"):hscore>0?(lang==="tr"?"Dikkat! 🔴":"Attention! 🔴"):(lang==="tr"?"Veri girin":"Enter data")}
+        </div>
+      </div>
+      {hscore>0&&<div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {[
+          {icon:"❤️",label:t.pulse,val:hd.pulse,max:25,score:hd.pulse>=60&&hd.pulse<=100?25:hd.pulse>=50&&hd.pulse<=110?12:hd.pulse>0?5:0,status:hd.pulse>=60&&hd.pulse<=100},
+          {icon:"⚖️",label:"BMI",val:bmi,max:22,score:bmi>=18.5&&bmi<25?22:bmi>=17&&bmi<30?10:bmi>0?5:0,status:bmi>=18.5&&bmi<25},
+          {icon:"🩺",label:t.bp,val:hd.bpS>0?`${hd.bpS}/${hd.bpD}`:0,max:25,score:hd.bpS>=90&&hd.bpS<=120&&hd.bpD>=60&&hd.bpD<=80?25:hd.bpS>=85&&hd.bpS<=140&&hd.bpD>=55&&hd.bpD<=90?12:hd.bpS>0?5:0,status:hd.bpS>=90&&hd.bpS<=120},
+          {icon:"💊",label:t.prog,val:`${medProg}%`,max:15,score:medProg>=80?15:medProg>50?10:medProg>0?5:0,status:medProg>=80}
+        ].map(item=>item.val?(
+          <div key={item.label} style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:16,width:20}}>{item.icon}</span>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2}}>
+                <span style={{color:mt}}>{item.label}: <strong style={{color:tc}}>{item.val}</strong></span>
+                <span style={{fontWeight:700,color:item.status?sc:item.score>0?ac:dg}}>{item.score}/{item.max}</span>
+              </div>
+              <div style={{height:4,background:`${mt}22`,borderRadius:2,marginTop:2}}><div style={{height:"100%",borderRadius:2,background:item.status?sc:item.score>0?ac:dg,width:`${(item.score/item.max)*100}%`,transition:"width .5s"}}/></div>
+            </div>
+          </div>
+        ):null)}
+        {(allergyCount>0||chronicCount>0)&&<div style={{marginTop:6,padding:"6px 8px",borderRadius:6,background:`${dg}08`,fontSize:fs-3,color:mt,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:4}}>
+          <span>⚠️ {lang==="tr"?"Risk":"Risk"}: {allergyCount>0&&`${allergyCount} ${lang==="tr"?"alerji":"allergies"}`}{allergyCount>0&&chronicCount>0&&", "}{chronicCount>0&&`${chronicCount} ${lang==="tr"?"kronik":"chronic"}`}</span>
+          <span style={{color:dg,fontWeight:700}}>−{riskPenalty}</span>
+        </div>}
+        {wellnessBonus>0&&<div style={{padding:"6px 8px",borderRadius:6,background:`${sc}08`,fontSize:fs-3,color:mt,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span>✨ {lang==="tr"?"Wellness":"Wellness"}: {lang==="tr"?"su, uyku, adım":"water, sleep, steps"}</span>
+          <span style={{color:sc,fontWeight:700}}>+{wellnessBonus}</span>
+        </div>}
+      </div>}
+      {hscore===0&&<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:"8px 0"}}>{lang==="tr"?"Sağlık verilerinizi girin":"Enter your health data"}</div>}
     </div>
     {/* Next Med + Next Appt — only if data exists */}
     {<div style={{display:"grid",gridTemplateColumns:nextMed&&nextAppt?"1fr 1fr":"1fr",gap:6}}>
@@ -1133,7 +1170,24 @@ const renderHome=()=>{
       <div style={{display:"flex",gap:6,marginBottom:6}}>
         <button onClick={async()=>{if(!trIn.trim())return;setTrLoad(true);
           // First try AI (if API key exists), otherwise fallback to MyMemory free API (no key required)
-          const targets=[{flag:"tr",lang:"Türkçe",code:"tr"},{flag:"en",lang:"English",code:"en"},{flag:"de",lang:"Deutsch",code:"de"},{flag:"ru",lang:"Русский",code:"ru"},{flag:"zh",lang:"中文",code:"zh-CN"},{flag:"hi",lang:"हिन्दी",code:"hi"},{flag:"nl",lang:"Nederlands",code:"nl"},{flag:"es",lang:"Español",code:"es"},{flag:"ar",lang:"العربية",code:"ar"}];
+          const targets=[
+            {flag:"tr",lang:"Türkçe",code:"tr"},{flag:"us",lang:"English",code:"en"},{flag:"de",lang:"Deutsch",code:"de"},
+            {flag:"fr",lang:"Français",code:"fr"},{flag:"es",lang:"Español",code:"es"},{flag:"it",lang:"Italiano",code:"it"},
+            {flag:"pt",lang:"Português",code:"pt"},{flag:"ru",lang:"Русский",code:"ru"},{flag:"cn",lang:"中文",code:"zh-CN"},
+            {flag:"jp",lang:"日本語",code:"ja"},{flag:"kr",lang:"한국어",code:"ko"},{flag:"ar",lang:"العربية",code:"ar"},
+            {flag:"hi",lang:"हिन्दी",code:"hi"},{flag:"bd",lang:"বাংলা",code:"bn"},{flag:"nl",lang:"Nederlands",code:"nl"},
+            {flag:"pl",lang:"Polski",code:"pl"},{flag:"se",lang:"Svenska",code:"sv"},{flag:"no",lang:"Norsk",code:"no"},
+            {flag:"fi",lang:"Suomi",code:"fi"},{flag:"dk",lang:"Dansk",code:"da"},{flag:"gr",lang:"Ελληνικά",code:"el"},
+            {flag:"cz",lang:"Čeština",code:"cs"},{flag:"hu",lang:"Magyar",code:"hu"},{flag:"ro",lang:"Română",code:"ro"},
+            {flag:"bg",lang:"Български",code:"bg"},{flag:"ua",lang:"Українська",code:"uk"},{flag:"sk",lang:"Slovenčina",code:"sk"},
+            {flag:"ie",lang:"Gaeilge",code:"ga"},{flag:"id",lang:"Bahasa Indonesia",code:"id"},{flag:"my",lang:"Bahasa Melayu",code:"ms"},
+            {flag:"th",lang:"ไทย",code:"th"},{flag:"vn",lang:"Tiếng Việt",code:"vi"},{flag:"ph",lang:"Filipino",code:"tl"},
+            {flag:"pk",lang:"اردو",code:"ur"},{flag:"ir",lang:"فارسی",code:"fa"},{flag:"il",lang:"עברית",code:"he"},
+            {flag:"az",lang:"Azərbaycan",code:"az"},{flag:"ge",lang:"ქართული",code:"ka"},{flag:"am",lang:"Հայերեն",code:"hy"},
+            {flag:"eg",lang:"Arabic (Egypt)",code:"ar-EG"},{flag:"ma",lang:"Arabic (Morocco)",code:"ar-MA"},{flag:"ng",lang:"Hausa",code:"ha"},
+            {flag:"ke",lang:"Kiswahili",code:"sw"},{flag:"za",lang:"Afrikaans",code:"af"},{flag:"mx",lang:"Español (MX)",code:"es-MX"},
+            {flag:"br",lang:"Português (BR)",code:"pt-BR"},{flag:"ag",lang:"Español (AR)",code:"es-AR"},{flag:"cl",lang:"Español (CL)",code:"es-CL"}
+          ];
           try{
             // Try AI first (better quality, if key available)
             if(apiKey){
@@ -1676,6 +1730,28 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         {recordsCount>0&&<div>📋 {lang==="tr"?"Tıbbi Kayıt":"Medical Records"}: <strong>{recordsCount}</strong></div>}
         <div style={{marginTop:2,color:dg}}>{lang==="tr"?`Toplam risk cezası: −${riskPenalty} puan`:`Total risk penalty: −${riskPenalty} pts`}</div>
       </div>
+      {/* Possible health implications */}
+      {(pat.allergies||pat.chronic||meds.length>0)&&<div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${dg}22`}}>
+        <div style={{fontSize:fs-3,fontWeight:700,color:dg,marginBottom:4}}>🔍 {lang==="tr"?"Muhtemel Sonuçlar ve Dikkat Edilmesi Gerekenler":"Possible Implications & Warnings"}</div>
+        <div style={{fontSize:fs-3,color:mt,display:"flex",flexDirection:"column",gap:3}}>
+          {pat.chronic&&/diyabet|diabetes/i.test(pat.chronic)&&<div>• {lang==="tr"?"🩸 Diyabet: Kan şekeri takibi, düzenli HbA1c ölçümü, göz-böbrek kontrolü önerilir.":"🩸 Diabetes: Regular blood sugar monitoring, HbA1c tests, eye/kidney checks recommended."}</div>}
+          {pat.chronic&&/hipertansiyon|tansiyon|hypertension|high.blood/i.test(pat.chronic)&&<div>• {lang==="tr"?"💓 Hipertansiyon: Tuz kısıtlaması, düzenli ölçüm, stres yönetimi önemli.":"💓 Hypertension: Salt restriction, regular monitoring, stress management important."}</div>}
+          {pat.chronic&&/astım|asthma|astim/i.test(pat.chronic)&&<div>• {lang==="tr"?"🫁 Astım: İnhaler taşıyın, polen/toz/duman alerjenlerinden kaçının.":"🫁 Asthma: Carry inhaler, avoid pollen/dust/smoke triggers."}</div>}
+          {pat.chronic&&/kalp|heart|cardiac/i.test(pat.chronic)&&<div>• {lang==="tr"?"❤️ Kalp hastalığı: Ağır egzersizden kaçının, düzenli EKG kontrolü.":"❤️ Heart condition: Avoid strenuous exercise, regular ECG checks."}</div>}
+          {pat.chronic&&/tiroid|thyroid/i.test(pat.chronic)&&<div>• {lang==="tr"?"🦋 Tiroid: TSH/T3/T4 düzenli takip, ilaç saatine dikkat.":"🦋 Thyroid: Regular TSH/T3/T4 monitoring, medication timing matters."}</div>}
+          {pat.allergies&&/penisilin|penicillin/i.test(pat.allergies)&&<div>• {lang==="tr"?"💉 Penisilin alerjisi: Doktora/eczaneye MUTLAKA bildirin.":"💉 Penicillin allergy: ALWAYS inform doctor/pharmacy."}</div>}
+          {pat.allergies&&/arı|bee|arı sokması|bal arısı/i.test(pat.allergies)&&<div>• {lang==="tr"?"🐝 Arı alerjisi: Epipen taşıyın, anafilaksi riski.":"🐝 Bee allergy: Carry EpiPen, anaphylaxis risk."}</div>}
+          {pat.allergies&&/fıstık|peanut|kuruyemiş|nut/i.test(pat.allergies)&&<div>• {lang==="tr"?"🥜 Fıstık/kuruyemiş alerjisi: Gıda etiketlerini okuyun, çapraz kontaminasyona dikkat.":"🥜 Peanut/nut allergy: Read food labels, beware cross-contamination."}</div>}
+          {pat.allergies&&/laktoz|lactose|gluten/i.test(pat.allergies)&&<div>• {lang==="tr"?"🥛 Gıda intoleransı: Uygun beslenme planı, etiket okuma.":"🥛 Food intolerance: Appropriate diet plan, label reading."}</div>}
+          {meds.length>=3&&<div>• {lang==="tr"?`⚠️ ${meds.length} farklı ilaç kullanıyorsunuz — ilaç etkileşimi için doktora danışın.`:`⚠️ You're taking ${meds.length} medications — consult doctor for drug interactions.`}</div>}
+          {bmi>30&&<div>• {lang==="tr"?"⚖️ Obezite: Diyabet, kalp hastalığı, eklem problemleri riski artar.":"⚖️ Obesity: Increased risk of diabetes, heart disease, joint issues."}</div>}
+          {bmi>0&&bmi<18.5&&<div>• {lang==="tr"?"⚖️ Zayıflık: Bağışıklık zayıflığı, demir eksikliği riski — beslenme uzmanına danışın.":"⚖️ Underweight: Weakened immunity, iron deficiency risk — consult nutritionist."}</div>}
+          {hd.bpS>140&&<div>• {lang==="tr"?"🩺 Yüksek tansiyon: Kalp/inme riski, acil doktor kontrolü gerekli.":"🩺 High blood pressure: Heart/stroke risk, urgent doctor check needed."}</div>}
+          {hd.pulse>100&&<div>• {lang==="tr"?"❤️ Taşikardi (hızlı nabız): Kafein/stresi azaltın, kalp kontrolü önerilir.":"❤️ Tachycardia: Reduce caffeine/stress, cardiac check recommended."}</div>}
+          {hd.pulse>0&&hd.pulse<60&&<div>• {lang==="tr"?"❤️ Bradikardi (yavaş nabız): Kardiyolog kontrolü önerilir.":"❤️ Bradycardia: Cardiologist consultation recommended."}</div>}
+        </div>
+        <div style={{fontSize:fs-4,color:mt,marginTop:6,fontStyle:"italic"}}>⚕️ {lang==="tr"?"Bu öneriler genel bilgi amaçlıdır. Teşhis/tedavi için doktorunuza danışın.":"These are general suggestions. Consult your doctor for diagnosis/treatment."}</div>
+      </div>}
     </div>}
     {/* Wellness bonus */}
     {wellnessBonus>0&&<div style={{marginTop:6,padding:"8px 10px",borderRadius:8,background:`${sc}08`,border:`1px solid ${sc}22`}}>
