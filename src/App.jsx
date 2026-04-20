@@ -801,6 +801,29 @@ useEffect(()=>{
   return()=>clearInterval(int);
 },[]);
 
+// Auto-sync same-name meds to minimum count (ensures stock pool is consistent)
+useEffect(()=>{
+  const byName={};
+  meds.forEach(m=>{
+    const nm=m.name?.trim().toLowerCase();
+    if(!nm)return;
+    const c=m.count??30;
+    if(byName[nm]===undefined||c<byName[nm])byName[nm]=c;
+  });
+  // Check if any sync is needed
+  const needsSync=meds.some(m=>{
+    const nm=m.name?.trim().toLowerCase();
+    return nm&&byName[nm]!==undefined&&(m.count??30)!==byName[nm];
+  });
+  if(needsSync){
+    setMeds(p=>p.map(m=>{
+      const nm=m.name?.trim().toLowerCase();
+      if(nm&&byName[nm]!==undefined)return{...m,count:byName[nm]};
+      return m;
+    }));
+  }
+},[meds.length]); // Only run when meds count changes (add/delete), not on every count change
+
 // Notes
 const[notes,setNotes]=useState([]);
 const[editNote,setEditNote]=useState(null);
@@ -1473,15 +1496,18 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div style={{display:"flex",gap:6,marginTop:8}}>
         <button onClick={()=>{
           const nm=m.name?.trim().toLowerCase();
-          const timesPerDay=m.timesPerDay||1;
-          // Decrement by 1 pill (one dose taken); share count across all meds with same name
+          // Find minimum count across all same-named meds (they should share stock)
+          const allSame=meds.filter(x=>x.name?.trim().toLowerCase()===nm);
+          const minCount=Math.min(...allSame.map(x=>x.count??30));
+          const newCount=Math.max(0,minCount-1);
+          // Set ALL same-named meds to newCount so they stay synchronized
           setMeds(p=>p.map(x=>{
             const sameMed=x.name?.trim().toLowerCase()===nm;
-            if(x.id===m.id){return{...x,taken:true,count:Math.max(0,(x.count??30)-1)};}
-            if(sameMed){return{...x,count:Math.max(0,(x.count??30)-1)};}
+            if(x.id===m.id){return{...x,taken:true,count:newCount};}
+            if(sameMed){return{...x,count:newCount};}
             return x;
           }));
-          notify("✅ "+m.name+" "+(lang==="tr"?"alındı":"taken")+" ("+(lang==="tr"?"Kalan":"Left")+": "+Math.max(0,(m.count??30)-1)+")");
+          notify("✅ "+m.name+" "+(lang==="tr"?"alındı":"taken")+" ("+(lang==="tr"?"Kalan":"Left")+": "+newCount+")");
           speakAlarm(m.name+" "+(lang==="tr"?"alındı":"taken"));
         }} style={{...BP,flex:1,padding:"10px",fontSize:fs,fontWeight:700}}>✅ {lang==="tr"?"Aldım":"Taken"}</button>
         <button onClick={()=>speakAlarm((pat.name||"")+", "+m.name+" "+m.dose+" "+(lang==="tr"?"saatin yaklaşıyor!":"time is near!"))} style={{background:`${ac}15`,border:`1px solid ${ac}`,borderRadius:10,padding:"10px 14px",cursor:"pointer",fontSize:16}}>🔊</button>
@@ -1572,13 +1598,16 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
     <div style={{flex:1,minWidth:0}}><div style={{fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</div><div style={{fontSize:fs-2,color:mt}}>{m.dose} — ⏰ {m.time}</div><div style={{fontSize:fs-3,color:sc}}>{m.alarmType==="ring"?"🔔":m.alarmType==="vibrate"?"📳":"🔔📳"} {m.count>0&&<span style={{color:m.count<=5?dg:mt}}>({lang==="tr"?"Kalan":"Left"}: {m.count})</span>}</div></div>
     {!m.taken&&<button onClick={()=>{
       const nm=m.name?.trim().toLowerCase();
+      const allSame=meds.filter(x=>x.name?.trim().toLowerCase()===nm);
+      const minCount=Math.min(...allSame.map(x=>x.count??30));
+      const newCount=Math.max(0,minCount-1);
       setMeds(p=>p.map(x=>{
         const sameMed=x.name?.trim().toLowerCase()===nm;
-        if(x.id===m.id){return{...x,taken:true,count:Math.max(0,(x.count??30)-1)};}
-        if(sameMed){return{...x,count:Math.max(0,(x.count??30)-1)};}
+        if(x.id===m.id){return{...x,taken:true,count:newCount};}
+        if(sameMed){return{...x,count:newCount};}
         return x;
       }));
-      notify(`✅ ${m.name} ${t.taken} (${lang==="tr"?"Kalan":"Left"}: ${Math.max(0,(m.count??30)-1)})`);
+      notify(`✅ ${m.name} ${t.taken} (${lang==="tr"?"Kalan":"Left"}: ${newCount})`);
     }} style={{...BP,padding:"6px 12px"}}>✓</button>}
     <button onClick={()=>{setEditMedId(m.id);setNewMed({name:m.name||"",dose:m.dose||"",time:m.time||"",startDate:m.startDate||"",alarmType:m.alarmType||"both",count:m.count||30,timesPerDay:m.timesPerDay||1,recurring:m.recurring!==false});setShowAddMed(true);}} style={{background:"none",border:`1px solid ${ac}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:ac}}>✏️</button>
     <button onClick={()=>toTrash("med",m)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:16}}>🗑️</button>
