@@ -6,8 +6,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
    v2 design + all new features + restructured nav
    ══════════════════════════════════════════════════════════ */
 
-const T={tr:{app:"AILVIE",sl:"Kişisel Yapay Zeka Sağlık Asistanı",home:"Ana Sayfa",meds:"İlaçlar",appts:"Randevular",health:"Sağlık",notes:"Notlar",contacts:"Rehber",community:"Topluluk",chat:"AILVIE Sohbet",settings:"Ayarlar",notif:"Bildirimler",emergency:"ACİL ÇAĞRI",dark:"Karanlık Tema",hc:"Yüksek Kontrast",fSize:"Yazı Boyutu",lang:"Dil",hScore:"Sağlık Skoru",bmi:"BMI",nMed:"Sonraki İlaç",nAppt:"Sonraki Randevu",addMed:"İlaç Ekle",addAppt:"Randevu Ekle",bookAppt:"Randevu Al",nm:"Ad",dose:"Doz",time:"Saat",taken:"Alındı",dr:"Doktor",hosp:"Hastane",clin:"Poliklinik",date:"Tarih",up:"Yaklaşan",past:"Geçmiş",pulse:"Nabız",wt:"Kilo",ht:"Boy",bp:"Tansiyon",norm:"Normal",caut:"Dikkat",save:"Kaydet",del:"Sil",add:"Ekle",copy:"Kopyala",pin:"Sabitle",send:"Gönder",cancel:"İptal",drugR:"İlaç Tanıma",drugN:"İlaç adı yazın...",anlz:"Analiz",prog:"İlerleme",addSys:"Sisteme Ekle",dir:"Yol Tarifi",loc:"AI Konum",emN:"Acil Numaralar",wr:"Mesajınızı yazın...",bpm:"bpm",kg:"kg",cm:"cm",tap:"Dokunun",noM:"İlaç yok",noA:"Randevu yok",noN:"Not yok",noC:"Kişi yok",warn:"⚕️ Tıbbi teşhis aracı değildir",pCard:"Hasta Karnesi",fName:"Ad Soyad",bDate:"Doğum Tarihi",age:"Yaş",bType:"Kan Grubu",allrg:"Alerjiler",chron:"Kronik Hastalıklar",diag:"Teşhis",xray:"Röntgen",mri:"MR/Emar",ultra:"Ultrason",lab:"Tahliller",surg:"Ameliyat",insu:"Sigorta No",emCon:"Acil Kişi",trash:"Çöp Kutusu",trD:"gün sonra silinir",rest:"Geri Yükle",empT:"Boşalt",trE:"Çöp boş",q1:"Nasıl hissediyorsun?",q2:"İlaç bilgisi",q3:"Sağlık önerileri",greet:"Merhaba! Ben AILVIE, kişisel sağlık asistanınızım. 🌸 Size nasıl yardımcı olabilirim?",gm:"Günaydın",ga:"İyi akşamlar",hi:"Merhaba",emj:"Emoji",jan:"Oca",feb:"Şub",mar:"Mar",apr:"Nis",may:"May",jun:"Haz",jul:"Tem",aug:"Ağu",sep:"Eyl",oct:"Eki",nov:"Kas",dec:"Ara",su:"Pz",mo:"Pt",tu:"Sa",we:"Ça",th:"Pe",fr:"Cu",sa:"Ct",nNote:"Yeni Not",extA:"Harici Uygulamalar",addApp:"Uygulama Ekle",cls:"Sınıf",usg:"Kullanım",sEff:"Yan Etkiler",wrn:"Uyarılar",intr:"Etkileşimler",alarm:"Alarm",alarmSet:"Alarm Kuruldu",alarmType:"Alarm Tipi",vibrate:"Titreşim",ring:"Zil",both:"Her İkisi",scanQR:"QR/Barkod Tara",scanManual:"Manuel Barkod Gir",scanning:"Taranıyor...",scanFound:"İlaç Bulundu!",scanNotFound:"Barkod veritabanında bulunamadı",stopScan:"Taramayı Durdur",barcodeNum:"Barkod Numarası",scanAdd:"Tarayarak Ekle",profile:"Profil",login:"Giriş Yap",logout:"Çıkış Yap",permissions:"Uygulama İzinleri",subscription:"Abonelik Planları",free:"Ücretsiz",premium:"Premium",legal:"Hukuki Uyarı",legalText:"AILVIE, yapay zeka destekli kişisel sağlık asistanıdır. Bilgiler yalnızca bilgilendirme amaçlıdır, tıbbi teşhis/tedavi/reçete yerine geçmez. Sağlık kararları için doktorunuza danışın. GÜVENLİK: Verileriniz cihazınızda şifrelenerek saklanır, üçüncü taraflarla paylaşılmaz. KVKK ve GDPR uyumludur. Ödemeler Stripe PCI DSS sertifikalı altyapı üzerinden gerçekleşir. BAĞIŞ: Her PRO aboneliğinden TEGV bursuna otomatik bağış yapılır (Aylık $1, Yıllık $2.99).",about:"Hakkında",version:"Sürüm",privPolicy:"Gizlilik Politikası",terms:"Kullanım Şartları",notifPerm:"Bildirim İzni",locPerm:"Konum İzni",micPerm:"Mikrofon İzni",camPerm:"Kamera İzni",freePlan:"Temel özellikler • Reklamlı • 3 ilaç • 5 not",premPlan:"Reklamsız • Sınırsız AI/İlaç/Not • Sesli asistan • $4.99/ay | $12.99/yıl • TEGV: $1/ay, $2.99/yıl",entPlan:"PRO + Aile (5) • Çoklu profil • Öncelikli destek • $12.99/ay | $59.99/yıl • TEGV dahil",enterprise:"Kurumsal",monthly:"aylık",loggedIn:"Giriş yapıldı",loggedOut:"Çıkış yapıldı",gn:"İyi geceler",feel:"kendini nasıl hissediyorsun? Umarım iyisindir.",adminCh:"AILVIE Destek",adminWelcome:"Mesajınız alındı. En kısa sürede yanıt vereceğiz.",voiceOn:"Sesli Diyalog",wordLangPick:"Dil Seç"},
-en:{app:"AILVIE",sl:"Personal AI Health Assistant",home:"Home",meds:"Meds",appts:"Appts",health:"Health",notes:"Notes",contacts:"Contacts",community:"Community",chat:"AILVIE Chat",settings:"Settings",notif:"Notifications",emergency:"EMERGENCY",dark:"Dark Mode",hc:"High Contrast",fSize:"Font Size",lang:"Language",hScore:"Health Score",bmi:"BMI",nMed:"Next Med",nAppt:"Next Appt",addMed:"Add Med",addAppt:"Add Appt",bookAppt:"Book Appt",nm:"Name",dose:"Dose",time:"Time",taken:"Taken",dr:"Doctor",hosp:"Hospital",clin:"Clinic",date:"Date",up:"Upcoming",past:"Past",pulse:"Pulse",wt:"Weight",ht:"Height",bp:"Blood Pressure",norm:"Normal",caut:"Caution",save:"Save",del:"Delete",add:"Add",copy:"Copy",pin:"Pin",send:"Send",cancel:"Cancel",drugR:"Drug Recognition",drugN:"Enter drug name...",anlz:"Analyze",prog:"Progress",addSys:"Add System",dir:"Directions",loc:"AI Location",emN:"Emergency Numbers",wr:"Type message...",bpm:"bpm",kg:"kg",cm:"cm",tap:"Tap to add",noM:"No meds",noA:"No appts",noN:"No notes",noC:"No contacts",warn:"⚕️ Not a medical tool",pCard:"Patient Card",fName:"Full Name",bDate:"Birth Date",age:"Age",bType:"Blood Type",allrg:"Allergies",chron:"Chronic Diseases",diag:"Diagnosis",xray:"X-Ray",mri:"MRI",ultra:"Ultrasound",lab:"Lab Results",surg:"Surgeries",insu:"Insurance",emCon:"Emergency Contact",trash:"Trash",trD:"days auto-delete",rest:"Restore",empT:"Empty",trE:"Trash empty",q1:"How are you feeling?",q2:"Med info",q3:"Health tips",greet:"Hello! I'm AILVIE, your health assistant. 🌸 How can I help?",gm:"Good morning",ga:"Good evening",hi:"Hello",emj:"Emoji",jan:"Jan",feb:"Feb",mar:"Mar",apr:"Apr",may:"May",jun:"Jun",jul:"Jul",aug:"Aug",sep:"Sep",oct:"Oct",nov:"Nov",dec:"Dec",su:"Su",mo:"Mo",tu:"Tu",we:"We",th:"Th",fr:"Fr",sa:"Sa",nNote:"New Note",extA:"External Apps",addApp:"Add App",cls:"Class",usg:"Usage",sEff:"Side Effects",wrn:"Warnings",intr:"Interactions",alarm:"Alarm",alarmSet:"Alarm Set",alarmType:"Alarm Type",vibrate:"Vibrate",ring:"Ring",both:"Both",scanQR:"Scan QR/Barcode",scanManual:"Enter Barcode",scanning:"Scanning...",scanFound:"Drug Found!",scanNotFound:"Barcode not in database",stopScan:"Stop Scan",barcodeNum:"Barcode Number",scanAdd:"Scan to Add",profile:"Profile",login:"Log In",logout:"Log Out",permissions:"App Permissions",subscription:"Subscription Plans",free:"Free",premium:"Premium",legal:"Legal Notice",legalText:"AILVIE is an AI-powered personal health assistant. Information is for informational purposes only, not medical advice. Consult your doctor for health decisions. SECURITY: Your data is encrypted on your device only, never shared with third parties. GDPR and KVKK compliant. Payments processed via Stripe (PCI DSS certified). DONATION: Every PRO subscription automatically donates to TEGV education fund ($1/mo, $2.99/yr).",about:"About",version:"Version",privPolicy:"Privacy Policy",terms:"Terms of Service",notifPerm:"Notification Permission",locPerm:"Location Permission",micPerm:"Microphone Permission",camPerm:"Camera Permission",freePlan:"Basic features • Ads • 3 meds • 5 notes",premPlan:"Ad-free • Unlimited AI/Meds/Notes • Voice assistant • $4.99/mo | $12.99/yr • TEGV: $1/mo, $2.99/yr",entPlan:"PRO + Family (5) • Multi-profile • Priority support • $12.99/mo | $59.99/yr • TEGV included",enterprise:"Enterprise",monthly:"monthly",loggedIn:"Logged in",loggedOut:"Logged out",gn:"Good night",feel:"how are you feeling? Hope you're doing well.",adminCh:"AILVIE Support",adminWelcome:"Message received. We'll respond shortly.",voiceOn:"Voice Dialog",wordLangPick:"Select Language"},
+const T={tr:{app:"AILVIE",sl:"Kişisel Yapay Zeka Sağlık Asistanı",home:"Ana Sayfa",meds:"İlaçlar",appts:"Randevular",health:"Sağlık",notes:"Notlar",contacts:"Rehber",community:"Topluluk",chat:"AILVIE Sohbet",settings:"Ayarlar",notif:"Bildirimler",emergency:"ACİL ÇAĞRI",dark:"Karanlık Tema",hc:"Yüksek Kontrast",fSize:"Yazı Boyutu",lang:"Dil",hScore:"Sağlık Skoru",bmi:"BMI",nMed:"Sonraki İlaç",nAppt:"Sonraki Randevu",addMed:"İlaç Ekle",addAppt:"Randevu Ekle",bookAppt:"Randevu Al",nm:"Ad",dose:"Doz",time:"Saat",taken:"Alındı",dr:"Doktor",hosp:"Hastane",clin:"Poliklinik",date:"Tarih",up:"Yaklaşan",past:"Geçmiş",pulse:"Nabız",wt:"Kilo",ht:"Boy",bp:"Tansiyon",norm:"Normal",caut:"Dikkat",save:"Kaydet",del:"Sil",add:"Ekle",copy:"Kopyala",pin:"Sabitle",send:"Gönder",cancel:"İptal",drugR:"İlaç Tanıma",drugN:"İlaç adı yazın...",anlz:"Analiz",prog:"İlerleme",addSys:"Sisteme Ekle",dir:"Yol Tarifi",loc:"AI Konum",emN:"Acil Numaralar",wr:"Mesajınızı yazın...",bpm:"bpm",kg:"kg",cm:"cm",tap:"Dokunun",noM:"İlaç yok",noA:"Randevu yok",noN:"Not yok",noC:"Kişi yok",warn:"⚕️ Tıbbi teşhis aracı değildir",pCard:"Hasta Karnesi",fName:"Ad Soyad",bDate:"Doğum Tarihi",age:"Yaş",bType:"Kan Grubu",allrg:"Alerjiler",chron:"Kronik Hastalıklar",diag:"Teşhis",xray:"Röntgen",mri:"MR/Emar",ultra:"Ultrason",lab:"Tahliller",surg:"Ameliyat",insu:"Sigorta No",emCon:"Acil Kişi",trash:"Çöp Kutusu",trD:"gün sonra silinir",rest:"Geri Yükle",empT:"Boşalt",trE:"Çöp boş",q1:"Nasıl hissediyorsun?",q2:"İlaç bilgisi",q3:"Sağlık önerileri",greet:"Merhaba! Ben AILVIE, kişisel sağlık asistanınızım. 🌸 Size nasıl yardımcı olabilirim?",gm:"Günaydın",ga:"İyi akşamlar",hi:"Merhaba",emj:"Emoji",jan:"Oca",feb:"Şub",mar:"Mar",apr:"Nis",may:"May",jun:"Haz",jul:"Tem",aug:"Ağu",sep:"Eyl",oct:"Eki",nov:"Kas",dec:"Ara",su:"Pz",mo:"Pt",tu:"Sa",we:"Ça",th:"Pe",fr:"Cu",sa:"Ct",nNote:"Yeni Not",extA:"Harici Uygulamalar",addApp:"Uygulama Ekle",cls:"Sınıf",usg:"Kullanım",sEff:"Yan Etkiler",wrn:"Uyarılar",intr:"Etkileşimler",alarm:"Alarm",alarmSet:"Alarm Kuruldu",alarmType:"Alarm Tipi",vibrate:"Titreşim",ring:"Zil",both:"Her İkisi",scanQR:"QR/Barkod Tara",scanManual:"Manuel Barkod Gir",scanning:"Taranıyor...",scanFound:"İlaç Bulundu!",scanNotFound:"Barkod veritabanında bulunamadı",stopScan:"Taramayı Durdur",barcodeNum:"Barkod Numarası",scanAdd:"Tarayarak Ekle",profile:"Profil",login:"Giriş Yap",logout:"Çıkış Yap",permissions:"Uygulama İzinleri",subscription:"Abonelik Planları",free:"Ücretsiz",premium:"Premium",legal:"Hukuki Uyarı",legalText:"AILVIE, yapay zeka destekli kişisel sağlık asistanıdır. Bilgiler yalnızca bilgilendirme amaçlıdır, tıbbi teşhis/tedavi/reçete yerine geçmez. Sağlık kararları için doktorunuza danışın. GÜVENLİK: Verileriniz cihazınızda şifrelenerek saklanır, üçüncü taraflarla paylaşılmaz. KVKK ve GDPR uyumludur. Ödemeler Stripe PCI DSS sertifikalı altyapı üzerinden gerçekleşir.",about:"Hakkında",version:"Sürüm",privPolicy:"Gizlilik Politikası",terms:"Kullanım Şartları",notifPerm:"Bildirim İzni",locPerm:"Konum İzni",micPerm:"Mikrofon İzni",camPerm:"Kamera İzni",freePlan:"Temel özellikler • Reklamlı • 3 ilaç • 5 not",premPlan:"Reklamsız • Sınırsız AI/İlaç/Not • Sesli asistan • $4.99/ay | $12.99/yıl",entPlan:"PRO + Aile (5) • Çoklu profil • Öncelikli destek • $12.99/ay | $59.99/yıl",enterprise:"Kurumsal",monthly:"aylık",loggedIn:"Giriş yapıldı",loggedOut:"Çıkış yapıldı",gn:"İyi geceler",feel:"kendini nasıl hissediyorsun? Umarım iyisindir.",adminCh:"AILVIE Destek",adminWelcome:"Mesajınız alındı. En kısa sürede yanıt vereceğiz.",voiceOn:"Sesli Diyalog",wordLangPick:"Dil Seç"},
+en:{app:"AILVIE",sl:"Personal AI Health Assistant",home:"Home",meds:"Meds",appts:"Appts",health:"Health",notes:"Notes",contacts:"Contacts",community:"Community",chat:"AILVIE Chat",settings:"Settings",notif:"Notifications",emergency:"EMERGENCY",dark:"Dark Mode",hc:"High Contrast",fSize:"Font Size",lang:"Language",hScore:"Health Score",bmi:"BMI",nMed:"Next Med",nAppt:"Next Appt",addMed:"Add Med",addAppt:"Add Appt",bookAppt:"Book Appt",nm:"Name",dose:"Dose",time:"Time",taken:"Taken",dr:"Doctor",hosp:"Hospital",clin:"Clinic",date:"Date",up:"Upcoming",past:"Past",pulse:"Pulse",wt:"Weight",ht:"Height",bp:"Blood Pressure",norm:"Normal",caut:"Caution",save:"Save",del:"Delete",add:"Add",copy:"Copy",pin:"Pin",send:"Send",cancel:"Cancel",drugR:"Drug Recognition",drugN:"Enter drug name...",anlz:"Analyze",prog:"Progress",addSys:"Add System",dir:"Directions",loc:"AI Location",emN:"Emergency Numbers",wr:"Type message...",bpm:"bpm",kg:"kg",cm:"cm",tap:"Tap to add",noM:"No meds",noA:"No appts",noN:"No notes",noC:"No contacts",warn:"⚕️ Not a medical tool",pCard:"Patient Card",fName:"Full Name",bDate:"Birth Date",age:"Age",bType:"Blood Type",allrg:"Allergies",chron:"Chronic Diseases",diag:"Diagnosis",xray:"X-Ray",mri:"MRI",ultra:"Ultrasound",lab:"Lab Results",surg:"Surgeries",insu:"Insurance",emCon:"Emergency Contact",trash:"Trash",trD:"days auto-delete",rest:"Restore",empT:"Empty",trE:"Trash empty",q1:"How are you feeling?",q2:"Med info",q3:"Health tips",greet:"Hello! I'm AILVIE, your health assistant. 🌸 How can I help?",gm:"Good morning",ga:"Good evening",hi:"Hello",emj:"Emoji",jan:"Jan",feb:"Feb",mar:"Mar",apr:"Apr",may:"May",jun:"Jun",jul:"Jul",aug:"Aug",sep:"Sep",oct:"Oct",nov:"Nov",dec:"Dec",su:"Su",mo:"Mo",tu:"Tu",we:"We",th:"Th",fr:"Fr",sa:"Sa",nNote:"New Note",extA:"External Apps",addApp:"Add App",cls:"Class",usg:"Usage",sEff:"Side Effects",wrn:"Warnings",intr:"Interactions",alarm:"Alarm",alarmSet:"Alarm Set",alarmType:"Alarm Type",vibrate:"Vibrate",ring:"Ring",both:"Both",scanQR:"Scan QR/Barcode",scanManual:"Enter Barcode",scanning:"Scanning...",scanFound:"Drug Found!",scanNotFound:"Barcode not in database",stopScan:"Stop Scan",barcodeNum:"Barcode Number",scanAdd:"Scan to Add",profile:"Profile",login:"Log In",logout:"Log Out",permissions:"App Permissions",subscription:"Subscription Plans",free:"Free",premium:"Premium",legal:"Legal Notice",legalText:"AILVIE is an AI-powered personal health assistant. Information is for informational purposes only, not medical advice. Consult your doctor for health decisions. SECURITY: Your data is encrypted on your device only, never shared with third parties. GDPR and KVKK compliant. Payments processed via Stripe (PCI DSS certified).",about:"About",version:"Version",privPolicy:"Privacy Policy",terms:"Terms of Service",notifPerm:"Notification Permission",locPerm:"Location Permission",micPerm:"Microphone Permission",camPerm:"Camera Permission",freePlan:"Basic features • Ads • 3 meds • 5 notes",premPlan:"Ad-free • Unlimited AI/Meds/Notes • Voice assistant • $4.99/mo | $12.99/yr",entPlan:"PRO + Family (5) • Multi-profile • Priority support • $12.99/mo | $59.99/yr",enterprise:"Enterprise",monthly:"monthly",loggedIn:"Logged in",loggedOut:"Logged out",gn:"Good night",feel:"how are you feeling? Hope you're doing well.",adminCh:"AILVIE Support",adminWelcome:"Message received. We'll respond shortly.",voiceOn:"Voice Dialog",wordLangPick:"Select Language"},
 de:{app:"AILVIE",sl:"Persönliche KI-Gesundheitsassistentin",home:"Start",meds:"Medikamente",appts:"Termine",health:"Gesundheit",notes:"Notizen",contacts:"Kontakte",community:"Gemeinschaft",chat:"AILVIE Chat",settings:"Einstellungen",notif:"Meldungen",emergency:"NOTFALL",dark:"Dunkelmodus",hc:"Kontrast",fSize:"Schrift",lang:"Sprache",hScore:"Score",bmi:"BMI",nMed:"Nächstes",nAppt:"Nächster",addMed:"Hinzufügen",addAppt:"Hinzufügen",bookAppt:"Buchen",nm:"Name",dose:"Dosis",time:"Zeit",taken:"Genommen",dr:"Arzt",hosp:"Krankenhaus",clin:"Klinik",date:"Datum",up:"Kommende",past:"Vergangene",pulse:"Puls",wt:"Gewicht",ht:"Größe",bp:"Blutdruck",norm:"Normal",caut:"Achtung",save:"Speichern",del:"Löschen",add:"Hinzufügen",copy:"Kopieren",pin:"Anheften",send:"Senden",cancel:"Abbrechen",drugR:"Erkennung",drugN:"Medikamentenname...",anlz:"Analysieren",prog:"Fortschritt",addSys:"System",dir:"Route",loc:"KI Standort",emN:"Notrufnummern",wr:"Nachricht...",bpm:"bpm",kg:"kg",cm:"cm",tap:"Tippen",noM:"Keine",noA:"Keine",noN:"Keine",noC:"Keine",warn:"⚕️ Kein Diagnosetool",pCard:"Patientenkarte",fName:"Name",bDate:"Geburtsdatum",age:"Alter",bType:"Blutgruppe",allrg:"Allergien",chron:"Chronische",diag:"Diagnose",xray:"Röntgen",mri:"MRT",ultra:"Ultraschall",lab:"Labor",surg:"OP",insu:"Versicherung",emCon:"Notfallkontakt",trash:"Papierkorb",trD:"Tage",rest:"Wiederherstellen",empT:"Leeren",trE:"Leer",q1:"Wie geht es Ihnen?",q2:"Med-Info",q3:"Tipps",greet:"Hallo! Ich bin AILVIE. 🌸",gm:"Guten Morgen",ga:"Guten Abend",hi:"Hallo",emj:"Emoji",jan:"Jan",feb:"Feb",mar:"Mär",apr:"Apr",may:"Mai",jun:"Jun",jul:"Jul",aug:"Aug",sep:"Sep",oct:"Okt",nov:"Nov",dec:"Dez",su:"So",mo:"Mo",tu:"Di",we:"Mi",th:"Do",fr:"Fr",sa:"Sa",nNote:"Neue",extA:"Externe",addApp:"App",cls:"Klasse",usg:"Verwendung",sEff:"Nebenwirkungen",wrn:"Warnungen",intr:"Wechselwirkungen",alarm:"Alarm",alarmSet:"Alarm gesetzt",alarmType:"Alarmtyp",vibrate:"Vibration",ring:"Klingelton",both:"Beides",profile:"Profil",login:"Anmelden",logout:"Abmelden",permissions:"Berechtigungen",subscription:"Abonnement",free:"Kostenlos",premium:"Premium",legal:"Rechtlicher Hinweis",legalText:"AILVIE ist ein KI-gestützter Gesundheitsassistent. Informationen dienen nur zu Informationszwecken. Konsultieren Sie immer einen Arzt.",about:"Über",version:"Version",privPolicy:"Datenschutz",terms:"Nutzungsbedingungen",notifPerm:"Benachrichtigungen",locPerm:"Standort",micPerm:"Mikrofon",camPerm:"Kamera",freePlan:"Grundfunktionen kostenlos",premPlan:"Unbegrenzter KI-Chat, werbefrei",entPlan:"Familienfreigabe, Prioritätssupport",enterprise:"Unternehmen",monthly:"monatlich",loggedIn:"Angemeldet",loggedOut:"Abgemeldet",gn:"Gute Nacht",feel:"wie fühlst du dich? Hoffentlich geht es dir gut.",adminCh:"AILVIE Support",adminWelcome:"Nachricht erhalten.",voiceOn:"Sprachchat",wordLangPick:"Sprache wählen"},
 ru:{app:"AILVIE",sl:"Персональный ИИ-ассистент здоровья",home:"Главная",meds:"Лекарства",appts:"Записи",health:"Здоровье",notes:"Заметки",contacts:"Контакты",community:"Сообщество",chat:"AILVIE Чат",settings:"Настройки",notif:"Уведомления",emergency:"SOS",dark:"Тёмная тема",hc:"Контраст",fSize:"Шрифт",lang:"Язык",hScore:"Здоровье",bmi:"ИМТ",nMed:"След.",nAppt:"След.",addMed:"Добавить",addAppt:"Добавить",bookAppt:"Записаться",nm:"Имя",dose:"Доза",time:"Время",taken:"Принято",dr:"Врач",hosp:"Больница",clin:"Поликлиника",date:"Дата",up:"Предстоящие",past:"Прошедшие",pulse:"Пульс",wt:"Вес",ht:"Рост",bp:"Давление",norm:"Норма",caut:"Внимание",save:"Сохранить",del:"Удалить",add:"Добавить",copy:"Копировать",pin:"Закрепить",send:"Отправить",cancel:"Отмена",drugR:"Распознавание",drugN:"Название...",anlz:"Анализ",prog:"Прогресс",addSys:"Система",dir:"Маршрут",loc:"ИИ Местоположение",emN:"Экстренные",wr:"Сообщение...",bpm:"уд/м",kg:"кг",cm:"см",tap:"Нажмите",noM:"Нет",noA:"Нет",noN:"Нет",noC:"Нет",warn:"⚕️ Не диагностика",pCard:"Карта",fName:"ФИО",bDate:"Дата рождения",age:"Возраст",bType:"Группа крови",allrg:"Аллергии",chron:"Хронические",diag:"Диагноз",xray:"Рентген",mri:"МРТ",ultra:"УЗИ",lab:"Анализы",surg:"Операции",insu:"Страховой",emCon:"Экстренный",trash:"Корзина",trD:"дней",rest:"Восстановить",empT:"Очистить",trE:"Пусто",q1:"Как вы себя чувствуете?",q2:"О лекарствах",q3:"Советы",greet:"Здравствуйте! Я AILVIE. 🌸",gm:"Доброе утро",ga:"Добрый вечер",hi:"Здравствуйте",emj:"Эмодзи",jan:"Янв",feb:"Фев",mar:"Мар",apr:"Апр",may:"Май",jun:"Июн",jul:"Июл",aug:"Авг",sep:"Сен",oct:"Окт",nov:"Ноя",dec:"Дек",su:"Вс",mo:"Пн",tu:"Вт",we:"Ср",th:"Чт",fr:"Пт",sa:"Сб",nNote:"Новая",extA:"Внешние",addApp:"Приложение",cls:"Класс",usg:"Применение",sEff:"Побочные",wrn:"Предупреждения",intr:"Взаимодействия",alarm:"Будильник",alarmSet:"Установлен",alarmType:"Тип",vibrate:"Вибрация",ring:"Звонок",both:"Оба",profile:"Профиль",login:"Войти",logout:"Выйти",permissions:"Разрешения",subscription:"Подписка",free:"Бесплатно",premium:"Премиум",legal:"Юридическое уведомление",legalText:"AILVIE — ИИ-помощник. Информация носит ознакомительный характер. Консультируйтесь с врачом.",about:"О приложении",version:"Версия",privPolicy:"Конфиденциальность",terms:"Условия",notifPerm:"Уведомления",locPerm:"Геолокация",micPerm:"Микрофон",camPerm:"Камера",freePlan:"Базовые функции бесплатно",premPlan:"Безлимитный ИИ-чат, без рекламы",entPlan:"Семейный доступ, приоритет",enterprise:"Корпоративный",monthly:"в месяц",loggedIn:"Вход выполнен",loggedOut:"Выход выполнен",gn:"Спокойной ночи",feel:"как вы себя чувствуете? Надеюсь, всё хорошо.",adminCh:"Поддержка AILVIE",adminWelcome:"Сообщение получено.",voiceOn:"Голосовой диалог",wordLangPick:"Выбрать язык"},
 zh:{app:"AILVIE",sl:"个人AI健康助手",home:"首页",meds:"药物",appts:"预约",health:"健康",notes:"笔记",contacts:"通讯录",community:"社区",chat:"AILVIE聊天",settings:"设置",notif:"通知",emergency:"紧急",dark:"暗色",hc:"对比度",fSize:"字体",lang:"语言",hScore:"健康分",bmi:"BMI",nMed:"下一药",nAppt:"下一预约",addMed:"添加",addAppt:"添加",bookAppt:"预约",nm:"姓名",dose:"剂量",time:"时间",taken:"已服",dr:"医生",hosp:"医院",clin:"诊所",date:"日期",up:"即将",past:"已过",pulse:"脉搏",wt:"体重",ht:"身高",bp:"血压",norm:"正常",caut:"注意",save:"保存",del:"删除",add:"添加",copy:"复制",pin:"置顶",send:"发送",cancel:"取消",drugR:"药物识别",drugN:"输入药名...",anlz:"分析",prog:"进度",addSys:"添加系统",dir:"路线",loc:"AI位置",emN:"紧急号码",wr:"输入消息...",bpm:"bpm",kg:"kg",cm:"cm",tap:"点击",noM:"暂无",noA:"暂无",noN:"暂无",noC:"暂无",warn:"⚕️非诊断工具",pCard:"患者卡",fName:"姓名",bDate:"出生",age:"年龄",bType:"血型",allrg:"过敏",chron:"慢性病",diag:"诊断",xray:"X光",mri:"MRI",ultra:"超声",lab:"检验",surg:"手术",insu:"保险",emCon:"紧急联系人",trash:"回收站",trD:"天",rest:"恢复",empT:"清空",trE:"空",q1:"感觉如何？",q2:"药物信息",q3:"健康建议",greet:"你好！我是AILVIE。🌸",gm:"早上好",ga:"晚上好",hi:"你好",emj:"表情",jan:"1月",feb:"2月",mar:"3月",apr:"4月",may:"5月",jun:"6月",jul:"7月",aug:"8月",sep:"9月",oct:"10月",nov:"11月",dec:"12月",su:"日",mo:"一",tu:"二",we:"三",th:"四",fr:"五",sa:"六",nNote:"新",extA:"外部",addApp:"添加",cls:"分类",usg:"用途",sEff:"副作用",wrn:"警告",intr:"相互作用",alarm:"闹钟",alarmSet:"已设置",alarmType:"类型",vibrate:"振动",ring:"铃声",both:"两者",profile:"个人资料",login:"登录",logout:"退出",permissions:"权限",subscription:"订阅",free:"免费",premium:"高级",legal:"法律声明",legalText:"AILVIE是AI助手。信息仅供参考。请咨询医生。",about:"关于",version:"版本",privPolicy:"隐私",terms:"条款",notifPerm:"通知",locPerm:"位置",micPerm:"麦克风",camPerm:"相机",freePlan:"基础功能免费",premPlan:"无限AI聊天",entPlan:"家庭共享",enterprise:"企业",monthly:"月",loggedIn:"已登录",loggedOut:"已退出",gn:"晚安",feel:"你感觉怎么样？希望一切都好。",adminCh:"AILVIE 支持",adminWelcome:"消息已收到。",voiceOn:"语音对话",wordLangPick:"选择语言"},
@@ -686,26 +686,20 @@ const[connSys,setConnSys]=useState([]);
 const playAlarmBell=()=>{try{const actx=new(window.AudioContext||window.webkitAudioContext)();const playTone=(freq,start,dur)=>{const o=actx.createOscillator();const g=actx.createGain();o.connect(g);g.connect(actx.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(0.3,actx.currentTime+start);g.gain.exponentialRampToValueAtTime(0.01,actx.currentTime+start+dur);o.start(actx.currentTime+start);o.stop(actx.currentTime+start+dur);};for(let i=0;i<3;i++){playTone(880,i*0.6,0.4);playTone(1100,i*0.6+0.15,0.3);}setTimeout(()=>actx.close(),3000);}catch(e){}};
 const speakAlarm=(text)=>{
   if(!text)return;
-  // Try native browser TTS first for better quality
   const base=(lc||"en").toLowerCase().split("-")[0];
+  const FEM_PAT=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|gülsüm|zeynep|melike|selin|esra|özlem|google/i;
+  const MALE_PAT=/\bmale\b|\berkek\b|\bman\b|tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|george|richard|guy|rishi|fred|paul/i;
+  
+  // Check if native has a FEMALE voice for current language
   if(window.speechSynthesis){
     const voices=speechSynthesis.getVoices();
-    const langVoices=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
-    if(langVoices.length>0){
+    const langFem=voices.filter(v=>v.lang.toLowerCase().startsWith(base)&&FEM_PAT.test(v.name)&&!MALE_PAT.test(v.name));
+    if(langFem.length>0){
       const doAlarm=()=>{
         const u=new SpeechSynthesisUtterance(text);u.volume=1;
-        const FEM_PAT=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|gülsüm|zeynep|melike|selin|esra|özlem|premium|neural|enhanced/i;
-        const MALE_PAT=/male|\berkek\b|man\b|tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|george|richard|guy|rishi|fred|paul/i;
-        let pick=langVoices.find(v=>FEM_PAT.test(v.name)&&/premium|neural|enhanced|natural|online/i.test(v.name))
-          ||langVoices.find(v=>FEM_PAT.test(v.name))
-          ||langVoices.find(v=>/google/i.test(v.name))
-          ||langVoices.find(v=>/microsoft/i.test(v.name)&&!MALE_PAT.test(v.name))
-          ||langVoices.find(v=>!MALE_PAT.test(v.name))
-          ||langVoices[0];
-        if(pick){u.voice=pick;u.lang=pick.lang;}else{u.lang=lc;}
-        const isMale=pick&&MALE_PAT.test(pick.name)&&!FEM_PAT.test(pick.name);
-        u.pitch=isMale?1.5:1.05;
-        u.rate=isMale?0.88:0.95;
+        const pick=langFem.find(v=>/premium|neural|enhanced|natural|online/i.test(v.name))||langFem[0];
+        u.voice=pick;u.lang=pick.lang;
+        u.pitch=1.05;u.rate=0.95;
         speechSynthesis.speak(u);
       };
       if(voices.length===0){speechSynthesis.onvoiceschanged=()=>{doAlarm();speechSynthesis.onvoiceschanged=null;};setTimeout(doAlarm,500);}
@@ -713,9 +707,21 @@ const speakAlarm=(text)=>{
       return;
     }
   }
-  // No native voice for this language → use ResponsiveVoice
-  const rvName=RV_VOICES[lang]||"UK English Female";
+  // No native female in target language → ResponsiveVoice (guaranteed female)
+  const rvName=RV_VOICES[lang]||"Turkish Female";
   try{if(window.responsiveVoice&&responsiveVoice.voiceSupport()){responsiveVoice.speak(text,rvName,{pitch:1.0,rate:0.95,volume:1});return;}}catch(e){}
+  // Last resort: any cross-language female voice
+  if(window.speechSynthesis){
+    const voices=speechSynthesis.getVoices();
+    const anyFem=voices.filter(v=>FEM_PAT.test(v.name)&&!MALE_PAT.test(v.name));
+    if(anyFem.length>0){
+      const u=new SpeechSynthesisUtterance(text);u.volume=1;
+      u.voice=anyFem.find(v=>/premium|neural|enhanced/i.test(v.name))||anyFem.find(v=>v.lang.startsWith("en"))||anyFem[0];
+      u.lang=u.voice.lang;
+      u.pitch=1.05;u.rate=0.95;
+      speechSynthesis.speak(u);
+    }
+  }
 };
 
 // Calendar
@@ -976,8 +982,7 @@ const COUNTRY_CODES=[
   {code:"+54",flag:"ag",n:{tr:"Arjantin",en:"Argentina",de:"Argentinien",ru:"Аргентина",zh:"阿根廷",hi:"अर्जेंटीना",nl:"Argentinië",es:"Argentina",ar:"الأرجنتين"}},
   {code:"+56",flag:"cl",n:{tr:"Şili",en:"Chile",de:"Chile",ru:"Чили",zh:"智利",hi:"चिली",nl:"Chili",es:"Chile",ar:"تشيلي"}},
   {code:"+57",flag:"co",n:{tr:"Kolombiya",en:"Colombia",de:"Kolumbien",ru:"Колумбия",zh:"哥伦比亚",hi:"कोलंबिया",nl:"Colombia",es:"Colombia",ar:"كولومبيا"}},
-  {code:"+51",flag:"pe",n:{tr:"Peru",en:"Peru",de:"Peru",ru:"Перу",zh:"秘鲁",hi:"पेरू",nl:"Peru",es:"Perú",ar:"بيرو"}},
-];
+  {code:"+51",flag:"pe",n:{tr:"Peru",en:"Peru",de:"Peru",ru:"Перу",zh:"秘鲁",hi:"पेरू",nl:"Peru",es:"Perú",ar:"بيرو"}}];
 const[newC,setNewC]=useState({name:"",phone:"",countryCode:"+90",category:"doctor",note:""});
 
 // Community
@@ -999,8 +1004,8 @@ const[trashDays,setTrashDays]=useState(30);
 
 const bmi=hd.weight>0&&hd.height>0?(hd.weight/((hd.height/100)**2)).toFixed(1):0;
 // Risk factors from patient history
-const allergyCount=(pat.allergies||"").split(/[,;]/).filter(x=>x.trim()).length;
-const chronicCount=(pat.chronic||"").split(/[,;]/).filter(x=>x.trim()).length;
+const allergyCount=(pat.allergies||"").split(/[;]/).filter(x=>x.trim()).length;
+const chronicCount=(pat.chronic||"").split(/[;]/).filter(x=>x.trim()).length;
 const medsCount=new Set(meds.map(m=>m.name?.trim().toLowerCase()).filter(Boolean)).size;
 const recordsCount=records.length;
 // Risk penalty: each chronic -3, each allergy -1 (max -15)
@@ -1094,6 +1099,7 @@ const restoreItem=(item)=>{if(item._t==="med")setMeds(p=>[...p,item]);if(item._t
 const[calY,setCalY]=useState(now.getFullYear());
 
 // Speech — FEMALE ONLY
+// Speech — FEMALE ONLY (never falls to male voice)
 const speak=(text,overrideLang)=>{
   if(!text)return;
   if(isSpeak){
@@ -1103,22 +1109,28 @@ const speak=(text,overrideLang)=>{
   }
   setIsSpeak(true);
   const useLang=overrideLang||lang;
-  // STRATEGY: Use native browser TTS first (higher quality, natural accent)
-  // Fall back to ResponsiveVoice only if browser has no voice for this language
   const useLc=typeof useLang==="string"&&useLang.includes("-")?useLang:(LC[useLang]||useLang);
   const base=(useLc||"en").toLowerCase().split("-")[0];
   
-  // Try native browser TTS first
-  if(window.speechSynthesis){
+  // Check if native browser has a FEMALE voice for this language
+  const hasNativeFemale=()=>{
+    if(!window.speechSynthesis)return false;
     const voices=speechSynthesis.getVoices();
-    const langVoices=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
-    if(langVoices.length>0){
-      fallbackSpeak(text,overrideLang);
-      return;
-    }
+    const FEM_PAT=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|gülsüm|zeynep|melike|selin|esra|özlem|google/i;
+    return voices.some(v=>v.lang.toLowerCase().startsWith(base)&&FEM_PAT.test(v.name));
+  };
+  
+  // DECISION TREE:
+  // Native FEMALE voice for this language exists? → Use it (best quality)
+  // Else → ResponsiveVoice (female, guaranteed, but lower quality)
+  // Else → Native female in ANY language (aksan var ama kadın)
+  
+  if(hasNativeFemale()){
+    fallbackSpeak(text,overrideLang);
+    return;
   }
   
-  // No native voice — fall back to ResponsiveVoice
+  // No native female → ResponsiveVoice fallback
   const rvName=RV_VOICES[useLang]||RV_VOICES[useLang?.split?.("-")[0]]||"UK English Female";
   try{
     if(window.responsiveVoice&&typeof responsiveVoice.speak==="function"&&responsiveVoice.voiceSupport()){
@@ -1139,52 +1151,56 @@ const fallbackSpeak=(text,overrideLang)=>{
     const useLc=typeof overrideLang==="string"&&overrideLang.includes("-")?overrideLang:(LC[overrideLang||lang]||lc);
     const base=useLc.toLowerCase().split("-")[0];
     
-    // Female voice patterns — includes natural Turkish names
     const FEM_PAT=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|veena|lekha|ting|meijia|yuna|paulina|monica|luciana|zosia|nora|sara|alva|ellen|amélie|virginie|cécile|céline|petra|katja|milena|weiblich|femme|женский|femenino|vrouwelijk|carmen|lucia|marisa|claudia|nathalie|bianca|francesca|giorgia|isabella|maria|sofia|chiara|julia|christina|marta|alicia|beatriz|cristina|elena|gabriela|valentina|natasha|olga|marina|tatiana|irina|gülsüm|zeynep|melike|selin|esra|özlem|gamze|lale|pinar|aylin|naz|büşra|buse|deniz|ipek|priya|kavita|meera|asha|geeta|chen|ling|wei|li|yuki|sakura|hana|mei|jihye|soyeon|minji|salwa|amina|layla|fatima|nour|maryam|aisha|yasmin/i;
-    const MALE_PAT=/male|\berkek\b|man\b|homme|männlich|мужской|tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|george|richard|guy|rishi|fred|paul|sergio|jorge|carlos|alex|takumi|ryo|kenji/i;
+    const MALE_PAT=/\bmale\b|\berkek\b|\bman\b|homme|männlich|мужской|tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|george|richard|guy|rishi|fred|paul|sergio|jorge|carlos|alex|takumi|ryo|kenji/i;
     
-    // Priority chain for voice selection
     const langVoices=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
     let pick=null;
     
-    // 1. Premium/Neural/Enhanced female voice in this language (highest quality)
+    // FEMALE-ONLY CHAIN:
+    // 1. Premium/Neural female in target language (best)
     pick=langVoices.find(v=>FEM_PAT.test(v.name)&&/premium|neural|enhanced|natural|online/i.test(v.name));
     
-    // 2. Any female voice in this language
+    // 2. Any female in target language
     if(!pick)pick=langVoices.find(v=>FEM_PAT.test(v.name));
     
-    // 3. "Google" voice in this language (Chrome's natural-sounding default)
-    if(!pick)pick=langVoices.find(v=>/google/i.test(v.name));
+    // 3. "Google" voice in target language (usually natural-sounding female-ish default)
+    if(!pick)pick=langVoices.find(v=>/google/i.test(v.name)&&!MALE_PAT.test(v.name));
     
-    // 4. Microsoft voice (Windows natural voices, often high quality)
-    if(!pick)pick=langVoices.find(v=>/microsoft/i.test(v.name)&&!MALE_PAT.test(v.name));
-    
-    // 5. Any non-male voice in this language
-    if(!pick)pick=langVoices.find(v=>!MALE_PAT.test(v.name));
-    
-    // 6. Any voice in this language (even male — we'll raise pitch)
-    if(!pick)pick=langVoices[0];
-    
-    // 7. Fallback: English female
+    // 4. NO MALE FALLBACK — jump to female in OTHER language
+    // Female English voice (aksan var ama kadın)
     if(!pick){
-      const en=voices.filter(v=>v.lang.startsWith("en"));
-      pick=en.find(v=>FEM_PAT.test(v.name))||en.find(v=>!MALE_PAT.test(v.name))||en[0];
+      const anyFemale=voices.filter(v=>FEM_PAT.test(v.name)&&!MALE_PAT.test(v.name));
+      // Prefer premium neural
+      pick=anyFemale.find(v=>/premium|neural|enhanced|natural|online/i.test(v.name));
+      // Or English female
+      if(!pick)pick=anyFemale.find(v=>v.lang.startsWith("en"));
+      // Or ANY female
+      if(!pick)pick=anyFemale[0];
     }
     
-    if(pick){u.voice=pick;u.lang=pick.lang;}else{u.lang=useLc;}
+    // 5. Last resort: any voice that doesn't match MALE_PAT
+    if(!pick)pick=voices.find(v=>!MALE_PAT.test(v.name));
     
-    // Detect if we ended up with a male voice
-    const isMale=pick&&MALE_PAT.test(pick.name)&&!FEM_PAT.test(pick.name);
-    
-    // Pitch/rate tuning for natural sound
-    // Female voice: slightly elevated pitch, natural pace
-    // Male-only-available: higher pitch to simulate female, slower rate
-    if(isMale){
-      u.pitch=1.5;    // Push male voice toward feminine range (but not too high — distortion)
-      u.rate=0.88;
+    if(pick){
+      u.voice=pick;
+      u.lang=pick.lang;
+      // Check if picked voice still looks male (shouldn't happen but defensive)
+      const looksMale=MALE_PAT.test(pick.name)&&!FEM_PAT.test(pick.name);
+      if(looksMale){
+        // Aggressive feminize
+        u.pitch=1.6;
+        u.rate=0.92;
+      }else{
+        // Natural female range
+        u.pitch=1.05;
+        u.rate=0.95;
+      }
     }else{
-      u.pitch=1.05;   // Just slightly above neutral (1.0) for warmth
-      u.rate=0.95;    // Very slightly slower than natural for clarity
+      // Absolutely no voice found — use system default with high pitch
+      u.lang=useLc;
+      u.pitch=1.5;
+      u.rate=0.9;
     }
     u.volume=1.0;
     u.onend=()=>setIsSpeak(false);
@@ -1796,8 +1812,8 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
     </div>
     {[
 {n:t.free,p:"$0",d:t.freePlan,c:sc,active:true,features:lang==="tr"?["3 ilaç takibi","5 not","Temel sağlık takibi","Reklamlı","Topluluk erişimi","Manuel veri girişi"]:["3 medications","5 notes","Basic health tracking","Ads supported","Community access","Manual data entry"]},
-{n:"PRO "+(lang==="tr"?"Aylık":"Monthly"),p:"$4.99/"+t.monthly,d:t.premPlan,c:ac,active:false,features:lang==="tr"?["Sınırsız ilaç","Sınırsız not","Sınırsız AI sohbet","Çeviri (60+ dil)","Sesli asistan","Otomatik adım sayar","Reklamsız","9 dilde çeviri","TEGV bağışı: $1/ay"]:["Unlimited medications","Unlimited notes","Unlimited AI chat","Translation (60+ languages)","Voice assistant","Auto step counter","Ad-free","TEGV donation: $1/mo"]},
-{n:"PRO "+(lang==="tr"?"Yıllık":"Yearly"),p:"$44.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"⚡ %25 İndirim! Yıllık tek ödeme":"⚡ 25% Off! Annual single payment"),c:"#e8a817",active:false,badge:lang==="tr"?"EN POPÜLER":"BEST VALUE",features:lang==="tr"?["PRO Aylık'taki TÜM özellikler","Öncelikli AI yanıtları","Gelişmiş sağlık analizleri","Özel PRO rozeti","TEGV bağışı: $2.99/yıl"]:["ALL Monthly PRO features","Priority AI responses","Advanced health analytics","Exclusive PRO badge","TEGV donation: $2.99/yr"]},
+{n:"PRO "+(lang==="tr"?"Aylık":"Monthly"),p:"$4.99/"+t.monthly,d:t.premPlan,c:ac,active:false,features:lang==="tr"?["Sınırsız ilaç","Sınırsız not","Sınırsız AI sohbet","Çeviri (60+ dil)","Sesli asistan","Otomatik adım sayar","Reklamsız","9 dilde çeviri"]:["Unlimited medications","Unlimited notes","Unlimited AI chat","Translation (60+ languages)","Voice assistant","Auto step counter","Ad-free"]},
+{n:"PRO "+(lang==="tr"?"Yıllık":"Yearly"),p:"$44.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"⚡ %25 İndirim! Yıllık tek ödeme":"⚡ 25% Off! Annual single payment"),c:"#e8a817",active:false,badge:lang==="tr"?"EN POPÜLER":"BEST VALUE",features:lang==="tr"?["PRO Aylık'taki TÜM özellikler","Öncelikli AI yanıtları","Gelişmiş sağlık analizleri","Özel PRO rozeti"]:["ALL Monthly PRO features","Priority AI responses","Advanced health analytics","Exclusive PRO badge"]},
 {n:"PRO "+(lang==="tr"?"Paylaşımlı 2 Kişi":"Shared 2 Users"),p:"$77.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"Kişi başı $38.99/yıl — %13 İNDİRİM":"$38.99/user/yr — 13% OFF"),c:"#e8a817",active:false,features:lang==="tr"?["2 ayrı kullanıcı profili","Tüm PRO Yıllık özellikleri","Aile sağlık panosu","Paylaşımlı takvim"]:["2 separate user profiles","All PRO Yearly features","Family health dashboard","Shared calendar"]},
 {n:"PRO "+(lang==="tr"?"Paylaşımlı 3 Kişi":"Shared 3 Users"),p:"$119.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"Kişi başı $39.99/yıl":"$39.99/user/yr"),c:"#e8a817",active:false,features:lang==="tr"?["3 ayrı kullanıcı profili","Tüm PRO Yıllık özellikleri","Aile sağlık panosu"]:["3 separate user profiles","All PRO Yearly features","Family health dashboard"]},
 {n:"PRO "+(lang==="tr"?"Paylaşımlı 5 Kişi":"Shared 5 Users"),p:"$194.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"Kişi başı $38.99/yıl — %13 İNDİRİM":"$38.99/user/yr — 13% OFF"),c:"#e8a817",active:false,features:lang==="tr"?["5 ayrı kullanıcı profili","Tüm PRO Yıllık özellikleri","Aile sağlık panosu","Çocuk hesapları"]:["5 separate user profiles","All PRO Yearly features","Family dashboard","Child accounts"]},
@@ -2368,7 +2384,7 @@ const renderAbout=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
     <div style={{fontSize:fs-1,color:mt,marginTop:8}}>{t.version}: 9.0.0</div>
     <div style={{fontSize:fs-1,color:mt}}>© 2025-2026 AILVIE Health Technologies</div>
     <div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:`${ac}11`,fontSize:fs-2,color:ac}}>
-      {lang==="tr"?"9 dil • 23 ilaç DB • AI sohbet • Hasta karnesi • KVKK/GDPR uyumlu • Her PRO = TEGV bağışı":"9 languages • 23 drug DB • AI chat • Patient card • GDPR compliant • Every PRO = TEGV donation"}
+      {lang==="tr"?"9 dil • 23 ilaç DB • AI sohbet • Hasta karnesi • KVKK/GDPR uyumlu":"9 languages • 23 drug DB • AI chat • Patient card • GDPR compliant"}
     </div>
   </div>
   <div style={CS}><div style={{fontSize:fs-1,color:tc,lineHeight:1.6}}>
@@ -2492,8 +2508,7 @@ return (
               {icon:"📋",label:t.terms,action:()=>{goTo("terms");setShowMenu(false);}},
               null,
               {icon:"ℹ️",label:t.about+" — v9.1",action:()=>{goTo("about");setShowMenu(false);}},
-              {icon:"⚙️",label:t.settings,action:()=>{setSettingsTab("all");goTo("settings");setShowMenu(false);}},
-            ].map((item,idx)=>(
+              {icon:"⚙️",label:t.settings,action:()=>{setSettingsTab("all");goTo("settings");setShowMenu(false);}}].map((item,idx)=>(
               item===null?<div key={`d${idx}`} style={{height:1,background:bd,margin:"2px 14px"}}/>:
               <button key={idx} onClick={item.action} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",background:"none",border:"none",color:tc,cursor:"pointer",width:"100%",textAlign:"left",fontSize:fs-1,transition:"background .15s"}} onMouseOver={e=>e.currentTarget.style.background=`${ac}11`} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
                 <span style={{fontSize:15,width:20,textAlign:"center"}}>{item.icon}</span>
