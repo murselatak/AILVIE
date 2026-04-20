@@ -24,7 +24,7 @@ export async function onRequestPost(context) {
 
     // Validate and sanitize — only allow messages endpoint params
     const allowed = {
-      model: body.model || "claude-sonnet-4-20250514",
+      model: body.model || "claude-sonnet-4-5",
       max_tokens: Math.min(body.max_tokens || 1000, 2000),
       messages: body.messages || [],
     };

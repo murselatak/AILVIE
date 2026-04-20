@@ -103,11 +103,16 @@ const DR={paracetamol:{tr:"Analjezik/Antipiretik|Ağrı, ateş|500-1000mg 4-6 sa
 function pD(s){const p=s.split("|");return{class:p[0]||"-",usage:p[1]||"-",dose:p[2]||"-",sideEffects:p[3]||"-",warnings:p[4]||"-",interactions:p[5]||"-"};}
 function apiHeaders(key){const h={"Content-Type":"application/json"};if(key){h["x-api-key"]=key;h["anthropic-dangerous-direct-browser-access"]="true";}return h;}
 async function callAI(body,apiKey){
+  let proxyError=null;
   // 1) Try server proxy first (no key needed on client)
   try{
     const pr=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-    if(pr.ok){const d=await pr.json();if(d.content)return d;}
-  }catch(e){}
+    const d=await pr.json().catch(()=>null);
+    if(pr.ok&&d&&d.content)return d;
+    // Proxy returned an error — remember it
+    proxyError=d?.error||d?.error?.message||("Proxy HTTP "+pr.status);
+    if(d?.detail)proxyError+=": "+d.detail;
+  }catch(e){proxyError=e.message;}
   // 2) Fallback: direct Anthropic API with user key
   if(apiKey){
     const dr=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:apiHeaders(apiKey),body:JSON.stringify(body)});
@@ -115,6 +120,8 @@ async function callAI(body,apiKey){
     const err=await dr.json().catch(()=>({}));
     throw new Error(err?.error?.message||"API error "+dr.status);
   }
+  // If we got a proxy error, surface it instead of fake NO_KEY
+  if(proxyError&&!proxyError.includes("not configured"))throw new Error("AI_ERROR: "+proxyError);
   throw new Error("NO_KEY");
 }
 
@@ -613,7 +620,7 @@ const analyzeDrug=async()=>{
   const db=DR[key];
   if(db){const raw=db[lang]||db.tr||db.en;if(raw){setDrugRes(pD(raw));setDrugLoad(false);return;}}
   try{
-    const d=await callAI({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`"${drugQ}" ilacı hakkında bilgi. MUTLAKA ${LL[lang]} dilinde. JSON: {"class":"...","usage":"...","dose":"...","sideEffects":"...","warnings":"...","interactions":"..."}. SADECE JSON.`}]},apiKey);
+    const d=await callAI({model:"claude-sonnet-4-5",max_tokens:800,messages:[{role:"user",content:`"${drugQ}" ilacı hakkında bilgi. MUTLAKA ${LL[lang]} dilinde. JSON: {"class":"...","usage":"...","dose":"...","sideEffects":"...","warnings":"...","interactions":"..."}. SADECE JSON.`}]},apiKey);
     const txt=d.content?.map(c=>c.text||"").join("")||"";
     setDrugRes(JSON.parse(txt.replace(/```json|```/g,"").trim()));
   }catch{setDrugRes({class:"-",usage:lang==="tr"?"Analiz edilemedi":"Analysis failed",dose:"-",sideEffects:"-",warnings:"-",interactions:"-"});}
@@ -987,7 +994,7 @@ const sendChat=async(text)=>{
     if(records.length)cx.push(`Tıbbi kayıtlar: ${records.slice(0,3).map(r=>`${r.type}: ${r.content?.substring(0,50)}`).join("; ")}`);
     const ctxStr=cx.length?`\n\nHASTA PROFİLİ:\n${cx.join("\n")}\n`:"Hasta henüz bilgi girmemiş. ";
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
-    const d=await callAI({model:"claude-sonnet-4-20250514",max_tokens:1000,system:`Sen AILVIE — dünya çapında hizmet veren, sıcak, şefkatli ve güvenilir bir KADIN sağlık asistanısın.${ctxStr}
+    const d=await callAI({model:"claude-sonnet-4-5",max_tokens:1000,system:`Sen AILVIE — dünya çapında hizmet veren, sıcak, şefkatli ve güvenilir bir KADIN sağlık asistanısın.${ctxStr}
 ÖNEMLİ KURALLAR:
 1) Hastayı ismiyle hitap et (biliniyorsa). Kişiselleştirilmiş yanıtlar ver.
 2) ASLA hasta girmediği veriyi uydurma. Bilmiyorsan "Bu bilgiyi henüz profilinize eklemediniz" de.
@@ -1002,14 +1009,19 @@ const sendChat=async(text)=>{
     if(voiceActive){speak(reply);const wi=setInterval(()=>{if(!isSpeak&&voiceActive){clearInterval(wi);setTimeout(()=>{if(voiceActive&&!isListen)startVoice((t2)=>sendChat(t2),true);},600);}},500);setTimeout(()=>clearInterval(wi),60000);}
   }catch(e){
     const noKey=e.message==="NO_KEY";
+    const isAIError=e.message?.startsWith("AI_ERROR:");
     let errorText;
     if(lang==="tr"){
       errorText=noKey
         ?"👋 Merhaba! Ben AILVIE.\n\nSizinle sohbet edebilmem için önce AI servisinin ayarlanması gerekiyor. İki seçeneğiniz var:\n\n🔧 KOLAY YOL — Ayarlar → AI API Anahtarı bölümüne Anthropic API anahtarınızı girin (sadece sizde saklanır).\n\n☁️ KURUMSAL YOL — Uygulama yöneticisi Cloudflare Pages üzerinde ANTHROPIC_API_KEY ortam değişkenini yapılandırabilir.\n\n🔗 Anahtar almak için: console.anthropic.com/settings/keys"
+        :isAIError
+        ?"⚠️ AI yanıt veremedi.\n\nTeknik detay: "+e.message.replace("AI_ERROR: ","")
         :"Üzgünüm, şu an yanıt veremiyorum. Lütfen tekrar deneyin. 💙";
     }else{
       errorText=noKey
         ?"👋 Hello! I'm AILVIE.\n\nTo chat with you, AI service needs to be set up. Two options:\n\n🔧 EASY — Settings → AI API Key — enter your Anthropic API key (stored only on your device).\n\n☁️ ENTERPRISE — Admin can configure ANTHROPIC_API_KEY on Cloudflare Pages.\n\n🔗 Get a key: console.anthropic.com/settings/keys"
+        :isAIError
+        ?"⚠️ AI could not respond.\n\nTechnical detail: "+e.message.replace("AI_ERROR: ","")
         :"Sorry, I cannot respond right now. Please try again. 💙";
     }
     setChatM(p=>[...p,{role:"assistant",text:errorText}]);
@@ -1366,7 +1378,7 @@ const renderHome=()=>{
         try{
           // Try AI first if apiKey
           if(apiKey){
-            const d=await callAI({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`Translate the following text from ${srcObj?.n||srcCode} to ${tgtObj?.n||tgtCode}. Return ONLY the translated text, no explanations, no quotes.\n\nText: ${trIn}`}]},apiKey);
+            const d=await callAI({model:"claude-sonnet-4-5",max_tokens:800,messages:[{role:"user",content:`Translate the following text from ${srcObj?.n||srcCode} to ${tgtObj?.n||tgtCode}. Return ONLY the translated text, no explanations, no quotes.\n\nText: ${trIn}`}]},apiKey);
             const out=d.content?.map(c=>c.text||"").join("").trim()||"";
             if(out){setTrResult(out);setTrLoad(false);return;}
           }
