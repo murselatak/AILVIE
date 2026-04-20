@@ -617,13 +617,60 @@ const[manualBarcode,setManualBarcode]=useState("");
 const analyzeDrug=async()=>{
   if(!drugQ.trim())return;setDrugLoad(true);setDrugRes(null);
   const key=drugQ.toLowerCase().trim();
+  // 1) Local DB lookup (instant, no API cost)
   const db=DR[key];
   if(db){const raw=db[lang]||db.tr||db.en;if(raw){setDrugRes(pD(raw));setDrugLoad(false);return;}}
+  // 2) Cache check (reduces API calls for repeated queries)
   try{
-    const d=await callAI({model:"claude-sonnet-4-5",max_tokens:800,messages:[{role:"user",content:`"${drugQ}" ilacı hakkında bilgi. MUTLAKA ${LL[lang]} dilinde. JSON: {"class":"...","usage":"...","dose":"...","sideEffects":"...","warnings":"...","interactions":"..."}. SADECE JSON.`}]},apiKey);
-    const txt=d.content?.map(c=>c.text||"").join("")||"";
-    setDrugRes(JSON.parse(txt.replace(/```json|```/g,"").trim()));
-  }catch{setDrugRes({class:"-",usage:lang==="tr"?"Analiz edilemedi":"Analysis failed",dose:"-",sideEffects:"-",warnings:"-",interactions:"-"});}
+    const cacheKey=`drug_${lang}_${key}`;
+    const cached=localStorage.getItem(cacheKey);
+    if(cached){
+      const parsed=JSON.parse(cached);
+      // Cache valid for 30 days
+      if(parsed.ts&&(Date.now()-parsed.ts)<30*24*60*60*1000){
+        setDrugRes(parsed.data);setDrugLoad(false);return;
+      }
+    }
+  }catch(e){}
+  // 3) AI analysis
+  try{
+    const langName=LL[lang]||"English";
+    const prompt=`Provide medical information about the medication "${drugQ}".
+
+Respond ONLY with a JSON object in this exact format (no markdown, no explanation):
+{"class":"drug class/category","usage":"what it is used for","dose":"typical dosage","sideEffects":"common side effects","warnings":"important warnings","interactions":"drug interactions"}
+
+IMPORTANT: All values MUST be in ${langName} language. Keep each field concise (under 100 chars). If the drug name is unknown or misspelled, respond with: {"error":"not_found"}`;
+    const d=await callAI({model:"claude-sonnet-4-5",max_tokens:800,messages:[{role:"user",content:prompt}]},apiKey);
+    const txt=d.content?.map(c=>c.text||"").join("").trim()||"";
+    if(!txt){throw new Error("Empty response");}
+    // Clean JSON — strip markdown code blocks
+    const cleaned=txt.replace(/```json\s*/g,"").replace(/```\s*/g,"").trim();
+    let parsed;
+    try{parsed=JSON.parse(cleaned);}
+    catch(pErr){
+      // Try to extract JSON from mixed text
+      const match=cleaned.match(/\{[\s\S]*\}/);
+      if(match){parsed=JSON.parse(match[0]);}
+      else throw new Error("Invalid JSON: "+cleaned.substring(0,80));
+    }
+    if(parsed.error==="not_found"){
+      setDrugRes({class:"-",usage:lang==="tr"?`"${drugQ}" isimli ilaç bulunamadı. Yazım hatası veya çok nadir bir ilaç olabilir.`:`Drug "${drugQ}" not found. Check spelling or it may be a rare medication.`,dose:"-",sideEffects:"-",warnings:"-",interactions:"-"});
+    }else{
+      setDrugRes(parsed);
+      // Cache for 30 days
+      try{localStorage.setItem(`drug_${lang}_${key}`,JSON.stringify({ts:Date.now(),data:parsed}));}catch(e){}
+    }
+  }catch(e){
+    const isNoKey=e.message==="NO_KEY";
+    const isAIErr=e.message?.startsWith("AI_ERROR:");
+    const errText=isNoKey
+      ?(lang==="tr"?"AI analizi için API anahtarı gerekli. Ayarlar → AI API Key":"AI analysis requires API key. Settings → AI API Key")
+      :isAIErr
+      ?(lang==="tr"?"AI hatası: "+e.message.replace("AI_ERROR: ",""):"AI error: "+e.message.replace("AI_ERROR: ",""))
+      :(lang==="tr"?"Analiz edilemedi: "+e.message:"Analysis failed: "+e.message);
+    setDrugRes({class:"-",usage:errText,dose:"-",sideEffects:"-",warnings:"-",interactions:"-"});
+  }
   setDrugLoad(false);
 };
 
@@ -639,24 +686,36 @@ const[connSys,setConnSys]=useState([]);
 const playAlarmBell=()=>{try{const actx=new(window.AudioContext||window.webkitAudioContext)();const playTone=(freq,start,dur)=>{const o=actx.createOscillator();const g=actx.createGain();o.connect(g);g.connect(actx.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(0.3,actx.currentTime+start);g.gain.exponentialRampToValueAtTime(0.01,actx.currentTime+start+dur);o.start(actx.currentTime+start);o.stop(actx.currentTime+start+dur);};for(let i=0;i<3;i++){playTone(880,i*0.6,0.4);playTone(1100,i*0.6+0.15,0.3);}setTimeout(()=>actx.close(),3000);}catch(e){}};
 const speakAlarm=(text)=>{
   if(!text)return;
+  // Try native browser TTS first for better quality
+  const base=(lc||"en").toLowerCase().split("-")[0];
+  if(window.speechSynthesis){
+    const voices=speechSynthesis.getVoices();
+    const langVoices=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
+    if(langVoices.length>0){
+      const doAlarm=()=>{
+        const u=new SpeechSynthesisUtterance(text);u.volume=1;
+        const FEM_PAT=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|gülsüm|zeynep|melike|selin|esra|özlem|premium|neural|enhanced/i;
+        const MALE_PAT=/male|\berkek\b|man\b|tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|george|richard|guy|rishi|fred|paul/i;
+        let pick=langVoices.find(v=>FEM_PAT.test(v.name)&&/premium|neural|enhanced|natural|online/i.test(v.name))
+          ||langVoices.find(v=>FEM_PAT.test(v.name))
+          ||langVoices.find(v=>/google/i.test(v.name))
+          ||langVoices.find(v=>/microsoft/i.test(v.name)&&!MALE_PAT.test(v.name))
+          ||langVoices.find(v=>!MALE_PAT.test(v.name))
+          ||langVoices[0];
+        if(pick){u.voice=pick;u.lang=pick.lang;}else{u.lang=lc;}
+        const isMale=pick&&MALE_PAT.test(pick.name)&&!FEM_PAT.test(pick.name);
+        u.pitch=isMale?1.5:1.05;
+        u.rate=isMale?0.88:0.95;
+        speechSynthesis.speak(u);
+      };
+      if(voices.length===0){speechSynthesis.onvoiceschanged=()=>{doAlarm();speechSynthesis.onvoiceschanged=null;};setTimeout(doAlarm,500);}
+      else doAlarm();
+      return;
+    }
+  }
+  // No native voice for this language → use ResponsiveVoice
   const rvName=RV_VOICES[lang]||"UK English Female";
-  try{if(window.responsiveVoice&&responsiveVoice.voiceSupport()){responsiveVoice.speak(text,rvName,{pitch:1.1,rate:0.9,volume:1});return;}}catch(e){}
-  if(!window.speechSynthesis)return;
-  const doAlarm=()=>{
-    const u=new SpeechSynthesisUtterance(text);u.volume=1;
-    const voices=speechSynthesis.getVoices();const base=lc.split("-")[0];
-    const MALE=/tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|george|richard|guy|rishi|fred|male|erkek|man|homme|männlich|мужской/i;
-    const FEM=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|veena|lekha|ting|meijia|yuna|paulina|monica|luciana|zosia|nora|sara|alva|ellen|amélie|virginie|cécile|céline|petra|katja|milena|weiblich|femme|женский|femenino|vrouwelijk/i;
-    const lv=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
-    let pick=lv.filter(v=>FEM.test(v.name))[0]||lv.filter(v=>!MALE.test(v.name))[0];
-    if(!pick||MALE.test(pick?.name||""))pick=voices.filter(v=>FEM.test(v.name))[0];
-    if(pick){u.voice=pick;u.lang=pick.lang;}else{u.lang=lc;}
-    const isMale=!pick||MALE.test(pick?.name||"")||!FEM.test(pick?.name||"");
-    u.pitch=isMale?1.9:1.15;u.rate=isMale?0.75:0.9;
-    speechSynthesis.speak(u);
-  };
-  if(speechSynthesis.getVoices().length===0){speechSynthesis.onvoiceschanged=()=>{doAlarm();speechSynthesis.onvoiceschanged=null;};setTimeout(doAlarm,500);}
-  else doAlarm();
+  try{if(window.responsiveVoice&&responsiveVoice.voiceSupport()){responsiveVoice.speak(text,rvName,{pitch:1.0,rate:0.95,volume:1});return;}}catch(e){}
 };
 
 // Calendar
@@ -1044,11 +1103,27 @@ const speak=(text,overrideLang)=>{
   }
   setIsSpeak(true);
   const useLang=overrideLang||lang;
-  const rvName=RV_VOICES[useLang]||RV_VOICES[useLang?.split("-")[0]]||"UK English Female";
+  // STRATEGY: Use native browser TTS first (higher quality, natural accent)
+  // Fall back to ResponsiveVoice only if browser has no voice for this language
+  const useLc=typeof useLang==="string"&&useLang.includes("-")?useLang:(LC[useLang]||useLang);
+  const base=(useLc||"en").toLowerCase().split("-")[0];
+  
+  // Try native browser TTS first
+  if(window.speechSynthesis){
+    const voices=speechSynthesis.getVoices();
+    const langVoices=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
+    if(langVoices.length>0){
+      fallbackSpeak(text,overrideLang);
+      return;
+    }
+  }
+  
+  // No native voice — fall back to ResponsiveVoice
+  const rvName=RV_VOICES[useLang]||RV_VOICES[useLang?.split?.("-")[0]]||"UK English Female";
   try{
     if(window.responsiveVoice&&typeof responsiveVoice.speak==="function"&&responsiveVoice.voiceSupport()){
       let started=false;
-      responsiveVoice.speak(text,rvName,{pitch:1.1,rate:0.9,onstart:()=>{started=true;},onend:()=>setIsSpeak(false),onerror:()=>fallbackSpeak(text,overrideLang)});
+      responsiveVoice.speak(text,rvName,{pitch:1.0,rate:0.95,onstart:()=>{started=true;},onend:()=>setIsSpeak(false),onerror:()=>fallbackSpeak(text,overrideLang)});
       setTimeout(()=>{if(!started){try{responsiveVoice.cancel();}catch(e){}fallbackSpeak(text,overrideLang);}},2000);
       return;
     }
@@ -1061,27 +1136,65 @@ const fallbackSpeak=(text,overrideLang)=>{
   const doSpeak=()=>{
     const u=new SpeechSynthesisUtterance(text);
     const voices=speechSynthesis.getVoices();
-    const useLc=overrideLang||lc;
+    const useLc=typeof overrideLang==="string"&&overrideLang.includes("-")?overrideLang:(LC[overrideLang||lang]||lc);
     const base=useLc.toLowerCase().split("-")[0];
-    const MALE=/tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|george|richard|guy|rishi|fred|male|erkek|man|homme|männlich|мужской/i;
-    const FEM=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|veena|lekha|ting|meijia|yuna|paulina|monica|luciana|zosia|nora|sara|alva|ellen|amélie|virginie|cécile|céline|petra|katja|milena|weiblich|femme|женский|kadın|femenino|vrouwelijk|carmen|lucia|marisa|claudia|nathalie|paulina|aurelie|juliette|bianca|francesca|giorgia|isabella|maria|sofia|chiara|nicoletta|julia|christina|marta|alicia|beatriz|cristina|elena|gabriela|valentina|natasha|olga|marina|tatiana|irina|elena|gülsüm|zeynep|melike|selin|esra|özlem|gamze|lale|nihal|pinar|aylin|naz|büşra|buse|deniz|ipek|hira|priya|kavita|meera|asha|geeta|chen|ling|wei|li|yuki|sakura|hana|mei|jihye|soyeon|hyejin|minji|yena|sena|salwa|amina|layla|fatima|nour|huda|maryam|aisha|yasmin|bianca|adriana|cristiane|renata|fernanda|marcia|silvia|alessandra|giovanna|valeria|stefania/i;
-    const lv=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
-    let pick=lv.filter(v=>FEM.test(v.name))[0];
-    if(!pick)pick=lv.filter(v=>!MALE.test(v.name))[0];
-    if(!pick||MALE.test(pick?.name||""))pick=voices.filter(v=>FEM.test(v.name)&&v.lang.startsWith(base))[0]||voices.filter(v=>FEM.test(v.name))[0];
-    if(!pick||MALE.test(pick?.name||"")){const en=voices.filter(v=>v.lang.startsWith("en"));pick=en.filter(v=>FEM.test(v.name))[0]||en.filter(v=>!MALE.test(v.name))[0]||pick;}
+    
+    // Female voice patterns — includes natural Turkish names
+    const FEM_PAT=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|veena|lekha|ting|meijia|yuna|paulina|monica|luciana|zosia|nora|sara|alva|ellen|amélie|virginie|cécile|céline|petra|katja|milena|weiblich|femme|женский|femenino|vrouwelijk|carmen|lucia|marisa|claudia|nathalie|bianca|francesca|giorgia|isabella|maria|sofia|chiara|julia|christina|marta|alicia|beatriz|cristina|elena|gabriela|valentina|natasha|olga|marina|tatiana|irina|gülsüm|zeynep|melike|selin|esra|özlem|gamze|lale|pinar|aylin|naz|büşra|buse|deniz|ipek|priya|kavita|meera|asha|geeta|chen|ling|wei|li|yuki|sakura|hana|mei|jihye|soyeon|minji|salwa|amina|layla|fatima|nour|maryam|aisha|yasmin/i;
+    const MALE_PAT=/male|\berkek\b|man\b|homme|männlich|мужской|tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|george|richard|guy|rishi|fred|paul|sergio|jorge|carlos|alex|takumi|ryo|kenji/i;
+    
+    // Priority chain for voice selection
+    const langVoices=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
+    let pick=null;
+    
+    // 1. Premium/Neural/Enhanced female voice in this language (highest quality)
+    pick=langVoices.find(v=>FEM_PAT.test(v.name)&&/premium|neural|enhanced|natural|online/i.test(v.name));
+    
+    // 2. Any female voice in this language
+    if(!pick)pick=langVoices.find(v=>FEM_PAT.test(v.name));
+    
+    // 3. "Google" voice in this language (Chrome's natural-sounding default)
+    if(!pick)pick=langVoices.find(v=>/google/i.test(v.name));
+    
+    // 4. Microsoft voice (Windows natural voices, often high quality)
+    if(!pick)pick=langVoices.find(v=>/microsoft/i.test(v.name)&&!MALE_PAT.test(v.name));
+    
+    // 5. Any non-male voice in this language
+    if(!pick)pick=langVoices.find(v=>!MALE_PAT.test(v.name));
+    
+    // 6. Any voice in this language (even male — we'll raise pitch)
+    if(!pick)pick=langVoices[0];
+    
+    // 7. Fallback: English female
+    if(!pick){
+      const en=voices.filter(v=>v.lang.startsWith("en"));
+      pick=en.find(v=>FEM_PAT.test(v.name))||en.find(v=>!MALE_PAT.test(v.name))||en[0];
+    }
+    
     if(pick){u.voice=pick;u.lang=pick.lang;}else{u.lang=useLc;}
-    const isMale=!pick||(MALE.test(pick?.name||"")&&!FEM.test(pick?.name||""));
-    // Female natural range: pitch 1.0-1.3, rate 0.85-1.0
-    // If only male voice available, raise pitch significantly to sound feminine
-    u.pitch=isMale?1.7:1.15;
-    u.rate=isMale?0.85:0.95;
-    u.volume=1;
-    u.onend=()=>setIsSpeak(false);u.onerror=()=>setIsSpeak(false);
+    
+    // Detect if we ended up with a male voice
+    const isMale=pick&&MALE_PAT.test(pick.name)&&!FEM_PAT.test(pick.name);
+    
+    // Pitch/rate tuning for natural sound
+    // Female voice: slightly elevated pitch, natural pace
+    // Male-only-available: higher pitch to simulate female, slower rate
+    if(isMale){
+      u.pitch=1.5;    // Push male voice toward feminine range (but not too high — distortion)
+      u.rate=0.88;
+    }else{
+      u.pitch=1.05;   // Just slightly above neutral (1.0) for warmth
+      u.rate=0.95;    // Very slightly slower than natural for clarity
+    }
+    u.volume=1.0;
+    u.onend=()=>setIsSpeak(false);
+    u.onerror=()=>setIsSpeak(false);
     speechSynthesis.speak(u);
   };
-  if(speechSynthesis.getVoices().length===0){speechSynthesis.onvoiceschanged=()=>{doSpeak();speechSynthesis.onvoiceschanged=null;};setTimeout(doSpeak,500);}
-  else doSpeak();
+  if(speechSynthesis.getVoices().length===0){
+    speechSynthesis.onvoiceschanged=()=>{doSpeak();speechSynthesis.onvoiceschanged=null;};
+    setTimeout(doSpeak,500);
+  }else{doSpeak();}
 };
 // Voice handled by ResponsiveVoice.js
 
