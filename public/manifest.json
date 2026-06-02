@@ -1,7 +1,7 @@
 {
   "name": "AILVIE — AI Kişisel Sağlık Asistanı",
   "short_name": "AILVIE",
-  "description": "AI-powered personal health assistant. 9 languages, medication management, appointment booking, health tracking. Every PRO subscription donates $1 to TEGV.",
+  "description": "AI-powered personal health assistant. 60+ languages, medication management, voice assistant, drug recognition, health tracking, patient card.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0e14",
