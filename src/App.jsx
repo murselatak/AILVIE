@@ -729,7 +729,7 @@ Respond ONLY with a JSON object in this exact format (no markdown, no explanatio
 {"class":"drug class/category","usage":"what it is used for","dose":"typical dosage","sideEffects":"common side effects","warnings":"important warnings","interactions":"drug interactions"}
 
 IMPORTANT: All values MUST be in ${langName} language. Keep each field concise (under 100 chars). If the drug name is unknown or misspelled, respond with: {"error":"not_found"}`;
-    const d=await callAI({model:"claude-sonnet-4-5",max_tokens:800,messages:[{role:"user",content:prompt}]},apiKey);
+    const d=await callAI({model:"claude-sonnet-4-6",max_tokens:800,messages:[{role:"user",content:prompt}]},apiKey);
     const txt=d.content?.map(c=>c.text||"").join("").trim()||"";
     if(!txt){throw new Error("Empty response");}
     // Clean JSON — strip markdown code blocks
@@ -1178,7 +1178,7 @@ const sendChat=async(text)=>{
     if(records.length)cx.push(`Tıbbi kayıtlar: ${records.slice(0,3).map(r=>`${r.type}: ${r.content?.substring(0,50)}`).join("; ")}`);
     const ctxStr=cx.length?`\n\nHASTA PROFİLİ:\n${cx.join("\n")}\n`:"Hasta henüz bilgi girmemiş. ";
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
-    const d=await callAI({model:"claude-sonnet-4-5",max_tokens:1000,system:`Sen AILVIE — dünya çapında hizmet veren, sıcak, şefkatli ve güvenilir bir KADIN sağlık asistanısın.${ctxStr}
+    const d=await callAI({model:"claude-sonnet-4-6",max_tokens:1000,system:`Sen AILVIE — dünya çapında hizmet veren, sıcak, şefkatli ve güvenilir bir KADIN sağlık asistanısın.${ctxStr}
 ÖNEMLİ KURALLAR:
 1) Hastayı ismiyle hitap et (biliniyorsa). Kişiselleştirilmiş yanıtlar ver.
 2) ASLA hasta girmediği veriyi uydurma. Bilmiyorsan "Bu bilgiyi henüz profilinize eklemediniz" de.
@@ -1627,7 +1627,7 @@ const renderHome=()=>{
         try{
           // Try AI first if apiKey
           if(apiKey){
-            const d=await callAI({model:"claude-sonnet-4-5",max_tokens:800,messages:[{role:"user",content:`Translate the following text from ${srcObj?.n||srcCode} to ${tgtObj?.n||tgtCode}. Return ONLY the translated text, no explanations, no quotes.\n\nText: ${trIn}`}]},apiKey);
+            const d=await callAI({model:"claude-haiku-4-5-20251001",max_tokens:800,messages:[{role:"user",content:`Translate the following text from ${srcObj?.n||srcCode} to ${tgtObj?.n||tgtCode}. Return ONLY the translated text, no explanations, no quotes.\n\nText: ${trIn}`}]},apiKey);
             const out=d.content?.map(c=>c.text||"").join("").trim()||"";
             if(out){setTrResult(out);setTrLoad(false);return;}
           }
