@@ -1228,38 +1228,9 @@ const speak=(text,overrideLang)=>{
     setIsSpeak(false);return;
   }
   setIsSpeak(true);
-  const useLang=overrideLang||lang;
-  const useLc=typeof useLang==="string"&&useLang.includes("-")?useLang:(LC[useLang]||useLang);
-  const base=(useLc||"en").toLowerCase().split("-")[0];
-  
-  // Check if native browser has a FEMALE voice for this language
-  const hasNativeFemale=()=>{
-    if(!window.speechSynthesis)return false;
-    const voices=speechSynthesis.getVoices();
-    const FEM_PAT=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|gülsüm|zeynep|melike|selin|esra|özlem|google/i;
-    return voices.some(v=>v.lang.toLowerCase().startsWith(base)&&FEM_PAT.test(v.name));
-  };
-  
-  // DECISION TREE:
-  // Native FEMALE voice for this language exists? → Use it (best quality)
-  // Else → ResponsiveVoice (female, guaranteed, but lower quality)
-  // Else → Native female in ANY language (aksan var ama kadın)
-  
-  if(hasNativeFemale()){
-    fallbackSpeak(text,overrideLang);
-    return;
-  }
-  
-  // No native female → ResponsiveVoice fallback
-  const rvName=RV_VOICES[useLang]||RV_VOICES[useLang?.split?.("-")[0]]||"UK English Female";
-  try{
-    if(window.responsiveVoice&&typeof responsiveVoice.speak==="function"&&responsiveVoice.voiceSupport()){
-      let started=false;
-      responsiveVoice.speak(text,rvName,{pitch:1.0,rate:0.95,onstart:()=>{started=true;},onend:()=>setIsSpeak(false),onerror:()=>fallbackSpeak(text,overrideLang)});
-      setTimeout(()=>{if(!started){try{responsiveVoice.cancel();}catch(e){}fallbackSpeak(text,overrideLang);}},2000);
-      return;
-    }
-  }catch(e){}
+  // ALWAYS use native browser TTS (fallbackSpeak) — it has a strong female-only
+  // selection chain. ResponsiveVoice free tier is unreliable (sometimes male,
+  // sometimes silent), so we skip it entirely.
   fallbackSpeak(text,overrideLang);
 };
 const fallbackSpeak=(text,overrideLang)=>{
@@ -2584,10 +2555,18 @@ return (
             <button onClick={()=>{const newState=!voiceActive;setVoiceActive(newState);
             if(newState){
               if(page!=="chat")goTo("chat");
-              speak((lang==="tr"?"Sesli diyalog başladı. Konuşabilirsiniz.":"Voice dialog started. You can speak."));
-              setTimeout(()=>{
-                startVoice((txt)=>{sendChat(txt);},true);
-              },2500);
+              // Speak greeting, then start listening AFTER speech ends (no collision)
+              const greeting=lang==="tr"?"Sesli diyalog başladı. Konuşabilirsiniz.":"Voice dialog started. You can speak.";
+              speak(greeting);
+              // Poll for speech end, then start mic
+              const waitAndListen=()=>{
+                if(!window.speechSynthesis||!speechSynthesis.speaking){
+                  startVoice((txt)=>{sendChat(txt);},true);
+                }else{
+                  setTimeout(waitAndListen,300);
+                }
+              };
+              setTimeout(waitAndListen,1500);
             }else{
               try{speechSynthesis.cancel();}catch(e){}
               if(window.responsiveVoice)try{responsiveVoice.cancel();}catch(e){}
