@@ -1147,7 +1147,8 @@ const sendChat=async(text)=>{
   const hasBYOK=apiKey&&apiKey.length>20; // User's own key
   if(!isPRO&&!hasBYOK){
     const today=new Date().toDateString();
-    const usage=JSON.parse(localStorage.getItem("ailvie_ai_usage")||"{}");
+    let usage={};
+    try{usage=JSON.parse(localStorage.getItem("ailvie_ai_usage")||"{}");}catch(e){usage={};}
     const todayCount=usage.date===today?(usage.count||0):0;
     const DAILY_LIMIT=3;
     if(todayCount>=DAILY_LIMIT){
