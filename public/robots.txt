@@ -1,3 +1,3 @@
+# Pre-launch — block all search engines
 User-agent: *
-Allow: /
-Sitemap: https://ailvie.com/sitemap.xml
+Disallow: /
