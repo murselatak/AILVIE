@@ -2543,9 +2543,10 @@ return (
             <button onClick={()=>{const newState=!voiceActive;setVoiceActive(newState);
             if(newState){
               if(page!=="chat")goTo("chat");
-              // Speak greeting, then start listening AFTER speech ends (no collision)
-              const greeting=lang==="tr"?"Sesli diyalog başladı. Konuşabilirsiniz.":"Voice dialog started. You can speak.";
-              speak(greeting);
+              // Speak greeting in the user's language, passing lang so correct voice is picked
+              const greetings={tr:"Sesli diyalog başladı. Konuşabilirsiniz.",en:"Voice dialog started. You can speak.",de:"Sprachdialog gestartet. Sie können sprechen.",ru:"Голосовой диалог начат. Можете говорить.",zh:"语音对话已开始。您可以说话了。",hi:"वॉइस डायलॉग शुरू हुआ। आप बोल सकते हैं।",nl:"Spraakdialoog gestart. U kunt spreken.",es:"Diálogo de voz iniciado. Puede hablar.",ar:"بدأ الحوار الصوتي. يمكنك التحدث."};
+              const greeting=greetings[lang]||greetings.en;
+              speak(greeting,lang);
               // Poll for speech end, then start mic
               const waitAndListen=()=>{
                 if(!window.speechSynthesis||!speechSynthesis.speaking){
