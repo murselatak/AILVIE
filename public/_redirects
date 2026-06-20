@@ -1,1 +1,5 @@
+# API routes go to Cloudflare Functions (must come BEFORE the catch-all)
+/api/*  /api/:splat  200
+
+# SPA fallback — all other routes serve index.html
 /*  /index.html  200
