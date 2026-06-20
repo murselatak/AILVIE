@@ -1217,29 +1217,26 @@ const fallbackSpeak=(text,overrideLang)=>{
     const langVoices=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
     let pick=null;
     
-    // FEMALE-ONLY CHAIN:
-    // 1. Premium/Neural female in target language (best)
+    // FEMALE-ONLY CHAIN (strict — never a male or ambiguous voice):
+    // 1. Premium/Neural female in target language (best quality)
     pick=langVoices.find(v=>FEM_PAT.test(v.name)&&/premium|neural|enhanced|natural|online/i.test(v.name));
     
-    // 2. Any female in target language
+    // 2. Any explicitly-female voice in target language
     if(!pick)pick=langVoices.find(v=>FEM_PAT.test(v.name));
     
-    // 3. "Google" voice in target language (usually natural-sounding female-ish default)
-    if(!pick)pick=langVoices.find(v=>/google/i.test(v.name)&&!MALE_PAT.test(v.name));
-    
-    // 4. NO MALE FALLBACK — jump to female in OTHER language
-    // Female English voice (aksan var ama kadın)
+    // 3. Target language has NO explicit female → jump to guaranteed female in another language
+    // (We do NOT use ambiguous "Google X" voices here — they're often male-toned)
     if(!pick){
       const anyFemale=voices.filter(v=>FEM_PAT.test(v.name)&&!MALE_PAT.test(v.name));
-      // Prefer premium neural
+      // Prefer premium/neural female
       pick=anyFemale.find(v=>/premium|neural|enhanced|natural|online/i.test(v.name));
-      // Or English female
+      // Then English female (clear, widely available)
       if(!pick)pick=anyFemale.find(v=>v.lang.startsWith("en"));
-      // Or ANY female
+      // Then ANY explicit female
       if(!pick)pick=anyFemale[0];
     }
     
-    // 5. Last resort: any voice that doesn't match MALE_PAT
+    // 4. Absolute last resort: any non-male voice
     if(!pick)pick=voices.find(v=>!MALE_PAT.test(v.name));
     
     if(pick){
@@ -2409,13 +2406,13 @@ const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,h
   <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}</div>
   <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>
     {chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}
-    {chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:"slideD .3s"}}>
+    {chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
       {m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}
       <div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.text}</div>
       <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
         {m.role==="assistant"&&<>
           <button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:tc}}>📋</button>
-          <SpeakBtn text={m.text}/>
+          <SpeakBtn text={m.text} langCode={lang}/>
         </>}
         <button onClick={()=>setChatM(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:`1px solid ${m.role==="user"?"rgba(255,255,255,.3)":dg+"33"}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:m.role==="user"?"#fff":dg}}>🗑️</button>
       </div>
