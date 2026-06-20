@@ -774,42 +774,10 @@ const[connSys,setConnSys]=useState([]);
 const playAlarmBell=()=>{try{const actx=new(window.AudioContext||window.webkitAudioContext)();const playTone=(freq,start,dur)=>{const o=actx.createOscillator();const g=actx.createGain();o.connect(g);g.connect(actx.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(0.3,actx.currentTime+start);g.gain.exponentialRampToValueAtTime(0.01,actx.currentTime+start+dur);o.start(actx.currentTime+start);o.stop(actx.currentTime+start+dur);};for(let i=0;i<3;i++){playTone(880,i*0.6,0.4);playTone(1100,i*0.6+0.15,0.3);}setTimeout(()=>actx.close(),3000);}catch(e){}};
 const speakAlarm=(text)=>{
   if(!text)return;
-  const base=(lc||"en").toLowerCase().split("-")[0];
-  const FEM_PAT=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|gülsüm|zeynep|melike|selin|esra|özlem|google/i;
-  const MALE_PAT=/\bmale\b|\berkek\b|\bman\b|tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|george|richard|guy|rishi|fred|paul/i;
-  
-  // Check if native has a FEMALE voice for current language
-  if(window.speechSynthesis){
-    const voices=speechSynthesis.getVoices();
-    const langFem=voices.filter(v=>v.lang.toLowerCase().startsWith(base)&&FEM_PAT.test(v.name)&&!MALE_PAT.test(v.name));
-    if(langFem.length>0){
-      const doAlarm=()=>{
-        const u=new SpeechSynthesisUtterance(text);u.volume=1;
-        const pick=langFem.find(v=>/premium|neural|enhanced|natural|online/i.test(v.name))||langFem[0];
-        u.voice=pick;u.lang=pick.lang;
-        u.pitch=1.05;u.rate=0.95;
-        speechSynthesis.speak(u);
-      };
-      if(voices.length===0){speechSynthesis.onvoiceschanged=()=>{doAlarm();speechSynthesis.onvoiceschanged=null;};setTimeout(doAlarm,500);}
-      else doAlarm();
-      return;
-    }
-  }
-  // No native female in target language → ResponsiveVoice (guaranteed female)
-  const rvName=RV_VOICES[lang]||"Turkish Female";
-  try{if(window.responsiveVoice&&responsiveVoice.voiceSupport()){responsiveVoice.speak(text,rvName,{pitch:1.0,rate:0.95,volume:1});return;}}catch(e){}
-  // Last resort: any cross-language female voice
-  if(window.speechSynthesis){
-    const voices=speechSynthesis.getVoices();
-    const anyFem=voices.filter(v=>FEM_PAT.test(v.name)&&!MALE_PAT.test(v.name));
-    if(anyFem.length>0){
-      const u=new SpeechSynthesisUtterance(text);u.volume=1;
-      u.voice=anyFem.find(v=>/premium|neural|enhanced/i.test(v.name))||anyFem.find(v=>v.lang.startsWith("en"))||anyFem[0];
-      u.lang=u.voice.lang;
-      u.pitch=1.05;u.rate=0.95;
-      speechSynthesis.speak(u);
-    }
-  }
+  // Reuse the robust female-only speak() — but don't toggle (alarms always speak)
+  if(isSpeak){try{speechSynthesis.cancel();}catch(e){}}
+  setIsSpeak(true);
+  fallbackSpeak(text);
 };
 
 // Calendar
@@ -1299,10 +1267,29 @@ const fallbackSpeak=(text,overrideLang)=>{
     u.onerror=()=>setIsSpeak(false);
     speechSynthesis.speak(u);
   };
-  if(speechSynthesis.getVoices().length===0){
-    speechSynthesis.onvoiceschanged=()=>{doSpeak();speechSynthesis.onvoiceschanged=null;};
-    setTimeout(doSpeak,500);
-  }else{doSpeak();}
+  // Robust voice loading: wait for voices, prevent double-call and empty-list fallback
+  let voicesReady=speechSynthesis.getVoices().length>0;
+  if(voicesReady){
+    doSpeak();
+  }else{
+    let done=false;
+    const tryOnce=()=>{
+      if(done)return;
+      if(speechSynthesis.getVoices().length>0){
+        done=true;
+        speechSynthesis.onvoiceschanged=null;
+        doSpeak();
+      }
+    };
+    speechSynthesis.onvoiceschanged=tryOnce;
+    // Retry a few times with increasing delay (voices can be slow on first load)
+    setTimeout(tryOnce,200);
+    setTimeout(tryOnce,600);
+    setTimeout(()=>{
+      // Last resort: if still no voices after 1.2s, speak anyway (better than silence)
+      if(!done){done=true;speechSynthesis.onvoiceschanged=null;doSpeak();}
+    },1200);
+  }
 };
 // Voice handled by ResponsiveVoice.js
 
