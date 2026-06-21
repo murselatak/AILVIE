@@ -1297,29 +1297,40 @@ const startVoice=(cb,continuous=false)=>{
   if(isListen&&recRef.current){try{recRef.current.abort();}catch(e){}setIsListen(false);recRef.current=null;return;}
   try{
     const r=new SR();recRef.current=r;r.lang=lc;r.continuous=false;r.interimResults=false;r.maxAlternatives=1;
-    r.onstart=()=>setIsListen(true);
+    let gotResult=false;
+    r.onstart=()=>{setIsListen(true);notify("🎤 "+(lang==="tr"?"Dinliyorum, konuşun...":"Listening, speak now..."));};
     r.onresult=(e)=>{
+      gotResult=true;
       const txt=e.results[0][0].transcript;
       setIsListen(false);recRef.current=null;
-      cb(txt);
+      if(txt&&txt.trim())cb(txt);
     };
     r.onerror=(e)=>{
       setIsListen(false);recRef.current=null;
-      if(e.error==="not-allowed")notify("🎤 "+(lang==="tr"?"Mikrofon izni gerekli!":"Microphone permission required!"));
-      else if(e.error==="no-speech"&&continuous&&voiceActive){
-        // In voice dialog mode, restart listening after no-speech
-        setTimeout(()=>{if(voiceActive)startVoice(cb,true);},500);
+      if(e.error==="not-allowed"||e.error==="service-not-allowed"){
+        notify("🎤 "+(lang==="tr"?"Mikrofon izni gerekli! Tarayıcı ayarlarından izin verin.":"Microphone permission required! Allow in browser settings."));
+      }else if(e.error==="no-speech"){
+        if(continuous&&voiceActive){setTimeout(()=>{if(voiceActive)startVoice(cb,true);},500);}
+        else notify("🎤 "+(lang==="tr"?"Ses algılanmadı, tekrar deneyin.":"No speech detected, try again."));
+      }else if(e.error==="network"){
+        notify("⚠️ "+(lang==="tr"?"Ses tanıma ağ hatası. İnternet bağlantınızı kontrol edin.":"Voice recognition network error. Check your connection."));
+      }else if(e.error==="aborted"){
+        // user cancelled, no message
+      }else{
+        notify("⚠️ "+(lang==="tr"?"Ses tanıma hatası: ":"Voice error: ")+e.error);
       }
     };
     r.onend=()=>{
       setIsListen(false);recRef.current=null;
-      // In voice dialog mode, restart after recognition ends naturally
-      if(continuous&&voiceActive&&!isSpeak){
+      if(continuous&&voiceActive&&!isSpeak&&!gotResult){
         setTimeout(()=>{if(voiceActive)startVoice(cb,true);},800);
       }
     };
     r.start();
-  }catch(e){setIsListen(false);}
+  }catch(e){
+    setIsListen(false);
+    notify("⚠️ "+(lang==="tr"?"Mikrofon başlatılamadı. Chrome kullanın ve izin verin.":"Could not start mic. Use Chrome and allow permission."));
+  }
 };
 
 const autoResize=(e)=>{const t=e.target;t.style.height='36px';t.style.height=Math.min(t.scrollHeight,150)+'px';};
@@ -1346,7 +1357,27 @@ const greetTxt=hr<6?t.gn:hr<12?t.gm:hr<18?t.hi:hr<22?t.ga:t.gn;
 const MicBtn=({onResult,inputRef,currentValue})=>{
   return <button onClick={()=>startVoice((txt)=>{if(inputRef?.current){const el=inputRef.current;const s=el.selectionStart||0,e=el.selectionEnd||0;if(s!==e){const v=el.value;onResult(v.substring(0,s)+txt+v.substring(e));}else{const v=el.value;onResult(v.substring(0,s)+txt+v.substring(s));}}else if(typeof currentValue==='string'&&currentValue.length>0){onResult(currentValue+" "+txt);}else{onResult(txt);}})} style={{background:isListen?`${dg}22`:`${ac}15`,border:`1px solid ${isListen?dg:bd}`,borderRadius:8,padding:"8px 12px",cursor:"pointer",fontSize:18,animation:isListen?"micPulse 2s infinite":"none"}}>{isListen?"🔴":"🎤"}</button>;
 };
-const SpeakBtn=({text,langCode})=>(<button onClick={(e)=>{e.stopPropagation();speak(text,langCode);}} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"3px 7px",cursor:"pointer",fontSize:13,color:isSpeak?dg:tc}}>{isSpeak?"⏹":"🔊"}</button>);
+const SpeakBtn=({text,langCode})=>{
+  const[mySpeaking,setMySpeaking]=useState(false);
+  return <button onClick={(e)=>{
+    e.stopPropagation();
+    if(mySpeaking){
+      try{speechSynthesis.cancel();}catch(err){}
+      setMySpeaking(false);setIsSpeak(false);
+      return;
+    }
+    setMySpeaking(true);
+    speak(text,langCode);
+    // Track when this specific utterance ends
+    const checkEnd=setInterval(()=>{
+      if(!window.speechSynthesis||!speechSynthesis.speaking){
+        clearInterval(checkEnd);
+        setMySpeaking(false);
+      }
+    },300);
+    setTimeout(()=>{clearInterval(checkEnd);setMySpeaking(false);},30000);
+  }} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"3px 7px",cursor:"pointer",fontSize:13,color:mySpeaking?dg:tc}}>{mySpeaking?"⏹":"🔊"}</button>;
+};
 const EmojiPicker=({onPick,onClose})=>(<div style={{position:"absolute",bottom:52,left:0,right:0,background:cd,border:`1px solid ${bd}`,borderRadius:14,padding:12,zIndex:400,boxShadow:"0 -4px 20px rgba(0,0,0,.3)"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontWeight:700}}>{t.emj}</span><button onClick={onClose} style={{background:"none",border:"none",color:tc,cursor:"pointer",fontSize:18}}>✕</button></div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{EMOJIS.map(e=><button key={e} onClick={()=>{onPick(e);onClose();}} style={{fontSize:22,background:"none",border:"none",cursor:"pointer",padding:3,borderRadius:6}}>{e}</button>)}</div></div>);
 
 const HField=({icon,label,field,unit})=>{
