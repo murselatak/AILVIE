@@ -280,6 +280,7 @@ const[appLockEnabled,setAppLockEnabled]=useState(()=>{try{return localStorage.ge
 const[isLocked,setIsLocked]=useState(()=>{try{return localStorage.getItem("ailvie_lock")==="1";}catch(e){return false;}});
 const toastTm=useRef(null);
 const recRef=useRef(null);
+const audioRef=useRef(null); // Azure TTS audio element
 const[isListen,setIsListen]=useState(false);
 const[isSpeak,setIsSpeak]=useState(false);
 const[zoom,setZoom]=useState(1);
@@ -774,10 +775,22 @@ const[connSys,setConnSys]=useState([]);
 const playAlarmBell=()=>{try{const actx=new(window.AudioContext||window.webkitAudioContext)();const playTone=(freq,start,dur)=>{const o=actx.createOscillator();const g=actx.createGain();o.connect(g);g.connect(actx.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(0.3,actx.currentTime+start);g.gain.exponentialRampToValueAtTime(0.01,actx.currentTime+start+dur);o.start(actx.currentTime+start);o.stop(actx.currentTime+start+dur);};for(let i=0;i<3;i++){playTone(880,i*0.6,0.4);playTone(1100,i*0.6+0.15,0.3);}setTimeout(()=>actx.close(),3000);}catch(e){}};
 const speakAlarm=(text)=>{
   if(!text)return;
-  // Reuse the robust female-only speak() — but don't toggle (alarms always speak)
-  if(isSpeak){try{speechSynthesis.cancel();}catch(e){}}
-  setIsSpeak(true);
-  fallbackSpeak(text);
+  try{speechSynthesis.cancel();}catch(e){}
+  try{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}}catch(e){}
+  const azureLang=LC[lang]||"en-US";
+  // Try Azure first, fall back to browser TTS
+  fetch("/api/tts",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({text,lang:azureLang})
+  }).then(res=>{
+    if(res.ok&&res.headers.get("Content-Type")?.includes("audio"))return res.blob();
+    throw new Error("azure_unavailable");
+  }).then(blob=>{
+    const url=URL.createObjectURL(blob);
+    const audio=new Audio(url);audioRef.current=audio;
+    audio.onended=()=>{URL.revokeObjectURL(url);audioRef.current=null;};
+    audio.play().catch(()=>{URL.revokeObjectURL(url);audioRef.current=null;fallbackSpeak(text);});
+  }).catch(()=>{fallbackSpeak(text);});
 };
 
 // Calendar
@@ -1191,16 +1204,40 @@ const[calY,setCalY]=useState(now.getFullYear());
 // Speech — FEMALE ONLY (never falls to male voice)
 const speak=(text,overrideLang)=>{
   if(!text)return;
+  // Toggle off if already speaking
   if(isSpeak){
     try{speechSynthesis.cancel();}catch(e){}
-    try{if(window.responsiveVoice)responsiveVoice.cancel();}catch(e){}
+    try{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}}catch(e){}
     setIsSpeak(false);return;
   }
   setIsSpeak(true);
-  // ALWAYS use native browser TTS (fallbackSpeak) — it has a strong female-only
-  // selection chain. ResponsiveVoice free tier is unreliable (sometimes male,
-  // sometimes silent), so we skip it entirely.
-  fallbackSpeak(text,overrideLang);
+  const useLang=overrideLang||lang;
+  const azureLang=LC[useLang]||(typeof useLang==="string"&&useLang.includes("-")?useLang:useLang)||"en-US";
+  // 1) Try Azure Neural TTS (high-quality female voice, every language/device)
+  fetch("/api/tts",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({text,lang:azureLang})
+  }).then(res=>{
+    if(res.ok&&res.headers.get("Content-Type")?.includes("audio")){
+      return res.blob();
+    }
+    throw new Error("azure_unavailable");
+  }).then(blob=>{
+    const url=URL.createObjectURL(blob);
+    const audio=new Audio(url);
+    audioRef.current=audio;
+    audio.onended=()=>{setIsSpeak(false);URL.revokeObjectURL(url);audioRef.current=null;};
+    audio.onerror=()=>{setIsSpeak(false);URL.revokeObjectURL(url);audioRef.current=null;fallbackSpeak(text,overrideLang);};
+    audio.play().catch(()=>{
+      // Autoplay blocked or play failed → browser TTS
+      setIsSpeak(false);URL.revokeObjectURL(url);audioRef.current=null;
+      fallbackSpeak(text,overrideLang);
+    });
+  }).catch(()=>{
+    // 2) Azure not configured or failed → browser TTS fallback
+    fallbackSpeak(text,overrideLang);
+  });
 };
 const fallbackSpeak=(text,overrideLang)=>{
   if(!window.speechSynthesis){setIsSpeak(false);return;}
