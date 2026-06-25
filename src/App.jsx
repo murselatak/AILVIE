@@ -229,23 +229,7 @@ wls:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="10" fill="#fff"/><re
 };
 const Flag=({code,size=20})=>{const k=code?.toLowerCase();const s=FlagSVG[k];return s?<span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:size,height:Math.round(size*0.67),verticalAlign:"middle",borderRadius:3,overflow:"hidden",border:"1px solid rgba(255,255,255,0.15)",boxShadow:"0 1px 2px rgba(0,0,0,0.15)",flexShrink:0,lineHeight:0}}>{React.cloneElement(s,{width:size,height:Math.round(size*0.67),preserveAspectRatio:"xMidYMid slice",style:{display:"block"}})}</span>:<span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:size,height:Math.round(size*0.67),background:"linear-gradient(135deg,#334155,#1e293b)",color:"#fff",fontSize:Math.round(size*0.4),fontWeight:700,borderRadius:3,flexShrink:0,border:"1px solid rgba(255,255,255,0.15)"}}>{code?.toUpperCase().slice(0,2)}</span>;};
 
-// ResponsiveVoice female voice names for all supported languages
-const RV_VOICES={
-  tr:"Turkish Female",en:"UK English Female","en-gb":"UK English Female","en-us":"US English Female",
-  de:"Deutsch Female",fr:"French Female",es:"Spanish Female","es-mx":"Spanish Latin American Female",
-  it:"Italian Female",pt:"Portuguese Female","pt-pt":"Portuguese Female","pt-br":"Brazilian Portuguese Female",
-  ru:"Russian Female",uk:"Ukrainian Female","zh-cn":"Chinese Female",zh:"Chinese Female","zh-tw":"Chinese (Taiwan)",
-  ja:"Japanese Female",ko:"Korean Female",ar:"Arabic Female","ar-eg":"Arabic Female","ar-ma":"Arabic Female",
-  hi:"Hindi Female",bn:"Bangla Bangladesh Female",ur:"Hindi Female",fa:"Farsi/Persian",he:"Hebrew Female",
-  nl:"Dutch Female",pl:"Polish Female",sv:"Swedish Female",no:"Norwegian Female",fi:"Finnish Female",
-  da:"Danish Female",el:"Greek Female",cs:"Czech Female",sk:"Slovak Female",hu:"Hungarian Female",
-  ro:"Romanian Female",bg:"Bulgarian",hr:"Croatian Female",sr:"Serbian",sl:"Slovenian",
-  ga:"Irish English Female",is:"Icelandic Female",id:"Indonesian Female",ms:"Malaysian",th:"Thai Female",
-  vi:"Vietnamese Female",tl:"Filipino Female",az:"Azerbaijani",ka:"Georgian",hy:"Armenian",
-  sw:"Swahili",ha:"Hausa",af:"Afrikaans",am:"Amharic",yo:"Yoruba",
-  ca:"Catalan Female",eu:"Basque",gl:"Galician",lt:"Lithuanian",lv:"Latvian",et:"Estonian",
-  mt:"Maltese",cy:"Welsh Female"
-};
+
 
 export default function AILVIE_App(){
 const[lang,setLang]=useState(function(){try{var s=localStorage.getItem("ailvie_lang");if(s)return s;}catch(e){}var b=(navigator.language||"tr").split("-")[0].toLowerCase();return["tr","en","de","ru","zh","hi","nl","es","ar"].indexOf(b)>=0?b:"en";});
@@ -1325,7 +1309,6 @@ const fallbackSpeak=(text,overrideLang)=>{
     },1200);
   }
 };
-// Voice handled by ResponsiveVoice.js
 
 // Voice — improved with continuous mode
 const startVoice=(cb,continuous=false)=>{
@@ -2623,7 +2606,6 @@ return (
               setTimeout(waitAndListen,1500);
             }else{
               try{speechSynthesis.cancel();}catch(e){}
-              if(window.responsiveVoice)try{responsiveVoice.cancel();}catch(e){}
               if(recRef.current)try{recRef.current.abort();}catch(e){}
               setIsListen(false);setIsSpeak(false);
             }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:20,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:voiceActive?1:0.8}}>🎙️</button>
