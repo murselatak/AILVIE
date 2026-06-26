@@ -265,6 +265,7 @@ const[isLocked,setIsLocked]=useState(()=>{try{return localStorage.getItem("ailvi
 const toastTm=useRef(null);
 const recRef=useRef(null);
 const audioRef=useRef(null); // Azure TTS audio element
+const chatEndRef=useRef(null); // auto-scroll anchor for chat
 const[isListen,setIsListen]=useState(false);
 const[isSpeak,setIsSpeak]=useState(false);
 const[zoom,setZoom]=useState(1);
@@ -1058,6 +1059,8 @@ const[msgIn,setMsgIn]=useState("");
 const[chatM,setChatM]=useState([]);
 const[chatIn,setChatIn]=useState("");
 const[chatL,setChatL]=useState(false);
+// Auto-scroll chat to bottom when new messages arrive
+useEffect(()=>{if(chatEndRef.current)chatEndRef.current.scrollIntoView({behavior:"smooth",block:"end"});},[chatM,chatL]);
 
 // Emergency
 const[emNums,setEmNums]=useState([{id:1,name:"Ambulans",number:"112",icon:"🚑",fixed:true},{id:2,name:"Polis",number:"155",icon:"🚔",fixed:true},{id:3,name:"İtfaiye",number:"110",icon:"🚒",fixed:true},{id:4,name:"Jandarma",number:"156",icon:"🛡️",fixed:true},{id:5,name:"AFAD",number:"122",icon:"🆘",fixed:true}]);
@@ -1144,18 +1147,23 @@ const sendChat=async(text)=>{
     if(records.length)cx.push(`Tıbbi kayıtlar: ${records.slice(0,3).map(r=>`${r.type}: ${r.content?.substring(0,50)}`).join("; ")}`);
     const ctxStr=cx.length?`\n\nHASTA PROFİLİ:\n${cx.join("\n")}\n`:"Hasta henüz bilgi girmemiş. ";
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
-    const d=await callAI({model:"claude-sonnet-4-6",max_tokens:1000,system:`Sen AILVIE — dünya çapında hizmet veren, sıcak, şefkatli ve güvenilir bir KADIN sağlık asistanısın.${ctxStr}
-ÖNEMLİ KURALLAR:
-1) Hastayı ismiyle hitap et (biliniyorsa). Kişiselleştirilmiş yanıtlar ver.
+    const d=await callAI({model:"claude-sonnet-4-6",max_tokens:1000,system:`Sen AILVIE — güvenilir bir kadın sağlık asistanısın.${ctxStr}
+KONUŞMA TARZI (çok önemli):
+- Doğrudan, net ve doğal konuş — bir insan gibi. ChatGPT gibi anlaşılır ve mantıklı ol.
+- Süslü, abartılı, yapay iltifatlardan KAÇIN. "Ne kadar nazik bir soru", "kiraz çiçeği" gibi gereksiz süs sözler KULLANMA.
+- Emoji'yi çok az kullan (yanıtta en fazla 1, çoğu zaman hiç). Emoji yağmuru yapma.
+- Kullanıcının sorusuna ODAKLAN. Soruyu yanıtla, gereksiz geri sorularla konuyu dağıtma.
+- Gereksiz uzatma. Net ve öz ol (2-4 cümle yeterli, gerekirse açıkla).
+
+KURALLAR:
+1) Hasta biliniyorsa ismiyle hitap et.
 2) ASLA hasta girmediği veriyi uydurma. Bilmiyorsan "Bu bilgiyi henüz profilinize eklemediniz" de.
-3) Her zaman sıcak, empatik ve rahatlatıcı ol. Emoji kullan.
-4) Ciddi belirtilerde MUTLAKA doktora yönlendir.
-5) SADECE ${LL[lang]} dilinde yanıt ver.
-6) Kısa ve öz cevaplar ver (3-5 cümle). Gerekirse detaylandır.
-7) Hasta verilerine dayanarak kişiye özel öneriler sun.
-8) İlaç etkileşimleri konusunda uyar.
-9) Senin sesli yanıt verme özelliğin VAR — kullanıcı yanıtlarını 🔊 ile dinleyebilir ve seninle sesli diyalog (🎙️) kurabilir. ASLA "sesli yanıt veremiyorum" deme. Sesli konuşma istenirse bunun mümkün olduğunu söyle.
-10) Kullanıcının cihazını, mikrofonunu, kamerasını veya ekranını GÖREMEZSİN. "Seni duyamıyorum", "mikrofonun kapalı/çarpılı", "kameran açık" gibi cihaz durumu hakkında ASLA tahmin yürütme veya uydurma. Sadece kullanıcının yazdığı metne göre yanıt ver. Mikrofon sorunu varsa kullanıcı bunu kendisi çözer; sen sadece yazılı içeriğe odaklan.`,messages:history},apiKey);
+3) Ciddi belirtilerde doktora yönlendir.
+4) SADECE ${LL[lang]} dilinde yanıt ver.
+5) Hasta verilerine dayanarak öneri sun.
+6) İlaç etkileşimlerinde uyar.
+7) Sesli yanıt özelliğin VAR (🔊 dinleme, 🎙️ sesli diyalog). "Sesli veremiyorum" deme.
+8) Kullanıcının cihazını/mikrofonunu GÖREMEZSİN. "Seni duyamıyorum", "mikrofonun kapalı" gibi cihaz durumu hakkında uydurma yapma.`,messages:history},apiKey);
     const reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
     if(voiceActive){
@@ -2464,7 +2472,7 @@ const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",ga
 const q1Dynamic=pat.name?`${pat.name.split(" ")[0]}, ${t.q1.toLowerCase()} ${lang==="tr"?"Umarım iyisindir 💙":"Hope you are well 💙"}`:t.q1;
 const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}>
   <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0,alignItems:"center"}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}{chatM.length>0&&<button onClick={()=>{if(confirm(lang==="tr"?"Tüm sohbet geçmişi silinsin mi?":"Clear all chat history?"))setChatM([]);}} style={{...pill(false),marginLeft:"auto",flexShrink:0,color:dg,borderColor:dg+"44",whiteSpace:"nowrap"}}>🗑️ {lang==="tr"?"Temizle":"Clear"}</button>}</div>
-  <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>
+  <div className="chat-scroll" style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180,scrollbarWidth:"thin",scrollbarColor:`${ac}66 transparent`}}>
     {chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}
     {chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
       {m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}
@@ -2478,6 +2486,7 @@ const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,h
       </div>
     </div>))}
     {chatL&&<div style={{...CS,alignSelf:"flex-start"}}><span style={{animation:"pulse 1s infinite"}}>● </span><span style={{animation:"pulse 1s infinite .2s"}}>● </span><span style={{animation:"pulse 1s infinite .4s"}}>●</span></div>}
+    <div ref={chatEndRef}/>
   </div>
   <div style={{display:"flex",gap:6,flexShrink:0,position:"relative",alignItems:"flex-end"}}>
     <MicBtn onResult={v=>setChatIn(v)} currentValue={chatIn}/>
@@ -2715,6 +2724,10 @@ return (
       @keyframes fadeIn{from{opacity:0}to{opacity:1}}
       @keyframes globeSpin{0%{transform:rotateY(0deg)}100%{transform:rotateY(360deg)}}
       textarea{min-height:36px;max-height:150px;overflow-y:auto;transition:height 0.1s}
+      .chat-scroll::-webkit-scrollbar{width:8px}
+      .chat-scroll::-webkit-scrollbar-track{background:transparent}
+      .chat-scroll::-webkit-scrollbar-thumb{background:rgba(0,180,216,.4);border-radius:4px}
+      .chat-scroll::-webkit-scrollbar-thumb:hover{background:rgba(0,180,216,.7)}
       @keyframes scanLine{0%{top:10%}50%{top:85%}100%{top:10%}}
       *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;word-wrap:break-word;overflow-wrap:break-word}
       .msg-card{max-width:100%;overflow-wrap:anywhere;word-break:break-word;hyphens:auto}
