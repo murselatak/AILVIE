@@ -1156,7 +1156,14 @@ const sendChat=async(text)=>{
 8) İlaç etkileşimleri konusunda uyar.`,messages:history},apiKey);
     const reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
-    if(voiceActive){speak(reply);const wi=setInterval(()=>{if(!isSpeak&&voiceActive){clearInterval(wi);setTimeout(()=>{if(voiceActive&&!isListen)startVoice((t2)=>sendChat(t2),true);},600);}},500);setTimeout(()=>clearInterval(wi),60000);}
+    if(voiceActive){
+      // Speak the reply; when speech truly ends, resume listening (no fragile polling)
+      speak(reply,null,()=>{
+        if(voiceActive){
+          setTimeout(()=>{if(voiceActive&&!isListen)startVoice((t2)=>sendChat(t2),true);},500);
+        }
+      });
+    }
   }catch(e){
     const noKey=e.message==="NO_KEY";
     const isAIError=e.message?.startsWith("AI_ERROR:");
@@ -1186,8 +1193,8 @@ const[calY,setCalY]=useState(now.getFullYear());
 
 // Speech — FEMALE ONLY
 // Speech — FEMALE ONLY (never falls to male voice)
-const speak=(text,overrideLang)=>{
-  if(!text)return;
+const speak=(text,overrideLang,onEnd)=>{
+  if(!text){if(onEnd)onEnd();return;}
   // Toggle off if already speaking
   if(isSpeak){
     try{speechSynthesis.cancel();}catch(e){}
@@ -1211,20 +1218,20 @@ const speak=(text,overrideLang)=>{
     const url=URL.createObjectURL(blob);
     const audio=new Audio(url);
     audioRef.current=audio;
-    audio.onended=()=>{setIsSpeak(false);URL.revokeObjectURL(url);audioRef.current=null;};
-    audio.onerror=()=>{setIsSpeak(false);URL.revokeObjectURL(url);audioRef.current=null;fallbackSpeak(text,overrideLang);};
+    audio.onended=()=>{setIsSpeak(false);URL.revokeObjectURL(url);audioRef.current=null;if(onEnd)onEnd();};
+    audio.onerror=()=>{setIsSpeak(false);URL.revokeObjectURL(url);audioRef.current=null;fallbackSpeak(text,overrideLang,onEnd);};
     audio.play().catch(()=>{
       // Autoplay blocked or play failed → browser TTS
       setIsSpeak(false);URL.revokeObjectURL(url);audioRef.current=null;
-      fallbackSpeak(text,overrideLang);
+      fallbackSpeak(text,overrideLang,onEnd);
     });
   }).catch(()=>{
     // 2) Azure not configured or failed → browser TTS fallback
-    fallbackSpeak(text,overrideLang);
+    fallbackSpeak(text,overrideLang,onEnd);
   });
 };
-const fallbackSpeak=(text,overrideLang)=>{
-  if(!window.speechSynthesis){setIsSpeak(false);return;}
+const fallbackSpeak=(text,overrideLang,onEnd)=>{
+  if(!window.speechSynthesis){setIsSpeak(false);if(onEnd)onEnd();return;}
   speechSynthesis.cancel();
   const doSpeak=()=>{
     const u=new SpeechSynthesisUtterance(text);
@@ -1281,8 +1288,8 @@ const fallbackSpeak=(text,overrideLang)=>{
       u.rate=0.9;
     }
     u.volume=1.0;
-    u.onend=()=>setIsSpeak(false);
-    u.onerror=()=>setIsSpeak(false);
+    u.onend=()=>{setIsSpeak(false);if(onEnd)onEnd();};
+    u.onerror=()=>{setIsSpeak(false);if(onEnd)onEnd();};
     speechSynthesis.speak(u);
   };
   // Robust voice loading: wait for voices, prevent double-call and empty-list fallback
