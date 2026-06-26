@@ -229,23 +229,7 @@ wls:<svg viewBox="0 0 30 20"><rect y="0" width="30" height="10" fill="#fff"/><re
 };
 const Flag=({code,size=20})=>{const k=code?.toLowerCase();const s=FlagSVG[k];return s?<span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:size,height:Math.round(size*0.67),verticalAlign:"middle",borderRadius:3,overflow:"hidden",border:"1px solid rgba(255,255,255,0.15)",boxShadow:"0 1px 2px rgba(0,0,0,0.15)",flexShrink:0,lineHeight:0}}>{React.cloneElement(s,{width:size,height:Math.round(size*0.67),preserveAspectRatio:"xMidYMid slice",style:{display:"block"}})}</span>:<span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:size,height:Math.round(size*0.67),background:"linear-gradient(135deg,#334155,#1e293b)",color:"#fff",fontSize:Math.round(size*0.4),fontWeight:700,borderRadius:3,flexShrink:0,border:"1px solid rgba(255,255,255,0.15)"}}>{code?.toUpperCase().slice(0,2)}</span>;};
 
-// ResponsiveVoice female voice names for all supported languages
-const RV_VOICES={
-  tr:"Turkish Female",en:"UK English Female","en-gb":"UK English Female","en-us":"US English Female",
-  de:"Deutsch Female",fr:"French Female",es:"Spanish Female","es-mx":"Spanish Latin American Female",
-  it:"Italian Female",pt:"Portuguese Female","pt-pt":"Portuguese Female","pt-br":"Brazilian Portuguese Female",
-  ru:"Russian Female",uk:"Ukrainian Female","zh-cn":"Chinese Female",zh:"Chinese Female","zh-tw":"Chinese (Taiwan)",
-  ja:"Japanese Female",ko:"Korean Female",ar:"Arabic Female","ar-eg":"Arabic Female","ar-ma":"Arabic Female",
-  hi:"Hindi Female",bn:"Bangla Bangladesh Female",ur:"Hindi Female",fa:"Farsi/Persian",he:"Hebrew Female",
-  nl:"Dutch Female",pl:"Polish Female",sv:"Swedish Female",no:"Norwegian Female",fi:"Finnish Female",
-  da:"Danish Female",el:"Greek Female",cs:"Czech Female",sk:"Slovak Female",hu:"Hungarian Female",
-  ro:"Romanian Female",bg:"Bulgarian",hr:"Croatian Female",sr:"Serbian",sl:"Slovenian",
-  ga:"Irish English Female",is:"Icelandic Female",id:"Indonesian Female",ms:"Malaysian",th:"Thai Female",
-  vi:"Vietnamese Female",tl:"Filipino Female",az:"Azerbaijani",ka:"Georgian",hy:"Armenian",
-  sw:"Swahili",ha:"Hausa",af:"Afrikaans",am:"Amharic",yo:"Yoruba",
-  ca:"Catalan Female",eu:"Basque",gl:"Galician",lt:"Lithuanian",lv:"Latvian",et:"Estonian",
-  mt:"Maltese",cy:"Welsh Female"
-};
+
 
 export default function AILVIE_App(){
 const[lang,setLang]=useState(function(){try{var s=localStorage.getItem("ailvie_lang");if(s)return s;}catch(e){}var b=(navigator.language||"tr").split("-")[0].toLowerCase();return["tr","en","de","ru","zh","hi","nl","es","ar"].indexOf(b)>=0?b:"en";});
@@ -280,6 +264,7 @@ const[appLockEnabled,setAppLockEnabled]=useState(()=>{try{return localStorage.ge
 const[isLocked,setIsLocked]=useState(()=>{try{return localStorage.getItem("ailvie_lock")==="1";}catch(e){return false;}});
 const toastTm=useRef(null);
 const recRef=useRef(null);
+const audioRef=useRef(null); // Azure TTS audio element
 const[isListen,setIsListen]=useState(false);
 const[isSpeak,setIsSpeak]=useState(false);
 const[zoom,setZoom]=useState(1);
@@ -774,10 +759,22 @@ const[connSys,setConnSys]=useState([]);
 const playAlarmBell=()=>{try{const actx=new(window.AudioContext||window.webkitAudioContext)();const playTone=(freq,start,dur)=>{const o=actx.createOscillator();const g=actx.createGain();o.connect(g);g.connect(actx.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(0.3,actx.currentTime+start);g.gain.exponentialRampToValueAtTime(0.01,actx.currentTime+start+dur);o.start(actx.currentTime+start);o.stop(actx.currentTime+start+dur);};for(let i=0;i<3;i++){playTone(880,i*0.6,0.4);playTone(1100,i*0.6+0.15,0.3);}setTimeout(()=>actx.close(),3000);}catch(e){}};
 const speakAlarm=(text)=>{
   if(!text)return;
-  // Reuse the robust female-only speak() — but don't toggle (alarms always speak)
-  if(isSpeak){try{speechSynthesis.cancel();}catch(e){}}
-  setIsSpeak(true);
-  fallbackSpeak(text);
+  try{speechSynthesis.cancel();}catch(e){}
+  try{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}}catch(e){}
+  const azureLang=LC[lang]||"en-US";
+  // Try Azure first, fall back to browser TTS
+  fetch("/api/tts",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({text,lang:azureLang})
+  }).then(res=>{
+    if(res.ok&&res.headers.get("Content-Type")?.includes("audio"))return res.blob();
+    throw new Error("azure_unavailable");
+  }).then(blob=>{
+    const url=URL.createObjectURL(blob);
+    const audio=new Audio(url);audioRef.current=audio;
+    audio.onended=()=>{URL.revokeObjectURL(url);audioRef.current=null;};
+    audio.play().catch(()=>{URL.revokeObjectURL(url);audioRef.current=null;fallbackSpeak(text);});
+  }).catch(()=>{fallbackSpeak(text);});
 };
 
 // Calendar
@@ -1159,7 +1156,14 @@ const sendChat=async(text)=>{
 8) İlaç etkileşimleri konusunda uyar.`,messages:history},apiKey);
     const reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
-    if(voiceActive){speak(reply);const wi=setInterval(()=>{if(!isSpeak&&voiceActive){clearInterval(wi);setTimeout(()=>{if(voiceActive&&!isListen)startVoice((t2)=>sendChat(t2),true);},600);}},500);setTimeout(()=>clearInterval(wi),60000);}
+    if(voiceActive){
+      // Speak the reply; when speech truly ends, resume listening (no fragile polling)
+      speak(reply,null,()=>{
+        if(voiceActive){
+          setTimeout(()=>{if(voiceActive&&!isListen)startVoice((t2)=>sendChat(t2),true);},500);
+        }
+      });
+    }
   }catch(e){
     const noKey=e.message==="NO_KEY";
     const isAIError=e.message?.startsWith("AI_ERROR:");
@@ -1189,21 +1193,45 @@ const[calY,setCalY]=useState(now.getFullYear());
 
 // Speech — FEMALE ONLY
 // Speech — FEMALE ONLY (never falls to male voice)
-const speak=(text,overrideLang)=>{
-  if(!text)return;
+const speak=(text,overrideLang,onEnd)=>{
+  if(!text){if(onEnd)onEnd();return;}
+  // Toggle off if already speaking
   if(isSpeak){
     try{speechSynthesis.cancel();}catch(e){}
-    try{if(window.responsiveVoice)responsiveVoice.cancel();}catch(e){}
+    try{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}}catch(e){}
     setIsSpeak(false);return;
   }
   setIsSpeak(true);
-  // ALWAYS use native browser TTS (fallbackSpeak) — it has a strong female-only
-  // selection chain. ResponsiveVoice free tier is unreliable (sometimes male,
-  // sometimes silent), so we skip it entirely.
-  fallbackSpeak(text,overrideLang);
+  const useLang=overrideLang||lang;
+  const azureLang=LC[useLang]||(typeof useLang==="string"&&useLang.includes("-")?useLang:useLang)||"en-US";
+  // 1) Try Azure Neural TTS (high-quality female voice, every language/device)
+  fetch("/api/tts",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({text,lang:azureLang})
+  }).then(res=>{
+    if(res.ok&&res.headers.get("Content-Type")?.includes("audio")){
+      return res.blob();
+    }
+    throw new Error("azure_unavailable");
+  }).then(blob=>{
+    const url=URL.createObjectURL(blob);
+    const audio=new Audio(url);
+    audioRef.current=audio;
+    audio.onended=()=>{setIsSpeak(false);URL.revokeObjectURL(url);audioRef.current=null;if(onEnd)onEnd();};
+    audio.onerror=()=>{setIsSpeak(false);URL.revokeObjectURL(url);audioRef.current=null;fallbackSpeak(text,overrideLang,onEnd);};
+    audio.play().catch(()=>{
+      // Autoplay blocked or play failed → browser TTS
+      setIsSpeak(false);URL.revokeObjectURL(url);audioRef.current=null;
+      fallbackSpeak(text,overrideLang,onEnd);
+    });
+  }).catch(()=>{
+    // 2) Azure not configured or failed → browser TTS fallback
+    fallbackSpeak(text,overrideLang,onEnd);
+  });
 };
-const fallbackSpeak=(text,overrideLang)=>{
-  if(!window.speechSynthesis){setIsSpeak(false);return;}
+const fallbackSpeak=(text,overrideLang,onEnd)=>{
+  if(!window.speechSynthesis){setIsSpeak(false);if(onEnd)onEnd();return;}
   speechSynthesis.cancel();
   const doSpeak=()=>{
     const u=new SpeechSynthesisUtterance(text);
@@ -1260,8 +1288,8 @@ const fallbackSpeak=(text,overrideLang)=>{
       u.rate=0.9;
     }
     u.volume=1.0;
-    u.onend=()=>setIsSpeak(false);
-    u.onerror=()=>setIsSpeak(false);
+    u.onend=()=>{setIsSpeak(false);if(onEnd)onEnd();};
+    u.onerror=()=>{setIsSpeak(false);if(onEnd)onEnd();};
     speechSynthesis.speak(u);
   };
   // Robust voice loading: wait for voices, prevent double-call and empty-list fallback
@@ -1288,7 +1316,6 @@ const fallbackSpeak=(text,overrideLang)=>{
     },1200);
   }
 };
-// Voice handled by ResponsiveVoice.js
 
 // Voice — improved with continuous mode
 const startVoice=(cb,continuous=false)=>{
@@ -2586,7 +2613,6 @@ return (
               setTimeout(waitAndListen,1500);
             }else{
               try{speechSynthesis.cancel();}catch(e){}
-              if(window.responsiveVoice)try{responsiveVoice.cancel();}catch(e){}
               if(recRef.current)try{recRef.current.abort();}catch(e){}
               setIsListen(false);setIsSpeak(false);
             }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:20,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:voiceActive?1:0.8}}>🎙️</button>
