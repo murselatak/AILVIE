@@ -1170,7 +1170,7 @@ KURALLAR:
       // Speak the reply; when speech truly ends, resume listening (no fragile polling)
       speak(reply,null,()=>{
         if(voiceActive){
-          setTimeout(()=>{if(voiceActive&&!isListen)startVoice((t2)=>sendChat(t2),true);},500);
+          setTimeout(()=>{if(voiceActive&&!recRef.current)startVoice((t2)=>sendChat(t2),true);},500);
         }
       });
     }
@@ -2621,22 +2621,18 @@ return (
             <button onClick={()=>{const newState=!voiceActive;setVoiceActive(newState);
             if(newState){
               if(page!=="chat")goTo("chat");
-              // Speak greeting in the user's language, passing lang so correct voice is picked
+              // Speak greeting; when it truly ends (Azure OR browser), start listening
               const greetings={tr:"Sesli diyalog başladı. Konuşabilirsiniz.",en:"Voice dialog started. You can speak.",de:"Sprachdialog gestartet. Sie können sprechen.",ru:"Голосовой диалог начат. Можете говорить.",zh:"语音对话已开始。您可以说话了。",hi:"वॉइस डायलॉग शुरू हुआ। आप बोल सकते हैं।",nl:"Spraakdialoog gestart. U kunt spreken.",es:"Diálogo de voz iniciado. Puede hablar.",ar:"بدأ الحوار الصوتي. يمكنك التحدث."};
               const greeting=greetings[lang]||greetings.en;
-              speak(greeting,lang);
-              // Poll for speech end, then start mic
-              const waitAndListen=()=>{
-                if(!window.speechSynthesis||!speechSynthesis.speaking){
-                  startVoice((txt)=>{sendChat(txt);},true);
-                }else{
-                  setTimeout(waitAndListen,300);
-                }
-              };
-              setTimeout(waitAndListen,1500);
+              speak(greeting,lang,()=>{
+                // Greeting finished → start listening (small delay so mic doesn't catch tail)
+                setTimeout(()=>{if(voiceActive&&!recRef.current)startVoice((txt)=>{sendChat(txt);},true);},400);
+              });
             }else{
               try{speechSynthesis.cancel();}catch(e){}
-              if(recRef.current)try{recRef.current.abort();}catch(e){}
+              try{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}}catch(e){}
+              if(recRef.current)try{recRef.current.onend=null;recRef.current.onerror=null;recRef.current.abort();}catch(e){}
+              recRef.current=null;
               setIsListen(false);setIsSpeak(false);
             }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:20,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:voiceActive?1:0.8}}>🎙️</button>
             <button onClick={()=>goTo("home")} style={{background:"none",border:"none",color:"#fff",fontSize:20,cursor:"pointer",padding:0}}>🏠</button>
@@ -2736,10 +2732,11 @@ return (
       @keyframes fadeIn{from{opacity:0}to{opacity:1}}
       @keyframes globeSpin{0%{transform:rotateY(0deg)}100%{transform:rotateY(360deg)}}
       textarea{min-height:36px;max-height:150px;overflow-y:auto;transition:height 0.1s}
-      .chat-scroll::-webkit-scrollbar{width:8px}
-      .chat-scroll::-webkit-scrollbar-track{background:transparent}
-      .chat-scroll::-webkit-scrollbar-thumb{background:rgba(0,180,216,.4);border-radius:4px}
-      .chat-scroll::-webkit-scrollbar-thumb:hover{background:rgba(0,180,216,.7)}
+      .chat-scroll{scrollbar-gutter:stable}
+      .chat-scroll::-webkit-scrollbar{width:10px;-webkit-appearance:none}
+      .chat-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,.05);border-radius:5px}
+      .chat-scroll::-webkit-scrollbar-thumb{background:rgba(0,180,216,.6);border-radius:5px;border:2px solid transparent;background-clip:padding-box;min-height:40px}
+      .chat-scroll::-webkit-scrollbar-thumb:hover{background:rgba(0,180,216,.9);background-clip:padding-box}
       @keyframes scanLine{0%{top:10%}50%{top:85%}100%{top:10%}}
       *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;word-wrap:break-word;overflow-wrap:break-word}
       .msg-card{max-width:100%;overflow-wrap:anywhere;word-break:break-word;hyphens:auto}
