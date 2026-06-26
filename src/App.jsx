@@ -1154,7 +1154,8 @@ const sendChat=async(text)=>{
 6) Kısa ve öz cevaplar ver (3-5 cümle). Gerekirse detaylandır.
 7) Hasta verilerine dayanarak kişiye özel öneriler sun.
 8) İlaç etkileşimleri konusunda uyar.
-9) Senin sesli yanıt verme özelliğin VAR — kullanıcı yanıtlarını 🔊 ile dinleyebilir ve seninle sesli diyalog (🎙️) kurabilir. ASLA "sesli yanıt veremiyorum" deme. Sesli konuşma istenirse bunun mümkün olduğunu söyle.`,messages:history},apiKey);
+9) Senin sesli yanıt verme özelliğin VAR — kullanıcı yanıtlarını 🔊 ile dinleyebilir ve seninle sesli diyalog (🎙️) kurabilir. ASLA "sesli yanıt veremiyorum" deme. Sesli konuşma istenirse bunun mümkün olduğunu söyle.
+10) Kullanıcının cihazını, mikrofonunu, kamerasını veya ekranını GÖREMEZSİN. "Seni duyamıyorum", "mikrofonun kapalı/çarpılı", "kameran açık" gibi cihaz durumu hakkında ASLA tahmin yürütme veya uydurma. Sadece kullanıcının yazdığı metne göre yanıt ver. Mikrofon sorunu varsa kullanıcı bunu kendisi çözer; sen sadece yazılı içeriğe odaklan.`,messages:history},apiKey);
     const reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
     if(voiceActive){
