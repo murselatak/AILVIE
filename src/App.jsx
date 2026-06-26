@@ -1153,7 +1153,8 @@ const sendChat=async(text)=>{
 5) SADECE ${LL[lang]} dilinde yanıt ver.
 6) Kısa ve öz cevaplar ver (3-5 cümle). Gerekirse detaylandır.
 7) Hasta verilerine dayanarak kişiye özel öneriler sun.
-8) İlaç etkileşimleri konusunda uyar.`,messages:history},apiKey);
+8) İlaç etkileşimleri konusunda uyar.
+9) Senin sesli yanıt verme özelliğin VAR — kullanıcı yanıtlarını 🔊 ile dinleyebilir ve seninle sesli diyalog (🎙️) kurabilir. ASLA "sesli yanıt veremiyorum" deme. Sesli konuşma istenirse bunun mümkün olduğunu söyle.`,messages:history},apiKey);
     const reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
     if(voiceActive){
@@ -2461,7 +2462,7 @@ const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",ga
 
 const q1Dynamic=pat.name?`${pat.name.split(" ")[0]}, ${t.q1.toLowerCase()} ${lang==="tr"?"Umarım iyisindir 💙":"Hope you are well 💙"}`:t.q1;
 const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}>
-  <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}</div>
+  <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0,alignItems:"center"}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}{chatM.length>0&&<button onClick={()=>{if(confirm(lang==="tr"?"Tüm sohbet geçmişi silinsin mi?":"Clear all chat history?"))setChatM([]);}} style={{...pill(false),marginLeft:"auto",flexShrink:0,color:dg,borderColor:dg+"44",whiteSpace:"nowrap"}}>🗑️ {lang==="tr"?"Temizle":"Clear"}</button>}</div>
   <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>
     {chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}
     {chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
