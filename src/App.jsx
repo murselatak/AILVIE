@@ -1331,7 +1331,12 @@ const fallbackSpeak=(text,overrideLang,onEnd)=>{
 const startVoice=(cb,continuous=false)=>{
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){notify("⚠️ "+(lang==="tr"?"Bu tarayıcı ses tanımayı desteklemiyor. Chrome kullanın.":"Browser doesn't support voice. Use Chrome."));return;}
-  if(isListen&&recRef.current){try{recRef.current.abort();}catch(e){}setIsListen(false);recRef.current=null;return;}
+  // If already listening, pressing again STOPS it (use ref — always current, no stale closure)
+  if(recRef.current){
+    try{recRef.current.onend=null;recRef.current.onerror=null;recRef.current.abort();}catch(e){}
+    recRef.current=null;setIsListen(false);
+    return;
+  }
   try{
     const r=new SR();recRef.current=r;r.lang=lc;r.continuous=false;r.interimResults=false;r.maxAlternatives=1;
     let gotResult=false;
@@ -1347,7 +1352,7 @@ const startVoice=(cb,continuous=false)=>{
       if(e.error==="not-allowed"||e.error==="service-not-allowed"){
         notify("🎤 "+(lang==="tr"?"Mikrofon izni gerekli! Tarayıcı ayarlarından izin verin.":"Microphone permission required! Allow in browser settings."));
       }else if(e.error==="no-speech"){
-        if(continuous&&voiceActive){setTimeout(()=>{if(voiceActive)startVoice(cb,true);},500);}
+        if(continuous&&voiceActive){setTimeout(()=>{if(voiceActive&&!recRef.current)startVoice(cb,true);},500);}
         else notify("🎤 "+(lang==="tr"?"Ses algılanmadı, tekrar deneyin.":"No speech detected, try again."));
       }else if(e.error==="network"){
         notify("⚠️ "+(lang==="tr"?"Ses tanıma ağ hatası. İnternet bağlantınızı kontrol edin.":"Voice recognition network error. Check your connection."));
@@ -1360,12 +1365,19 @@ const startVoice=(cb,continuous=false)=>{
     r.onend=()=>{
       setIsListen(false);recRef.current=null;
       if(continuous&&voiceActive&&!isSpeak&&!gotResult){
-        setTimeout(()=>{if(voiceActive)startVoice(cb,true);},800);
+        setTimeout(()=>{if(voiceActive&&!recRef.current)startVoice(cb,true);},800);
       }
     };
     r.start();
+    // Safety timeout: if mic gets stuck (no onstart/onend within 15s), force reset
+    setTimeout(()=>{
+      if(recRef.current===r){
+        try{r.onend=null;r.onerror=null;r.abort();}catch(e){}
+        recRef.current=null;setIsListen(false);
+      }
+    },15000);
   }catch(e){
-    setIsListen(false);
+    setIsListen(false);recRef.current=null;
     notify("⚠️ "+(lang==="tr"?"Mikrofon başlatılamadı. Chrome kullanın ve izin verin.":"Could not start mic. Use Chrome and allow permission."));
   }
 };
