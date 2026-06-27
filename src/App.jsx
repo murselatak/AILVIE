@@ -2639,7 +2639,7 @@ const renderAdmin=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,
 const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:renderMeds,appts:renderAppts,health:renderHealth,pCard:renderPCard,notes:renderNotes,contacts:renderContacts,community:renderCommunity,chat:renderChat,settings:renderSettings,privacy:renderPrivacy,terms:renderTerms,about:renderAbout};
 
 // ═══ RESTRUCTURED NAV — 2 rows only ═══
-const nav1=[{key:"contacts",icon:"📞",label:t.contacts},{key:"pCard",icon:"🪪",label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:"📊",label:t.health}];
+const nav1=[{key:"contacts",icon:"📞",label:t.contacts},{key:"pCard",icon:"🪪",label:lang==="tr"?"Karne":t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:"📊",label:t.health}];
 const nav2=[{key:"notes",icon:"📝",label:t.notes},{key:"community",icon:"👥",label:t.community},{key:"chat",icon:"🤖",label:t.chat},{key:"admin",icon:"💬",label:t.adminCh||"Destek"},{key:"settings",icon:"⚙️",label:t.settings,onNav:()=>setSettingsTab("all")}];
 
 return (
@@ -2767,10 +2767,10 @@ return (
 
         {/* BOTTOM NAV — compact 2 rows */}
         <div style={{flexShrink:0,background:cd,borderTop:`1px solid ${bd}`,paddingBottom:"max(env(safe-area-inset-bottom),0px)"}}>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)"}}>
-            {nav1.map(n=>(<button key={n.key} onClick={()=>page===n.key?goTo("home"):goTo(n.key)} style={{background:"none",border:"none",padding:"6px 0 2px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:0,color:page===n.key?ac:mt,position:"relative"}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"25%",right:"25%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:16}}>{n.icon}</span><span style={{fontSize:10,fontWeight:page===n.key?700:400}}>{n.label}</span></button>))}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)"}}>
+            {nav1.map(n=>(<button key={n.key} onClick={()=>page===n.key?goTo("home"):goTo(n.key)} style={{background:"none",border:"none",padding:"6px 1px 2px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:0,color:page===n.key?ac:mt,position:"relative",minWidth:0}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"25%",right:"25%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:16}}>{n.icon}</span><span style={{fontSize:9.5,fontWeight:page===n.key?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{n.label}</span></button>))}
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",borderTop:`1px solid ${bd}`}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",borderTop:`1px solid ${bd}`}}>
             {nav2.map(n=>(<button key={n.key} onClick={()=>{if(n.onNav)n.onNav();if(n.key==="settings"){if(page==="settings"&&settingsTab==="all")goTo("home");else{setSettingsTab("all");goTo("settings");}}else if(page===n.key)goTo("home");else goTo(n.key);}} style={{background:"none",border:"none",padding:"5px 0 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:0,color:page===n.key?ac:mt,position:"relative"}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:16}}>{n.icon}</span><span style={{fontSize:10,fontWeight:page===n.key?700:400}}>{n.label}</span></button>))}
           </div>
         </div>
