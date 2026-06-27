@@ -2482,11 +2482,11 @@ const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",ga
 </div>);
 
 const q1Dynamic=pat.name?`${pat.name.split(" ")[0]}, ${t.q1.toLowerCase()} ${lang==="tr"?"Umarım iyisindir 💙":"Hope you are well 💙"}`:t.q1;
-const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,flex:1,minHeight:0}}>
+const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,flex:1,minHeight:0,height:"100%",position:"relative"}}>
   <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0,alignItems:"center"}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}{chatM.length>0&&<button onClick={()=>{if(confirm(lang==="tr"?"Tüm sohbet geçmişi silinsin mi?":"Clear all chat history?"))setChatM([]);}} style={{...pill(false),marginLeft:"auto",flexShrink:0,color:dg,borderColor:dg+"44",whiteSpace:"nowrap"}}>🗑️ {lang==="tr"?"Temizle":"Clear"}</button>}</div>
-  <div className="chat-scroll" style={{flex:"1 1 0",minHeight:0,overflowY:"auto",overflowX:"hidden",display:"flex",flexDirection:"column",gap:8,WebkitOverflowScrolling:"touch",scrollbarWidth:"thin",scrollbarColor:`${ac}66 transparent`}}>
+  <div className="chat-scroll" style={{flex:"1 1 0",minHeight:0,height:0,overflowY:"auto",overflowX:"hidden",display:"flex",flexDirection:"column",gap:8,WebkitOverflowScrolling:"touch",scrollbarWidth:"thin",scrollbarColor:`${ac}66 transparent`}}>
     {chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}
-    {chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
+    {chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,flexShrink:0,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
       {m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}
       <div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.text}</div>
       <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
