@@ -2696,11 +2696,11 @@ return (
         </div>
 
 
-        {/* ZOOM CONTROLS — transparent floating, proportional zoom up to 1.5x */}
-        <div style={{position:"absolute",top:64,right:10,zIndex:90,display:"flex",flexDirection:"column",gap:6}}>
-          <button onClick={()=>setZoom(z=>Math.min(Math.round((z+0.1)*10)/10,1.5))} title={lang==="tr"?"Büyüt":"Zoom in"} style={{width:36,height:36,borderRadius:18,background:dark?"rgba(40,52,68,0.45)":"rgba(255,255,255,0.45)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:`1.5px solid ${ac}88`,color:ac,fontSize:21,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 10px rgba(0,0,0,.2)",lineHeight:1}}>+</button>
-          <button onClick={()=>setZoom(z=>Math.max(Math.round((z-0.1)*10)/10,1))} title={lang==="tr"?"Küçült":"Zoom out"} style={{width:36,height:36,borderRadius:18,background:dark?"rgba(40,52,68,0.45)":"rgba(255,255,255,0.45)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:`1.5px solid ${ac}88`,color:ac,fontSize:24,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 10px rgba(0,0,0,.2)",lineHeight:1}}>−</button>
-          {zoom!==1&&<button onClick={()=>setZoom(1)} title={lang==="tr"?"Sıfırla":"Reset"} style={{width:36,height:36,borderRadius:18,background:`${ac}dd`,border:`1.5px solid ${ac}`,color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 10px rgba(0,0,0,.25)",lineHeight:1}}>{zoom.toFixed(1)}x</button>}
+        {/* ZOOM CONTROLS — truly transparent floating (no blur dependency) */}
+        <div style={{position:"absolute",top:64,right:10,zIndex:90,display:"flex",flexDirection:"column",gap:8}}>
+          <button onClick={()=>setZoom(z=>Math.min(Math.round((z+0.1)*10)/10,1.5))} title={lang==="tr"?"Büyüt":"Zoom in"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:ac,fontSize:23,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}}>+</button>
+          <button onClick={()=>setZoom(z=>Math.max(Math.round((z-0.1)*10)/10,1))} title={lang==="tr"?"Küçült":"Zoom out"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:ac,fontSize:26,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}}>−</button>
+          {zoom!==1&&<button onClick={()=>setZoom(1)} title={lang==="tr"?"Sıfırla":"Reset"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:ac,fontSize:13,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}}>{zoom.toFixed(1)}x</button>}
         </div>
 
         {/* LEFT SIDE MENU — compact */}
