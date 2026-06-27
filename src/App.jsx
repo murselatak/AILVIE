@@ -1163,7 +1163,9 @@ KURALLAR:
 5) Hasta verilerine dayanarak öneri sun.
 6) İlaç etkileşimlerinde uyar.
 7) Sesli yanıt özelliğin VAR (🔊 dinleme, 🎙️ sesli diyalog). "Sesli veremiyorum" deme.
-8) Kullanıcının cihazını/mikrofonunu GÖREMEZSİN. "Seni duyamıyorum", "mikrofonun kapalı" gibi cihaz durumu hakkında uydurma yapma.`,messages:history},apiKey);
+8) Kullanıcının cihazını/mikrofonunu GÖREMEZSİN. "Seni duyamıyorum", "mikrofonun kapalı" gibi cihaz durumu hakkında uydurma yapma.
+9) Kendi teknik altyapın hakkında konuşma. "Makine öğrenimim yok", "önceki günü hatırlamıyorum", "ben sadece bir dil modeliyim", "hafızam yok" gibi teknik açıklamalar YAPMA. Bunlar kullanıcının kafasını karıştırır. Sadece bir sağlık asistanı gibi davran ve sağlık konusuna odaklan.
+10) İlaç hakkında soru sorulduğunda: İlacı tanıyorsan etken maddesini, ne için kullanıldığını, yan etkilerini ve uyarılarını açıkla. İlacın adını net anlamadıysan kısaca "Hangi ilaç olduğunu netleştirir misin (etken madde veya kullanım amacı)?" diye SADECE BİR KEZ sor, sonra elindeki bilgiyle yardımcı ol. İlaç bilgisi verirken mutlaka "kesin bilgi için doktor/eczacıya danışın" uyarısı ekle.`,messages:history},apiKey);
     const reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
     if(voiceActive){
@@ -1338,14 +1340,28 @@ const startVoice=(cb,continuous=false)=>{
     return;
   }
   try{
-    const r=new SR();recRef.current=r;r.lang=lc;r.continuous=false;r.interimResults=false;r.maxAlternatives=1;
+    const r=new SR();recRef.current=r;r.lang=lc;
+    // Voice dialog (continuous=true): keep mic open longer, don't close on short pauses
+    r.continuous=continuous;r.interimResults=continuous;r.maxAlternatives=1;
     let gotResult=false;
+    let finalText="";
     r.onstart=()=>{setIsListen(true);notify("🎤 "+(lang==="tr"?"Dinliyorum, konuşun...":"Listening, speak now..."));};
     r.onresult=(e)=>{
       gotResult=true;
-      const txt=e.results[0][0].transcript;
-      setIsListen(false);recRef.current=null;
-      if(txt&&txt.trim())cb(txt);
+      if(continuous){
+        // Voice dialog: accumulate all final results, send on speech end
+        let interim="";
+        for(let k=e.resultIndex;k<e.results.length;k++){
+          if(e.results[k].isFinal)finalText+=e.results[k][0].transcript+" ";
+          else interim+=e.results[k][0].transcript;
+        }
+        // don't send yet — wait for onend (user may pause mid-sentence)
+      }else{
+        // Single capture (message box): send immediately
+        const txt=e.results[0][0].transcript;
+        setIsListen(false);recRef.current=null;
+        if(txt&&txt.trim())cb(txt);
+      }
     };
     r.onerror=(e)=>{
       setIsListen(false);recRef.current=null;
@@ -1364,18 +1380,25 @@ const startVoice=(cb,continuous=false)=>{
     };
     r.onend=()=>{
       setIsListen(false);recRef.current=null;
-      if(continuous&&voiceActive&&!isSpeak&&!gotResult){
-        setTimeout(()=>{if(voiceActive&&!recRef.current)startVoice(cb,true);},800);
+      if(continuous){
+        // Voice dialog: send the accumulated final text now (user finished speaking)
+        const spoken=finalText.trim();
+        if(spoken){
+          cb(spoken); // this triggers AI reply; the reply's onEnd will restart listening
+        }else if(voiceActive&&!isSpeak){
+          // nothing captured (silence) — keep listening
+          setTimeout(()=>{if(voiceActive&&!recRef.current)startVoice(cb,true);},600);
+        }
       }
     };
     r.start();
-    // Safety timeout: if mic gets stuck (no onstart/onend within 15s), force reset
+    // Safety timeout: if mic gets stuck (no onstart/onend within 20s), force reset
     setTimeout(()=>{
       if(recRef.current===r){
         try{r.onend=null;r.onerror=null;r.abort();}catch(e){}
         recRef.current=null;setIsListen(false);
       }
-    },15000);
+    },20000);
   }catch(e){
     setIsListen(false);recRef.current=null;
     notify("⚠️ "+(lang==="tr"?"Mikrofon başlatılamadı. Chrome kullanın ve izin verin.":"Could not start mic. Use Chrome and allow permission."));
@@ -2486,7 +2509,7 @@ const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,f
   <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0,alignItems:"center"}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}{chatM.length>0&&<button onClick={()=>{if(confirm(lang==="tr"?"Tüm sohbet geçmişi silinsin mi?":"Clear all chat history?"))setChatM([]);}} style={{...pill(false),marginLeft:"auto",flexShrink:0,color:dg,borderColor:dg+"44",whiteSpace:"nowrap"}}>🗑️ {lang==="tr"?"Temizle":"Clear"}</button>}</div>
   <div className="chat-scroll" style={{flex:"1 1 0",minHeight:0,height:0,overflowY:"auto",overflowX:"hidden",display:"flex",flexDirection:"column",gap:8,WebkitOverflowScrolling:"touch",scrollbarWidth:"thin",scrollbarColor:`${ac}66 transparent`}}>
     {chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}
-    {chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,flexShrink:0,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
+    {chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,padding:"8px 11px",borderRadius:12,flexShrink:0,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
       {m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}
       <div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.text}</div>
       <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
