@@ -2639,8 +2639,8 @@ const renderAdmin=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,
 const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:renderMeds,appts:renderAppts,health:renderHealth,pCard:renderPCard,notes:renderNotes,contacts:renderContacts,community:renderCommunity,chat:renderChat,settings:renderSettings,privacy:renderPrivacy,terms:renderTerms,about:renderAbout};
 
 // ═══ RESTRUCTURED NAV — 2 rows only ═══
-const nav1=[{key:"contacts",icon:"📞",label:t.contacts},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:"📊",label:t.health}];
-const nav2=[{key:"pCard",icon:"🪪",label:t.pCard},{key:"notes",icon:"📝",label:t.notes},{key:"community",icon:"👥",label:t.community},{key:"chat",icon:"🤖",label:t.chat},{key:"admin",icon:"💬",label:t.adminCh||"Destek"},{key:"settings",icon:"⚙️",label:t.settings,onNav:()=>setSettingsTab("all")}];
+const nav1=[{key:"contacts",icon:"📞",label:t.contacts},{key:"pCard",icon:"🪪",label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:"📊",label:t.health}];
+const nav2=[{key:"notes",icon:"📝",label:t.notes},{key:"community",icon:"👥",label:t.community},{key:"chat",icon:"🤖",label:t.chat},{key:"admin",icon:"💬",label:t.adminCh||"Destek"},{key:"settings",icon:"⚙️",label:t.settings,onNav:()=>setSettingsTab("all")}];
 
 return (
   <div style={{width:"100%",maxWidth:480,margin:"0 auto",height:"100dvh",display:"flex",flexDirection:"column",overflow:"hidden",background:bg,fontSize:fs,color:tc,fontFamily:"'SF Pro Display',-apple-system,'Segoe UI',system-ui,sans-serif",direction:rtl?"rtl":"ltr",position:"relative"}}>
