@@ -268,7 +268,8 @@ const audioRef=useRef(null); // Azure TTS audio element
 const chatEndRef=useRef(null); // auto-scroll anchor for chat
 const[isListen,setIsListen]=useState(false);
 const[isSpeak,setIsSpeak]=useState(false);
-const[zoom,setZoom]=useState(1);
+const[zoom,setZoom]=useState(()=>{try{const z=parseFloat(localStorage.getItem("ailvie_zoom"));return z>=1&&z<=1.5?z:1;}catch{return 1;}});
+useEffect(()=>{try{localStorage.setItem("ailvie_zoom",String(zoom));}catch{}},[zoom]);
 const[voiceActive,setVoiceActive]=useState(false);
 // Admin support — per-user (keyed by user id)
 const userId=(()=>{try{let id=localStorage.getItem("ailvie_uid");if(!id){id="u_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);localStorage.setItem("ailvie_uid",id);}return id;}catch{return"u_anon";}})();
@@ -2695,11 +2696,11 @@ return (
         </div>
 
 
-        {/* ZOOM CONTROLS */}
-        <div style={{position:"absolute",top:62,right:6,zIndex:90,display:"flex",flexDirection:"column",gap:2}}>
-          <button onClick={()=>setFs(f=>Math.min(f+1,24))} style={{width:24,height:24,borderRadius:12,background:`${ac}22`,border:`1px solid ${bd}`,color:"#e8a817",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-          <button onClick={()=>setFs(f=>Math.max(f-1,12))} style={{width:24,height:24,borderRadius:12,background:`${ac}22`,border:`1px solid ${bd}`,color:"#e8a817",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-          {fs!==15&&<button onClick={()=>setFs(15)} style={{width:24,height:24,borderRadius:12,background:`${ac}44`,border:`1px solid ${bd}`,color:"#e8a817",fontSize:10,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>1x</button>}
+        {/* ZOOM CONTROLS — transparent floating, proportional zoom up to 1.5x */}
+        <div style={{position:"absolute",top:60,right:8,zIndex:90,display:"flex",flexDirection:"column",gap:5,opacity:0.55}}>
+          <button onClick={()=>setZoom(z=>Math.min(Math.round((z+0.1)*10)/10,1.5))} title={lang==="tr"?"Büyüt":"Zoom in"} style={{width:34,height:34,borderRadius:17,background:"rgba(120,120,120,0.18)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",border:`1px solid ${ac}55`,color:ac,fontSize:20,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.15)"}}>+</button>
+          <button onClick={()=>setZoom(z=>Math.max(Math.round((z-0.1)*10)/10,1))} title={lang==="tr"?"Küçült":"Zoom out"} style={{width:34,height:34,borderRadius:17,background:"rgba(120,120,120,0.18)",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",border:`1px solid ${ac}55`,color:ac,fontSize:22,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.15)"}}>−</button>
+          {zoom!==1&&<button onClick={()=>setZoom(1)} title={lang==="tr"?"Sıfırla":"Reset"} style={{width:34,height:34,borderRadius:17,background:`${ac}cc`,backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",border:`1px solid ${ac}`,color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.2)"}}>{zoom.toFixed(1)}x</button>}
         </div>
 
         {/* LEFT SIDE MENU — compact */}
@@ -2747,7 +2748,7 @@ return (
         {toast&&<div style={{position:"absolute",top:100,left:"50%",transform:"translateX(-50%)",background:cd,color:tc,padding:"10px 20px",borderRadius:12,boxShadow:"0 6px 24px rgba(0,0,0,.3)",zIndex:300,maxWidth:300,border:`1px solid ${ac}`,fontSize:fs,animation:"slideD .3s ease-out",textAlign:"center"}}>{toast}</div>}
 
         {/* Content */}
-        <div style={{flex:"1 1 0",minHeight:0,height:0,overflowY:page==="chat"?"hidden":"auto",overflowX:"hidden",padding:page==="chat"?"10px 12px 8px":"10px 12px 24px",display:page==="chat"?"flex":"block",flexDirection:"column",WebkitOverflowScrolling:"touch",cursor:"default"}} onClick={(e)=>{if(e.target===e.currentTarget){setEditNote(null);setNOpen(false);setShowAddMed(false);setShowAddAppt(false);setShowAddC(false);setShowWordLangPicker(false);setSelDate(null);}}}>{pages[page]?.()}</div>
+        <div style={{flex:"1 1 0",minHeight:0,height:0,overflowY:page==="chat"?"hidden":"auto",overflowX:"hidden",padding:page==="chat"?"10px 12px 8px":"10px 12px 24px",display:page==="chat"?"flex":"block",flexDirection:"column",WebkitOverflowScrolling:"touch",cursor:"default",zoom:zoom}} onClick={(e)=>{if(e.target===e.currentTarget){setEditNote(null);setNOpen(false);setShowAddMed(false);setShowAddAppt(false);setShowAddC(false);setShowWordLangPicker(false);setSelDate(null);}}}>{pages[page]?.()}</div>
 
         {/* Notif Panel */}
         {showNotif&&<div style={{position:"absolute",bottom:86,left:0,right:0,maxHeight:"50%",background:cd,borderRadius:"16px 16px 0 0",boxShadow:"0 -6px 24px rgba(0,0,0,.3)",zIndex:250,padding:"14px 16px",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontWeight:700}}>🔔 {t.notif}</span><div style={{display:"flex",gap:8}}><button onClick={()=>setNotifs(p=>p.map(n=>({...n,read:true})))} style={{fontSize:fs-2,color:ac,background:"none",border:"none",cursor:"pointer"}}>✓</button><button onClick={()=>setNotifs([])} style={{fontSize:fs-2,color:dg,background:"none",border:"none",cursor:"pointer"}}>✕</button><button onClick={()=>setShowNotif(false)} style={{background:"none",border:"none",fontSize:16,cursor:"pointer",color:tc}}>✕</button></div></div>{notifs.length===0&&<div style={{textAlign:"center",color:mt,padding:16}}>—</div>}{notifs.map(n=><div key={n.id} style={{padding:"6px 0",borderBottom:`1px solid ${bd}`,opacity:n.read?0.4:1}}><div>{n.text}</div><div style={{fontSize:fs-3,color:mt}}>{n.time}</div></div>)}</div>}
