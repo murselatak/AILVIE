@@ -274,6 +274,10 @@ useEffect(()=>{try{localStorage.setItem("ailvie_zoom",String(zoom));}catch{}},[z
 const[zoomPos,setZoomPos]=useState(()=>{try{const p=JSON.parse(localStorage.getItem("ailvie_zoompos"));if(p&&typeof p.top==="number"&&typeof p.right==="number")return p;}catch{}return{top:64,right:10};});
 const zoomDrag=useRef({active:false,moved:false,startX:0,startY:0,startTop:0,startRight:0});
 const[voiceActive,setVoiceActive]=useState(false);
+const voiceActiveRef=useRef(false); // always-current value for callbacks (avoids stale closure)
+useEffect(()=>{voiceActiveRef.current=voiceActive;},[voiceActive]);
+const isSpeakRef=useRef(false); // always-current isSpeak for voice loop
+useEffect(()=>{isSpeakRef.current=isSpeak;},[isSpeak]);
 // Admin support — per-user (keyed by user id)
 const userId=(()=>{try{let id=localStorage.getItem("ailvie_uid");if(!id){id="u_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);localStorage.setItem("ailvie_uid",id);}return id;}catch{return"u_anon";}})();
 const[adminMsgs,setAdminMsgs]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_support_"+userId)||"[]");}catch{return[];}});
@@ -1177,11 +1181,11 @@ KURALLAR:
 10) İlaç hakkında soru sorulduğunda: İlacı tanıyorsan etken maddesini, ne için kullanıldığını, yan etkilerini ve uyarılarını açıkla. İlacın adını net anlamadıysan kısaca "Hangi ilaç olduğunu netleştirir misin (etken madde veya kullanım amacı)?" diye SADECE BİR KEZ sor, sonra elindeki bilgiyle yardımcı ol. İlaç bilgisi verirken mutlaka "kesin bilgi için doktor/eczacıya danışın" uyarısı ekle.`,messages:history},apiKey);
     const reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
-    if(voiceActive){
+    if(voiceActiveRef.current){
       // Speak the reply; when speech truly ends, resume listening (no fragile polling)
       speak(reply,null,()=>{
-        if(voiceActive){
-          setTimeout(()=>{if(voiceActive&&!recRef.current)startVoice((t2)=>sendChat(t2),true);},500);
+        if(voiceActiveRef.current){
+          setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current)startVoice((t2)=>sendChat(t2),true);},500);
         }
       });
     }
@@ -1358,12 +1362,12 @@ const startVoice=(cb,continuous=false)=>{
     r.onresult=(e)=>{
       gotResult=true;
       if(continuous){
-        // Voice dialog: accumulate all final results, send on speech end
-        let interim="";
-        for(let k=e.resultIndex;k<e.results.length;k++){
-          if(e.results[k].isFinal)finalText+=e.results[k][0].transcript+" ";
-          else interim+=e.results[k][0].transcript;
+        // Voice dialog: rebuild final text from ALL results each time (avoids duplication)
+        let combined="";
+        for(let k=0;k<e.results.length;k++){
+          if(e.results[k].isFinal)combined+=e.results[k][0].transcript+" ";
         }
+        finalText=combined; // replace, don't append — prevents garbled/repeated words
         // don't send yet — wait for onend (user may pause mid-sentence)
       }else{
         // Single capture (message box): send immediately
@@ -1377,7 +1381,7 @@ const startVoice=(cb,continuous=false)=>{
       if(e.error==="not-allowed"||e.error==="service-not-allowed"){
         notify("🎤 "+(lang==="tr"?"Mikrofon izni gerekli! Tarayıcı ayarlarından izin verin.":"Microphone permission required! Allow in browser settings."));
       }else if(e.error==="no-speech"){
-        if(continuous&&voiceActive){setTimeout(()=>{if(voiceActive&&!recRef.current)startVoice(cb,true);},500);}
+        if(continuous&&voiceActiveRef.current){setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current)startVoice(cb,true);},500);}
         else notify("🎤 "+(lang==="tr"?"Ses algılanmadı, tekrar deneyin.":"No speech detected, try again."));
       }else if(e.error==="network"){
         notify("⚠️ "+(lang==="tr"?"Ses tanıma ağ hatası. İnternet bağlantınızı kontrol edin.":"Voice recognition network error. Check your connection."));
@@ -1394,9 +1398,9 @@ const startVoice=(cb,continuous=false)=>{
         const spoken=finalText.trim();
         if(spoken){
           cb(spoken); // this triggers AI reply; the reply's onEnd will restart listening
-        }else if(voiceActive&&!isSpeak){
+        }else if(voiceActiveRef.current&&!isSpeakRef.current){
           // nothing captured (silence) — keep listening
-          setTimeout(()=>{if(voiceActive&&!recRef.current)startVoice(cb,true);},600);
+          setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current&&!isSpeakRef.current)startVoice(cb,true);},600);
         }
       }
     };
@@ -2674,7 +2678,7 @@ return (
             {/* Home button moved here */}
             <button onClick={goBack} style={{background:"none",border:"none",color:histIdx>0?"#e8a817":"#ffffff66",fontSize:19,cursor:"pointer",padding:"2px"}}>◀</button>
             <button onClick={goFwd} style={{background:"none",border:"none",color:histIdx<pageHist.length-1?"#e8a817":"#ffffff66",fontSize:19,cursor:"pointer",padding:"2px"}}>▶</button>
-            <button onClick={()=>{const newState=!voiceActive;setVoiceActive(newState);
+            <button onClick={()=>{const newState=!voiceActive;setVoiceActive(newState);voiceActiveRef.current=newState;
             if(newState){
               if(page!=="chat")goTo("chat");
               // Speak greeting; when it truly ends (Azure OR browser), start listening
@@ -2682,7 +2686,7 @@ return (
               const greeting=greetings[lang]||greetings.en;
               speak(greeting,lang,()=>{
                 // Greeting finished → start listening (small delay so mic doesn't catch tail)
-                setTimeout(()=>{if(voiceActive&&!recRef.current)startVoice((txt)=>{sendChat(txt);},true);},400);
+                setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current)startVoice((txt)=>{sendChat(txt);},true);},400);
               });
             }else{
               try{speechSynthesis.cancel();}catch(e){}
