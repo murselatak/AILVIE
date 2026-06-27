@@ -270,6 +270,9 @@ const[isListen,setIsListen]=useState(false);
 const[isSpeak,setIsSpeak]=useState(false);
 const[zoom,setZoom]=useState(()=>{try{const z=parseFloat(localStorage.getItem("ailvie_zoom"));return z>=1&&z<=1.5?z:1;}catch{return 1;}});
 useEffect(()=>{try{localStorage.setItem("ailvie_zoom",String(zoom));}catch{}},[zoom]);
+// Draggable zoom control position (top/right offsets in px), persisted
+const[zoomPos,setZoomPos]=useState(()=>{try{const p=JSON.parse(localStorage.getItem("ailvie_zoompos"));if(p&&typeof p.top==="number"&&typeof p.right==="number")return p;}catch{}return{top:64,right:10};});
+const zoomDrag=useRef({active:false,moved:false,startX:0,startY:0,startTop:0,startRight:0});
 const[voiceActive,setVoiceActive]=useState(false);
 // Admin support — per-user (keyed by user id)
 const userId=(()=>{try{let id=localStorage.getItem("ailvie_uid");if(!id){id="u_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);localStorage.setItem("ailvie_uid",id);}return id;}catch{return"u_anon";}})();
@@ -2696,11 +2699,17 @@ return (
         </div>
 
 
-        {/* ZOOM CONTROLS — truly transparent floating (no blur dependency) */}
-        <div style={{position:"absolute",top:64,right:10,zIndex:90,display:"flex",flexDirection:"column",gap:8}}>
-          <button onClick={()=>setZoom(z=>Math.min(Math.round((z+0.1)*10)/10,1.5))} title={lang==="tr"?"Büyüt":"Zoom in"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:ac,fontSize:23,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}}>+</button>
-          <button onClick={()=>setZoom(z=>Math.max(Math.round((z-0.1)*10)/10,1))} title={lang==="tr"?"Küçült":"Zoom out"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:ac,fontSize:26,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}}>−</button>
-          {zoom!==1&&<button onClick={()=>setZoom(1)} title={lang==="tr"?"Sıfırla":"Reset"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:ac,fontSize:13,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}}>{zoom.toFixed(1)}x</button>}
+        {/* ZOOM CONTROLS — transparent, draggable (user can move anywhere) */}
+        <div
+          style={{position:"absolute",top:zoomPos.top,right:zoomPos.right,zIndex:90,display:"flex",flexDirection:"column",gap:8,alignItems:"center",touchAction:"none"}}
+          onTouchStart={(e)=>{const t=e.touches[0];zoomDrag.current={active:true,moved:false,startX:t.clientX,startY:t.clientY,startTop:zoomPos.top,startRight:zoomPos.right};}}
+          onTouchMove={(e)=>{if(!zoomDrag.current.active)return;const t=e.touches[0];const dx=t.clientX-zoomDrag.current.startX;const dy=t.clientY-zoomDrag.current.startY;if(Math.abs(dx)>3||Math.abs(dy)>3)zoomDrag.current.moved=true;const newTop=Math.max(48,Math.min(window.innerHeight-180,zoomDrag.current.startTop+dy));const newRight=Math.max(4,Math.min(window.innerWidth-50,zoomDrag.current.startRight-dx));setZoomPos({top:newTop,right:newRight});}}
+          onTouchEnd={()=>{if(zoomDrag.current.moved){try{localStorage.setItem("ailvie_zoompos",JSON.stringify(zoomPos));}catch{}}zoomDrag.current.active=false;}}
+        >
+          <div title={lang==="tr"?"Taşımak için sürükle":"Drag to move"} style={{width:38,height:16,borderRadius:8,background:`${ac}33`,border:`1px solid ${ac}77`,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",color:ac,fontSize:12,fontWeight:800,lineHeight:1,userSelect:"none"}}>⋮⋮</div>
+          <button onClick={()=>{if(!zoomDrag.current.moved)setZoom(z=>Math.min(Math.round((z+0.1)*10)/10,1.5));}} title={lang==="tr"?"Büyüt":"Zoom in"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:ac,fontSize:23,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}}>+</button>
+          <button onClick={()=>{if(!zoomDrag.current.moved)setZoom(z=>Math.max(Math.round((z-0.1)*10)/10,1));}} title={lang==="tr"?"Küçült":"Zoom out"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:ac,fontSize:26,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}}>−</button>
+          {zoom!==1&&<button onClick={()=>{if(!zoomDrag.current.moved)setZoom(1);}} title={lang==="tr"?"Sıfırla":"Reset"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:ac,fontSize:13,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}}>{zoom.toFixed(1)}x</button>}
         </div>
 
         {/* LEFT SIDE MENU — compact */}
