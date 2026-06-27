@@ -1523,32 +1523,6 @@ const renderHome=()=>{
       </div>}
       {hscore===0&&<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:"8px 0"}}>{lang==="tr"?"Sağlık verilerinizi girin":"Enter your health data"}</div>}
     </div>
-    {/* Smart Watch Health Data — manual now, auto-sync in mobile app */}
-    <div style={{...CS}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-        <span style={{fontWeight:700,fontSize:fs+1,display:"flex",alignItems:"center",gap:6}}>⌚ {lang==="tr"?"Akıllı Saat Verileri":lang==="de"?"Smartwatch-Daten":lang==="es"?"Datos del reloj":lang==="ru"?"Данные часов":lang==="ar"?"بيانات الساعة":"Smartwatch Data"}</span>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-        {[
-          {icon:"👟",field:"steps",label:lang==="tr"?"Adım":lang==="de"?"Schritte":lang==="es"?"Pasos":lang==="ru"?"Шаги":lang==="ar"?"خطوات":"Steps",unit:"",good:v=>v>=7000},
-          {icon:"😴",field:"sleep",label:lang==="tr"?"Uyku":lang==="de"?"Schlaf":lang==="es"?"Sueño":lang==="ru"?"Сон":lang==="ar"?"نوم":"Sleep",unit:"saat",good:v=>v>=7&&v<=9},
-          {icon:"🫁",field:"spo2",label:lang==="tr"?"Oksijen":lang==="de"?"Sauerstoff":lang==="es"?"Oxígeno":lang==="ru"?"Кислород":lang==="ar"?"أكسجين":"Oxygen",unit:"%",good:v=>v>=95},
-          {icon:"🔥",field:"calories",label:lang==="tr"?"Kalori":lang==="de"?"Kalorien":lang==="es"?"Calorías":lang==="ru"?"Калории":lang==="ar"?"سعرات":"Calories",unit:"kcal",good:v=>v>=300},
-          {icon:"💗",field:"restPulse",label:lang==="tr"?"Dinlenik Nabız":lang==="de"?"Ruhepuls":lang==="es"?"Pulso reposo":lang==="ru"?"Пульс покоя":lang==="ar"?"نبض الراحة":"Resting HR",unit:"bpm",good:v=>v>=50&&v<=70},
-        ].map(item=>{
-          const v=hd[item.field]||0;const isEd=editH===item.field;
-          return(<div key={item.field} style={{padding:"8px 10px",borderRadius:8,background:`${ac}06`,border:`1px solid ${bd}`}}>
-            <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:3}}><span style={{fontSize:16}}>{item.icon}</span><span style={{fontSize:fs-3,color:mt}}>{item.label}</span></div>
-            {isEd?<div style={{display:"flex",gap:4,alignItems:"center"}}><input type="number" autoFocus value={tmpH} onChange={e=>setTmpH(e.target.value)} style={{...IS,width:60,padding:"4px 6px",fontWeight:700,fontSize:fs-1}} onKeyDown={e=>{if(e.key==="Enter"){setHd(p=>({...p,[item.field]:Number(tmpH)}));setEditH(null);}}}/><button onClick={()=>{setHd(p=>({...p,[item.field]:Number(tmpH)}));setEditH(null);}} style={{...BP,padding:"3px 8px"}}>✓</button></div>
-            :<div onClick={()=>{setEditH(item.field);setTmpH(v>0?String(v):"");}} style={{cursor:"pointer",fontWeight:700,fontSize:fs+1,color:v>0?(item.good(v)?sc:tc):mt}}>{v>0?`${v}${item.unit?" "+item.unit:""}`:t.tap}</div>}
-          </div>);
-        })}
-      </div>
-      <div style={{marginTop:8,padding:"7px 9px",borderRadius:7,background:`${ac}08`,fontSize:fs-3,color:mt,display:"flex",alignItems:"center",gap:6}}>
-        <span style={{fontSize:14}}>📲</span>
-        <span>{lang==="tr"?"Şimdi manuel girin. Mobil uygulamada Apple Health & Google Health Connect ile otomatik senkronize olacak.":lang==="de"?"Jetzt manuell. In der mobilen App automatische Synchronisierung mit Apple Health & Google Health Connect.":lang==="es"?"Manual ahora. En la app móvil se sincronizará automáticamente con Apple Health y Google Health Connect.":lang==="ru"?"Сейчас вручную. В мобильном приложении автосинхронизация с Apple Health и Google Health Connect.":lang==="ar"?"يدوي الآن. في تطبيق الجوال سيتزامن تلقائيًا مع Apple Health و Google Health Connect.":"Manual now. Will auto-sync via Apple Health & Google Health Connect in the mobile app."}</span>
-      </div>
-    </div>
     {/* Next Med + Next Appt — only if data exists */}
     {<div style={{display:"grid",gridTemplateColumns:nextMed&&nextAppt?"1fr 1fr":"1fr",gap:6}}>
       {<div onClick={()=>goTo("medTime")} style={{...CS,cursor:"pointer",padding:"12px",border:`1px solid ${ac}33`,background:`${ac}06`}}>
@@ -2273,6 +2247,30 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div style={{fontSize:fs-3,color:mt}}>+{wellnessBonus} {lang==="tr"?"puan (su, uyku, adım, ruh hali, egzersiz)":"pts (water, sleep, steps, mood, exercise)"}</div>
     </div>}
     <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Kaynak: acibadem.com.tr referans değerleri":"Source: acibadem.com.tr reference values"}</div>
+  </div>
+  {/* Smart Watch Health Data — manual now, auto-sync in mobile app */}
+  <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>⌚ {lang==="tr"?"Akıllı Saat Verileri":lang==="de"?"Smartwatch-Daten":lang==="es"?"Datos del reloj":lang==="ru"?"Данные часов":lang==="ar"?"بيانات الساعة":"Smartwatch Data"}</div>
+  <div style={{...CS,border:`1px solid ${ac}33`}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+      {[
+        {icon:"👟",field:"steps",label:lang==="tr"?"Adım":lang==="de"?"Schritte":lang==="es"?"Pasos":lang==="ru"?"Шаги":lang==="ar"?"خطوات":"Steps",unit:"",good:v=>v>=7000},
+        {icon:"😴",field:"sleep",label:lang==="tr"?"Uyku":lang==="de"?"Schlaf":lang==="es"?"Sueño":lang==="ru"?"Сон":lang==="ar"?"نوم":"Sleep",unit:lang==="tr"?"saat":"h",good:v=>v>=7&&v<=9},
+        {icon:"🫁",field:"spo2",label:lang==="tr"?"Oksijen":lang==="de"?"Sauerstoff":lang==="es"?"Oxígeno":lang==="ru"?"Кислород":lang==="ar"?"أكسجين":"Oxygen",unit:"%",good:v=>v>=95},
+        {icon:"🔥",field:"calories",label:lang==="tr"?"Kalori":lang==="de"?"Kalorien":lang==="es"?"Calorías":lang==="ru"?"Калории":lang==="ar"?"سعرات":"Calories",unit:"kcal",good:v=>v>=300},
+        {icon:"💗",field:"restPulse",label:lang==="tr"?"Dinlenik Nabız":lang==="de"?"Ruhepuls":lang==="es"?"Pulso reposo":lang==="ru"?"Пульс покоя":lang==="ar"?"نبض الراحة":"Resting HR",unit:"bpm",good:v=>v>=50&&v<=70},
+      ].map(item=>{
+        const v=hd[item.field]||0;const isEd=editH===item.field;
+        return(<div key={item.field} style={{padding:"8px 10px",borderRadius:8,background:`${ac}06`,border:`1px solid ${bd}`}}>
+          <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:3}}><span style={{fontSize:16}}>{item.icon}</span><span style={{fontSize:fs-3,color:mt}}>{item.label}</span></div>
+          {isEd?<div style={{display:"flex",gap:4,alignItems:"center"}}><input type="number" autoFocus value={tmpH} onChange={e=>setTmpH(e.target.value)} style={{...IS,width:60,padding:"4px 6px",fontWeight:700,fontSize:fs-1}} onKeyDown={e=>{if(e.key==="Enter"){setHd(p=>({...p,[item.field]:Number(tmpH)}));setEditH(null);}}}/><button onClick={()=>{setHd(p=>({...p,[item.field]:Number(tmpH)}));setEditH(null);}} style={{...BP,padding:"3px 8px"}}>✓</button></div>
+          :<div onClick={()=>{setEditH(item.field);setTmpH(v>0?String(v):"");}} style={{cursor:"pointer",fontWeight:700,fontSize:fs+1,color:v>0?(item.good(v)?sc:tc):mt}}>{v>0?`${v}${item.unit?" "+item.unit:""}`:t.tap}</div>}
+        </div>);
+      })}
+    </div>
+    <div style={{marginTop:8,padding:"7px 9px",borderRadius:7,background:`${ac}08`,fontSize:fs-3,color:mt,display:"flex",alignItems:"center",gap:6}}>
+      <span style={{fontSize:14}}>📲</span>
+      <span>{lang==="tr"?"Şimdi manuel girin. Mobil uygulamada Apple Health & Google Health Connect ile otomatik senkronize olacak.":lang==="de"?"Jetzt manuell. In der mobilen App automatische Synchronisierung.":lang==="es"?"Manual ahora. Sincronización automática en la app móvil.":lang==="ru"?"Сейчас вручную. Автосинхронизация в мобильном приложении.":lang==="ar"?"يدوي الآن. مزامنة تلقائية في تطبيق الجوال.":"Manual now. Auto-syncs via Apple Health & Google Health Connect in the mobile app."}</span>
+    </div>
   </div>
 </div>);};
 
