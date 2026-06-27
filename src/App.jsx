@@ -1121,8 +1121,8 @@ const sendChat=async(text)=>{
     const DAILY_LIMIT=3;
     if(todayCount>=DAILY_LIMIT){
       const limitMsg=lang==="tr"
-        ?`📊 Günlük ücretsiz AI mesajı hakkınız bitti (${DAILY_LIMIT}/${DAILY_LIMIT}).\n\nDevam etmek için:\n\n💎 PRO'ya yükselt — sınırsız AI sohbet, çeviri, ilaç analizi ($4.99/ay)\n   Ayarlar → Abonelik Planları\n\n🔑 VEYA kendi Anthropic API anahtarını gir (sınırsız, kendi krediniz)\n   Ayarlar → AI API Anahtarı\n\n⏰ Yarın saat 00:00'da hakkınız yenilenecek.`
-        :`📊 Daily free AI message limit reached (${DAILY_LIMIT}/${DAILY_LIMIT}).\n\nTo continue:\n\n💎 Upgrade to PRO — unlimited AI chat, translation, drug analysis ($4.99/mo)\n   Settings → Subscription Plans\n\n🔑 OR enter your own Anthropic API key (unlimited, your own credit)\n   Settings → AI API Key\n\n⏰ Your limit resets at midnight.`;
+        ?`📊 Günlük ücretsiz AI mesajı hakkınız bitti (${DAILY_LIMIT}/${DAILY_LIMIT}).\n\nDevam etmek için:\n\n💎 PRO'ya yükselt — sınırsız AI sohbet, çeviri, ilaç analizi (Yıllık ayda $5.00'dan başlar)\n   Ayarlar → Abonelik Planları\n\n⏰ Yarın saat 00:00'da hakkınız yenilenecek.`
+        :`📊 Daily free AI message limit reached (${DAILY_LIMIT}/${DAILY_LIMIT}).\n\nTo continue:\n\n💎 Upgrade to PRO — unlimited AI chat, translation, drug analysis (from $5.00/mo annual)\n   Settings → Subscription Plans\n\n⏰ Your limit resets at midnight.`;
       setChatM([...chatM,{role:"user",text:q},{role:"assistant",text:limitMsg}]);
       setChatIn("");
       return;
