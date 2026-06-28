@@ -2670,7 +2670,7 @@ return (
             <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:22,cursor:"pointer",padding:0,flexShrink:0,alignSelf:"center"}}>☰</button>
             <img src="/avatar2.svg" alt="" style={{height:54,width:54,objectFit:"cover",flexShrink:0,borderRadius:6}} />
             <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",lineHeight:1,minWidth:0}}>
-              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:25,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"0.6px #e8a817",textShadow:"0 1px 4px rgba(0,0,0,0.3)"}}>AILVIE</div>
+              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:29,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"1px #e8a817",textShadow:"0 2px 6px rgba(0,0,0,0.5)"}}>AILVIE</div>
               <div style={{fontSize:10,color:"rgba(255,255,255,0.85)",letterSpacing:1,fontWeight:500,marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.sl}</div>
             </div>
           </div>
@@ -2691,8 +2691,8 @@ return (
               if(recRef.current)try{recRef.current.onend=null;recRef.current.onerror=null;recRef.current.abort();}catch(e){}
               recRef.current=null;
               setIsListen(false);setIsSpeak(false);
-            }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:23,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:voiceActive?1:0.8}}>🎙️</button>
-            <button onClick={()=>setShowNotif(!showNotif)} style={{background:"none",border:"none",color:"#fff",fontSize:21,cursor:"pointer",padding:0,position:"relative"}}>🔔{unread>0&&<span style={{position:"absolute",top:-4,right:-6,width:16,height:16,borderRadius:"50%",background:dg,color:"#fff",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{unread}</span>}</button>
+            }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:27,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:1,filter:"drop-shadow(0 1px 3px rgba(0,0,0,0.55))"}}>🎙️</button>
+            <button onClick={()=>setShowNotif(!showNotif)} style={{background:"none",border:"none",color:"#fff",fontSize:25,cursor:"pointer",padding:0,position:"relative"}}>🔔{unread>0&&<span style={{position:"absolute",top:-4,right:-6,width:16,height:16,borderRadius:"50%",background:dg,color:"#fff",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{unread}</span>}</button>
           </div>
         </div>
 
