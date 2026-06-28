@@ -2666,18 +2666,18 @@ return (
         </div>}
         {/* HEADER */}
         <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"2px 10px",paddingTop:"max(env(safe-area-inset-top),2px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"flex-end",gap:5,flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"flex-end",gap:6,flex:1,minWidth:0}}>
             <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:22,cursor:"pointer",padding:0,flexShrink:0,alignSelf:"center"}}>☰</button>
-            <img src="/avatar2.svg" alt="" style={{height:48,width:48,objectFit:"cover",flexShrink:0,borderRadius:6}} />
-            <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",lineHeight:1.05,minWidth:0,flex:1}}>
-              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:21,color:"#e8a817",letterSpacing:2,WebkitTextStroke:"0.5px #e8a817",textShadow:"0 1px 4px rgba(0,0,0,0.3)"}}>AILVIE</div>
-              <div style={{fontSize:8.5,color:"rgba(255,255,255,0.85)",letterSpacing:0.3,fontWeight:500,marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.sl}</div>
+            <img src="/avatar2.svg" alt="" style={{height:54,width:54,objectFit:"cover",flexShrink:0,borderRadius:6}} />
+            <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",lineHeight:1,minWidth:0}}>
+              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:22,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"0.5px #e8a817",textShadow:"0 1px 4px rgba(0,0,0,0.3)"}}>AILVIE</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,0.85)",letterSpacing:1,fontWeight:500,marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.sl}</div>
             </div>
           </div>
-          <div style={{display:"flex",gap:3,alignItems:"center",flexShrink:0}}>
+          <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
             {/* Home button moved here */}
-            <button onClick={goBack} style={{background:"none",border:"none",color:histIdx>0?"#e8a817":"#ffffff66",fontSize:18,cursor:"pointer",padding:"2px"}}>◀</button>
-            <button onClick={goFwd} style={{background:"none",border:"none",color:histIdx<pageHist.length-1?"#e8a817":"#ffffff66",fontSize:18,cursor:"pointer",padding:"2px"}}>▶</button>
+            <button onClick={goBack} style={{background:"none",border:"none",color:histIdx>0?"#e8a817":"#ffffff66",fontSize:16,cursor:"pointer",padding:0}}>◀</button>
+            <button onClick={goFwd} style={{background:"none",border:"none",color:histIdx<pageHist.length-1?"#e8a817":"#ffffff66",fontSize:16,cursor:"pointer",padding:0}}>▶</button>
             <button onClick={()=>{const newState=!voiceActive;setVoiceActive(newState);voiceActiveRef.current=newState;
             if(newState){
               if(page!=="chat")goTo("chat");
@@ -2694,11 +2694,11 @@ return (
               if(recRef.current)try{recRef.current.onend=null;recRef.current.onerror=null;recRef.current.abort();}catch(e){}
               recRef.current=null;
               setIsListen(false);setIsSpeak(false);
-            }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:21,cursor:"pointer",padding:"2px",animation:voiceActive?"micPulse 2s infinite":"none",opacity:voiceActive?1:0.8}}>🎙️</button>
-            <button onClick={()=>goTo("home")} style={{background:"none",border:"none",color:"#fff",fontSize:21,cursor:"pointer",padding:"2px"}}>🏠</button>
-            <button onClick={()=>setDark(!dark)} style={{background:"none",border:"none",color:"#fff",fontSize:19,cursor:"pointer",padding:"2px"}}>{dark?"🌙":"☀️"}</button>
-            <button onClick={()=>setShowLangPicker(true)} style={{background:"none",border:"none",color:"#fff",fontSize:19,cursor:"pointer",padding:"2px",}}>🌏</button>
-            <button onClick={()=>setShowNotif(!showNotif)} style={{background:"none",border:"none",color:"#fff",fontSize:19,cursor:"pointer",padding:"2px",position:"relative"}}>🔔{unread>0&&<span style={{position:"absolute",top:-4,right:-6,width:16,height:16,borderRadius:"50%",background:dg,color:"#fff",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{unread}</span>}</button>
+            }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:20,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:voiceActive?1:0.8}}>🎙️</button>
+            <button onClick={()=>goTo("home")} style={{background:"none",border:"none",color:"#fff",fontSize:20,cursor:"pointer",padding:0}}>🏠</button>
+            <button onClick={()=>setDark(!dark)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0}}>{dark?"🌙":"☀️"}</button>
+            <button onClick={()=>setShowLangPicker(true)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0,}}>🌏</button>
+            <button onClick={()=>setShowNotif(!showNotif)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0,position:"relative"}}>🔔{unread>0&&<span style={{position:"absolute",top:-4,right:-6,width:16,height:16,borderRadius:"50%",background:dg,color:"#fff",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{unread}</span>}</button>
           </div>
         </div>
 
