@@ -2675,9 +2675,6 @@ return (
             </div>
           </div>
           <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
-            {/* Home button moved here */}
-            <button onClick={goBack} style={{background:"none",border:"none",color:histIdx>0?"#e8a817":"#ffffff66",fontSize:16,cursor:"pointer",padding:0}}>◀</button>
-            <button onClick={goFwd} style={{background:"none",border:"none",color:histIdx<pageHist.length-1?"#e8a817":"#ffffff66",fontSize:16,cursor:"pointer",padding:0}}>▶</button>
             <button onClick={()=>{const newState=!voiceActive;setVoiceActive(newState);voiceActiveRef.current=newState;
             if(newState){
               if(page!=="chat")goTo("chat");
@@ -2695,9 +2692,6 @@ return (
               recRef.current=null;
               setIsListen(false);setIsSpeak(false);
             }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:20,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:voiceActive?1:0.8}}>🎙️</button>
-            <button onClick={()=>goTo("home")} style={{background:"none",border:"none",color:"#fff",fontSize:20,cursor:"pointer",padding:0}}>🏠</button>
-            <button onClick={()=>setDark(!dark)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0}}>{dark?"🌙":"☀️"}</button>
-            <button onClick={()=>setShowLangPicker(true)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0,}}>🌏</button>
             <button onClick={()=>setShowNotif(!showNotif)} style={{background:"none",border:"none",color:"#fff",fontSize:18,cursor:"pointer",padding:0,position:"relative"}}>🔔{unread>0&&<span style={{position:"absolute",top:-4,right:-6,width:16,height:16,borderRadius:"50%",background:dg,color:"#fff",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{unread}</span>}</button>
           </div>
         </div>
