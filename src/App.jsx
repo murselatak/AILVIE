@@ -2666,12 +2666,12 @@ return (
         </div>}
         {/* HEADER */}
         <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"2px 10px",paddingTop:"max(env(safe-area-inset-top),2px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"flex-end",gap:6,flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"flex-end",gap:5,flex:1,minWidth:0}}>
             <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:22,cursor:"pointer",padding:0,flexShrink:0,alignSelf:"center"}}>☰</button>
-            <img src="/avatar2.svg" alt="" style={{height:54,width:54,objectFit:"cover",flexShrink:0,borderRadius:6}} />
-            <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",lineHeight:1,minWidth:0}}>
-              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:22,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"0.5px #e8a817",textShadow:"0 1px 4px rgba(0,0,0,0.3)"}}>AILVIE</div>
-              <div style={{fontSize:9,color:"rgba(255,255,255,0.85)",letterSpacing:1,fontWeight:500,marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.sl}</div>
+            <img src="/avatar2.svg" alt="" style={{height:48,width:48,objectFit:"cover",flexShrink:0,borderRadius:6}} />
+            <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",lineHeight:1.05,minWidth:0,flex:1}}>
+              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:21,color:"#e8a817",letterSpacing:2,WebkitTextStroke:"0.5px #e8a817",textShadow:"0 1px 4px rgba(0,0,0,0.3)"}}>AILVIE</div>
+              <div style={{fontSize:8.5,color:"rgba(255,255,255,0.85)",letterSpacing:0.3,fontWeight:500,marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.sl}</div>
             </div>
           </div>
           <div style={{display:"flex",gap:3,alignItems:"center",flexShrink:0}}>
