@@ -2676,7 +2676,7 @@ return (
           </div>
           <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
             <button onClick={goBack} aria-label="Geri" disabled={histIdx<=0} style={{background:"none",border:"none",padding:0,cursor:histIdx>0?"pointer":"default",opacity:histIdx>0?0.9:0.35,display:"flex",alignItems:"center",transition:"opacity .2s",filter:"drop-shadow(0 1px 2px rgba(0,0,0,0.4))"}}>
-              <svg width="39" height="26" viewBox="0 0 150 100"><path d="M8 50 L56 12 C100 6 126 68 140 84 C124 68 92 46 56 46 L50 88 Z" fill="#e8a817" stroke="#7a4f00" strokeWidth="5" strokeLinejoin="round"/></svg>
+              <svg width="33" height="27" viewBox="0 0 120 100" fill="#e8a817"><path d="M10 52 L52 18 C80 6 110 36 112 80 C95 55 75 55 58 90 L10 52 Z"/></svg>
             </button>
             <button onClick={()=>{const newState=!voiceActive;setVoiceActive(newState);voiceActiveRef.current=newState;
             if(newState){
