@@ -516,6 +516,7 @@ const[drugRes,setDrugRes]=useState(null);
 const[drugLoad,setDrugLoad]=useState(false);
 const[showScanner,setShowScanner]=useState(false);
 const[camOn,setCamOn]=useState(false);
+const[showAddChooser,setShowAddChooser]=useState(false);
 const[scanResult,setScanResult]=useState(null);
 const[scanError,setScanError]=useState("");
 const videoRef=useRef(null);
@@ -1946,8 +1947,25 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
       <div style={{fontSize:fs-2,color:mt}}>{meds.filter(m=>!m.taken).length} {lang==="tr"?"bekliyor":"pending"}</div>
     </div>
   </div>}
-  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:fs+2}}>💊 {t.meds}</span><div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}><button onClick={()=>setShowAddMed(true)} style={{...BP,padding:"7px 10px"}}>+ {t.addMed}</button><button onClick={startScanner} style={{...BP,padding:"7px 10px",background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>📷 {lang==="tr"?"Tara":"Scan"}</button><button onClick={()=>photoInputRef.current&&photoInputRef.current.click()} style={{...BP,padding:"7px 10px",background:`linear-gradient(135deg,${ac},#c08a0f)`}}>🖼️ {lang==="tr"?"Foto":"Photo"}</button></div></div>
+  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:fs+2}}>💊 {t.meds}</span><button onClick={()=>setShowAddChooser(true)} style={{...BP,padding:"8px 16px"}}>+ {t.addMed}</button></div>
   <input ref={photoInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files&&e.target.files[0];scanFromPhoto(f);e.target.value="";}}/>
+  {/* Add-med chooser: Manuel / Tarayarak Ekle (Foto, QR, Barkod) */}
+  {showAddChooser&&<div style={{position:"fixed",inset:0,zIndex:340,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowAddChooser(false)}>
+    <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:460,borderRadius:"18px 18px 0 0",padding:"16px 16px max(env(safe-area-inset-bottom),18px)",border:`1px solid ${bd}`,boxShadow:"0 -8px 32px rgba(0,0,0,.4)"}}>
+      <div style={{width:38,height:4,borderRadius:2,background:bd,margin:"0 auto 14px"}}/>
+      <div style={{fontWeight:700,fontSize:fs+2,marginBottom:12}}>💊 {t.addMed}</div>
+      <button onClick={()=>{setShowAddChooser(false);setShowAddMed(true);}} style={{...CS,display:"flex",alignItems:"center",gap:12,width:"100%",cursor:"pointer",border:`1px solid ${bd}`,marginBottom:10,textAlign:"left"}}>
+        <span style={{fontSize:24}}>✏️</span><div><div style={{fontWeight:600,color:tc}}>{lang==="tr"?"Manuel Ekle":"Add Manually"}</div><div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Bilgileri elle girin":"Enter details by hand"}</div></div>
+      </button>
+      <div style={{fontSize:fs-2,color:mt,fontWeight:600,margin:"4px 0 8px"}}>📷 {t.scanAdd}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+        <button onClick={()=>{setShowAddChooser(false);photoInputRef.current&&photoInputRef.current.click();}} style={{...CS,display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",border:`1px solid ${bd}`,padding:"14px 6px"}}><span style={{fontSize:26}}>🖼️</span><span style={{fontSize:fs-2,fontWeight:600,color:tc}}>{lang==="tr"?"Fotoğraf":"Photo"}</span></button>
+        <button onClick={()=>{setShowAddChooser(false);startScanner();}} style={{...CS,display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",border:`1px solid ${bd}`,padding:"14px 6px"}}><span style={{fontSize:26}}>🔳</span><span style={{fontSize:fs-2,fontWeight:600,color:tc}}>QR</span></button>
+        <button onClick={()=>{setShowAddChooser(false);startScanner();}} style={{...CS,display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",border:`1px solid ${bd}`,padding:"14px 6px"}}><span style={{fontSize:26}}>📊</span><span style={{fontSize:fs-2,fontWeight:600,color:tc}}>{lang==="tr"?"Barkod":"Barcode"}</span></button>
+      </div>
+      <button onClick={()=>setShowAddChooser(false)} style={{...BP,width:"100%",marginTop:14,background:"transparent",border:`1px solid ${bd}`,color:mt}}>{t.cancel}</button>
+    </div>
+  </div>}
   {meds.length>0&&<div style={CS}><div style={{fontSize:fs-1,color:mt,marginBottom:4}}>{t.prog}: {medProg}%</div><div style={{height:7,borderRadius:4,background:bd}}><div style={{height:7,borderRadius:4,background:`linear-gradient(90deg,${ac},${sc})`,width:`${medProg}%`,transition:"width .3s"}}/></div></div>}
   {/* QR/Barcode Scanner View */}
   {showScanner&&<div style={{...CS,border:`2px solid ${sc}`,overflow:"hidden",position:"relative"}}>
