@@ -23,7 +23,7 @@ export async function onRequestPost(context) {
     const body = await request.json();
 
     // Whitelist of allowed models (prevents invalid model errors)
-    const ALLOWED_MODELS = ["claude-sonnet-4-6", "claude-haiku-4-5-20251001", "claude-opus-4-7"];
+    const ALLOWED_MODELS = ["claude-sonnet-4-6", "claude-haiku-4-5-20251001", "claude-opus-4-8"];
     const requestedModel = body.model && ALLOWED_MODELS.includes(body.model) ? body.model : "claude-sonnet-4-6";
 
     // Validate and sanitize — only allow messages endpoint params

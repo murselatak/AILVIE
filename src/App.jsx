@@ -1696,18 +1696,21 @@ const renderHome=()=>{
         const srcCode=srcObj?.code||"auto";
         const tgtCode=tgtObj?.code||"en";
         try{
-          // Try AI first if apiKey
-          if(apiKey){
+          // 1) Try AI (server proxy OR user key) — best quality, unlimited
+          try{
             const d=await callAI({model:"claude-haiku-4-5-20251001",max_tokens:800,messages:[{role:"user",content:`Translate the following text from ${srcObj?.n||srcCode} to ${tgtObj?.n||tgtCode}. Return ONLY the translated text, no explanations, no quotes.\n\nText: ${trIn}`}]},apiKey);
             const out=d.content?.map(c=>c.text||"").join("").trim()||"";
             if(out){setTrResult(out);setTrLoad(false);return;}
-          }
-          // Fallback MyMemory
+          }catch(aiErr){/* AI unavailable — fall through to free service */}
+          // 2) Fallback: MyMemory free API
           const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(trIn)}&langpair=${encodeURIComponent(srcCode)}|${encodeURIComponent(tgtCode)}&de=ailvie@example.com`);
           const j=await res.json();
-          const tx=j?.responseData?.translatedText||"";
-          if(tx&&!tx.includes("PLEASE SELECT")&&!tx.includes("INVALID")&&!tx.includes("MYMEMORY WARNING")&&!tx.includes("IS AN INVALID")){
+          const tx=(j?.responseData?.translatedText||"").toString();
+          const up=tx.toUpperCase();
+          if(tx&&!up.includes("PLEASE SELECT")&&!up.includes("INVALID")&&!up.includes("MYMEMORY WARNING")&&!up.includes("USED ALL")){
             setTrResult(tx);
+          }else if(up.includes("MYMEMORY WARNING")||up.includes("USED ALL")){
+            setTrResult(lang==="tr"?"⚠️ Ücretsiz çeviri günlük limiti doldu. Sınırsız çeviri için Ayarlar'dan AI API anahtarı ekleyin.":"⚠️ Free translation daily limit reached. Add an AI API key in Settings for unlimited translation.");
           }else{
             setTrResult(lang==="tr"?"⚠️ Çeviri başarısız. Dil kombinasyonu desteklenmeyebilir.":"⚠️ Translation failed. Language pair may not be supported.");
           }
