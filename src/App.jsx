@@ -2676,7 +2676,7 @@ return (
           </div>
           <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
             <button onClick={goBack} aria-label="Geri" style={{background:"none",border:"none",padding:0,cursor:"pointer",display:"flex",alignItems:"center",filter:"drop-shadow(0 1px 2px rgba(0,0,0,0.4))"}}>
-              <svg width="36" height="36" viewBox="4.2 -3.3 23.8 23.8" fill="none" stroke="#e8a817" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><g transform="rotate(-55 15 15)"><path d="M19.1 4.8 A 11 11 0 0 1 19.1 25.2"/><path d="M16.3 3.3 L19.1 4.8"/><path d="M19.0 10.8 L16.3 3.3 L24.1 1.4"/></g></svg>
+              <svg width="32" height="32" viewBox="4.2 -3.3 23.8 23.8" fill="none" stroke="#e8a817" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><g transform="rotate(-55 15 15)"><path d="M19.1 4.8 A 11 11 0 0 1 19.1 25.2"/><path d="M16.3 3.3 L19.1 4.8"/><path d="M19.0 10.8 L16.3 3.3 L24.1 1.4"/></g></svg>
             </button>
             <button onClick={()=>{const newState=!voiceActive;setVoiceActive(newState);voiceActiveRef.current=newState;
             if(newState){
@@ -2694,8 +2694,8 @@ return (
               if(recRef.current)try{recRef.current.onend=null;recRef.current.onerror=null;recRef.current.abort();}catch(e){}
               recRef.current=null;
               setIsListen(false);setIsSpeak(false);
-            }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:31,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:1,filter:"drop-shadow(0 1px 3px rgba(0,0,0,0.55))"}}>🎙️</button>
-            <button onClick={()=>setShowNotif(!showNotif)} style={{background:"none",border:"none",color:"#fff",fontSize:29,cursor:"pointer",padding:0,position:"relative"}}>🔔{unread>0&&<span style={{position:"absolute",top:-4,right:-6,width:16,height:16,borderRadius:"50%",background:dg,color:"#fff",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{unread}</span>}</button>
+            }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:27,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:1,filter:"drop-shadow(0 1px 3px rgba(0,0,0,0.55))"}}>🎙️</button>
+            <button onClick={()=>setShowNotif(!showNotif)} style={{background:"none",border:"none",color:"#fff",fontSize:25,cursor:"pointer",padding:0,position:"relative"}}>🔔{unread>0&&<span style={{position:"absolute",top:-4,right:-6,width:16,height:16,borderRadius:"50%",background:dg,color:"#fff",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{unread}</span>}</button>
           </div>
         </div>
 
