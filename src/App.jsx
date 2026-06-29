@@ -261,6 +261,10 @@ const Flag=({code,size=20})=>{const k=code?.toLowerCase();const s=FlagSVG[k];ret
 
 
 
+const OB={
+  tr:{welcome:"AILVIE'ye hoş geldin",intro:"Kişisel yapay zeka sağlık asistanın. İlaç takibi, randevular, sağlık skoru ve daha fazlası — hepsi tek yerde.",chooseLang:"Dilini seç",yourName:"Sana nasıl hitap edelim?",namePh:"Adın (isteğe bağlı)",ready:"Hazırsın!",readyDesc:"İlaç hatırlatmaları için bildirimlere izin vermen önerilir. İstediğin zaman Ayarlar'dan değiştirebilirsin.",start:"Başla",next:"İleri",skip:"Atla",back:"Geri"},
+  en:{welcome:"Welcome to AILVIE",intro:"Your personal AI health assistant. Medication tracking, appointments, health score and more — all in one place.",chooseLang:"Choose your language",yourName:"What should we call you?",namePh:"Your name (optional)",ready:"You're all set!",readyDesc:"We recommend allowing notifications for medication reminders. You can change this anytime in Settings.",start:"Get Started",next:"Next",skip:"Skip",back:"Back"}
+};
 export default function AILVIE_App(){
 const[lang,setLang]=useState(function(){try{var s=localStorage.getItem("ailvie_lang");if(s)return s;}catch(e){}var b=(navigator.language||"tr").split("-")[0].toLowerCase();return["tr","en","de","ru","zh","hi","nl","es","ar"].indexOf(b)>=0?b:"en";});
 const[dark,setDark]=useState(true);
@@ -288,6 +292,8 @@ const[showNotif,setShowNotif]=useState(false);
 const[showEmergency,setShowEmergency]=useState(false);
 const[showMenu,setShowMenu]=useState(false);
 const[online,setOnline]=useState(typeof navigator!=="undefined"?navigator.onLine:true);
+const[showOb,setShowOb]=useState(()=>{try{if(localStorage.getItem("ailvie_onboarded"))return false;if(localStorage.getItem("ailvie_lang"))return false;return true;}catch(e){return false;}});
+const[obStep,setObStep]=useState(0);
 const[toast,setToast]=useState(null);
 const[showEmoji,setShowEmoji]=useState(false);
 const[appLockEnabled,setAppLockEnabled]=useState(()=>{try{return localStorage.getItem("ailvie_lock")==="1";}catch(e){return false;}});
@@ -2693,6 +2699,46 @@ const nav2=[{key:"notes",icon:"📝",label:t.notes},{key:"community",icon:"👥"
 
 return (
   <div style={{width:"100%",maxWidth:480,margin:"0 auto",height:"100dvh",display:"flex",flexDirection:"column",overflow:"hidden",background:bg,fontSize:fs,color:tc,fontFamily:"'SF Pro Display',-apple-system,'Segoe UI',system-ui,sans-serif",direction:rtl?"rtl":"ltr",position:"relative"}}>
+        {/* ONBOARDING — first run wizard */}
+        {showOb&&(()=>{const ob=OB[lang]||OB.en;return(
+          <div style={{position:"fixed",inset:0,zIndex:9998,background:`linear-gradient(160deg,${ac},${a2})`,display:"flex",flexDirection:"column",color:"#fff",direction:rtl?"rtl":"ltr"}}>
+            <div style={{display:"flex",justifyContent:"flex-end",padding:"max(env(safe-area-inset-top),12px) 16px 0"}}>
+              <button onClick={()=>{try{localStorage.setItem("ailvie_onboarded","1");}catch(e){}setShowOb(false);}} style={{background:"rgba(255,255,255,.15)",border:"none",color:"#fff",borderRadius:20,padding:"6px 16px",fontSize:fs-1,cursor:"pointer"}}>{ob.skip}</button>
+            </div>
+            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"0 28px",gap:16,overflowY:"auto"}}>
+              {obStep===0&&<>
+                <img src="/avatar2.svg" alt="" style={{width:120,height:120,borderRadius:20,objectFit:"cover",boxShadow:"0 8px 30px rgba(0,0,0,.3)"}}/>
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:42,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"1px #e8a817"}}>AILVIE</div>
+                <div style={{fontSize:fs+6,fontWeight:700}}>{ob.welcome}</div>
+                <div style={{fontSize:fs+1,opacity:.92,maxWidth:340,lineHeight:1.5}}>{ob.intro}</div>
+              </>}
+              {obStep===1&&<>
+                <div style={{fontSize:fs+8,fontWeight:700,marginBottom:4}}>{ob.chooseLang}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,width:"100%",maxWidth:360}}>
+                  {Object.entries(LL_NATIVE).map(([k,v])=><button key={k} onClick={()=>{setLang(k);try{localStorage.setItem("ailvie_lang",k);}catch(e){}}} style={{padding:"12px",borderRadius:12,border:lang===k?"2px solid #fff":"1px solid rgba(255,255,255,.4)",background:lang===k?"rgba(255,255,255,.25)":"rgba(255,255,255,.08)",color:"#fff",fontSize:fs,fontWeight:lang===k?700:500,cursor:"pointer"}}>{v}</button>)}
+                </div>
+              </>}
+              {obStep===2&&<>
+                <div style={{fontSize:60}}>👋</div>
+                <div style={{fontSize:fs+8,fontWeight:700}}>{ob.yourName}</div>
+                <input value={pat.name} onChange={e=>setPat(p=>({...p,name:e.target.value}))} placeholder={ob.namePh} style={{width:"100%",maxWidth:320,padding:"12px 14px",borderRadius:12,border:"none",fontSize:fs+2,textAlign:"center",outline:"none",color:"#0a0e14"}}/>
+              </>}
+              {obStep===3&&<>
+                <div style={{fontSize:64}}>🎉</div>
+                <div style={{fontSize:fs+8,fontWeight:700}}>{pat.name?`${ob.ready} ${pat.name}`:ob.ready}</div>
+                <div style={{fontSize:fs+1,opacity:.92,maxWidth:340,lineHeight:1.5}}>{ob.readyDesc}</div>
+              </>}
+            </div>
+            <div style={{padding:"0 24px max(env(safe-area-inset-bottom),20px)",display:"flex",flexDirection:"column",gap:14}}>
+              <div style={{display:"flex",gap:7,justifyContent:"center"}}>{[0,1,2,3].map(i=><div key={i} style={{width:obStep===i?22:8,height:8,borderRadius:4,background:obStep===i?"#fff":"rgba(255,255,255,.4)",transition:"all .2s"}}/>)}</div>
+              <div style={{display:"flex",gap:10}}>
+                {obStep>0&&<button onClick={()=>setObStep(s=>s-1)} style={{flexShrink:0,padding:"13px 20px",borderRadius:14,border:"1px solid rgba(255,255,255,.5)",background:"transparent",color:"#fff",fontSize:fs+1,fontWeight:600,cursor:"pointer"}}>{ob.back}</button>}
+                <button onClick={()=>{if(obStep<3)setObStep(s=>s+1);else{try{localStorage.setItem("ailvie_onboarded","1");if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();}catch(e){}setShowOb(false);}}} style={{flex:1,padding:"13px",borderRadius:14,border:"none",background:"#e8a817",color:"#0a0e14",fontSize:fs+2,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 16px rgba(0,0,0,.25)"}}>{obStep<3?ob.next:ob.start}</button>
+              </div>
+            </div>
+          </div>
+        );})()}
+
         {/* LOCK SCREEN — shown when app is locked */}
         {isLocked&&<div style={{position:"fixed",inset:0,zIndex:9999,background:`linear-gradient(160deg,${ac},${a2})`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:24,padding:24}}>
           <div style={{fontSize:64}}>🔒</div>
