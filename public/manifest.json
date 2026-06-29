@@ -3,6 +3,7 @@
   "short_name": "AILVIE",
   "description": "AI-powered personal health assistant. 60+ languages, medication management, voice assistant, drug recognition, health tracking, patient card.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0a0e14",
   "theme_color": "#00b4d8",
@@ -10,6 +11,9 @@
   "lang": "tr",
   "categories": ["health", "medical", "lifestyle"],
   "icons": [
-    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
   ]
 }
