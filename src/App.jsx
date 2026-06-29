@@ -515,11 +515,13 @@ const[drugQ,setDrugQ]=useState("");
 const[drugRes,setDrugRes]=useState(null);
 const[drugLoad,setDrugLoad]=useState(false);
 const[showScanner,setShowScanner]=useState(false);
+const[camOn,setCamOn]=useState(false);
 const[scanResult,setScanResult]=useState(null);
 const[scanError,setScanError]=useState("");
 const videoRef=useRef(null);
 const streamRef=useRef(null);
 const scanIntervalRef=useRef(null);
+const photoInputRef=useRef(null);
 const medProg=meds.length?Math.round(meds.filter(m=>m.taken).length/meds.length*100):0;
 
 // Barcode → Drug mapping (common EAN/UPC barcodes)
@@ -589,7 +591,7 @@ const BARCODE_DB={
 
 // Scanner functions
 const startScanner=async()=>{
-  setShowScanner(true);setScanResult(null);setScanError("");
+  setShowScanner(true);setScanResult(null);setScanError("");setCamOn(true);
   try{
     const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:640},height:{ideal:480}}});
     streamRef.current=stream;
@@ -612,8 +614,30 @@ const startScanner=async()=>{
       setScanError(lang==="tr"?"Tarayıcınız otomatik barkod algılamayı desteklemiyor. Barkod numarasını manuel girebilirsiniz.":"Your browser doesn't support automatic barcode detection. You can enter the barcode number manually.");
     }
   }catch(e){
-    setScanError(lang==="tr"?"📷 Kamera erişimi reddedildi. Kamera izni verin.":"📷 Camera access denied. Please grant camera permission.");
-    setShowScanner(false);
+    setCamOn(false);
+    setScanError(lang==="tr"?"📷 Kamera erişilemedi. Fotoğraftan okuyabilir veya barkodu manuel girebilirsiniz.":"📷 Camera unavailable. Read from a photo or enter the barcode manually.");
+  }
+};
+
+// Read a barcode/QR from a photo (taken or picked from gallery)
+const scanFromPhoto=async(file)=>{
+  if(!file)return;
+  setShowScanner(true);setScanResult(null);setScanError("");setCamOn(false);
+  if(scanIntervalRef.current){clearInterval(scanIntervalRef.current);scanIntervalRef.current=null;}
+  if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
+  try{
+    if(!('BarcodeDetector' in window)){
+      setScanError(lang==="tr"?"Bu tarayıcı fotoğraftan otomatik okumayı desteklemiyor. Barkod numarasını manuel girin.":"This browser can't auto-read from a photo. Enter the barcode number manually.");
+      return;
+    }
+    const bmp=await createImageBitmap(file);
+    const detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','qr_code','code_128','code_39']});
+    const codes=await detector.detect(bmp);
+    if(bmp.close)bmp.close();
+    if(codes.length>0){handleBarcodeScan(codes[0].rawValue);}
+    else{setScanResult({code:lang==="tr"?"okunamadı":"unreadable",found:false});setScanError(lang==="tr"?"Fotoğrafta barkod/QR bulunamadı. Daha net bir fotoğraf deneyin veya manuel girin.":"No barcode/QR found in photo. Try a clearer photo or enter manually.");}
+  }catch(e){
+    setScanError(lang==="tr"?"Fotoğraf okunamadı. Tekrar deneyin veya manuel girin.":"Couldn't read the photo. Try again or enter manually.");
   }
 };
 
@@ -621,6 +645,7 @@ const stopScanner=()=>{
   if(scanIntervalRef.current)clearInterval(scanIntervalRef.current);
   if(streamRef.current)streamRef.current.getTracks().forEach(t=>t.stop());
   streamRef.current=null;scanIntervalRef.current=null;
+  setCamOn(false);
   setShowScanner(false);
 };
 
@@ -1921,15 +1946,19 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
       <div style={{fontSize:fs-2,color:mt}}>{meds.filter(m=>!m.taken).length} {lang==="tr"?"bekliyor":"pending"}</div>
     </div>
   </div>}
-  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:fs+2}}>💊 {t.meds}</span><div style={{display:"flex",gap:6}}><button onClick={()=>setShowAddMed(true)} style={{...BP,padding:"7px 12px"}}>+ {t.addMed}</button><button onClick={startScanner} style={{...BP,padding:"7px 12px",background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>📷 {t.scanAdd}</button></div></div>
+  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:fs+2}}>💊 {t.meds}</span><div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}><button onClick={()=>setShowAddMed(true)} style={{...BP,padding:"7px 10px"}}>+ {t.addMed}</button><button onClick={startScanner} style={{...BP,padding:"7px 10px",background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>📷 {lang==="tr"?"Tara":"Scan"}</button><button onClick={()=>photoInputRef.current&&photoInputRef.current.click()} style={{...BP,padding:"7px 10px",background:`linear-gradient(135deg,${ac},#c08a0f)`}}>🖼️ {lang==="tr"?"Foto":"Photo"}</button></div></div>
+  <input ref={photoInputRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files&&e.target.files[0];scanFromPhoto(f);e.target.value="";}}/>
   {meds.length>0&&<div style={CS}><div style={{fontSize:fs-1,color:mt,marginBottom:4}}>{t.prog}: {medProg}%</div><div style={{height:7,borderRadius:4,background:bd}}><div style={{height:7,borderRadius:4,background:`linear-gradient(90deg,${ac},${sc})`,width:`${medProg}%`,transition:"width .3s"}}/></div></div>}
   {/* QR/Barcode Scanner View */}
   {showScanner&&<div style={{...CS,border:`2px solid ${sc}`,overflow:"hidden",position:"relative"}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-      <span style={{fontWeight:700,color:sc}}>📷 {t.scanning}</span>
-      <button onClick={stopScanner} style={{...BP,padding:"5px 10px",background:`linear-gradient(135deg,${dg},#c1121f)`,fontSize:fs-2}}>{t.stopScan}</button>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:6}}>
+      <span style={{fontWeight:700,color:sc}}>📷 {camOn?t.scanning:t.scanQR}</span>
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={()=>photoInputRef.current&&photoInputRef.current.click()} style={{...BP,padding:"5px 10px",background:`linear-gradient(135deg,${ac},#c08a0f)`,fontSize:fs-2}}>🖼️ {lang==="tr"?"Foto":"Photo"}</button>
+        <button onClick={stopScanner} style={{...BP,padding:"5px 10px",background:`linear-gradient(135deg,${dg},#c1121f)`,fontSize:fs-2}}>{t.stopScan}</button>
+      </div>
     </div>
-    <div style={{position:"relative",borderRadius:10,overflow:"hidden",background:"#000",aspectRatio:"4/3"}}>
+    {camOn&&<div style={{position:"relative",borderRadius:10,overflow:"hidden",background:"#000",aspectRatio:"4/3"}}>
       <video ref={videoRef} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:10}} playsInline muted/>
       {/* Scan overlay guide */}
       <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
@@ -1942,8 +1971,8 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
           <div style={{position:"absolute",left:"5%",right:"5%",height:2,background:ac,top:"50%",animation:"scanLine 2s ease-in-out infinite",boxShadow:`0 0 8px ${ac}`}}/>
         </div>
       </div>
-    </div>
-    <div style={{fontSize:fs-2,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Barkodu veya QR kodu kameranın önüne tutun":"Hold barcode or QR code in front of camera"}</div>
+    </div>}
+    <div style={{fontSize:fs-2,color:mt,textAlign:"center",marginTop:6}}>{camOn?(lang==="tr"?"Barkodu veya QR kodu kameranın önüne tutun":"Hold barcode or QR code in front of camera"):(lang==="tr"?"📷 Tara: canlı kamera • 🖼️ Foto: galeriden/çekerek oku • ⌨️ aşağıdan manuel girin":"📷 Scan: live camera • 🖼️ Photo: from gallery/capture • ⌨️ enter manually below")}</div>
     {scanError&&<div style={{fontSize:fs-2,color:dg,textAlign:"center",marginTop:4}}>{scanError}</div>}
   </div>}
   {/* Manual Barcode Entry */}
