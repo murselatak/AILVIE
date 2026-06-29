@@ -134,6 +134,36 @@ const HSYS=[{id:"mhrs",n:"MHRS",f:"tr",u:"https://mhrs.gov.tr"},{id:"nhs",n:"NHS
 // Full-body female doctor avatar
 const Avatar=({s=36})=><img src="/avatar.png" alt="AILVIE" style={{width:s,height:s,borderRadius:"50%",objectFit:"cover"}} />;
 
+// Lightweight, dependency-free markdown renderer for AI replies (React-safe, no innerHTML).
+const mdInline=(s)=>{
+  const nodes=[]; let key=0,last=0,m;
+  const re=/(\*\*([^*]+)\*\*|`([^`]+)`|\*([^*\n]+)\*)/g;
+  while((m=re.exec(s))){
+    if(m.index>last)nodes.push(s.slice(last,m.index));
+    if(m[2]!=null)nodes.push(<strong key={key++}>{m[2]}</strong>);
+    else if(m[3]!=null)nodes.push(<code key={key++} style={{background:"rgba(127,127,127,.2)",padding:"1px 4px",borderRadius:4,fontSize:"0.9em",fontFamily:"monospace"}}>{m[3]}</code>);
+    else if(m[4]!=null)nodes.push(<em key={key++}>{m[4]}</em>);
+    last=re.lastIndex;
+  }
+  if(last<s.length)nodes.push(s.slice(last));
+  return nodes;
+};
+const MD=({text})=>{
+  const lines=(text||"").split("\n"); const out=[]; let key=0;
+  for(let i=0;i<lines.length;i++){
+    const ln=lines[i];
+    const bullet=ln.match(/^\s*[-*•]\s+(.*)$/);
+    const numbered=ln.match(/^\s*(\d+)[.)]\s+(.*)$/);
+    const header=ln.match(/^\s*#{1,4}\s+(.*)$/);
+    if(header)out.push(<div key={key++} style={{fontWeight:700,margin:"5px 0 2px"}}>{mdInline(header[1])}</div>);
+    else if(bullet)out.push(<div key={key++} style={{display:"flex",gap:7,margin:"2px 0"}}><span style={{flexShrink:0,opacity:.7}}>•</span><span style={{flex:1}}>{mdInline(bullet[1])}</span></div>);
+    else if(numbered)out.push(<div key={key++} style={{display:"flex",gap:7,margin:"2px 0"}}><span style={{flexShrink:0,fontWeight:600,opacity:.85}}>{numbered[1]}.</span><span style={{flex:1}}>{mdInline(numbered[2])}</span></div>);
+    else if(ln.trim()==="")out.push(<div key={key++} style={{height:6}}/>);
+    else out.push(<div key={key++}>{mdInline(ln)}</div>);
+  }
+  return <>{out}</>;
+};
+
 
 // Flag component — renders Twemoji SVG for cross-platform flags
 const FlagSVG={
@@ -2550,7 +2580,7 @@ const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,f
     {chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}
     {chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,padding:"8px 11px",borderRadius:12,flexShrink:0,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
       {m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}
-      <div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.text}</div>
+      <div style={{wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.role==="assistant"?<MD text={m.text}/>:<span style={{whiteSpace:"pre-wrap"}}>{m.text}</span>}</div>
       <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
         {m.role==="assistant"&&<>
           <button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:tc}}>📋</button>
