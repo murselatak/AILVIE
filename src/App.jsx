@@ -2703,7 +2703,7 @@ return (
             <img src="/avatar2.svg" alt="" style={{height:54,width:54,objectFit:"cover",flexShrink:0,borderRadius:6}} />
             <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",lineHeight:1,minWidth:0}}>
               <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:35,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"1px #e8a817",textShadow:"0 2px 6px rgba(0,0,0,0.5)",textAlign:"center"}}>AILVIE</div>
-              <div style={{fontSize:10,color:"rgba(255,255,255,0.85)",letterSpacing:1,fontWeight:500,marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textAlign:"center"}}>{t.sl}</div>
+              <div style={{fontSize:12,color:"rgba(255,255,255,0.85)",letterSpacing:0.2,fontWeight:500,marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textAlign:"center"}}>{t.sl}</div>
             </div>
           </div>
           <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
