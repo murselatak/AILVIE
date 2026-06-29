@@ -241,7 +241,6 @@ const[pageHist,setPageHist]=useState(["home"]);
 const[histIdx,setHistIdx]=useState(0);
 const goTo=(p)=>{const nh=[...pageHist.slice(0,histIdx+1),p];setPageHist(nh);setHistIdx(nh.length-1);setPage(p);};
 const goBack=()=>{if(histIdx>0){setHistIdx(histIdx-1);setPage(pageHist[histIdx-1]);}};
-const goFwd=()=>{if(histIdx<pageHist.length-1){setHistIdx(histIdx+1);setPage(pageHist[histIdx+1]);}};
 const[trIn,setTrIn]=useState("");
 const[trOut,setTrOut]=useState(null);
 const[trLoad,setTrLoad]=useState(false);
