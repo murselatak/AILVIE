@@ -2676,7 +2676,7 @@ return (
           </div>
           <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
             <button onClick={goBack} aria-label="Geri" style={{background:"none",border:"none",padding:0,cursor:"pointer",display:"flex",alignItems:"center",filter:"drop-shadow(0 1px 2px rgba(0,0,0,0.4))"}}>
-              <svg width="37" height="28" viewBox="0 0 32 24" fill="none" stroke="#e8a817" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M26 4 A 22 22 0 0 0 5 12 A 22 22 0 0 0 26 20"/><polyline points="12 5 5 12 12 19"/></svg>
+              <svg width="36" height="27" viewBox="0 0 32 24" fill="none" stroke="#e8a817" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 13 C 15 14 23 11 26 5"/><polyline points="13 6 6 13 13 20"/></svg>
             </button>
             <button onClick={()=>{const newState=!voiceActive;setVoiceActive(newState);voiceActiveRef.current=newState;
             if(newState){
