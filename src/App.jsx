@@ -287,6 +287,7 @@ const[apiKey,setApiKey]=useState(()=>{try{return localStorage.getItem("ailvie_ap
 const[showNotif,setShowNotif]=useState(false);
 const[showEmergency,setShowEmergency]=useState(false);
 const[showMenu,setShowMenu]=useState(false);
+const[online,setOnline]=useState(typeof navigator!=="undefined"?navigator.onLine:true);
 const[toast,setToast]=useState(null);
 const[showEmoji,setShowEmoji]=useState(false);
 const[appLockEnabled,setAppLockEnabled]=useState(()=>{try{return localStorage.getItem("ailvie_lock")==="1";}catch(e){return false;}});
@@ -323,6 +324,7 @@ const lc=LC[lang]||"en-US";
 
 const[now,setNow]=useState(new Date());
 useEffect(()=>{const i=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(i)},[]);
+useEffect(()=>{const on=()=>setOnline(true),off=()=>setOnline(false);window.addEventListener("online",on);window.addEventListener("offline",off);return()=>{window.removeEventListener("online",on);window.removeEventListener("offline",off);};},[]);
 
 // Notifications
 const[notifs,setNotifs]=useState([]);
@@ -1146,6 +1148,12 @@ useEffect(()=>{const tm=setTimeout(()=>{setNotes(p=>{const filtered=p.filter(n=>
 
 const sendChat=async(text)=>{
   const q=text||chatIn;if(!q.trim())return;
+  // Offline guard — clear message + retry, without consuming a daily message
+  if(typeof navigator!=="undefined"&&!navigator.onLine){
+    setChatM(p=>[...p,{role:"user",text:q},{role:"assistant",text:lang==="tr"?"📡 İnternet bağlantısı yok. Bağlantınızı kontrol edip tekrar deneyin.":"📡 No internet connection. Check your connection and try again.",error:true,retry:q}]);
+    setChatIn("");
+    return;
+  }
   // Daily AI message limit for Free tier (3/day)
   // PRO users (with promo code) and BYOK users skip this limit
   const isPRO=localStorage.getItem("ailvie_active_plan")?.includes("PRO")||localStorage.getItem("ailvie_active_plan")?.includes("Enterprise");
@@ -1235,7 +1243,7 @@ KURALLAR:
         ?"⚠️ AI could not respond.\n\nTechnical detail: "+e.message.replace("AI_ERROR: ","")
         :"Sorry, I cannot respond right now. Please try again. 💙";
     }
-    setChatM(p=>[...p,{role:"assistant",text:errorText}]);
+    setChatM(p=>[...p,noKey?{role:"assistant",text:errorText}:{role:"assistant",text:errorText,error:true,retry:q}]);
   }
   setChatL(false);
 };
@@ -2583,6 +2591,7 @@ const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,f
       <div style={{wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.role==="assistant"?<MD text={m.text}/>:<span style={{whiteSpace:"pre-wrap"}}>{m.text}</span>}</div>
       <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
         {m.role==="assistant"&&<>
+          {m.error&&m.retry&&<button onClick={()=>{setChatM(p=>p.filter((_,j)=>j!==i&&j!==i-1));sendChat(m.retry);}} style={{background:ac+"1e",border:`1px solid ${ac}`,borderRadius:6,padding:"3px 10px",cursor:"pointer",fontSize:fs-3,color:ac,fontWeight:600}}>🔄 {lang==="tr"?"Tekrar dene":"Retry"}</button>}
           <button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:tc}}>📋</button>
           <SpeakBtn text={m.text} langCode={lang}/>
         </>}
@@ -2789,6 +2798,9 @@ return (
 
         {/* Toast */}
         {toast&&<div style={{position:"absolute",top:100,left:"50%",transform:"translateX(-50%)",background:cd,color:tc,padding:"10px 20px",borderRadius:12,boxShadow:"0 6px 24px rgba(0,0,0,.3)",zIndex:300,maxWidth:300,border:`1px solid ${ac}`,fontSize:fs,animation:"slideD .3s ease-out",textAlign:"center"}}>{toast}</div>}
+
+        {/* Offline banner */}
+        {!online&&<div style={{flexShrink:0,background:"#b91c1c",color:"#fff",fontSize:fs-2,textAlign:"center",padding:"4px 8px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>📡 {lang==="tr"?"Çevrimdışısınız — bazı özellikler sınırlı olabilir":"You're offline — some features may be limited"}</div>}
 
         {/* Content */}
         <div style={{flex:"1 1 0",minHeight:0,height:0,overflowY:page==="chat"?"hidden":"auto",overflowX:"hidden",padding:page==="chat"?"10px 12px 8px":"10px 12px 24px",display:page==="chat"?"flex":"block",flexDirection:"column",WebkitOverflowScrolling:"touch",cursor:"default",zoom:page==="chat"?1:zoom}} onClick={(e)=>{if(e.target===e.currentTarget){setEditNote(null);setNOpen(false);setShowAddMed(false);setShowAddAppt(false);setShowAddC(false);setShowWordLangPicker(false);setSelDate(null);}}}>{pages[page]?.()}</div>
