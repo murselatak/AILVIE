@@ -265,6 +265,10 @@ const OB={
   tr:{welcome:"AILVIE'ye hoş geldin",intro:"Kişisel yapay zeka sağlık asistanın. İlaç takibi, randevular, sağlık skoru ve daha fazlası — hepsi tek yerde.",chooseLang:"Dilini seç",yourName:"Sana nasıl hitap edelim?",namePh:"Adın (isteğe bağlı)",ready:"Hazırsın!",readyDesc:"İlaç hatırlatmaları için bildirimlere izin vermen önerilir. İstediğin zaman Ayarlar'dan değiştirebilirsin.",start:"Başla",next:"İleri",skip:"Atla",back:"Geri"},
   en:{welcome:"Welcome to AILVIE",intro:"Your personal AI health assistant. Medication tracking, appointments, health score and more — all in one place.",chooseLang:"Choose your language",yourName:"What should we call you?",namePh:"Your name (optional)",ready:"You're all set!",readyDesc:"We recommend allowing notifications for medication reminders. You can change this anytime in Settings.",start:"Get Started",next:"Next",skip:"Skip",back:"Back"}
 };
+// Store URLs — fill in after publishing to enable store buttons in the install banner.
+// Leave empty to hide a store button. PWA install (no commission) works regardless.
+const PLAY_URL=""; // e.g. "https://play.google.com/store/apps/details?id=com.ailvie.app"
+const IOS_URL="";  // e.g. "https://apps.apple.com/app/ailvie/id000000000"
 export default function AILVIE_App(){
 const[lang,setLang]=useState(function(){try{var s=localStorage.getItem("ailvie_lang");if(s)return s;}catch(e){}var b=(navigator.language||"tr").split("-")[0].toLowerCase();return["tr","en","de","ru","zh","hi","nl","es","ar"].indexOf(b)>=0?b:"en";});
 const[dark,setDark]=useState(true);
@@ -292,6 +296,9 @@ const[showNotif,setShowNotif]=useState(false);
 const[showEmergency,setShowEmergency]=useState(false);
 const[showMenu,setShowMenu]=useState(false);
 const[online,setOnline]=useState(typeof navigator!=="undefined"?navigator.onLine:true);
+const[installEvt,setInstallEvt]=useState(null);
+const[iosHelp,setIosHelp]=useState(false);
+const[installDismissed,setInstallDismissed]=useState(()=>{try{return !!localStorage.getItem("ailvie_install_dismissed");}catch(e){return false;}});
 const[showOb,setShowOb]=useState(()=>{try{if(localStorage.getItem("ailvie_onboarded"))return false;if(localStorage.getItem("ailvie_lang"))return false;return true;}catch(e){return false;}});
 const[obStep,setObStep]=useState(0);
 const[toast,setToast]=useState(null);
@@ -331,6 +338,7 @@ const lc=LC[lang]||"en-US";
 const[now,setNow]=useState(new Date());
 useEffect(()=>{const i=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(i)},[]);
 useEffect(()=>{const on=()=>setOnline(true),off=()=>setOnline(false);window.addEventListener("online",on);window.addEventListener("offline",off);return()=>{window.removeEventListener("online",on);window.removeEventListener("offline",off);};},[]);
+useEffect(()=>{const bip=(e)=>{e.preventDefault();setInstallEvt(e);};const inst=()=>{setInstallEvt(null);try{localStorage.setItem("ailvie_install_dismissed","1");}catch(e){}setInstallDismissed(true);};window.addEventListener("beforeinstallprompt",bip);window.addEventListener("appinstalled",inst);return()=>{window.removeEventListener("beforeinstallprompt",bip);window.removeEventListener("appinstalled",inst);};},[]);
 
 // Notifications
 const[notifs,setNotifs]=useState([]);
@@ -2959,6 +2967,46 @@ return (
 
         {/* Offline banner */}
         {!online&&<div style={{flexShrink:0,background:"#b91c1c",color:"#fff",fontSize:fs-2,textAlign:"center",padding:"4px 8px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>📡 {lang==="tr"?"Çevrimdışısınız — bazı özellikler sınırlı olabilir":"You're offline — some features may be limited"}</div>}
+
+        {/* Install / Open-in-app banner (web only, dismissible) */}
+        {(()=>{
+          const isStandalone=(typeof window!=="undefined")&&(((window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches))||window.navigator.standalone);
+          const isIOS=typeof navigator!=="undefined"&&/iphone|ipad|ipod/i.test(navigator.userAgent||"");
+          const canPWA=!!installEvt;
+          if(isStandalone||installDismissed||!(canPWA||isIOS||PLAY_URL||IOS_URL))return null;
+          const dismiss=()=>{try{localStorage.setItem("ailvie_install_dismissed","1");}catch(e){}setInstallDismissed(true);};
+          return (
+            <div style={{flexShrink:0,margin:"8px 10px 0",background:dark?"#0f1a28":"#eaf4fb",border:`1px solid ${ac}`,borderRadius:12,padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <img src="/icon-192.png" alt="" style={{width:34,height:34,borderRadius:8,flexShrink:0}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:fs,color:tc}}>{lang==="tr"?"AILVIE'yi uygulama olarak aç":"Open AILVIE as an app"}</div>
+                  <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Daha hızlı • çevrimdışı • tam ekran":"Faster • offline • full-screen"}</div>
+                </div>
+                <button onClick={dismiss} style={{background:"none",border:"none",color:mt,fontSize:fs+6,cursor:"pointer",lineHeight:1,padding:"0 4px"}}>×</button>
+              </div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {canPWA&&<button onClick={async()=>{try{installEvt.prompt();await installEvt.userChoice;}catch(e){}setInstallEvt(null);}} style={{...BP,flex:1,minWidth:120,padding:"9px"}}>⬇️ {lang==="tr"?"Yükle":"Install"}</button>}
+                {!canPWA&&isIOS&&<button onClick={()=>setIosHelp(true)} style={{...BP,flex:1,minWidth:140,padding:"9px"}}>⬇️ {lang==="tr"?"Ana ekrana ekle":"Add to Home Screen"}</button>}
+                {PLAY_URL&&<a href={PLAY_URL} target="_blank" rel="noreferrer" style={{...BP,flex:1,minWidth:110,padding:"9px",textAlign:"center",textDecoration:"none",background:"linear-gradient(135deg,#0f9d58,#0b8043)"}}>▶ Google Play</a>}
+                {IOS_URL&&<a href={IOS_URL} target="_blank" rel="noreferrer" style={{...BP,flex:1,minWidth:110,padding:"9px",textAlign:"center",textDecoration:"none",background:"linear-gradient(135deg,#444,#111)"}}> App Store</a>}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* iOS install help */}
+        {iosHelp&&<div style={{position:"fixed",inset:0,zIndex:350,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setIosHelp(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:380,borderRadius:16,padding:18,border:`1px solid ${ac}`}}>
+            <div style={{fontWeight:700,fontSize:fs+2,marginBottom:12}}>📱 {lang==="tr"?"iPhone'a yükleme":"Install on iPhone"}</div>
+            <div style={{display:"flex",flexDirection:"column",gap:10,fontSize:fs,color:tc}}>
+              <div>1. {lang==="tr"?"Safari'de alttaki Paylaş (⬆️) simgesine dokunun":"Tap the Share (⬆️) icon in Safari"}</div>
+              <div>2. {lang==="tr"?"\"Ana Ekrana Ekle\" seçeneğine dokunun":"Choose \"Add to Home Screen\""}</div>
+              <div>3. {lang==="tr"?"\"Ekle\"ye dokunun — AILVIE simgesi ana ekranda görünür":"Tap \"Add\" — the AILVIE icon appears on your home screen"}</div>
+            </div>
+            <button onClick={()=>setIosHelp(false)} style={{...BP,width:"100%",marginTop:16}}>{lang==="tr"?"Anladım":"Got it"}</button>
+          </div>
+        </div>}
 
         {/* Content */}
         <div style={{flex:"1 1 0",minHeight:0,height:0,overflowY:page==="chat"?"hidden":"auto",overflowX:"hidden",padding:page==="chat"?"10px 12px 8px":"10px 12px 24px",display:page==="chat"?"flex":"block",flexDirection:"column",WebkitOverflowScrolling:"touch",cursor:"default",zoom:page==="chat"?1:zoom}} onClick={(e)=>{if(e.target===e.currentTarget){setEditNote(null);setNOpen(false);setShowAddMed(false);setShowAddAppt(false);setShowAddC(false);setShowWordLangPicker(false);setSelDate(null);}}}>{pages[page]?.()}</div>
