@@ -1282,9 +1282,11 @@ const importData=async(file)=>{
 const signInWith=async(provider)=>{
   if(provider==="email"){
     const v=(emailIn||"").trim();
-    if(!v||!/.+@.+\..+/.test(v)){notify(lang==="tr"?"Geçerli bir e-posta girin":"Enter a valid email");return;}
+    const isEmail=/.+@.+\..+/.test(v);
+    const isPhone=/^[+\d][\d\s().-]*$/.test(v)&&v.replace(/\D/g,"").length>=7;
+    if(!v||!(isEmail||isPhone)){notify(lang==="tr"?"Geçerli bir e-posta veya telefon girin":"Enter a valid email or phone");return;}
     setAcctEmail(v);try{localStorage.setItem("ailvie_account_email",v);}catch(e){}
-    notify(lang==="tr"?"✅ E-posta ile giriş yapıldı":"✅ Signed in with email");
+    notify(lang==="tr"?"✅ Giriş yapıldı":"✅ Signed in");
     return;
   }
   const hasFb=FIREBASE_CONFIG&&FIREBASE_CONFIG.apiKey;
@@ -2244,9 +2246,9 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
           <div style={{fontSize:fs-2,color:mt,marginBottom:10}}>{lang==="tr"?"Bir yöntemle giriş yapın — aboneliğiniz ve (yakında) verileriniz hesabınıza bağlanır.":"Sign in with a method — your subscription and (soon) your data link to your account."}</div>
           <button onClick={()=>signInWith("google")} style={{...BP,width:"100%",marginBottom:8,background:"#fff",color:"#1a2332",border:`1px solid ${bd}`,fontWeight:600}}>🔵 {lang==="tr"?"Google ile devam et":"Continue with Google"}</button>
           <button onClick={()=>signInWith("apple")} style={{...BP,width:"100%",marginBottom:8,background:"#000",color:"#fff",fontWeight:600}}> {lang==="tr"?"Apple ile devam et":"Continue with Apple"}</button>
-          <div style={{display:"flex",alignItems:"center",gap:8,margin:"6px 0",color:mt,fontSize:fs-3}}><div style={{flex:1,height:1,background:bd}}/>{lang==="tr"?"veya e-posta ile":"or with email"}<div style={{flex:1,height:1,background:bd}}/></div>
+          <div style={{display:"flex",alignItems:"center",gap:8,margin:"6px 0",color:mt,fontSize:fs-3}}><div style={{flex:1,height:1,background:bd}}/>{lang==="tr"?"veya e-posta/telefon ile":"or with email/phone"}<div style={{flex:1,height:1,background:bd}}/></div>
           <div style={{display:"flex",gap:8}}>
-            <input type="email" placeholder={lang==="tr"?"E-posta adresiniz":"Your email"} value={emailIn} onChange={e=>setEmailIn(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")signInWith("email");}} style={{...IS,flex:1}}/>
+            <input type="text" inputMode="email" autoComplete="email" placeholder={lang==="tr"?"E-posta veya telefon":"Email or phone"} value={emailIn} onChange={e=>setEmailIn(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")signInWith("email");}} style={{...IS,flex:1}}/>
             <button onClick={()=>signInWith("email")} style={{...BP}}>{lang==="tr"?"Devam":"Continue"}</button>
           </div>
         </>}
