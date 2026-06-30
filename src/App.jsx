@@ -2257,6 +2257,33 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
       {(()=>{const pro=(()=>{try{const pl=localStorage.getItem("ailvie_active_plan")||"";return pl.includes("PRO")||pl.includes("Enterprise");}catch(e){return false;}})();return <span style={{fontSize:fs-2,fontWeight:700,padding:"2px 10px",borderRadius:8,background:pro?`${ac}22`:`${mt}22`,color:pro?ac:mt}}>{pro?"PRO ✓":t.free}</span>;})()}
     </div>
   </div>}
+  {(all||s==="subs")&&<div style={CS}>
+    <div style={{fontWeight:700,marginBottom:6}}>🔐 {lang==="tr"?"Doğrulama & Güvenlik":"Verification & Security"}</div>
+    <div style={{fontSize:fs-2,color:mt,marginBottom:10}}>{lang==="tr"?"Hesabını ve verilerini koru. Cihazın yüz/parmak izi ile kilit hazır; diğer yöntemler sunucu kurulduğunda eklenecek.":"Protect your account and data. Device face/fingerprint lock is ready; other methods arrive once a server is set up."}</div>
+    {/* Biometric — AVAILABLE (WebAuthn) */}
+    <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px",borderRadius:10,border:`1px solid ${appLockEnabled?sc:bd}`,background:appLockEnabled?`${sc}10`:"transparent",marginBottom:8}}>
+      <span style={{fontSize:22}}>{appLockEnabled?"🔒":"🫆"}</span>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontWeight:600,fontSize:fs-1}}>{lang==="tr"?"Yüz / Parmak İzi (biyometrik)":"Face / Fingerprint (biometric)"}</div>
+        <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Bu cihazın kilidiyle açılır — sunucu gerekmez":"Unlocks with this device — no server needed"}</div>
+      </div>
+      {appLockEnabled
+        ? <button onClick={disableAppLock} style={{...BP,padding:"6px 12px",fontSize:fs-2,background:"transparent",border:`1px solid ${bd}`,color:mt}}>{lang==="tr"?"Kapat":"Disable"}</button>
+        : <button onClick={enableAppLock} style={{...BP,padding:"6px 12px",fontSize:fs-2,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>{lang==="tr"?"Kur":"Set up"}</button>}
+    </div>
+    {/* Backend-dependent methods — honest "coming soon" */}
+    {[
+      {ic:"💬",name:lang==="tr"?"SMS ile kod":"SMS code",note:lang==="tr"?"Telefon doğrulama":"Phone verification"},
+      {ic:"🟢",name:lang==="tr"?"WhatsApp ile kod":"WhatsApp code",note:lang==="tr"?"WhatsApp Business":"WhatsApp Business"},
+      {ic:"✅",name:lang==="tr"?"Onaylı bildirim (Evet'e dokun / sayı eşleştir)":"Push approval (tap-yes / number match)",note:lang==="tr"?"Anlık bildirim onayı":"Push notification approval"},
+      {ic:"🔢",name:lang==="tr"?"Kod üreteci (Authenticator)":"Authenticator (code generator)",note:lang==="tr"?"TOTP 2FA":"TOTP 2FA"},
+    ].map(m=><div key={m.name} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 10px",borderRadius:10,border:`1px dashed ${bd}`,marginBottom:6,opacity:.75}}>
+      <span style={{fontSize:20}}>{m.ic}</span>
+      <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:fs-1}}>{m.name}</div><div style={{fontSize:fs-3,color:mt}}>{m.note}</div></div>
+      <span style={{fontSize:fs-3,padding:"2px 8px",borderRadius:8,background:`${mt}22`,color:mt,fontWeight:600,whiteSpace:"nowrap"}}>{lang==="tr"?"Yakında":"Soon"}</span>
+    </div>)}
+    <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"SMS/WhatsApp/onaylı bildirim ve authenticator için güvenli sunucu (Firebase/Stripe benzeri) yapılandırması gerekir.":"SMS/WhatsApp/push approval and authenticator need a secure server (like Firebase) configured."}</div>
+  </div>}
   {(all||s==="subs")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>💎 {t.subscription}</div>
     {/* Promo Code Redemption */}
     <div style={{padding:"10px 12px",borderRadius:10,background:`${ac}10`,border:`1px solid ${ac}44`,marginBottom:10}}>
