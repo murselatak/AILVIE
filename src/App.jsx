@@ -517,6 +517,7 @@ const[drugLoad,setDrugLoad]=useState(false);
 const[showScanner,setShowScanner]=useState(false);
 const[camOn,setCamOn]=useState(false);
 const[showAddChooser,setShowAddChooser]=useState(false);
+const[recog,setRecog]=useState(null); // AI recognition review {name,ingredient,dose,form}
 const[scanResult,setScanResult]=useState(null);
 const[scanError,setScanError]=useState("");
 const videoRef=useRef(null);
@@ -645,11 +646,7 @@ const aiRecognize=async(im)=>{
       if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
       if(scanIntervalRef.current){clearInterval(scanIntervalRef.current);scanIntervalRef.current=null;}
       setScanError("");setShowScanner(false);setScanResult(null);setCamOn(false);
-      setNewMed(pr=>({...pr,name:p.name,dose:p.dose||pr.dose}));
-      setDrugQ(p.ingredient||p.name);
-      const db=DR[(p.ingredient||"").toLowerCase()];if(db){const raw=db[lang]||db.tr||db.en;if(raw)setDrugRes(pD(raw));}
-      notify(`✅ ${lang==="tr"?"İlaç tanındı":"Recognized"}: ${p.name}${p.dose?" "+p.dose:""}`);
-      setShowAddMed(true);
+      setRecog({name:p.name||"",ingredient:p.ingredient||"",dose:p.dose||"",form:p.form||""});
     }else{
       setScanError(lang==="tr"?"İlaç tanınamadı. Kutuyu net ve yakın çekip tekrar deneyin ya da manuel girin.":"Could not recognize. Take a clear, close photo of the box and retry, or enter manually.");
     }
@@ -2014,7 +2011,26 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
       <button onClick={()=>setShowAddChooser(false)} style={{...BP,width:"100%",marginTop:14,background:"transparent",border:`1px solid ${bd}`,color:mt}}>{t.cancel}</button>
     </div>
   </div>}
-  {meds.length>0&&<div style={CS}><div style={{fontSize:fs-1,color:mt,marginBottom:4}}>{t.prog}: {medProg}%</div><div style={{height:7,borderRadius:4,background:bd}}><div style={{height:7,borderRadius:4,background:`linear-gradient(90deg,${ac},${sc})`,width:`${medProg}%`,transition:"width .3s"}}/></div></div>}
+  {/* AI recognition review — confirm/edit before adding */}
+  {recog&&<div style={{position:"fixed",inset:0,zIndex:345,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setRecog(null)}>
+    <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:420,borderRadius:16,padding:18,border:`1px solid ${ac}`,boxShadow:"0 12px 40px rgba(0,0,0,.45)"}}>
+      <div style={{fontWeight:700,fontSize:fs+2,marginBottom:4}}>✅ {lang==="tr"?"İlaç tanındı":"Medication recognized"}</div>
+      <div style={{fontSize:fs-2,color:mt,marginBottom:14}}>{lang==="tr"?"Bilgileri kontrol edin, gerekirse düzeltin.":"Check the details and correct if needed."}</div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <div><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"İlaç adı":"Name"}</div><input value={recog.name} onChange={e=>setRecog(r=>({...r,name:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
+        <div style={{display:"flex",gap:10}}>
+          <div style={{flex:1}}><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"Doz":"Dose"}</div><input value={recog.dose} onChange={e=>setRecog(r=>({...r,dose:e.target.value}))} placeholder={lang==="tr"?"örn 5 mg":"e.g. 5 mg"} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
+          <div style={{flex:1}}><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"Form":"Form"}</div><input value={recog.form} onChange={e=>setRecog(r=>({...r,form:e.target.value}))} placeholder={lang==="tr"?"tablet/şurup":"tablet/syrup"} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
+        </div>
+        <div><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"Etken madde":"Active ingredient"}</div><input value={recog.ingredient} onChange={e=>setRecog(r=>({...r,ingredient:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
+      </div>
+      <div style={{display:"flex",gap:10,marginTop:16}}>
+        <button onClick={()=>{const rc=recog;setRecog(null);photoInputRef.current&&photoInputRef.current.click();}} style={{...BP,flexShrink:0,background:"transparent",border:`1px solid ${bd}`,color:mt,padding:"11px 14px"}}>🔄 {lang==="tr"?"Yeniden":"Retry"}</button>
+        <button onClick={()=>{const rc=recog;setNewMed(pr=>({...pr,name:rc.name,dose:rc.dose}));setDrugQ(rc.ingredient||rc.name);const db=DR[(rc.ingredient||"").toLowerCase()];if(db){const raw=db[lang]||db.tr||db.en;if(raw)setDrugRes(pD(raw));}setRecog(null);notify(`✅ ${lang==="tr"?"İlaç eklendi":"Added"}: ${rc.name}`);setShowAddMed(true);}} disabled={!recog.name.trim()} style={{...BP,flex:1,padding:"11px",opacity:recog.name.trim()?1:.5}}>{lang==="tr"?"Ekle":"Add"} →</button>
+      </div>
+      <button onClick={()=>setRecog(null)} style={{...BP,width:"100%",marginTop:8,background:"transparent",border:"none",color:mt,fontSize:fs-1}}>{t.cancel}</button>
+    </div>
+  </div>}
   {/* QR/Barcode Scanner View */}
   {showScanner&&<div style={{...CS,border:`2px solid ${sc}`,overflow:"hidden",position:"relative"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:6}}>
