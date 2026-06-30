@@ -1350,6 +1350,7 @@ const sendChat=async(text)=>{
     if(pat.chronic)cx.push(`Kronik hastalıklar: ${pat.chronic}`);
     if(appts.length)cx.push(`Yaklaşan randevular: ${appts.slice(0,3).map(a=>`${a.doctor} - ${a.date}`).join("; ")}`);
     if(records.length)cx.push(`Tıbbi kayıtlar: ${records.slice(0,3).map(r=>`${r.type}: ${r.content?.substring(0,50)}`).join("; ")}`);
+    if(moodLog.length){const lbl={1:"çok kötü",2:"kötü",3:"normal",4:"iyi",5:"harika"};const last=moodLog.slice(-5);const recent=moodLog.slice(-3).map(e=>e.mood);const low=recent.length>=3&&recent.every(v=>v<=2);cx.push(`Son ruh hali kayıtları (eskiden yeniye): ${last.map(e=>lbl[e.mood]||e.mood).join(", ")}${low?" — son birkaç gündür sürekli düşük":""}`);}
     const ctxStr=cx.length?`\n\nHASTA PROFİLİ:\n${cx.join("\n")}\n`:"Hasta henüz bilgi girmemiş. ";
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
     const d=await callAI({model:"claude-sonnet-4-6",max_tokens:1000,system:`Sen AILVIE — güvenilir, sıcak ve şefkatli bir kadın sağlık asistanısın. Sadece ilaç ve sağlık takibi yapmazsın; insanların duygularını içtenlikle dinleyen, onları hayata bağlayan bir sohbet arkadaşısın.${ctxStr}
@@ -1366,6 +1367,7 @@ DUYGUSAL DESTEK & İÇTEN SOHBET:
 - Klişe/boş tesellilerden kaçın; samimi ve özgün ol. Kişinin duygusunu asla küçümseme.
 - Sen bir psikolog/terapist DEĞİLSİN ve profesyonel ruh sağlığı desteğinin yerine geçmezsin. Gerektiğinde bir uzmana (psikolog/psikiyatrist) görünmeyi nazikçe öner. Teşhis koyma.
 - Kişiyi yalnızca sana/uygulamaya bağımlı kılma; gerçek insanlarla bağ kurmasını teşvik et.
+- Hastanın son ruh hali kayıtlarını biliyorsan bunu nazikçe ve doğal kullan; gözetleniyormuş hissi verme, etiketleme/teşhis yapma. Sürekli düşükse şefkatle yaklaş ve nazikçe destek öner. Ruh hali iyiyse içtenlikle sevin.
 
 GÜVENLİK (çok önemli):
 - Kişi umutsuzluk, kendine zarar verme veya intihar düşüncesi ima ederse: ciddiye al, şefkatle yaklaş, duygusunu küçümseme. Yöntem/araç hakkında ASLA konuşma, sorgulama yapma. Nazikçe bir ruh sağlığı uzmanına, güvendiği birine ve acil durumda yerel acil hatta (Türkiye'de 112) ulaşmasını öner; yalnız olmadığını hatırlat.
