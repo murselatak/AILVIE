@@ -1334,6 +1334,8 @@ const sendChat=async(text)=>{
   setChatM(newMsgs);setChatIn("");setChatL(true);
   try{
     let cx=[];
+    const _now=new Date();
+    cx.push(`ŞU AN: ${_now.toLocaleString("tr-TR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})}`);
     if(pat.name)cx.push(`Hasta adı: ${pat.name}`);
     if(patAge)cx.push(`Yaş: ${patAge}`);
     if(pat.bloodType)cx.push(`Kan grubu: ${pat.bloodType}`);
@@ -1351,6 +1353,8 @@ const sendChat=async(text)=>{
     if(appts.length)cx.push(`Yaklaşan randevular: ${appts.slice(0,3).map(a=>`${a.doctor} - ${a.date}`).join("; ")}`);
     if(records.length)cx.push(`Tıbbi kayıtlar: ${records.slice(0,3).map(r=>`${r.type}: ${r.content?.substring(0,50)}`).join("; ")}`);
     if(moodLog.length){const lbl={1:"çok kötü",2:"kötü",3:"normal",4:"iyi",5:"harika"};const last=moodLog.slice(-5);const recent=moodLog.slice(-3).map(e=>e.mood);const low=recent.length>=3&&recent.every(v=>v<=2);cx.push(`Son ruh hali kayıtları (eskiden yeniye): ${last.map(e=>lbl[e.mood]||e.mood).join(", ")}${low?" — son birkaç gündür sürekli düşük":""}`);}
+    if(meds.length){const takenN=meds.filter(m=>m.taken).length;const pend=meds.filter(m=>!m.taken);const nowMin=_now.getHours()*60+_now.getMinutes();const overdue=pend.filter(m=>{const[h,mm]=(m.time||"00:00").split(":").map(Number);return (h*60+mm)<nowMin;});const nextP=pend.filter(m=>{const[h,mm]=(m.time||"00:00").split(":").map(Number);return (h*60+mm)>=nowMin;}).sort((a,b)=>((a.time||"00:00")>(b.time||"00:00")?1:-1))[0];cx.push(`BUGÜNKÜ İLAÇLAR: ${takenN}/${meds.length} alındı, ${pend.length} bekliyor${overdue.length?`; GECİKMİŞ: ${overdue.map(m=>`${m.name} (${m.time})`).join(", ")}`:""}${nextP?`; sıradaki: ${nextP.name} ${nextP.time}`:""}`);}
+    {const wp=[];if(wellness.water>0)wp.push(`su ${wellness.water}/${wellness.waterGoal} bardak`);if(wellness.mood>0){const ml={1:"çok kötü",2:"kötü",3:"normal",4:"iyi",5:"harika"};wp.push(`bugünkü ruh hali: ${ml[wellness.mood]}`);}if(wellness.sleep>0)wp.push(`uyku ${wellness.sleep} saat`);if(wellness.exercise>0)wp.push(`egzersiz ${wellness.exercise} dk`);if(wp.length)cx.push(`BUGÜNKÜ İYİ-OLUŞ: ${wp.join(", ")}`);}
     const ctxStr=cx.length?`\n\nHASTA PROFİLİ:\n${cx.join("\n")}\n`:"Hasta henüz bilgi girmemiş. ";
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
     const d=await callAI({model:"claude-sonnet-4-6",max_tokens:1000,system:`Sen AILVIE — güvenilir, sıcak ve şefkatli bir kadın sağlık asistanısın. Sadece ilaç ve sağlık takibi yapmazsın; insanların duygularını içtenlikle dinleyen, onları hayata bağlayan bir sohbet arkadaşısın.${ctxStr}
@@ -1360,6 +1364,9 @@ KONUŞMA TARZI (çok önemli):
 - Emoji'yi çok az kullan (yanıtta en fazla 1, çoğu zaman hiç). Emoji yağmuru yapma.
 - Kullanıcının sorusuna ODAKLAN. Soruyu yanıtla, gereksiz geri sorularla konuyu dağıtma.
 - Gereksiz uzatma. Net ve öz ol (2-4 cümle yeterli, gerekirse açıkla).
+- Yukarıdaki ŞU AN / BUGÜNKÜ İLAÇLAR / BUGÜNKÜ İYİ-OLUŞ / HASTA PROFİLİ bilgilerine TAM HAKİMSİN. Kişinin o anki sağlık durumunu zaten biliyormuş gibi davran; ilaç/sağlık sorularını bu güncel duruma göre, tekrar sormadan yanıtla (ör. "akşam ilacını henüz almamışsın, saat 20:00'de hatırlatayım mı?").
+- Kişinin O ANKİ yaklaşımına ve tonuna uyum sağla — tıpkı doğal bir sesli asistan gibi. Kısa/komut gibi konuşana kısa ve net; sohbet edene sıcak ve samimi; bilgi isteyene açık ve düzenli; dertleşene şefkatli cevap ver. Resmiyet ve enerji düzeyini ona göre ayarla, onun dilini/üslubunu yansıt.
+- Sesli kullanımda doğal, akıcı konuşma dili kullan; uzun madde listeleri yerine akan cümleler kur, kısa tut.
 
 DUYGUSAL DESTEK & İÇTEN SOHBET:
 - Kullanıcı yalnızlık, kaygı, üzüntü, stres veya günlük dertlerinden söz ederse önce DİNLE ve duygusunu içtenlikle kabul et ("Bunu yaşaman zor olmalı", "Seni anlıyorum"). Yargılamadan, sıcak ve sabırlı ol.
