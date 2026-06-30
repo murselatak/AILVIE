@@ -628,28 +628,12 @@ const imgToB64=(file,maxDim=1280,q=0.82)=>new Promise((res)=>{
   img.src=url;
 });
 
-// Recognize a medication from a photo: barcode first (offline cache), then AI vision (reads the box)
-const scanFromPhoto=async(file)=>{
-  if(!file)return;
-  setShowScanner(true);setScanResult(null);setScanError("");setCamOn(false);
-  if(scanIntervalRef.current){clearInterval(scanIntervalRef.current);scanIntervalRef.current=null;}
-  if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
-  // 1) Fast offline path: a known barcode present in the image
-  try{
-    if('BarcodeDetector' in window){
-      const bmp=await createImageBitmap(file);
-      const det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','qr_code','code_128','code_39']});
-      const codes=await det.detect(bmp);
-      if(bmp.close)bmp.close();
-      if(codes.length>0&&BARCODE_DB[codes[0].rawValue]){handleBarcodeScan(codes[0].rawValue);return;}
-    }
-  }catch(e){}
-  // 2) AI vision: read the medication box (works for any drug, any language)
+// Shared AI vision recognition from a base64 image (reads the medication box; works any drug/language)
+const aiRecognize=async(im)=>{
+  if(!im){setScanError(lang==="tr"?"Görüntü okunamadı. Tekrar deneyin.":"Couldn't read image. Try again.");return;}
   if(typeof navigator!=="undefined"&&!navigator.onLine){setScanError(lang==="tr"?"İnternet yok. Bağlanınca tekrar deneyin veya manuel girin.":"No internet. Try again when connected, or enter manually.");return;}
-  setScanError(lang==="tr"?"🔎 Fotoğraf yapay zeka ile inceleniyor...":"🔎 Analyzing photo with AI...");
+  setScanError(lang==="tr"?"🔎 Yapay zeka inceliyor...":"🔎 Analyzing with AI...");
   try{
-    const im=await imgToB64(file);
-    if(!im){setScanError(lang==="tr"?"Fotoğraf okunamadı. Tekrar deneyin.":"Couldn't read photo. Try again.");return;}
     const sys=lang==="tr"
       ?"Sen bir ilaç tanıma asistanısın. Görseldeki ilaç kutusu/şeridi/etiketini incele. SADECE geçerli JSON döndür, başka metin yazma: {\"found\":boolean,\"name\":\"ticari ad\",\"ingredient\":\"etken madde\",\"dose\":\"doz örn 5 mg\",\"form\":\"tablet/şurup/kapsül/...\"}. Görselde bir ilaç yoksa veya yazı okunamıyorsa {\"found\":false} döndür."
       :"You are a medication recognition assistant. Examine the medicine box/strip/label in the image. Return ONLY valid JSON, no other text: {\"found\":boolean,\"name\":\"brand name\",\"ingredient\":\"active ingredient\",\"dose\":\"dose e.g. 5 mg\",\"form\":\"tablet/syrup/capsule/...\"}. If there is no medication or text is unreadable, return {\"found\":false}.";
@@ -658,7 +642,9 @@ const scanFromPhoto=async(file)=>{
     const txt=((d&&d.content)||[]).map(c=>c.text||"").join("").trim();
     let p=null;try{p=JSON.parse(txt.replace(/```json|```/g,"").trim());}catch(e){const m=txt.match(/\{[\s\S]*\}/);if(m){try{p=JSON.parse(m[0]);}catch(_){}}}
     if(p&&p.found&&p.name){
-      setScanError("");setShowScanner(false);setScanResult(null);
+      if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
+      if(scanIntervalRef.current){clearInterval(scanIntervalRef.current);scanIntervalRef.current=null;}
+      setScanError("");setShowScanner(false);setScanResult(null);setCamOn(false);
       setNewMed(pr=>({...pr,name:p.name,dose:p.dose||pr.dose}));
       setDrugQ(p.ingredient||p.name);
       const db=DR[(p.ingredient||"").toLowerCase()];if(db){const raw=db[lang]||db.tr||db.en;if(raw)setDrugRes(pD(raw));}
@@ -672,6 +658,39 @@ const scanFromPhoto=async(file)=>{
     if(msg.includes("NO_KEY"))setScanError(lang==="tr"?"Yapay zeka tanıma için API anahtarı gerekli. Ayarlar > AI API Anahtarı'ndan ekleyin (veya sunucuda yapılandırın).":"AI recognition needs an API key. Add it in Settings > AI API Key (or configure on the server).");
     else setScanError(lang==="tr"?"Tanıma başarısız. Tekrar deneyin veya manuel girin.":"Recognition failed. Try again or enter manually.");
   }
+};
+
+// Photo path: barcode first (offline cache), then AI vision
+const scanFromPhoto=async(file)=>{
+  if(!file)return;
+  setShowScanner(true);setScanResult(null);setScanError("");setCamOn(false);
+  if(scanIntervalRef.current){clearInterval(scanIntervalRef.current);scanIntervalRef.current=null;}
+  if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
+  try{
+    if('BarcodeDetector' in window){
+      const bmp=await createImageBitmap(file);
+      const det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','qr_code','code_128','code_39']});
+      const codes=await det.detect(bmp);
+      if(bmp.close)bmp.close();
+      if(codes.length>0&&BARCODE_DB[codes[0].rawValue]){handleBarcodeScan(codes[0].rawValue);return;}
+    }
+  }catch(e){}
+  const im=await imgToB64(file);
+  await aiRecognize(im);
+};
+
+// Live camera: capture current frame and recognize with AI
+const captureFrameAndRecognize=async()=>{
+  const v=videoRef.current;
+  if(!v||!v.videoWidth){setScanError(lang==="tr"?"Kamera hazır değil, bir an bekleyin.":"Camera not ready, wait a moment.");return;}
+  const maxDim=1280;const scl=Math.min(1,maxDim/Math.max(v.videoWidth,v.videoHeight));
+  const cw=Math.round(v.videoWidth*scl),ch=Math.round(v.videoHeight*scl);
+  let im=null;
+  try{const c=document.createElement("canvas");c.width=cw;c.height=ch;c.getContext("2d").drawImage(v,0,0,cw,ch);im={mime:"image/jpeg",data:c.toDataURL("image/jpeg",0.82).split(",")[1]};}catch(e){}
+  setCamOn(false);
+  if(scanIntervalRef.current){clearInterval(scanIntervalRef.current);scanIntervalRef.current=null;}
+  if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
+  await aiRecognize(im);
 };
 
 const stopScanner=()=>{
@@ -1988,10 +2007,9 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
         <span style={{fontSize:24}}>✏️</span><div><div style={{fontWeight:600,color:tc}}>{lang==="tr"?"Manuel Ekle":"Add Manually"}</div><div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Bilgileri elle girin":"Enter details by hand"}</div></div>
       </button>
       <div style={{fontSize:fs-2,color:mt,fontWeight:600,margin:"4px 0 8px"}}>📷 {t.scanAdd}</div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-        <button onClick={()=>{setShowAddChooser(false);photoInputRef.current&&photoInputRef.current.click();}} style={{...CS,display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",border:`1px solid ${bd}`,padding:"14px 6px"}}><span style={{fontSize:26}}>🖼️</span><span style={{fontSize:fs-2,fontWeight:600,color:tc}}>{lang==="tr"?"Fotoğraf":"Photo"}</span></button>
-        <button onClick={()=>{setShowAddChooser(false);startScanner();}} style={{...CS,display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",border:`1px solid ${bd}`,padding:"14px 6px"}}><span style={{fontSize:26}}>🔳</span><span style={{fontSize:fs-2,fontWeight:600,color:tc}}>QR</span></button>
-        <button onClick={()=>{setShowAddChooser(false);startScanner();}} style={{...CS,display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",border:`1px solid ${bd}`,padding:"14px 6px"}}><span style={{fontSize:26}}>📊</span><span style={{fontSize:fs-2,fontWeight:600,color:tc}}>{lang==="tr"?"Barkod":"Barcode"}</span></button>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        <button onClick={()=>{setShowAddChooser(false);photoInputRef.current&&photoInputRef.current.click();}} style={{...CS,display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",border:`1px solid ${bd}`,padding:"16px 6px"}}><span style={{fontSize:28}}>🖼️</span><span style={{fontSize:fs-1,fontWeight:600,color:tc}}>{lang==="tr"?"Fotoğraf":"Photo"}</span><span style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"AI ile tanı":"AI recognize"}</span></button>
+        <button onClick={()=>{setShowAddChooser(false);startScanner();}} style={{...CS,display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",border:`1px solid ${bd}`,padding:"16px 6px"}}><span style={{fontSize:28}}>📷</span><span style={{fontSize:fs-1,fontWeight:600,color:tc}}>{lang==="tr"?"Kamera":"Camera"}</span><span style={{fontSize:fs-3,color:mt}}>QR / {lang==="tr"?"Barkod":"Barcode"}</span></button>
       </div>
       <button onClick={()=>setShowAddChooser(false)} style={{...BP,width:"100%",marginTop:14,background:"transparent",border:`1px solid ${bd}`,color:mt}}>{t.cancel}</button>
     </div>
@@ -2002,7 +2020,8 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:6}}>
       <span style={{fontWeight:700,color:sc}}>📷 {camOn?t.scanning:t.scanQR}</span>
       <div style={{display:"flex",gap:6}}>
-        <button onClick={()=>photoInputRef.current&&photoInputRef.current.click()} style={{...BP,padding:"5px 10px",background:`linear-gradient(135deg,${ac},#c08a0f)`,fontSize:fs-2}}>🖼️ {lang==="tr"?"Foto":"Photo"}</button>
+        {camOn&&<button onClick={captureFrameAndRecognize} style={{...BP,padding:"5px 10px",background:`linear-gradient(135deg,${sc},#1a7a6e)`,fontSize:fs-2}}>🔎 AI</button>}
+        <button onClick={()=>photoInputRef.current&&photoInputRef.current.click()} style={{...BP,padding:"5px 9px",background:`linear-gradient(135deg,${ac},#c08a0f)`,fontSize:fs-2}}>🖼️</button>
         <button onClick={stopScanner} style={{...BP,padding:"5px 10px",background:`linear-gradient(135deg,${dg},#c1121f)`,fontSize:fs-2}}>{t.stopScan}</button>
       </div>
     </div>
@@ -2020,7 +2039,7 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
         </div>
       </div>
     </div>}
-    <div style={{fontSize:fs-2,color:mt,textAlign:"center",marginTop:6}}>{camOn?(lang==="tr"?"Barkodu veya QR kodu kameranın önüne tutun":"Hold barcode or QR code in front of camera"):(lang==="tr"?"📷 Tara: canlı kamera • 🖼️ Foto: galeriden/çekerek oku • ⌨️ aşağıdan manuel girin":"📷 Scan: live camera • 🖼️ Photo: from gallery/capture • ⌨️ enter manually below")}</div>
+    <div style={{fontSize:fs-2,color:mt,textAlign:"center",marginTop:6}}>{camOn?(lang==="tr"?"Barkod/QR'ı çerçeveye getirin • tanınmazsa 🔎 AI ile kutuyu okutun":"Frame the barcode/QR • if not found, tap 🔎 AI to read the box"):(lang==="tr"?"📷 Kamera: canlı tara • 🖼️ Foto: galeriden/çekerek • ⌨️ aşağıdan manuel":"📷 Camera: live scan • 🖼️ Photo: gallery/capture • ⌨️ manual below")}</div>
     {scanError&&<div style={{fontSize:fs-2,color:dg,textAlign:"center",marginTop:4}}>{scanError}</div>}
   </div>}
   {/* Manual Barcode Entry */}
