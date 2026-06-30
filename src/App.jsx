@@ -2769,7 +2769,7 @@ const renderContacts=()=>{
         <div style={{fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</div>
         <div style={{fontSize:fs-2,color:mt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.phone}</div>
       </div>
-      <a href={`tel:${c.phone}`} style={{fontSize:22,textDecoration:"none"}}>📞</a>
+      <a href={`tel:${(c.phone||"").replace(/[^\d+]/g,"")}`} title={lang==="tr"?"Ara":"Call"} aria-label={lang==="tr"?"Ara":"Call"} style={{display:"flex",alignItems:"center",justifyContent:"center",width:38,height:38,borderRadius:"50%",background:`linear-gradient(135deg,${sc},#1a7a6e)`,color:"#fff",textDecoration:"none",fontSize:18,flexShrink:0,boxShadow:"0 2px 6px rgba(0,0,0,.2)"}}>📞</a>
       <button onClick={()=>{
         // Edit — parse phone to countryCode + rest
         const parts=(c.phone||"").split(" ");
