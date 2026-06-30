@@ -2233,7 +2233,7 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>setEmNums(p=>p.filter(x=>x.id!==en.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🛡️ {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button onClick={()=>setPerms(p=>({...p,[k]:!p[k]}))} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
   {(all||s==="subs")&&<div style={CS}>
-    <div style={{fontWeight:700,marginBottom:6}}>👤 {lang==="tr"?"Hesap / Giriş":"Account / Sign in"}</div>
+    <div style={{fontWeight:700,marginBottom:6}}>{acctEmail.trim()?(lang==="tr"?"👤 Hesap":"👤 Account"):(lang==="tr"?"🔑 Giriş Yap / Abone Ol":"🔑 Sign in / Subscribe")}</div>
     {acctEmail.trim()
       ? <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,background:`${sc}11`,border:`1px solid ${sc}44`,marginBottom:8}}>
           <span style={{fontSize:22}}>✅</span>
@@ -3091,6 +3091,10 @@ return (
             {/* Menu Items */}
             <div style={{padding:"4px 0",overflowY:"auto",flex:1}}>
             {[
+              (acctEmail.trim()
+                ? {icon:"👤",label:(lang==="tr"?"Hesabım":"My account")+" — "+acctEmail,action:()=>{setSettingsTab("subs");goTo("settings");setShowMenu(false);}}
+                : {icon:"🔑",label:({tr:"Giriş Yap / Abone Ol",en:"Sign in / Subscribe",de:"Anmelden / Abonnieren",ru:"Войти / Подписка",zh:"登录 / 订阅",hi:"साइन इन / सदस्यता",nl:"Inloggen / Abonneren",es:"Iniciar sesión / Suscribirse",ar:"تسجيل الدخول / اشتراك"}[lang]||"Sign in / Subscribe"),action:()=>{setSettingsTab("subs");goTo("settings");setShowMenu(false);}}),
+              null,
               {icon:"👤",label:t.profile,action:()=>{goTo("pCard");setShowMenu(false);}},
               {icon:"🌍",label:t.lang,action:()=>{setShowMenu(false);setShowLangPicker(true);}},
               {icon:dark?"🌙":"☀️",label:t.dark,action:()=>{setDark(!dark);}},
