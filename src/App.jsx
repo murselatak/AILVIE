@@ -1191,6 +1191,10 @@ const[newC,setNewC]=useState({name:"",phone:"",countryCode:"+90",category:"docto
 // Community
 const[msgs,setMsgs]=useState([{id:1,user:"Hasta_42",text:"Merhaba herkese! 👋",likes:3,time:"10:30"}]);
 const[msgIn,setMsgIn]=useState("");
+const[groups,setGroups]=useState([]);
+const[showGroupModal,setShowGroupModal]=useState(false);
+const[newGroup,setNewGroup]=useState({name:"",emoji:"👥",members:[]});
+const[callModal,setCallModal]=useState(null); // {type,group,status:'requesting'|'ready'|'denied'}
 
 // Chat
 const[chatM,setChatM]=useState([]);
@@ -1239,9 +1243,9 @@ riskPenalty
 useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
 if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(d.chatM?.length)setChatM(d.chatM);
-if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);
+if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
 }catch{}},[]); // load once
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM,moodLog}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM,moodLog]); // enhanced auto-save
+useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM,moodLog,groups}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM,moodLog,groups]); // enhanced auto-save
 // Auto-cleanup empty notes that are not being edited
 useEffect(()=>{const tm=setTimeout(()=>{setNotes(p=>{const filtered=p.filter(n=>(n.title?.trim()||n.content?.trim()||editNote===n.id));return filtered.length===p.length?p:filtered;});},3000);return()=>clearTimeout(tm);},[notes,editNote]);
 
@@ -2837,6 +2841,23 @@ const renderContacts=()=>{
   </div>);
 };
 
+const createGroup=()=>{
+  const nm=(newGroup.name||"").trim();
+  if(!nm){notify(lang==="tr"?"Grup adı girin":"Enter a group name");return;}
+  setGroups(p=>[{id:Date.now(),name:nm,emoji:newGroup.emoji||"👥",members:newGroup.members||[],createdAt:new Date().toISOString()},...p]);
+  setShowGroupModal(false);setNewGroup({name:"",emoji:"👥",members:[]});
+  notify(lang==="tr"?"✅ Grup oluşturuldu":"✅ Group created");
+};
+const deleteGroup=(g)=>{if(confirm(lang==="tr"?`"${g.name}" grubu silinsin mi?`:`Delete group "${g.name}"?`))setGroups(p=>p.filter(x=>x.id!==g.id));};
+const startCall=async(type,group)=>{
+  setCallModal({type,group,status:"requesting"});
+  try{
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setCallModal({type,group,status:"ready"});return;}
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:type!=="voice"});
+    stream.getTracks().forEach(tr=>tr.stop()); // readiness check only — no signaling backend yet
+    setCallModal({type,group,status:"ready"});
+  }catch(e){setCallModal({type,group,status:"denied"});}
+};
 const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}>
   <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
     <div style={{width:36,height:36,borderRadius:12,background:`linear-gradient(135deg,${ac},${a2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>👥</div>
@@ -2844,6 +2865,25 @@ const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",ga
       <div style={{fontWeight:700,fontSize:fs+1}}>{t.community}</div>
       <div style={{fontSize:fs-3,color:dg}}>{t.warn}</div>
     </div>
+  </div>
+  <div style={{flexShrink:0}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+      <span style={{fontWeight:700,fontSize:fs-1}}>{lang==="tr"?"Gruplar":"Groups"}</span>
+      <button onClick={()=>{setNewGroup({name:"",emoji:"👥",members:[]});setShowGroupModal(true);}} style={{...BP,padding:"5px 10px",fontSize:fs-2}}>+ {lang==="tr"?"Grup Oluştur":"Create Group"}</button>
+    </div>
+    {groups.length===0
+      ? <div style={{fontSize:fs-3,color:mt,padding:"2px 0"}}>{lang==="tr"?"Henüz grup yok. WhatsApp gibi grup kurup sesli/görüntülü/konferans araması başlatabilirsin.":"No groups yet. Create one and start voice/video/conference calls like WhatsApp."}</div>
+      : <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>{groups.map(g=>
+          <div key={g.id} style={{flexShrink:0,minWidth:152,border:`1px solid ${bd}`,borderRadius:12,padding:"8px 10px",background:cd}}>
+            <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:18}}>{g.emoji}</span><span style={{fontWeight:700,fontSize:fs-1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{g.name}</span></div>
+            <div style={{fontSize:fs-4,color:mt,marginBottom:6}}>{(g.members||[]).length} {lang==="tr"?"üye":"members"}</div>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <button onClick={()=>startCall("voice",g)} title={lang==="tr"?"Sesli":"Voice"} style={{...BP,padding:"5px 8px",fontSize:14,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>📞</button>
+              <button onClick={()=>startCall("video",g)} title={lang==="tr"?"Görüntülü":"Video"} style={{...BP,padding:"5px 8px",fontSize:14}}>📹</button>
+              <button onClick={()=>startCall("conf",g)} title={lang==="tr"?"Konferans":"Conference"} style={{...BP,padding:"5px 8px",fontSize:14,background:ac}}>👥</button>
+              <button onClick={()=>deleteGroup(g)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:14,marginLeft:"auto"}}>🗑️</button>
+            </div>
+          </div>)}</div>}
   </div>
   <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>
     {msgs.length===0&&<div style={{...CS,textAlign:"center",padding:20,color:mt}}>{lang==="tr"?"Henüz mesaj yok":"No messages yet"}</div>}
@@ -2875,6 +2915,39 @@ const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",ga
     <button onClick={()=>{if(msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn.trim(),likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}} style={{...BP,flexShrink:0}}>{t.send}</button>
     {showEmoji&&<EmojiPicker onPick={e=>setMsgIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}
   </div>
+  {showGroupModal&&<div style={{position:"fixed",inset:0,zIndex:350,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setShowGroupModal(false)}>
+    <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:400,borderRadius:16,padding:18,border:`1px solid ${ac}`,maxHeight:"85vh",overflowY:"auto"}}>
+      <div style={{fontWeight:700,fontSize:fs+2,marginBottom:12}}>👥 {lang==="tr"?"Grup Oluştur":"Create Group"}</div>
+      <div style={{display:"flex",gap:8,marginBottom:10}}>
+        <select value={newGroup.emoji} onChange={e=>setNewGroup(g=>({...g,emoji:e.target.value}))} style={{...IS,width:64,fontSize:18}}>{["👥","👨‍👩‍👧","💊","🏥","❤️","🧑‍⚕️","🌸","👴","👪"].map(em=><option key={em} value={em}>{em}</option>)}</select>
+        <input value={newGroup.name} onChange={e=>setNewGroup(g=>({...g,name:e.target.value}))} placeholder={lang==="tr"?"Grup adı":"Group name"} style={{...IS,flex:1}}/>
+      </div>
+      <div style={{fontSize:fs-2,color:mt,marginBottom:6}}>{lang==="tr"?"Üyeler (rehberden seç)":"Members (from contacts)"}</div>
+      <div style={{maxHeight:180,overflowY:"auto",marginBottom:12}}>
+        {contacts.length===0&&<div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Rehberde kişi yok — önce Rehber'e kişi ekleyin":"No contacts — add contacts first"}</div>}
+        {contacts.map(c=>{const sel=(newGroup.members||[]).includes(c.id);return <div key={c.id} onClick={()=>setNewGroup(g=>({...g,members:sel?g.members.filter(id=>id!==c.id):[...(g.members||[]),c.id]}))} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 8px",borderRadius:8,cursor:"pointer",background:sel?`${ac}18`:"transparent",marginBottom:2}}>
+          <span style={{width:18,height:18,borderRadius:4,border:`1px solid ${sel?ac:bd}`,background:sel?ac:"transparent",color:"#fff",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{sel?"✓":""}</span>
+          <span style={{fontSize:fs-1,fontWeight:600}}>{c.name}</span><span style={{fontSize:fs-3,color:mt,marginLeft:"auto"}}>{c.phone}</span>
+        </div>;})}
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={()=>setShowGroupModal(false)} style={{...BP,flex:1,background:"transparent",border:`1px solid ${bd}`,color:mt}}>{t.cancel}</button>
+        <button onClick={createGroup} style={{...BP,flex:1}}>{lang==="tr"?"Oluştur":"Create"}</button>
+      </div>
+    </div>
+  </div>}
+  {callModal&&<div style={{position:"fixed",inset:0,zIndex:351,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setCallModal(null)}>
+    <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:360,borderRadius:16,padding:20,border:`1px solid ${ac}`,textAlign:"center"}}>
+      <div style={{fontSize:40,marginBottom:8}}>{callModal.type==="voice"?"📞":callModal.type==="video"?"📹":"👥"}</div>
+      <div style={{fontWeight:700,fontSize:fs+1,marginBottom:6}}>{callModal.group?.emoji} {callModal.group?.name} · {callModal.type==="voice"?(lang==="tr"?"Sesli":"Voice"):callModal.type==="video"?(lang==="tr"?"Görüntülü":"Video"):(lang==="tr"?"Konferans":"Conference")}</div>
+      {callModal.status==="requesting"&&<div style={{color:mt,fontSize:fs-1}}>{lang==="tr"?"Kamera/mikrofon izni isteniyor...":"Requesting camera/microphone..."}</div>}
+      {callModal.status==="denied"&&<div style={{color:dg,fontSize:fs-1,lineHeight:1.5}}>{lang==="tr"?"Görüşme için kamera/mikrofon izni gerekli. Tarayıcı ayarlarından izin verip tekrar deneyin.":"Camera/microphone permission is required. Allow it in browser settings and try again."}</div>}
+      {callModal.status==="ready"&&<><div style={{color:sc,fontWeight:600,fontSize:fs}}>✓ {lang==="tr"?"Cihazın hazır (kamera/mikrofon erişimi verildi)":"Your device is ready"}</div>
+        <div style={{fontSize:fs-2,color:mt,marginTop:8,lineHeight:1.5}}>{lang==="tr"?"Gerçek zamanlı internet görüşmesi için güvenli bir görüşme sunucusu (WebRTC sinyal + TURN; konferans için medya sunucusu) gerekiyor. Bu altyapı kurulduğunda arama tam buradan başlayacak.":"A real-time call needs a secure server (WebRTC signaling + TURN; a media server for conference). Once it's set up, the call starts right here."}</div>
+        <div style={{fontSize:fs-3,color:mt,marginTop:8,padding:"3px 10px",borderRadius:8,background:`${mt}22`,display:"inline-block"}}>{lang==="tr"?"Yakında":"Coming soon"}</div></>}
+      <button onClick={()=>setCallModal(null)} style={{...BP,width:"100%",marginTop:16}}>{lang==="tr"?"Kapat":"Close"}</button>
+    </div>
+  </div>}
 </div>);
 
 const q1Dynamic=pat.name?`${pat.name.split(" ")[0]}, ${t.q1.toLowerCase()} ${lang==="tr"?"Umarım iyisindir 💙":"Hope you are well 💙"}`:t.q1;
