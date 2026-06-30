@@ -295,6 +295,7 @@ const[trSearch,setTrSearch]=useState("");
 const[showLangPicker,setShowLangPicker]=useState(false);
 const[settingsTab,setSettingsTab]=useState("all");
 const[promoIn,setPromoIn]=useState("");
+const[acctEmail,setAcctEmail]=useState(()=>{try{return localStorage.getItem("ailvie_account_email")||"";}catch(e){return"";}});
 const[apiKey,setApiKey]=useState(()=>{try{return localStorage.getItem("ailvie_api_key")||"";}catch(e){return"";}});
 const[showNotif,setShowNotif]=useState(false);
 const[showEmergency,setShowEmergency]=useState(false);
@@ -2145,6 +2146,23 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   <div style={CS}><div style={{marginBottom:6}}>🤖 AI API Key <span style={{fontSize:fs-3,color:mt}}>(Anthropic)</span></div><div style={{display:"flex",gap:6}}><input type="password" value={apiKey} onChange={e=>{setApiKey(e.target.value);try{localStorage.setItem("ailvie_api_key",e.target.value);}catch(ex){}}} placeholder="sk-ant-..." style={{...IS,flex:1,fontFamily:"monospace",fontSize:fs-2}}/>{apiKey&&<button onClick={()=>{setApiKey("");try{localStorage.removeItem("ailvie_api_key");}catch(ex){}}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",color:dg,cursor:"pointer"}}>✕</button>}</div><div style={{fontSize:fs-3,color:apiKey?sc:mt,marginTop:4}}>{apiKey?(lang==="tr"?"✓ API anahtarı ayarlandı":"✓ API key set"):(lang==="tr"?"AI Sohbet, çeviri ve ilaç analizi için gerekli":"Required for AI Chat, translation & drug analysis")}</div></div>
   <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>setEmNums(p=>p.filter(x=>x.id!==en.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🛡️ {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button onClick={()=>setPerms(p=>({...p,[k]:!p[k]}))} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
+  {(all||s==="subs")&&<div style={CS}>
+    <div style={{fontWeight:700,marginBottom:6}}>👤 {lang==="tr"?"Hesap":"Account"}</div>
+    <div style={{fontSize:fs-2,color:mt,marginBottom:8}}>{lang==="tr"?"E-posta hesabınız aboneliğinizi ve (yakında) çoklu cihaz senkronunu bağlar.":"Your email ties your subscription and (soon) multi-device sync."}</div>
+    <div style={{display:"flex",gap:8,marginBottom:8}}>
+      <input type="email" placeholder={lang==="tr"?"E-posta adresiniz":"Your email"} value={acctEmail} onChange={e=>setAcctEmail(e.target.value)} style={{...IS,flex:1}}/>
+      <button onClick={()=>{const v=acctEmail.trim();try{localStorage.setItem("ailvie_account_email",v);}catch(e){}notify(lang==="tr"?"Hesap e-postası kaydedildi":"Account email saved");}} style={{...BP}}>{t.save}</button>
+    </div>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 10px",borderRadius:8,background:`${mt}11`,marginBottom:8}}>
+      <span style={{fontSize:fs-1}}>{lang==="tr"?"Geçerli plan":"Current plan"}</span>
+      {(()=>{const pro=(()=>{try{const pl=localStorage.getItem("ailvie_active_plan")||"";return pl.includes("PRO")||pl.includes("Enterprise");}catch(e){return false;}})();return <span style={{fontSize:fs-2,fontWeight:700,padding:"2px 10px",borderRadius:8,background:pro?`${ac}22`:`${mt}22`,color:pro?ac:mt}}>{pro?"PRO ✓":t.free}</span>;})()}
+    </div>
+    <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,border:`1px dashed ${bd}`}}>
+      <span style={{fontSize:20}}>☁️</span>
+      <div style={{flex:1,minWidth:0}}><div style={{fontSize:fs-1,fontWeight:600}}>{lang==="tr"?"Bulut senkronu & çoklu cihaz":"Cloud sync & multi-device"}</div><div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Yakında — Firebase ile güvenli giriş":"Soon — secure sign-in with Firebase"}</div></div>
+      <span style={{fontSize:fs-3,padding:"2px 8px",borderRadius:8,background:`${mt}22`,color:mt,fontWeight:600}}>{lang==="tr"?"Yakında":"Soon"}</span>
+    </div>
+  </div>}
   {(all||s==="subs")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>💎 {t.subscription}</div>
     {/* Promo Code Redemption */}
     <div style={{padding:"10px 12px",borderRadius:10,background:`${ac}10`,border:`1px solid ${ac}44`,marginBottom:10}}>
@@ -2192,7 +2210,7 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
         {plan.features.map((f,i)=><li key={i} style={{marginBottom:2}}>{f}</li>)}
       </ul>}
       {plan.active&&<div style={{fontSize:fs-3,color:sc,marginTop:4,fontWeight:600}}>✓ {lang==="tr"?"Aktif Plan":"Active Plan"}</div>}
-      {!plan.active&&isPaid&&<button onClick={()=>{if(CHECKOUT_URL){window.open(CHECKOUT_URL+(CHECKOUT_URL.includes("?")?"&":"?")+"plan="+encodeURIComponent(plan.n),"_blank","noopener");}else{notify(lang==="tr"?"💎 Web ödemesi yakında. Şimdilik yukarıdaki kutudan PRO kodu ile etkinleştirebilirsiniz.":"💎 Web checkout coming soon. For now, activate with a PRO code in the box above.");}}} style={{...BP,width:"100%",marginTop:8,background:`linear-gradient(135deg,${plan.c},${plan.c}bb)`}}>{CHECKOUT_URL?(lang==="tr"?"💳 Web'de Yükselt":"💳 Upgrade on web"):(lang==="tr"?"🎁 PRO Kodu ile Etkinleştir":"🎁 Activate with PRO code")}</button>}
+      {!plan.active&&isPaid&&<button onClick={()=>{if(CHECKOUT_URL){const em=acctEmail.trim();window.open(CHECKOUT_URL+(CHECKOUT_URL.includes("?")?"&":"?")+"plan="+encodeURIComponent(plan.n)+(em?"&email="+encodeURIComponent(em):""),"_blank","noopener");}else{notify(lang==="tr"?"💎 Web ödemesi yakında. Şimdilik yukarıdaki kutudan PRO kodu ile etkinleştirebilirsiniz.":"💎 Web checkout coming soon. For now, activate with a PRO code in the box above.");}}} style={{...BP,width:"100%",marginTop:8,background:`linear-gradient(135deg,${plan.c},${plan.c}bb)`}}>{CHECKOUT_URL?(lang==="tr"?"💳 Web'de Yükselt":"💳 Upgrade on web"):(lang==="tr"?"🎁 PRO Kodu ile Etkinleştir":"🎁 Activate with PRO code")}</button>}
       {!plan.active&&!isPaid&&<button onClick={()=>{if(CONTACT_EMAIL){window.location.href="mailto:"+CONTACT_EMAIL+"?subject="+encodeURIComponent("AILVIE "+(lang==="tr"?"Kurumsal Talep":"Enterprise Inquiry"));}else{notify(lang==="tr"?"Kurumsal görüşme yakında eklenecek.":"Enterprise contact coming soon.");}}} style={{...BP,width:"100%",marginTop:8,background:`linear-gradient(135deg,${plan.c},${plan.c}bb)`}}>{lang==="tr"?"✉️ Bize Ulaşın":"✉️ Contact Us"}</button>}
     </div>);})}
     <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:4,padding:"8px 10px",borderRadius:8,background:`${mt}11`,lineHeight:1.5}}>
