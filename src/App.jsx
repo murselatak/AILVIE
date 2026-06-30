@@ -620,25 +620,57 @@ const startScanner=async()=>{
   }
 };
 
-// Read a barcode/QR from a photo (taken or picked from gallery)
+// Downscale an image file to base64 JPEG (keeps text legible, small payload for AI)
+const imgToB64=(file,maxDim=1280,q=0.82)=>new Promise((res)=>{
+  const img=new Image();const url=URL.createObjectURL(file);
+  img.onload=()=>{const sc=Math.min(1,maxDim/Math.max(img.width,img.height));const cw=Math.max(1,Math.round(img.width*sc)),ch=Math.max(1,Math.round(img.height*sc));const c=document.createElement("canvas");c.width=cw;c.height=ch;c.getContext("2d").drawImage(img,0,0,cw,ch);URL.revokeObjectURL(url);try{res({mime:"image/jpeg",data:c.toDataURL("image/jpeg",q).split(",")[1]});}catch(e){res(null);}};
+  img.onerror=()=>{URL.revokeObjectURL(url);res(null);};
+  img.src=url;
+});
+
+// Recognize a medication from a photo: barcode first (offline cache), then AI vision (reads the box)
 const scanFromPhoto=async(file)=>{
   if(!file)return;
   setShowScanner(true);setScanResult(null);setScanError("");setCamOn(false);
   if(scanIntervalRef.current){clearInterval(scanIntervalRef.current);scanIntervalRef.current=null;}
   if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
+  // 1) Fast offline path: a known barcode present in the image
   try{
-    if(!('BarcodeDetector' in window)){
-      setScanError(lang==="tr"?"Bu tarayıcı fotoğraftan otomatik okumayı desteklemiyor. Barkod numarasını manuel girin.":"This browser can't auto-read from a photo. Enter the barcode number manually.");
-      return;
+    if('BarcodeDetector' in window){
+      const bmp=await createImageBitmap(file);
+      const det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','qr_code','code_128','code_39']});
+      const codes=await det.detect(bmp);
+      if(bmp.close)bmp.close();
+      if(codes.length>0&&BARCODE_DB[codes[0].rawValue]){handleBarcodeScan(codes[0].rawValue);return;}
     }
-    const bmp=await createImageBitmap(file);
-    const detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','qr_code','code_128','code_39']});
-    const codes=await detector.detect(bmp);
-    if(bmp.close)bmp.close();
-    if(codes.length>0){handleBarcodeScan(codes[0].rawValue);}
-    else{setScanResult({code:lang==="tr"?"okunamadı":"unreadable",found:false});setScanError(lang==="tr"?"Fotoğrafta barkod/QR bulunamadı. Daha net bir fotoğraf deneyin veya manuel girin.":"No barcode/QR found in photo. Try a clearer photo or enter manually.");}
+  }catch(e){}
+  // 2) AI vision: read the medication box (works for any drug, any language)
+  if(typeof navigator!=="undefined"&&!navigator.onLine){setScanError(lang==="tr"?"İnternet yok. Bağlanınca tekrar deneyin veya manuel girin.":"No internet. Try again when connected, or enter manually.");return;}
+  setScanError(lang==="tr"?"🔎 Fotoğraf yapay zeka ile inceleniyor...":"🔎 Analyzing photo with AI...");
+  try{
+    const im=await imgToB64(file);
+    if(!im){setScanError(lang==="tr"?"Fotoğraf okunamadı. Tekrar deneyin.":"Couldn't read photo. Try again.");return;}
+    const sys=lang==="tr"
+      ?"Sen bir ilaç tanıma asistanısın. Görseldeki ilaç kutusu/şeridi/etiketini incele. SADECE geçerli JSON döndür, başka metin yazma: {\"found\":boolean,\"name\":\"ticari ad\",\"ingredient\":\"etken madde\",\"dose\":\"doz örn 5 mg\",\"form\":\"tablet/şurup/kapsül/...\"}. Görselde bir ilaç yoksa veya yazı okunamıyorsa {\"found\":false} döndür."
+      :"You are a medication recognition assistant. Examine the medicine box/strip/label in the image. Return ONLY valid JSON, no other text: {\"found\":boolean,\"name\":\"brand name\",\"ingredient\":\"active ingredient\",\"dose\":\"dose e.g. 5 mg\",\"form\":\"tablet/syrup/capsule/...\"}. If there is no medication or text is unreadable, return {\"found\":false}.";
+    const body={model:"claude-sonnet-4-6",max_tokens:400,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:im.mime,data:im.data}},{type:"text",text:lang==="tr"?"Bu ilacı tanı.":"Identify this medication."}]}]};
+    const d=await callAI(body,apiKey);
+    const txt=((d&&d.content)||[]).map(c=>c.text||"").join("").trim();
+    let p=null;try{p=JSON.parse(txt.replace(/```json|```/g,"").trim());}catch(e){const m=txt.match(/\{[\s\S]*\}/);if(m){try{p=JSON.parse(m[0]);}catch(_){}}}
+    if(p&&p.found&&p.name){
+      setScanError("");setShowScanner(false);setScanResult(null);
+      setNewMed(pr=>({...pr,name:p.name,dose:p.dose||pr.dose}));
+      setDrugQ(p.ingredient||p.name);
+      const db=DR[(p.ingredient||"").toLowerCase()];if(db){const raw=db[lang]||db.tr||db.en;if(raw)setDrugRes(pD(raw));}
+      notify(`✅ ${lang==="tr"?"İlaç tanındı":"Recognized"}: ${p.name}${p.dose?" "+p.dose:""}`);
+      setShowAddMed(true);
+    }else{
+      setScanError(lang==="tr"?"İlaç tanınamadı. Kutuyu net ve yakın çekip tekrar deneyin ya da manuel girin.":"Could not recognize. Take a clear, close photo of the box and retry, or enter manually.");
+    }
   }catch(e){
-    setScanError(lang==="tr"?"Fotoğraf okunamadı. Tekrar deneyin veya manuel girin.":"Couldn't read the photo. Try again or enter manually.");
+    const msg=String((e&&e.message)||e);
+    if(msg.includes("NO_KEY"))setScanError(lang==="tr"?"Yapay zeka tanıma için API anahtarı gerekli. Ayarlar > AI API Anahtarı'ndan ekleyin (veya sunucuda yapılandırın).":"AI recognition needs an API key. Add it in Settings > AI API Key (or configure on the server).");
+    else setScanError(lang==="tr"?"Tanıma başarısız. Tekrar deneyin veya manuel girin.":"Recognition failed. Try again or enter manually.");
   }
 };
 
@@ -664,9 +696,7 @@ const handleBarcodeScan=(code)=>{
     setShowAddMed(true);
   }else{
     setScanResult({code,found:false});
-    // Try AI analysis for unknown barcodes
-    setDrugQ(code);
-    notify(`📊 ${lang==="tr"?"Barkod okundu, AI analiz ediliyor...":"Barcode read, analyzing with AI..."}`);
+    notify(`⚠️ ${lang==="tr"?"Barkod kayıtlı değil. '🖼️ Fotoğraf' ile kutuyu çekip yapay zekayla tanıyın.":"Barcode not in cache. Use '🖼️ Photo' to capture the box for AI recognition."}`);
   }
 };
 
