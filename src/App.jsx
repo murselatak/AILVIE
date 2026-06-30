@@ -1357,6 +1357,7 @@ const sendChat=async(text)=>{
     {const wp=[];if(wellness.water>0)wp.push(`su ${wellness.water}/${wellness.waterGoal} bardak`);if(wellness.mood>0){const ml={1:"çok kötü",2:"kötü",3:"normal",4:"iyi",5:"harika"};wp.push(`bugünkü ruh hali: ${ml[wellness.mood]}`);}if(wellness.sleep>0)wp.push(`uyku ${wellness.sleep} saat`);if(wellness.exercise>0)wp.push(`egzersiz ${wellness.exercise} dk`);if(wp.length)cx.push(`BUGÜNKÜ İYİ-OLUŞ: ${wp.join(", ")}`);}
     const ctxStr=cx.length?`\n\nHASTA PROFİLİ:\n${cx.join("\n")}\n`:"Hasta henüz bilgi girmemiş. ";
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
+    const voiceNote=voiceActiveRef.current?"\n\nSESLİ MOD (şu an aktif): Kullanıcı seninle SESLİ konuşuyor ve yanıtın sesli okunacak. Yanıtın KISA, doğal ve konuşma dilinde olsun (genelde 1-3 cümle). Madde işareti, numaralı liste, başlık veya markdown KULLANMA; akıcı cümleler kur. En önemli bilgiyi önce söyle, ayrıntıya kullanıcı isterse gir.":"";
     const d=await callAI({model:"claude-sonnet-4-6",max_tokens:1000,system:`Sen AILVIE — güvenilir, sıcak ve şefkatli bir kadın sağlık asistanısın. Sadece ilaç ve sağlık takibi yapmazsın; insanların duygularını içtenlikle dinleyen, onları hayata bağlayan bir sohbet arkadaşısın.${ctxStr}
 KONUŞMA TARZI (çok önemli):
 - Doğrudan, net ve doğal konuş — bir insan gibi. ChatGPT gibi anlaşılır ve mantıklı ol.
@@ -1389,7 +1390,7 @@ KURALLAR:
 7) Sesli yanıt özelliğin VAR (🔊 dinleme, 🎙️ sesli diyalog). "Sesli veremiyorum" deme.
 8) Kullanıcının cihazını/mikrofonunu GÖREMEZSİN. "Seni duyamıyorum", "mikrofonun kapalı" gibi cihaz durumu hakkında uydurma yapma.
 9) Kendi teknik altyapın hakkında konuşma. "Makine öğrenimim yok", "önceki günü hatırlamıyorum", "ben sadece bir dil modeliyim", "hafızam yok" gibi teknik açıklamalar YAPMA. Bunlar kullanıcının kafasını karıştırır. Sadece bir sağlık asistanı gibi davran ve sağlık konusuna odaklan.
-10) İlaç hakkında soru sorulduğunda: İlacı tanıyorsan etken maddesini, ne için kullanıldığını, yan etkilerini ve uyarılarını açıkla. İlacın adını net anlamadıysan kısaca "Hangi ilaç olduğunu netleştirir misin (etken madde veya kullanım amacı)?" diye SADECE BİR KEZ sor, sonra elindeki bilgiyle yardımcı ol. İlaç bilgisi verirken mutlaka "kesin bilgi için doktor/eczacıya danışın" uyarısı ekle.`,messages:history},apiKey);
+10) İlaç hakkında soru sorulduğunda: İlacı tanıyorsan etken maddesini, ne için kullanıldığını, yan etkilerini ve uyarılarını açıkla. İlacın adını net anlamadıysan kısaca "Hangi ilaç olduğunu netleştirir misin (etken madde veya kullanım amacı)?" diye SADECE BİR KEZ sor, sonra elindeki bilgiyle yardımcı ol. İlaç bilgisi verirken mutlaka "kesin bilgi için doktor/eczacıya danışın" uyarısı ekle.${voiceNote}`,messages:history},apiKey);
     const reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
     if(voiceActiveRef.current){
