@@ -273,6 +273,10 @@ const IOS_URL="";  // e.g. "https://apps.apple.com/app/ailvie/id000000000"
 // When set, PRO plan cards open this URL (?plan=...) instead of any in-app payment.
 const CHECKOUT_URL=""; // e.g. "https://ailvie.com/pro"
 const CONTACT_EMAIL=""; // e.g. "kurumsal@ailvie.com" (Enterprise "Contact Us")
+// Firebase web config (PUBLIC client keys) — fill to enable Google/Apple sign-in & cloud sync.
+// Get from Firebase console > Project settings > Your apps > SDK config.
+const FIREBASE_CONFIG={}; // e.g. {apiKey:"...",authDomain:"ailvie.firebaseapp.com",projectId:"ailvie",appId:"..."}
+const FB_VER="10.12.0";
 export default function AILVIE_App(){
 const[lang,setLang]=useState(function(){try{var s=localStorage.getItem("ailvie_lang");if(s)return s;}catch(e){}var b=(navigator.language||"tr").split("-")[0].toLowerCase();return["tr","en","de","ru","zh","hi","nl","es","ar"].indexOf(b)>=0?b:"en";});
 const[dark,setDark]=useState(true);
@@ -296,6 +300,7 @@ const[showLangPicker,setShowLangPicker]=useState(false);
 const[settingsTab,setSettingsTab]=useState("all");
 const[promoIn,setPromoIn]=useState("");
 const[acctEmail,setAcctEmail]=useState(()=>{try{return localStorage.getItem("ailvie_account_email")||"";}catch(e){return"";}});
+const[emailIn,setEmailIn]=useState(()=>{try{return localStorage.getItem("ailvie_account_email")||"";}catch(e){return"";}});
 const[apiKey,setApiKey]=useState(()=>{try{return localStorage.getItem("ailvie_api_key")||"";}catch(e){return"";}});
 const[showNotif,setShowNotif]=useState(false);
 const[showEmergency,setShowEmergency]=useState(false);
@@ -1271,6 +1276,30 @@ const importData=async(file)=>{
   }catch(e){notify(lang==="tr"?"Geri yükleme başarısız (dosya bozuk olabilir)":"Restore failed (file may be corrupt)");}
 };
 
+// ═══ SIGN-IN (email local; Google/Apple via Firebase when configured) ═══
+const signInWith=async(provider)=>{
+  if(provider==="email"){
+    const v=(emailIn||"").trim();
+    if(!v||!/.+@.+\..+/.test(v)){notify(lang==="tr"?"Geçerli bir e-posta girin":"Enter a valid email");return;}
+    setAcctEmail(v);try{localStorage.setItem("ailvie_account_email",v);}catch(e){}
+    notify(lang==="tr"?"✅ E-posta ile giriş yapıldı":"✅ Signed in with email");
+    return;
+  }
+  const hasFb=FIREBASE_CONFIG&&FIREBASE_CONFIG.apiKey;
+  if(!hasFb){notify(lang==="tr"?"Google/Apple girişi için Firebase yapılandırması gerekir (yakında).":"Google/Apple sign-in needs Firebase configuration (coming soon).");return;}
+  try{
+    const appMod=await import(/* @vite-ignore */ `https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app.js`);
+    const authMod=await import(/* @vite-ignore */ `https://www.gstatic.com/firebasejs/${FB_VER}/firebase-auth.js`);
+    const app=appMod.initializeApp(FIREBASE_CONFIG);
+    const auth=authMod.getAuth(app);
+    const prov=provider==="apple"?new authMod.OAuthProvider("apple.com"):new authMod.GoogleAuthProvider();
+    const res=await authMod.signInWithPopup(auth,prov);
+    const u=res&&res.user;
+    if(u){const em=u.email||"";if(em){setAcctEmail(em);setEmailIn(em);try{localStorage.setItem("ailvie_account_email",em);localStorage.setItem("ailvie_uid",u.uid||"");}catch(e){}}notify(lang==="tr"?"✅ Giriş başarılı: "+(u.displayName||em):"✅ Signed in: "+(u.displayName||em));}
+  }catch(e){notify(lang==="tr"?"Giriş iptal edildi veya başarısız oldu.":"Sign-in cancelled or failed.");}
+};
+const signOutAcct=()=>{setAcctEmail("");try{localStorage.removeItem("ailvie_account_email");localStorage.removeItem("ailvie_uid");}catch(e){}notify(lang==="tr"?"Çıkış yapıldı":"Signed out");};
+
 const sendChat=async(text)=>{
   const q=text||chatIn;if(!q.trim())return;
   // Offline guard — clear message + retry, without consuming a daily message
@@ -2191,20 +2220,26 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>setEmNums(p=>p.filter(x=>x.id!==en.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🛡️ {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button onClick={()=>setPerms(p=>({...p,[k]:!p[k]}))} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
   {(all||s==="subs")&&<div style={CS}>
-    <div style={{fontWeight:700,marginBottom:6}}>👤 {lang==="tr"?"Hesap":"Account"}</div>
-    <div style={{fontSize:fs-2,color:mt,marginBottom:8}}>{lang==="tr"?"E-posta hesabınız aboneliğinizi ve (yakında) çoklu cihaz senkronunu bağlar.":"Your email ties your subscription and (soon) multi-device sync."}</div>
-    <div style={{display:"flex",gap:8,marginBottom:8}}>
-      <input type="email" placeholder={lang==="tr"?"E-posta adresiniz":"Your email"} value={acctEmail} onChange={e=>setAcctEmail(e.target.value)} style={{...IS,flex:1}}/>
-      <button onClick={()=>{const v=acctEmail.trim();try{localStorage.setItem("ailvie_account_email",v);}catch(e){}notify(lang==="tr"?"Hesap e-postası kaydedildi":"Account email saved");}} style={{...BP}}>{t.save}</button>
-    </div>
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 10px",borderRadius:8,background:`${mt}11`,marginBottom:8}}>
+    <div style={{fontWeight:700,marginBottom:6}}>👤 {lang==="tr"?"Hesap / Giriş":"Account / Sign in"}</div>
+    {acctEmail.trim()
+      ? <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,background:`${sc}11`,border:`1px solid ${sc}44`,marginBottom:8}}>
+          <span style={{fontSize:22}}>✅</span>
+          <div style={{flex:1,minWidth:0}}><div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Giriş yapıldı":"Signed in"}</div><div style={{fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{acctEmail}</div></div>
+          <button onClick={signOutAcct} style={{...BP,padding:"6px 12px",background:"transparent",border:`1px solid ${bd}`,color:mt,fontSize:fs-2}}>{t.logout}</button>
+        </div>
+      : <>
+          <div style={{fontSize:fs-2,color:mt,marginBottom:10}}>{lang==="tr"?"Bir yöntemle giriş yapın — aboneliğiniz ve (yakında) verileriniz hesabınıza bağlanır.":"Sign in with a method — your subscription and (soon) your data link to your account."}</div>
+          <button onClick={()=>signInWith("google")} style={{...BP,width:"100%",marginBottom:8,background:"#fff",color:"#1a2332",border:`1px solid ${bd}`,fontWeight:600}}>🔵 {lang==="tr"?"Google ile devam et":"Continue with Google"}</button>
+          <button onClick={()=>signInWith("apple")} style={{...BP,width:"100%",marginBottom:8,background:"#000",color:"#fff",fontWeight:600}}> {lang==="tr"?"Apple ile devam et":"Continue with Apple"}</button>
+          <div style={{display:"flex",alignItems:"center",gap:8,margin:"6px 0",color:mt,fontSize:fs-3}}><div style={{flex:1,height:1,background:bd}}/>{lang==="tr"?"veya e-posta ile":"or with email"}<div style={{flex:1,height:1,background:bd}}/></div>
+          <div style={{display:"flex",gap:8}}>
+            <input type="email" placeholder={lang==="tr"?"E-posta adresiniz":"Your email"} value={emailIn} onChange={e=>setEmailIn(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")signInWith("email");}} style={{...IS,flex:1}}/>
+            <button onClick={()=>signInWith("email")} style={{...BP}}>{lang==="tr"?"Devam":"Continue"}</button>
+          </div>
+        </>}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 10px",borderRadius:8,background:`${mt}11`,marginTop:8}}>
       <span style={{fontSize:fs-1}}>{lang==="tr"?"Geçerli plan":"Current plan"}</span>
       {(()=>{const pro=(()=>{try{const pl=localStorage.getItem("ailvie_active_plan")||"";return pl.includes("PRO")||pl.includes("Enterprise");}catch(e){return false;}})();return <span style={{fontSize:fs-2,fontWeight:700,padding:"2px 10px",borderRadius:8,background:pro?`${ac}22`:`${mt}22`,color:pro?ac:mt}}>{pro?"PRO ✓":t.free}</span>;})()}
-    </div>
-    <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,border:`1px dashed ${bd}`}}>
-      <span style={{fontSize:20}}>☁️</span>
-      <div style={{flex:1,minWidth:0}}><div style={{fontSize:fs-1,fontWeight:600}}>{lang==="tr"?"Bulut senkronu & çoklu cihaz":"Cloud sync & multi-device"}</div><div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Yakında — Firebase ile güvenli giriş":"Soon — secure sign-in with Firebase"}</div></div>
-      <span style={{fontSize:fs-3,padding:"2px 8px",borderRadius:8,background:`${mt}22`,color:mt,fontWeight:600}}>{lang==="tr"?"Yakında":"Soon"}</span>
     </div>
   </div>}
   {(all||s==="subs")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>💎 {t.subscription}</div>
