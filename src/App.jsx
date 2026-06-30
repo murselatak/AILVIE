@@ -269,6 +269,10 @@ const OB={
 // Leave empty to hide a store button. PWA install (no commission) works regardless.
 const PLAY_URL=""; // e.g. "https://play.google.com/store/apps/details?id=com.ailvie.app"
 const IOS_URL="";  // e.g. "https://apps.apple.com/app/ailvie/id000000000"
+// Web checkout (account-based, COMMISSION-FREE): host a Stripe Checkout page on your domain.
+// When set, PRO plan cards open this URL (?plan=...) instead of any in-app payment.
+const CHECKOUT_URL=""; // e.g. "https://ailvie.com/pro"
+const CONTACT_EMAIL=""; // e.g. "kurumsal@ailvie.com" (Enterprise "Contact Us")
 export default function AILVIE_App(){
 const[lang,setLang]=useState(function(){try{var s=localStorage.getItem("ailvie_lang");if(s)return s;}catch(e){}var b=(navigator.language||"tr").split("-")[0].toLowerCase();return["tr","en","de","ru","zh","hi","nl","es","ar"].indexOf(b)>=0?b:"en";});
 const[dark,setDark]=useState(true);
@@ -2174,17 +2178,23 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
 {n:"PRO "+(lang==="tr"?"Yıllık":"Annual"),p:"$59.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"Ayda $5.00 • %44 tasarruf • 7 gün deneme":"$5.00/mo • Save 44% • 7-day trial"),c:"#e8a817",active:false,badge:lang==="tr"?"EN POPÜLER":"BEST VALUE",features:lang==="tr"?["PRO Aylık'taki TÜM özellikler","Yılda $48 tasarruf","En iyi fiyat/değer","Yıllık tek ödeme","Özel PRO rozeti"]:["ALL Monthly PRO features","Save $48 per year","Best value","Single annual payment","Exclusive PRO badge"]},
 {n:"PRO "+(lang==="tr"?"Aile":"Family"),p:"$99.99/"+(lang==="tr"?"yıl":"yr"),d:(lang==="tr"?"6 kişiye kadar • Kişi başı $16.67/yıl":"Up to 6 members • $16.67/user/yr"),c:"#9b59b6",active:false,features:lang==="tr"?["6 kişiye kadar ayrı profil","Herkese tüm PRO özellikleri","Aile sağlık panosu","Paylaşımlı takvim & hatırlatıcılar","Çocuk hesapları (ebeveyn kontrollü)"]:["Up to 6 separate profiles","Full PRO for everyone","Family health dashboard","Shared calendar & reminders","Child accounts (parental control)"]},
 {n:(lang==="tr"?"Kurumsal":"Enterprise"),p:lang==="tr"?"Bize Ulaşın":"Contact Us",d:(lang==="tr"?"Hastane, eczane, klinik & sigorta için":"For hospitals, pharmacies, clinics & insurers"),c:a2,active:false,features:lang==="tr"?["Kurum içi sınırsız kullanıcı","Özel kurum markası (white-label)","API entegrasyonu","Özel veri analizi & raporlama","7/24 öncelikli destek & SLA","KVKK/GDPR uyum paketi","Toplu sağlık raporu dışa aktarımı"]:["Unlimited organization users","Custom branding (white-label)","API integration","Custom analytics & reporting","24/7 priority support & SLA","KVKK/GDPR compliance package","Bulk health report export"]}
-    ].map(plan=>(<div key={plan.n} style={{padding:"10px 12px",borderRadius:10,border:`1px solid ${plan.c}44`,marginBottom:8,background:`${plan.c}08`}}>
+    ].map(plan=>{
+      const isPaid=/\$/.test(plan.p);
+      const canWeb=isPaid&&!!CHECKOUT_URL;
+      const canContact=!isPaid&&!!CONTACT_EMAIL;
+      return (<div key={plan.n} style={{padding:"10px 12px",borderRadius:10,border:`1px solid ${plan.c}44`,marginBottom:8,background:`${plan.c}08`}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
         <span style={{fontWeight:700,color:plan.c}}>{plan.n}{plan.badge&&<span style={{marginLeft:6,fontSize:fs-4,padding:"1px 6px",borderRadius:4,background:plan.c,color:"#fff",fontWeight:700}}>{plan.badge}</span>}</span>
-        <div style={{display:"flex",alignItems:"center",gap:6}}>{!plan.active&&<span style={{fontSize:fs-3,padding:"2px 8px",borderRadius:8,background:`${mt}22`,color:mt,fontWeight:600}}>{lang==="tr"?"Yakında":"Soon"}</span>}<span style={{fontWeight:700,fontSize:fs}}>{plan.p}</span></div>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>{!plan.active&&!canWeb&&!canContact&&<span style={{fontSize:fs-3,padding:"2px 8px",borderRadius:8,background:`${mt}22`,color:mt,fontWeight:600}}>{lang==="tr"?"Yakında":"Soon"}</span>}<span style={{fontWeight:700,fontSize:fs}}>{plan.p}</span></div>
       </div>
       <div style={{fontSize:fs-2,color:mt,marginBottom:6}}>{plan.d}</div>
       {plan.features&&<ul style={{margin:"4px 0 0 0",padding:"0 0 0 18px",fontSize:fs-2,color:tc}}>
         {plan.features.map((f,i)=><li key={i} style={{marginBottom:2}}>{f}</li>)}
       </ul>}
       {plan.active&&<div style={{fontSize:fs-3,color:sc,marginTop:4,fontWeight:600}}>✓ {lang==="tr"?"Aktif Plan":"Active Plan"}</div>}
-    </div>))}
+      {!plan.active&&isPaid&&<button onClick={()=>{if(CHECKOUT_URL){window.open(CHECKOUT_URL+(CHECKOUT_URL.includes("?")?"&":"?")+"plan="+encodeURIComponent(plan.n),"_blank","noopener");}else{notify(lang==="tr"?"💎 Web ödemesi yakında. Şimdilik yukarıdaki kutudan PRO kodu ile etkinleştirebilirsiniz.":"💎 Web checkout coming soon. For now, activate with a PRO code in the box above.");}}} style={{...BP,width:"100%",marginTop:8,background:`linear-gradient(135deg,${plan.c},${plan.c}bb)`}}>{CHECKOUT_URL?(lang==="tr"?"💳 Web'de Yükselt":"💳 Upgrade on web"):(lang==="tr"?"🎁 PRO Kodu ile Etkinleştir":"🎁 Activate with PRO code")}</button>}
+      {!plan.active&&!isPaid&&<button onClick={()=>{if(CONTACT_EMAIL){window.location.href="mailto:"+CONTACT_EMAIL+"?subject="+encodeURIComponent("AILVIE "+(lang==="tr"?"Kurumsal Talep":"Enterprise Inquiry"));}else{notify(lang==="tr"?"Kurumsal görüşme yakında eklenecek.":"Enterprise contact coming soon.");}}} style={{...BP,width:"100%",marginTop:8,background:`linear-gradient(135deg,${plan.c},${plan.c}bb)`}}>{lang==="tr"?"✉️ Bize Ulaşın":"✉️ Contact Us"}</button>}
+    </div>);})}
     <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:4,padding:"8px 10px",borderRadius:8,background:`${mt}11`,lineHeight:1.5}}>
       🌍 {lang==="tr"?"Fiyatlar ülkenize göre uyarlanır. Yıllık planlar 7 gün ücretsiz deneme içerir, istediğiniz zaman iptal edebilirsiniz.":"Prices are adapted to your region. Annual plans include a 7-day free trial, cancel anytime."}
     </div>
