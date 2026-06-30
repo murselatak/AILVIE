@@ -1196,6 +1196,7 @@ const[msgIn,setMsgIn]=useState("");
 const[chatM,setChatM]=useState([]);
 const[chatIn,setChatIn]=useState("");
 const[chatL,setChatL]=useState(false);
+const[chatNudgeOff,setChatNudgeOff]=useState(false); // gentle overdue-med reminder dismissed for this session
 // Auto-scroll chat to bottom when new messages arrive
 useEffect(()=>{if(chatEndRef.current)chatEndRef.current.scrollIntoView({behavior:"smooth",block:"end"});},[chatM,chatL]);
 
@@ -1366,6 +1367,7 @@ KONUŞMA TARZI (çok önemli):
 - Kullanıcının sorusuna ODAKLAN. Soruyu yanıtla, gereksiz geri sorularla konuyu dağıtma.
 - Gereksiz uzatma. Net ve öz ol (2-4 cümle yeterli, gerekirse açıkla).
 - Yukarıdaki ŞU AN / BUGÜNKÜ İLAÇLAR / BUGÜNKÜ İYİ-OLUŞ / HASTA PROFİLİ bilgilerine TAM HAKİMSİN. Kişinin o anki sağlık durumunu zaten biliyormuş gibi davran; ilaç/sağlık sorularını bu güncel duruma göre, tekrar sormadan yanıtla (ör. "akşam ilacını henüz almamışsın, saat 20:00'de hatırlatayım mı?").
+- Gerçekten önemli ve güncel bir durum varsa (ör. saati geçmiş/gecikmiş bir ilaç) sohbete uygun bir anda NAZİKÇE ve yalnızca BİR KEZ hatırlat ("bu arada öğle ilacın biraz gecikmiş, aldın mı?"). Israr etme, suçlayıcı olma; kullanıcı üzgün/dertliyse önce onu dinle, hatırlatmayı dayatma.
 - Kişinin O ANKİ yaklaşımına ve tonuna uyum sağla — tıpkı doğal bir sesli asistan gibi. Kısa/komut gibi konuşana kısa ve net; sohbet edene sıcak ve samimi; bilgi isteyene açık ve düzenli; dertleşene şefkatli cevap ver. Resmiyet ve enerji düzeyini ona göre ayarla, onun dilini/üslubunu yansıt.
 - Sesli kullanımda doğal, akıcı konuşma dili kullan; uzun madde listeleri yerine akan cümleler kur, kısa tut.
 
@@ -2849,6 +2851,19 @@ const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",ga
 const q1Dynamic=pat.name?`${pat.name.split(" ")[0]}, ${t.q1.toLowerCase()} ${lang==="tr"?"Umarım iyisindir 💙":"Hope you are well 💙"}`:t.q1;
 const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,flex:"1 1 0",minHeight:0,height:0,position:"relative"}}>
   <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0,alignItems:"center"}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}{chatM.length>0&&<button onClick={()=>{if(confirm(lang==="tr"?"Tüm sohbet geçmişi silinsin mi?":"Clear all chat history?"))setChatM([]);}} style={{...pill(false),marginLeft:"auto",flexShrink:0,color:dg,borderColor:dg+"44",whiteSpace:"nowrap"}}>🗑️ {lang==="tr"?"Temizle":"Clear"}</button>}</div>
+  {(()=>{
+    if(chatNudgeOff)return null;
+    const nowMin=new Date().getHours()*60+new Date().getMinutes();
+    const overdue=meds.filter(m=>!m.taken&&m.time).filter(m=>{const[h,mm]=(m.time||"00:00").split(":").map(Number);return (h*60+mm)<nowMin;}).sort((a,b)=>((a.time||"")<(b.time||"")?-1:1));
+    if(!overdue.length)return null;
+    const m0=overdue[0];const[h,mm]=(m0.time||"00:00").split(":").map(Number);const lateMin=nowMin-(h*60+mm);const lateTxt=lateMin>=60?`${Math.floor(lateMin/60)} ${lang==="tr"?"saat":"h"}`:`${lateMin} ${lang==="tr"?"dk":"min"}`;
+    return <div style={{flexShrink:0,display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:10,background:`${ac}12`,border:`1px solid ${ac}55`}}>
+      <span style={{fontSize:18}}>⏰</span>
+      <div style={{flex:1,minWidth:0,fontSize:fs-1}}>{lang==="tr"?<>Bu arada <b>{m0.name}</b> ilacın {lateTxt} gecikmiş{overdue.length>1?` (+${overdue.length-1})`:""} — aldın mı?</>:<>By the way, your <b>{m0.name}</b> is {lateTxt} late{overdue.length>1?` (+${overdue.length-1})`:""} — taken it?</>}</div>
+      <button onClick={()=>{setMeds(p=>p.map(x=>x.id===m0.id?{...x,taken:true}:x));notify(lang==="tr"?`✓ ${m0.name} alındı olarak işaretlendi`:`✓ ${m0.name} marked as taken`);}} style={{...BP,padding:"5px 10px",fontSize:fs-2,flexShrink:0,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>✓ {lang==="tr"?"Aldım":"Took it"}</button>
+      <button onClick={()=>setChatNudgeOff(true)} style={{background:"none",border:"none",color:mt,fontSize:fs+4,cursor:"pointer",lineHeight:1,padding:"0 2px",flexShrink:0}}>×</button>
+    </div>;
+  })()}
   <div className="chat-scroll" style={{flex:"1 1 0",minHeight:0,height:0,overflowY:"auto",overflowX:"hidden",display:"flex",flexDirection:"column",gap:8,WebkitOverflowScrolling:"touch",scrollbarWidth:"thin",scrollbarColor:`${ac}66 transparent`}}>
     {chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}
     {chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,padding:"8px 11px",borderRadius:12,flexShrink:0,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
