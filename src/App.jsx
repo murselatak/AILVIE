@@ -1015,6 +1015,7 @@ const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0,steps:0,sleep:0,
 const[editH,setEditH]=useState(null);
 const[tmpH,setTmpH]=useState("");
 const[wellness,setWellness]=useState({water:0,sleep:0,mood:0,steps:0,exercise:0,waterGoal:8,sleepGoal:8,stepsGoal:10000});
+const[moodLog,setMoodLog]=useState([]);
 const[stepAuto,setStepAuto]=useState(()=>{try{return localStorage.getItem("ailvie_step_auto")==="1";}catch{return false;}});
 const stepRef=React.useRef({last:0,baseSteps:0,count:0,lastMag:0});
 // Auto step counter via DeviceMotion
@@ -1237,9 +1238,9 @@ riskPenalty
 useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
 if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(d.chatM?.length)setChatM(d.chatM);
-if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);
+if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);
 }catch{}},[]); // load once
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM]); // enhanced auto-save
+useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM,moodLog}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM,moodLog]); // enhanced auto-save
 // Auto-cleanup empty notes that are not being edited
 useEffect(()=>{const tm=setTimeout(()=>{setNotes(p=>{const filtered=p.filter(n=>(n.title?.trim()||n.content?.trim()||editNote===n.id));return filtered.length===p.length?p:filtered;});},3000);return()=>clearTimeout(tm);},[notes,editNote]);
 
@@ -2435,8 +2436,20 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <div style={{...CS,border:`1px solid #f59e0b33`}}>
     <div style={{fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>🧠 {lang==="tr"?"Ruh Hali":"Mood"}</div>
     <div style={{display:"flex",justifyContent:"space-between",gap:4}}>
-      {moods.map(m=><button key={m.v} onClick={()=>setWellness(w=>({...w,mood:m.v}))} style={{flex:1,padding:"10px 4px",borderRadius:10,border:wellness.mood===m.v?`2px solid #f59e0b`:`1px solid ${bd}`,background:wellness.mood===m.v?"#f59e0b15":"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}><span style={{fontSize:24}}>{m.e}</span><span style={{fontSize:fs-4,color:mt}}>{m.l}</span></button>)}
+      {moods.map(m=><button key={m.v} onClick={()=>{setWellness(w=>({...w,mood:m.v}));const td=new Date().toISOString().slice(0,10);setMoodLog(p=>[...p.filter(e=>e.date!==td),{date:td,mood:m.v}].slice(-60));}} style={{flex:1,padding:"10px 4px",borderRadius:10,border:wellness.mood===m.v?`2px solid #f59e0b`:`1px solid ${bd}`,background:wellness.mood===m.v?"#f59e0b15":"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}><span style={{fontSize:24}}>{m.e}</span><span style={{fontSize:fs-4,color:mt}}>{m.l}</span></button>)}
     </div>
+    {(()=>{
+      const days=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().slice(0,10));}
+      const map={};moodLog.forEach(e=>{map[e.date]=e.mood;});
+      const recent=moodLog.slice(-3).map(e=>e.mood);
+      const persistentLow=recent.length>=3&&recent.every(v=>v<=2);
+      const dayLbl=[t.su,t.mo,t.tu,t.we,t.th,t.fr,t.sa];
+      return <div style={{marginTop:10}}>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:4}}>{lang==="tr"?"Son 7 gün":"Last 7 days"}</div>
+        <div style={{display:"flex",gap:4}}>{days.map(d=>{const mv=map[d];const em=mv?(moods.find(x=>x.v===mv)||{}).e:"·";const dd=new Date(d);return <div key={d} style={{flex:1,textAlign:"center"}}><div style={{fontSize:mv?16:13,opacity:mv?1:.3,lineHeight:1.4}}>{em}</div><div style={{fontSize:fs-4,color:mt}}>{dayLbl[dd.getDay()]}</div></div>;})}</div>
+        {persistentLow&&<div style={{marginTop:8,padding:"8px 10px",borderRadius:8,background:`${ac}10`,border:`1px solid ${ac}44`,fontSize:fs-2,color:tc}}>{lang==="tr"?"Birkaç gündür kendini iyi hissetmiyorsun. Güvendiğin biriyle konuşmak ya da bir uzmana danışmak iyi gelebilir — yalnız değilsin. 💙":"You've been feeling low for a few days. Talking to someone you trust or a professional may help — you're not alone. 💙"}</div>}
+      </div>;
+    })()}
   </div>
   {/* Exercise Minutes */}
   <div style={{...CS,border:`1px solid ${dg}33`}}>
