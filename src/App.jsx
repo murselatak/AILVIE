@@ -3091,6 +3091,7 @@ return (
             {/* Menu Items */}
             <div style={{padding:"4px 0",overflowY:"auto",flex:1}}>
             {[
+              {icon:"🏠",label:t.home,action:()=>{goTo("home");setShowMenu(false);}},
               (acctEmail.trim()
                 ? {icon:"👤",label:(lang==="tr"?"Hesabım":"My account")+" — "+acctEmail,action:()=>{setSettingsTab("subs");goTo("settings");setShowMenu(false);}}
                 : {icon:"🔑",label:({tr:"Giriş Yap / Abone Ol",en:"Sign in / Subscribe",de:"Anmelden / Abonnieren",ru:"Войти / Подписка",zh:"登录 / 订阅",hi:"साइन इन / सदस्यता",nl:"Inloggen / Abonneren",es:"Iniciar sesión / Suscribirse",ar:"تسجيل الدخول / اشتراك"}[lang]||"Sign in / Subscribe"),action:()=>{setSettingsTab("subs");goTo("settings");setShowMenu(false);}}),
