@@ -537,6 +537,7 @@ const videoRef=useRef(null);
 const streamRef=useRef(null);
 const scanIntervalRef=useRef(null);
 const photoInputRef=useRef(null);
+const backupInputRef=useRef(null);
 const medProg=meds.length?Math.round(meds.filter(m=>m.taken).length/meds.length*100):0;
 
 // Barcode → Drug mapping (common EAN/UPC barcodes)
@@ -954,7 +955,7 @@ meds.forEach(m=>{
   }
   // Late med warning — every 15 min for unmissed meds past their time
   if(!m.taken&&m.time){
-    const[mH,mM]=m.time.split(':').map(Number);
+    const[mH,mM]=(m.time||'00:00').split(':').map(Number);
     const medMins=mH*60+mM;
     const nowMins=_n.getHours()*60+_n.getMinutes();
     const diff=nowMins-medMins;
@@ -1236,6 +1237,39 @@ if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);
 useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM]); // enhanced auto-save
 // Auto-cleanup empty notes that are not being edited
 useEffect(()=>{const tm=setTimeout(()=>{setNotes(p=>{const filtered=p.filter(n=>(n.title?.trim()||n.content?.trim()||editNote===n.id));return filtered.length===p.length?p:filtered;});},3000);return()=>clearTimeout(tm);},[notes,editNote]);
+
+// ═══ DATA BACKUP (export/import) — local file, no cloud needed ═══
+const exportData=()=>{
+  try{
+    const env={app:"AILVIE",version:1,exportedAt:new Date().toISOString(),data:{
+      ailvie_data:localStorage.getItem("ailvie_data")||"{}",
+      ailvie_account_email:localStorage.getItem("ailvie_account_email")||"",
+      ailvie_lang:localStorage.getItem("ailvie_lang")||""
+    }};
+    const blob=new Blob([JSON.stringify(env,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;a.download="ailvie-yedek-"+new Date().toISOString().slice(0,10)+".json";
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    notify(lang==="tr"?"✅ Yedek indirildi":"✅ Backup downloaded");
+  }catch(e){notify(lang==="tr"?"Yedekleme başarısız":"Backup failed");}
+};
+const importData=async(file)=>{
+  if(!file)return;
+  try{
+    const txt=await file.text();
+    const env=JSON.parse(txt);
+    if(!env||env.app!=="AILVIE"||!env.data){notify(lang==="tr"?"Geçersiz yedek dosyası":"Invalid backup file");return;}
+    const ok=window.confirm(lang==="tr"?"Mevcut verileriniz bu yedekle DEĞİŞTİRİLECEK. Devam edilsin mi?":"Your current data will be REPLACED by this backup. Continue?");
+    if(!ok)return;
+    const d=env.data;
+    if(typeof d.ailvie_data==="string")localStorage.setItem("ailvie_data",d.ailvie_data);
+    if(d.ailvie_account_email!=null)localStorage.setItem("ailvie_account_email",d.ailvie_account_email);
+    if(d.ailvie_lang)localStorage.setItem("ailvie_lang",d.ailvie_lang);
+    notify(lang==="tr"?"✅ Geri yüklendi, yenileniyor...":"✅ Restored, reloading...");
+    setTimeout(()=>location.reload(),800);
+  }catch(e){notify(lang==="tr"?"Geri yükleme başarısız (dosya bozuk olabilir)":"Restore failed (file may be corrupt)");}
+};
 
 const sendChat=async(text)=>{
   const q=text||chatIn;if(!q.trim())return;
@@ -1673,7 +1707,7 @@ const renderHome=()=>{
           <span style={{fontSize:22,animation:"pulse 2s infinite"}}>⏰</span>
           <div style={{flex:1}}>
             <div style={{fontWeight:700,fontSize:fs-1}}>{nextMed.name} — {nextMed.dose}</div>
-            <div style={{fontSize:fs-3,color:mt}}>{pat.name?pat.name.split(" ")[0]+", ":""}{nextMed.name} {(()=>{const[mH,mM]=nextMed.time.split(":").map(Number);const nowM=now.getHours()*60+now.getMinutes();const medM=mH*60+mM;const diff=nowM-medM;if(diff>0&&diff<120)return lang==="tr"?`${diff} dk geçti. İlacını aldıysan onay ver.`:`${diff} min passed. Confirm if taken.`;if(diff>=120)return lang==="tr"?`${Math.floor(diff/60)} saat ${diff%60} dk geçti!`:`${Math.floor(diff/60)}h ${diff%60}m passed!`;return lang==="tr"?"saatin yaklaşıyor!":"time approaching!";})()}</div>
+            <div style={{fontSize:fs-3,color:mt}}>{pat.name?pat.name.split(" ")[0]+", ":""}{nextMed.name} {(()=>{const[mH,mM]=(nextMed.time||"00:00").split(":").map(Number);const nowM=now.getHours()*60+now.getMinutes();const medM=mH*60+mM;const diff=nowM-medM;if(diff>0&&diff<120)return lang==="tr"?`${diff} dk geçti. İlacını aldıysan onay ver.`:`${diff} min passed. Confirm if taken.`;if(diff>=120)return lang==="tr"?`${Math.floor(diff/60)} saat ${diff%60} dk geçti!`:`${Math.floor(diff/60)}h ${diff%60}m passed!`;return lang==="tr"?"saatin yaklaşıyor!":"time approaching!";})()}</div>
           </div>
           <div style={{textAlign:"right"}}>
             <div style={{fontWeight:800,fontSize:fs+1,color:ac}}>{nextMed.time}</div>
@@ -2216,6 +2250,15 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
     <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:4,padding:"8px 10px",borderRadius:8,background:`${mt}11`,lineHeight:1.5}}>
       🌍 {lang==="tr"?"Fiyatlar ülkenize göre uyarlanır. Yıllık planlar 7 gün ücretsiz deneme içerir, istediğiniz zaman iptal edebilirsiniz.":"Prices are adapted to your region. Annual plans include a 7-day free trial, cancel anytime."}
     </div>
+  </div>}
+  {all&&<div style={CS}>
+    <div style={{fontWeight:700,marginBottom:6}}>💾 {lang==="tr"?"Veri Yedekleme":"Data Backup"}</div>
+    <div style={{fontSize:fs-2,color:mt,marginBottom:8}}>{lang==="tr"?"Tüm sağlık verilerinizi (ilaç, randevu, not, hasta karnesi) bir dosyaya yedekleyin veya geri yükleyin. Buluta gerek yok — cihaz değiştirirken de kullanışlı.":"Back up or restore all your health data (meds, appointments, notes, patient card) to a file. No cloud needed — also handy when switching devices."}</div>
+    <div style={{display:"flex",gap:8}}>
+      <button onClick={exportData} style={{...BP,flex:1}}>⬇️ {lang==="tr"?"Dışa Aktar":"Export"}</button>
+      <button onClick={()=>backupInputRef.current&&backupInputRef.current.click()} style={{...BP,flex:1,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>⬆️ {lang==="tr"?"İçe Aktar":"Import"}</button>
+    </div>
+    <input ref={backupInputRef} type="file" accept="application/json,.json" style={{display:"none"}} onChange={e=>{const f=e.target.files&&e.target.files[0];importData(f);e.target.value="";}}/>
   </div>}
   {(all||s==="trash")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🗑️ {t.trash}</div><div style={{display:"flex",gap:8,marginBottom:8}}>{[30,60,90].map(d=><button key={d} onClick={()=>setTrashDays(d)} style={pill(trashDays===d)}>{d} {t.trD}</button>)}</div>{trashItems.length===0&&<div style={{color:mt,textAlign:"center",padding:12}}>🗑️ {t.trE}</div>}{trashItems.map(item=>(<div key={item.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`,opacity:.7}}><span style={{fontSize:fs-1}}>{item.name||item.title||item.doctor||item.content?.substring(0,20)||"—"}</span><button onClick={()=>restoreItem(item)} style={{...BP,padding:"4px 10px",fontSize:fs-2}}>{t.rest}</button></div>))}{trashItems.length>0&&<button onClick={()=>setTrashItems([])} style={{...BD,width:"100%",marginTop:8}}>{t.empT}</button>}</div>}
   {(all||s==="legal")&&<div style={CS}><div style={{fontWeight:700,marginBottom:6}}>⚖️ {t.legal}</div><div style={{fontSize:fs-2,color:mt,lineHeight:1.4}}>{t.legalText}</div></div>}
