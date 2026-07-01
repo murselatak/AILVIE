@@ -308,6 +308,32 @@ const CONTACT_EMAIL=""; // e.g. "kurumsal@ailvie.com" (Enterprise "Contact Us")
 // Get from Firebase console > Project settings > Your apps > SDK config.
 const FIREBASE_CONFIG={}; // e.g. {apiKey:"...",authDomain:"ailvie.firebaseapp.com",projectId:"ailvie",appId:"..."}
 const ENABIZ_CONFIG={}; // resmi Sağlık Bakanlığı izni alınınca: {authUrl, clientId, scope, redirectUri} — OAuth2/FHIR
+const FIRST_AID=[
+ {ic:"🫀",tr:["Kalp masajı (KPR) — yanıt yok, nefes yok","Hemen 112'yi arayın (ya da birine arattırın); yakında OED/AED varsa getirtin.","Kişiyi sert, düz zemine sırtüstü yatırın.","Göğsün tam ortasına iki elle bastırın: dakikada 100–120 bası, 5–6 cm derinlik.","Eğitimliyseniz 30 bası + 2 suni solunum; değilseniz yalnızca kesintisiz bası yapın.","Yardım gelene veya kişi kendine gelene kadar ara vermeyin."],
+  en:["CPR — unresponsive, not breathing","Call emergency (112) now or have someone call; get an AED if nearby.","Lay the person on their back on a firm, flat surface.","Push hard in the center of the chest: 100–120/min, 5–6 cm deep.","If trained: 30 compressions + 2 breaths; if not, do hands-only compressions.","Don't stop until help arrives or the person recovers."]},
+ {ic:"😮‍💨",tr:["Boğulma / soluk yolu tıkanması (Heimlich)","Kişi öksürebiliyorsa öksürmesini teşvik edin.","Öksüremiyor/konuşamıyorsa kürek kemikleri arasına elin topuğuyla 5 sert sırt vuruşu yapın.","Sonra arkadan sarılıp göbek üstüne 5 kez içeri-yukarı bastırın (Heimlich).","5 sırt + 5 karın bastırmayı tekrarlayın; kişi bayılırsa 112'yi arayıp KPR'ye başlayın.","Bebeklerde (1 yaş altı): 5 sırt vuruşu + 5 göğüs bası; karına bastırma YAPMAYIN."],
+  en:["Choking (Heimlich)","If they can cough, encourage coughing.","If they can't cough/speak: 5 firm back blows between the shoulder blades.","Then 5 abdominal thrusts (Heimlich) from behind.","Repeat 5+5; if they collapse, call 112 and start CPR.","Infants (<1yr): 5 back blows + 5 chest thrusts; NO abdominal thrusts."]},
+ {ic:"🩸",tr:["Ciddi kanama","Temiz bez/gazlı bezle yaraya doğrudan ve sürekli bası uygulayın.","Mümkünse yaralı bölgeyi kalp seviyesinin üstüne kaldırın.","Bez kanla dolarsa çıkarmayın, üstüne yeni bez ekleyin.","Ağır veya durmayan kanamada 112'yi arayın.","Turnike yalnızca hayatı tehdit eden kol/bacak kanamasında son çaredir."],
+  en:["Severe bleeding","Apply firm, direct pressure with a clean cloth.","Raise the injured area above heart level if possible.","If the cloth soaks through, add another on top — don't remove it.","Call 112 for heavy or non-stopping bleeding.","A tourniquet is a last resort only for life-threatening limb bleeding."]},
+ {ic:"🔥",tr:["Yanık","Yanan bölgeyi 20 dakika akan serin (buz gibi değil) suyun altında tutun.","Yapışmadıysa yüzük/saat/dar giysiyi çıkarın.","Diş macunu, yağ, buz SÜRMEYİN; su kabarcıklarını patlatmayın.","Temiz, yapışmaz bir bezle gevşekçe örtün.","Geniş/derin ya da yüz-el-genital yanıklarında hekime başvurun."],
+  en:["Burns","Cool under running cool (not icy) water for 20 minutes.","Remove rings/watch/tight clothing if not stuck.","Do NOT apply toothpaste, oil or ice; don't pop blisters.","Cover loosely with a clean, non-stick cloth.","Seek care for large/deep burns or burns to face, hands, genitals."]},
+ {ic:"❤️",tr:["Kalp krizi","Hemen 112'yi arayın.","Kişiyi rahat oturtun, dar giysilerini gevşetin, sakinleştirin.","Alerjisi ve engel yoksa 1 aspirin çiğnetmek faydalı olabilir.","Bilinç kaybolur ve nefes durursa KPR'ye başlayın.","Belirtiler: göğüste baskı/ağrı, kola-çeneye yayılma, soğuk ter, nefes darlığı."],
+  en:["Heart attack","Call 112 immediately.","Sit them down, loosen tight clothing, keep them calm.","If not allergic and no contraindication, chewing one aspirin may help.","If they lose consciousness and stop breathing, start CPR.","Signs: chest pressure/pain spreading to arm/jaw, cold sweat, breathlessness."]},
+ {ic:"🧠",tr:["İnme (felç) — FAST","F – Yüz: Gülümsetin; bir taraf düşük mü?","A – Kol: İki kolu kaldırtın; biri düşüyor mu?","S – Konuşma: Basit bir cümle kurdurtun; peltek/bozuk mu?","T – Zaman: Bunlardan biri varsa HEMEN 112. Belirtinin başlama saatini not edin.","Kişiye yiyecek/içecek vermeyin."],
+  en:["Stroke — FAST","F – Face: Ask them to smile; is one side drooping?","A – Arms: Raise both arms; does one drift down?","S – Speech: Ask a simple sentence; is it slurred?","T – Time: If any sign, call 112 NOW. Note the time symptoms started.","Do not give food or drink."]},
+ {ic:"⚡",tr:["Nöbet (epilepsi)","Çevreyi güvenli yapın, sert/keskin eşyaları uzaklaştırın.","Başının altına yumuşak bir şey koyun; kişiyi TUTMAYIN, ağzına bir şey SOKMAYIN.","Nöbet bitince yan yatırın (koma pozisyonu), nefesini kontrol edin.","5 dakikadan uzun sürer, tekrarlar veya ilk nöbetse 112'yi arayın."],
+  en:["Seizure","Make the area safe; move hard/sharp objects away.","Cushion the head; do NOT restrain them or put anything in their mouth.","After it stops, roll them onto their side and check breathing.","Call 112 if it lasts >5 min, repeats, or is a first seizure."]},
+ {ic:"🐝",tr:["Şiddetli alerji (anafilaksi)","Adrenalin oto-enjektörü (EpiPen) varsa uyluğun dış yüzüne HEMEN uygulayın.","112'yi arayın.","Nefes zorsa oturtun; baygınsa sırtüstü yatırıp bacakları kaldırın.","Belirtiler sürerse ve ikinci doz varsa 5–15 dk sonra tekrar uygulanabilir.","Belirtiler: yüz/dudak/dil şişmesi, nefes darlığı, yaygın kızarıklık, baş dönmesi."],
+  en:["Severe allergy (anaphylaxis)","If an adrenaline auto-injector (EpiPen) is available, use it on the outer thigh NOW.","Call 112.","If breathing is hard, sit them up; if faint, lay flat and raise legs.","A second dose may be given after 5–15 min if symptoms persist.","Signs: swelling of face/lips/tongue, breathlessness, widespread rash, dizziness."]},
+ {ic:"☠️",tr:["Zehirlenme","Ulusal Zehir Danışma Merkezi 114'ü veya 112'yi arayın.","Aksi söylenmedikçe KUSTURMAYIN.","Zehirli madde/ilaç kutusunu (isim ve miktar için) yanınıza alın.","Cilt/göz teması varsa bol suyla 15–20 dk yıkayın."],
+  en:["Poisoning","Call the poison center (in Turkey 114) or 112.","Do NOT induce vomiting unless told to.","Keep the substance/medication package (for name and amount).","For skin/eye contact, rinse with plenty of water for 15–20 min."]},
+ {ic:"😵",tr:["Bayılma","Kişiyi sırtüstü yatırın, bacaklarını ~30 cm kaldırın.","Dar giysileri gevşetin, temiz hava sağlayın.","1 dakikada kendine gelmezse ya da nefes/bilinç sorunluysa 112'yi arayın."],
+  en:["Fainting","Lay the person on their back and raise their legs ~30 cm.","Loosen tight clothing and provide fresh air.","If they don't recover within a minute or breathing is off, call 112."]},
+ {ic:"🩹",tr:["Kırık / burkulma","Bölgeyi hareket ettirmeyin; olduğu gibi sabitleyin (atel/destek).","Kemiği yerine oturtmaya ÇALIŞMAYIN.","Şişlik için beze sarılı soğuk kompres uygulayın (doğrudan cilde değil).","Şiddetli ağrı, şekil bozukluğu veya açık kırıkta 112/hekim."],
+  en:["Fracture / sprain","Don't move the area; immobilize it as-is (splint/support).","Do NOT try to realign the bone.","Apply a cold pack wrapped in cloth (not directly on skin).","Seek care for severe pain, deformity, or an open fracture."]},
+ {ic:"👃",tr:["Burun kanaması","Öne eğilin (başı geriye ATMAYIN).","Burnun yumuşak kısmını 10 dakika sıkın, ağızdan nefes alın.","20 dakikada durmazsa veya çok yoğunsa hekime başvurun."],
+  en:["Nosebleed","Lean forward (do NOT tilt the head back).","Pinch the soft part of the nose for 10 minutes; breathe through the mouth.","If it doesn't stop in 20 min or is very heavy, seek care."]}
+];
 const FB_VER="10.12.0";
 export default function AILVIE_App(){
 const[lang,setLang]=useState(function(){try{var s=localStorage.getItem("ailvie_lang");if(s)return s;}catch(e){}var b=(navigator.language||"tr").split("-")[0].toLowerCase();return["tr","en","de","ru","zh","hi","nl","es","ar"].indexOf(b)>=0?b:"en";});
@@ -337,6 +363,8 @@ const[apiKey,setApiKey]=useState(()=>{try{return localStorage.getItem("ailvie_ap
 const[showNotif,setShowNotif]=useState(false);
 const[showEmergency,setShowEmergency]=useState(false);
 const[showMenu,setShowMenu]=useState(false);
+const[showFirstAid,setShowFirstAid]=useState(false);
+const[faOpen,setFaOpen]=useState(null);
 const[online,setOnline]=useState(typeof navigator!=="undefined"?navigator.onLine:true);
 const[installEvt,setInstallEvt]=useState(null);
 const[iosHelp,setIosHelp]=useState(false);
@@ -3322,6 +3350,30 @@ return (
         );})()}
 
         {/* LOCK SCREEN — shown when app is locked */}
+        {showFirstAid&&<div style={{position:"fixed",inset:0,zIndex:9997,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowFirstAid(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:520,maxHeight:"92vh",borderRadius:"18px 18px 0 0",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
+              <span style={{fontWeight:800,fontSize:fs+3}}>🚑 {lang==="tr"?"İlk Yardım":"First Aid"}</span>
+              <button onClick={()=>setShowFirstAid(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:tc}}>✕</button>
+            </div>
+            <div style={{padding:"12px 16px",overflowY:"auto"}}>
+              <div style={{display:"flex",gap:8,marginBottom:10}}>
+                <a href="tel:112" style={{...BP,flex:1,textAlign:"center",textDecoration:"none",padding:"12px",fontSize:fs+1,fontWeight:800,background:`linear-gradient(135deg,${dg},#c0392b)`}}>📞 112 {lang==="tr"?"Acil":"Emergency"}</a>
+                <a href="tel:114" title={lang==="tr"?"Zehir Danışma":"Poison line"} style={{...BP,flex:"0 0 auto",textAlign:"center",textDecoration:"none",padding:"12px 14px",fontSize:fs-1,background:"transparent",border:`1px solid ${bd}`,color:tc}}>☠️ 114</a>
+              </div>
+              <div style={{fontSize:fs-3,color:tc,background:`${dg}12`,border:`1px solid ${dg}33`,borderRadius:10,padding:"8px 10px",marginBottom:12,lineHeight:1.5}}>⚠️ {lang==="tr"?"Acil durumda ÖNCE 112'yi arayın. Bu bilgiler temel yönlendirmedir; profesyonel tıbbi yardımın veya ilk yardım eğitiminin yerine geçmez.":"In an emergency, call 112 FIRST. This is basic guidance and does not replace professional help or first-aid training."}</div>
+              {FIRST_AID.map((it,i)=>{const c=lang==="tr"?it.tr:it.en;const open=faOpen===i;return <div key={i} style={{border:`1px solid ${bd}`,borderRadius:12,marginBottom:8,overflow:"hidden"}}>
+                <button onClick={()=>setFaOpen(open?null:i)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 12px",background:open?`${ac}10`:"transparent",border:"none",cursor:"pointer",color:tc,textAlign:"left"}}>
+                  <span style={{fontSize:22,flexShrink:0}}>{it.ic}</span>
+                  <span style={{flex:1,fontWeight:700,fontSize:fs-1}}>{c[0]}</span>
+                  <span style={{color:mt,fontSize:fs-1,flexShrink:0}}>{open?"▲":"▼"}</span>
+                </button>
+                {open&&<ol style={{margin:0,padding:"2px 16px 12px 36px",fontSize:fs-1,lineHeight:1.6,color:tc}}>{c.slice(1).map((s,j)=><li key={j} style={{marginBottom:5}}>{s}</li>)}</ol>}
+              </div>;})}
+              <div style={{fontSize:fs-4,color:mt,textAlign:"center",padding:"6px 0 8px"}}>{lang==="tr"?"Kaynak: genel kabul görmüş ilk yardım ilkeleri. Ülkenizin acil numarası farklı olabilir.":"Source: widely accepted first-aid principles. Your local emergency number may differ."}</div>
+            </div>
+          </div>
+        </div>}
         {pulseM&&<div style={{position:"fixed",inset:0,zIndex:9998,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={pulseM.phase!=="measuring"&&pulseM.phase!=="init"?closePulse:undefined}>
           <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:360,borderRadius:18,padding:22,textAlign:"center",border:`1px solid ${dg}`}}>
             <div style={{fontSize:44,marginBottom:8,animation:(pulseM.phase==="measuring")?"pulse 1s infinite":"none"}}>❤️</div>
@@ -3428,6 +3480,7 @@ return (
                 : {icon:"🔑",label:({tr:"Giriş Yap / Abone Ol",en:"Sign in / Subscribe",de:"Anmelden / Abonnieren",ru:"Войти / Подписка",zh:"登录 / 订阅",hi:"साइन इन / सदस्यता",nl:"Inloggen / Abonneren",es:"Iniciar sesión / Suscribirse",ar:"تسجيل الدخول / اشتراك"}[lang]||"Sign in / Subscribe"),action:()=>{setSettingsTab("subs");goTo("settings");setShowMenu(false);}}),
               null,
               {icon:"👤",label:t.profile,action:()=>{goTo("pCard");setShowMenu(false);}},
+              {icon:"🚑",label:lang==="tr"?"İlk Yardım":"First Aid",action:()=>{setShowMenu(false);setFaOpen(null);setShowFirstAid(true);}},
               {icon:"🌍",label:t.lang,action:()=>{setShowMenu(false);setShowLangPicker(true);}},
               {icon:dark?"🌙":"☀️",label:t.dark,action:()=>{setDark(!dark);}},
               {icon:appLockEnabled?"🔓":"🔒",label:appLockEnabled?t.lockOn:t.appLock,action:()=>{setShowMenu(false);if(appLockEnabled)disableAppLock();else enableAppLock();}},
