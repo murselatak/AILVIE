@@ -276,6 +276,7 @@ const CONTACT_EMAIL=""; // e.g. "kurumsal@ailvie.com" (Enterprise "Contact Us")
 // Firebase web config (PUBLIC client keys) — fill to enable Google/Apple sign-in & cloud sync.
 // Get from Firebase console > Project settings > Your apps > SDK config.
 const FIREBASE_CONFIG={}; // e.g. {apiKey:"...",authDomain:"ailvie.firebaseapp.com",projectId:"ailvie",appId:"..."}
+const ENABIZ_CONFIG={}; // resmi Sağlık Bakanlığı izni alınınca: {authUrl, clientId, scope, redirectUri} — OAuth2/FHIR
 const FB_VER="10.12.0";
 export default function AILVIE_App(){
 const[lang,setLang]=useState(function(){try{var s=localStorage.getItem("ailvie_lang");if(s)return s;}catch(e){}var b=(navigator.language||"tr").split("-")[0].toLowerCase();return["tr","en","de","ru","zh","hi","nl","es","ar"].indexOf(b)>=0?b:"en";});
@@ -2674,6 +2675,14 @@ const interpretImage=async(img)=>{
     setMedImages(p=>p.map(x=>x.id===img.id?{...x,aiNote:"⚠️ "+msg}:x));setImgView(v=>v&&v.id===img.id?{...v,aiNote:"⚠️ "+msg}:v);
   }finally{setImgBusy(null);}
 };
+const connectENabiz=()=>{
+  if(ENABIZ_CONFIG&&ENABIZ_CONFIG.authUrl){
+    const u=ENABIZ_CONFIG.authUrl+`?client_id=${encodeURIComponent(ENABIZ_CONFIG.clientId||"")}&response_type=code&scope=${encodeURIComponent(ENABIZ_CONFIG.scope||"patient/*.read")}&redirect_uri=${encodeURIComponent(ENABIZ_CONFIG.redirectUri||(location.origin+"/enabiz/callback"))}`;
+    window.open(u,"_blank","noopener");
+  }else{
+    notify(lang==="tr"?"Otomatik bağlantı için Sağlık Bakanlığı resmi API izni gerekiyor (yakında). Şimdilik e-Nabız'ı açıp raporunu indirip aşağıya yükleyebilirsin.":"Automatic connection needs official Ministry of Health API approval (soon). For now, open e-Nabız, download your report and upload it below.");
+  }
+};
 const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <span style={{fontWeight:700,fontSize:fs+2}}>🪪 {t.pCard}</span>
   {/* Kimlik Bilgileri */}
@@ -2759,6 +2768,22 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   </div>
   {records.map(r=>(<div key={r.id} style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,color:ac}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-2,color:mt}}>{r.date}</span></div><div style={{fontSize:fs-1,color:mt}}>{r.doctor} — {r.hospital}</div><div style={{marginTop:4,wordBreak:"break-word"}}>{r.content}</div><div style={{display:"flex",gap:6,marginTop:4}}><button onClick={()=>{setEditRecId(r.id);setNewRec({type:r.type||"diag",doctor:r.doctor||"",hospital:r.hospital||"",date:r.date||"",content:r.content||"",notes:r.notes||""});setShowAddRec(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:ac,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button><button onClick={()=>toTrash("record",r)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>🗑️ {t.del}</button></div></div>))}
   {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><div style={{fontWeight:700,marginBottom:8,color:ac}}>{editRecId?"✏️ "+(lang==="tr"?"Kaydı Düzenle":"Edit Record"):"+ "+(lang==="tr"?"Yeni Kayıt":"New Record")}</div><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><textarea placeholder={lang==="tr"?"İçerik / Sonuç":"Content / Result"} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newRec.content){if(editRecId){setRecords(p=>p.map(x=>x.id===editRecId?{...x,...newRec}:x));notify("✅ "+(lang==="tr"?"Kayıt güncellendi":"Record updated"));}else{setRecords(p=>[...p,{id:Date.now(),...newRec}]);}setNewRec({type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""});setEditRecId(null);setShowAddRec(false);}}} style={BP}>{editRecId?(lang==="tr"?"Güncelle":"Update"):t.save}</button><button onClick={()=>{setShowAddRec(false);setEditRecId(null);}} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
+  <div style={{...CS}}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+      <span style={{fontSize:20}}>🩺</span>
+      <div style={{fontWeight:700,color:ac}}>e-Nabız {lang==="tr"?"Bağlantısı":"Connection"}</div>
+    </div>
+    <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"T.C. Sağlık Bakanlığı kişisel sağlık kaydın: muayene, tahlil, reçete ve radyoloji raporların tek yerde.":"Turkey's Ministry of Health personal health record: visits, labs, prescriptions and radiology reports."}</div>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+      <a href="https://enabiz.gov.tr" target="_blank" rel="noopener noreferrer" style={{...BP,flex:"1 1 45%",textAlign:"center",textDecoration:"none",padding:"8px",fontSize:fs-2}}>🌐 {lang==="tr"?"e-Nabız'ı Aç":"Open e-Nabız"}</a>
+      <button onClick={connectENabiz} style={{...BP,flex:"1 1 45%",padding:"8px",fontSize:fs-2,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>🔗 {lang==="tr"?"Hesabımı Bağla":"Connect account"}</button>
+    </div>
+    <div style={{fontSize:fs-3,color:tc,background:`${mt}12`,borderRadius:8,padding:"8px 10px",lineHeight:1.5}}>
+      <b>{lang==="tr"?"Şimdi nasıl aktarırım?":"How to import now?"}</b><br/>
+      {lang==="tr"?"1) e-Nabız'ı aç, e-Devlet ile gir · 2) Rapor/görüntüyü indir · 3) Aşağıdaki \"Tıbbi Görüntüleme\" bölümüne yükle — AILVIE okuyup yorumlar.":"1) Open e-Nabız, sign in with e-Devlet · 2) Download the report/image · 3) Upload it in \"Medical Imaging\" below — AILVIE reads & interprets."}
+    </div>
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.5}}>ℹ️ {lang==="tr"?"Uygulama içinden otomatik veri çekme; Sağlık Bakanlığı resmi API izni (OAuth2/FHIR) + güvenli sunucu + KVKK uyumu gerektirir. Bu onay alınınca \"Hesabımı Bağla\" tek dokunuşla çalışacak (sahte bağlantı göstermiyoruz).":"Automatic in-app data pull requires official Ministry of Health API approval (OAuth2/FHIR) + a secure server + data-protection compliance. Once approved, \"Connect account\" works in one tap (we don't show a fake connection)."}</div>
+  </div>
   <div style={{...CS}}>
     <div style={{fontWeight:700,marginBottom:4,color:ac}}>🩻 {lang==="tr"?"Tıbbi Görüntüleme & Belgeler":"Medical Imaging & Documents"}</div>
     <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"Röntgen, tomografi, MR, ultrason, tahlil… Pencereden seç, sürükle-bırak, fotoğraf çek ya da QR/barkod ile yükle. AILVIE görüntüyü okuyup genel yorum yapar.":"X-ray, CT, MRI, ultrasound, labs… Pick, drag & drop, take a photo, or upload via QR/barcode. AILVIE reads and gives a general interpretation."}</div>
