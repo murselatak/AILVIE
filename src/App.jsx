@@ -366,6 +366,7 @@ const[showNotif,setShowNotif]=useState(false);
 const[showEmergency,setShowEmergency]=useState(false);
 const[showMenu,setShowMenu]=useState(false);
 const[showFirstAid,setShowFirstAid]=useState(false);
+const[showNav,setShowNav]=useState(false);
 const[faOpen,setFaOpen]=useState(null);
 const[voiceFirst,setVoiceFirst]=useState(()=>{try{return localStorage.getItem("ailvie_vf")==="1";}catch{return false;}});
 useEffect(()=>{try{localStorage.setItem("ailvie_vf",voiceFirst?"1":"0");}catch{}},[voiceFirst]);
@@ -1507,15 +1508,18 @@ SESLİ KOMUTLAR / GEZİNME (kullanıcı özellikle bir yere gitmek/okumak isters
 - Kullanıcı bir sayfaya gitmek isterse KISA bir onay cümlesi ver ve yanıtının EN SONUNA ayrı satırda [[GIT:sayfa]] ekle. Geçerli sayfalar: home, meds, appts, health, notes, contacts, community, chat, settings, pCard. Örn "ilaçlarıma git" → [[GIT:meds]].
 - Kullanıcı kayıtlı verisini SESLİ okumanı isterse [[OKU:tür]] ekle (tür: meds, appts, health). Uygulama listeyi kendisi sesli okuyacak, sen listeyi tekrar yazma. Örn "ilaçlarımı oku" → [[OKU:meds]].
 - Kullanıcı ilk yardım isterse [[ILKYARDIM]] ekle (İlk Yardım ekranını açar).
+- Kullanıcı bir yere yol tarifi/navigasyon isterse (en yakın hastane, eczane, nöbetçi eczane, acil servis, klinik vb.) [[NAV:arama]] ekle; "arama" kısmına haritada aranacak yeri yaz (ör. [[NAV:nöbetçi eczane]]). Uygulama konumu kullanıp harita yol tarifini açacak.
 - Bu direktifleri YALNIZCA kullanıcı gerçekten isterse kullan; uydurma bilgi verme.${voiceNote}`,messages:history},apiKey);
     let reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
     const wantsPulse=/\[\[\s*(OLC:NABIZ|MEASURE:PULSE)\s*\]\]/i.test(reply);
     const navM=reply.match(/\[\[\s*GIT:(\w+)\s*\]\]/i);
     const readM=reply.match(/\[\[\s*OKU:(\w+)\s*\]\]/i);
     const wantsFA=/\[\[\s*(ILKYARDIM|FIRSTAID)\s*\]\]/i.test(reply);
+    const navGo=reply.match(/\[\[\s*NAV:([^\]]+?)\s*\]\]/i);
     reply=reply.replace(/\[\[[^\]]*\]\]/g,"").trim()||(lang==="tr"?"Tamamdır.":"Done.");
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
     if(wantsPulse)setTimeout(()=>startPulseMeasure(true),500);
+    if(navGo)setTimeout(()=>navTo(navGo[1].trim()),400);
     if(navM){const norm={home:"home",meds:"meds",appts:"appts",health:"health",notes:"notes",contacts:"contacts",community:"community",chat:"chat",settings:"settings",pcard:"pCard",admin:"admin"}[navM[1].toLowerCase()];if(norm)setTimeout(()=>goTo(norm),400);}
     if(wantsFA)setTimeout(()=>{setFaOpen(null);setShowFirstAid(true);},400);
     if(readM)setTimeout(()=>readData(readM[1].toLowerCase()),500);
@@ -1762,6 +1766,27 @@ const getLoc=()=>{
   if(!navigator.geolocation){window.open("https://www.google.com/maps/search/hospital+near+me","_blank");return;}
   navigator.geolocation.getCurrentPosition(p=>window.open(`https://www.google.com/maps?q=${p.coords.latitude},${p.coords.longitude}`,"_blank"),()=>window.open("https://www.google.com/maps/search/hospital+near+me","_blank"),{enableHighAccuracy:true,timeout:8000});
 };
+const navTo=(query)=>{
+  const q=encodeURIComponent(query);
+  const open=u=>{try{window.open(u,"_blank","noopener");}catch(e){}};
+  haptic(12);
+  notify(lang==="tr"?"🧭 Harita açılıyor…":"🧭 Opening map…");
+  if(!navigator.geolocation){open(`https://www.google.com/maps/search/${q}`);return;}
+  navigator.geolocation.getCurrentPosition(
+    p=>{const la=p.coords.latitude,lo=p.coords.longitude;open(`https://www.google.com/maps/search/${q}/@${la},${lo},14z`);},
+    ()=>open(`https://www.google.com/maps/search/${q}`),
+    {enableHighAccuracy:true,timeout:8000});
+};
+const NAV_PLACES=()=>{const tr=lang==="tr";return[
+  {ic:"🏥",label:tr?"En yakın hastane":"Nearest hospital",q:tr?"hastane":"hospital"},
+  {ic:"🚑",label:tr?"Acil servis":"Emergency room",q:tr?"acil servis":"emergency room"},
+  {ic:"💊",label:tr?"Eczane":"Pharmacy",q:tr?"eczane":"pharmacy"},
+  {ic:"🌙",label:tr?"Nöbetçi eczane":"On-duty pharmacy",q:tr?"nöbetçi eczane":"24 hour pharmacy"},
+  {ic:"🩺",label:tr?"Klinik / Poliklinik":"Clinic",q:tr?"özel klinik poliklinik":"medical clinic"},
+  {ic:"🦷",label:tr?"Diş hekimi":"Dentist",q:tr?"diş hekimi":"dentist"},
+  {ic:"🔬",label:tr?"Laboratuvar / Tahlil":"Lab",q:tr?"tıbbi tahlil laboratuvarı":"medical laboratory"},
+  {ic:"🩻",label:tr?"Görüntüleme (MR/Röntgen)":"Imaging center",q:tr?"radyoloji görüntüleme merkezi":"radiology imaging center"},
+];};
 
 // ─── STYLES (v2 preserved) ───
 const bg=dark?(hc?"#000":"#0a0e14"):(hc?"#fff":"#f2f5f9");
@@ -3398,6 +3423,24 @@ return (
         );})()}
 
         {/* LOCK SCREEN — shown when app is locked */}
+        {showNav&&<div style={{position:"fixed",inset:0,zIndex:9997,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowNav(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:520,maxHeight:"88vh",borderRadius:"18px 18px 0 0",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
+              <span style={{fontWeight:800,fontSize:fs+3}}>🧭 {lang==="tr"?"Navigasyon":"Navigation"}</span>
+              <button onClick={()=>setShowNav(false)} aria-label={lang==="tr"?"Kapat":"Close"} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:tc}}>✕</button>
+            </div>
+            <div style={{padding:"12px 16px",overflowY:"auto"}}>
+              <div style={{fontSize:fs-2,color:mt,marginBottom:10,lineHeight:1.5}}>{lang==="tr"?"Konumunu kullanıp yakındaki sağlık yerlerine yol tarifini harita uygulamasında açar.":"Uses your location to open directions to nearby health places in your maps app."}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                {NAV_PLACES().map(pl=><button key={pl.q} onClick={()=>navTo(pl.q)} aria-label={pl.label} style={{...BP,display:"flex",alignItems:"center",gap:8,padding:"12px 10px",fontSize:fs-2,textAlign:"left",background:"transparent",border:`1px solid ${bd}`,color:tc}}>
+                  <span style={{fontSize:22,flexShrink:0}}>{pl.ic}</span><span style={{fontWeight:600}}>{pl.label}</span>
+                </button>)}
+              </div>
+              <button onClick={()=>getLoc()} style={{...BP,width:"100%",marginTop:10,padding:"10px"}}>📍 {lang==="tr"?"Konumumu haritada göster":"Show my location"}</button>
+              <div style={{fontSize:fs-4,color:mt,marginTop:10,lineHeight:1.5}}>ℹ️ {lang==="tr"?"Yol tarifi cihazının harita uygulamasında açılır. Konum izni gerekebilir; acil durumda önce 112'yi arayın.":"Directions open in your device's maps app. Location permission may be needed; in an emergency call 112 first."}</div>
+            </div>
+          </div>
+        </div>}
         {showFirstAid&&<div style={{position:"fixed",inset:0,zIndex:9997,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowFirstAid(false)}>
           <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:520,maxHeight:"92vh",borderRadius:"18px 18px 0 0",display:"flex",flexDirection:"column",overflow:"hidden"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
@@ -3529,6 +3572,7 @@ return (
               null,
               {icon:"👤",label:t.profile,action:()=>{goTo("pCard");setShowMenu(false);}},
               {icon:"🚑",label:lang==="tr"?"İlk Yardım":"First Aid",action:()=>{setShowMenu(false);setFaOpen(null);setShowFirstAid(true);}},
+              {icon:"🧭",label:lang==="tr"?"Navigasyon":"Navigation",action:()=>{setShowMenu(false);setShowNav(true);}},
               {icon:"🌍",label:t.lang,action:()=>{setShowMenu(false);setShowLangPicker(true);}},
               {icon:dark?"🌙":"☀️",label:t.dark,action:()=>{setDark(!dark);}},
               {icon:appLockEnabled?"🔓":"🔒",label:appLockEnabled?t.lockOn:t.appLock,action:()=>{setShowMenu(false);if(appLockEnabled)disableAppLock();else enableAppLock();}},
