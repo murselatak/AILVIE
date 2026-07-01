@@ -1385,6 +1385,27 @@ const signInWith=async(provider)=>{
 };
 const signOutAcct=()=>{setAcctEmail("");try{localStorage.removeItem("ailvie_account_email");localStorage.removeItem("ailvie_uid");}catch(e){}notify(lang==="tr"?"Çıkış yapıldı":"Signed out");};
 
+const readData=(kind)=>{
+  let txt="";
+  if(kind==="meds"){
+    if(!meds.length)txt=lang==="tr"?"Kayıtlı ilacın yok.":"You have no medications.";
+    else txt=(lang==="tr"?`${meds.length} ilacın var. `:`You have ${meds.length} medications. `)+meds.slice(0,8).map(m=>`${m.name}${m.time?" "+m.time:""}${m.taken?(lang==="tr"?" alındı":" taken"):""}`).join(", ")+".";
+  }else if(kind==="appts"){
+    const up=[...appts].filter(a=>a.date).sort((x,y)=>(x.date>y.date?1:-1));
+    if(!up.length)txt=lang==="tr"?"Yaklaşan randevun yok.":"You have no upcoming appointments.";
+    else txt=(lang==="tr"?"Randevuların: ":"Your appointments: ")+up.slice(0,3).map(a=>`${a.date}${a.time?" "+a.time:""}${a.doctor?" "+a.doctor:""}${a.hospital?" "+a.hospital:""}`).join("; ")+".";
+  }else if(kind==="health"){
+    const parts=[];
+    if(hd.pulse)parts.push((lang==="tr"?"nabız ":"pulse ")+hd.pulse);
+    if(hd.bpS&&hd.bpD)parts.push((lang==="tr"?"tansiyon ":"blood pressure ")+hd.bpS+"/"+hd.bpD);
+    if(hd.weight)parts.push((lang==="tr"?"kilo ":"weight ")+hd.weight);
+    if(hd.spo2)parts.push("SpO2 "+hd.spo2);
+    txt=parts.length?(lang==="tr"?"Sağlık verilerin: ":"Your health data: ")+parts.join(", ")+".":(lang==="tr"?"Henüz sağlık verin yok.":"No health data yet.");
+  }else return;
+  setChatM(p=>[...p,{role:"assistant",text:"🔊 "+txt}]);
+  try{speak(txt,lang);}catch(e){}
+  haptic(12);
+};
 const sendChat=async(text)=>{
   const q=text||chatIn;if(!q.trim())return;
   // Offline guard — clear message + retry, without consuming a daily message
@@ -1480,12 +1501,24 @@ KURALLAR:
 ÖLÇÜMLER (ölçümleri baştan sona SEN yönet, hastayı yönlendir):
 - Uygulama içinde NABIZ (kalp atışı) ölçümünü BAŞLATABİLİRSİN: telefonun arka kamerası + flaşı ile parmak ucundan. Kullanıcı nabzını/kalp atışını ölçmek isterse (veya klinik olarak faydalıysa ve kullanıcı kabul ederse): önce KISACA yönlendir (parmak ucunu arka kameraya ve flaşa hafifçe kapat, 15 sn sabit ve iyi ışıkta tut), sonra yanıtının EN SONUNA ayrı bir satırda tam olarak [[OLC:NABIZ]] yaz. Uygulama ölçümü yapacak ve gerçek sonucu ("Nabzım X bpm ölçüldü") sana geri gönderecek.
 - ASLA bir ölçüm değeri UYDURMA. Yalnızca uygulamanın gönderdiği GERÇEK sonucu yorumla. Sonuç gelince: kişinin yaşına göre normal aralıkla karşılaştır, sakin bir dille normal/yüksek/düşük olduğunu söyle, gerekli ise doktora yönlendir. Bu bir tıbbi tanı değildir; endişe verici değerlerde hekime başvurmasını nazikçe öner.
-- Telefonla GÜVENİLİR ölçülemeyen değerler (tansiyon, SpO2/oksijen, EKG, ateş, kan şekeri): dürüstçe bunların sertifikalı bir cihaz / oksimetre / giyilebilir gerektirdiğini söyle; ölçüyormuş gibi YAPMA. İstersen değeri elle kaydetmeyi öner.${voiceNote}`,messages:history},apiKey);
+- Telefonla GÜVENİLİR ölçülemeyen değerler (tansiyon, SpO2/oksijen, EKG, ateş, kan şekeri): dürüstçe bunların sertifikalı bir cihaz / oksimetre / giyilebilir gerektirdiğini söyle; ölçüyormuş gibi YAPMA. İstersen değeri elle kaydetmeyi öner.
+
+SESLİ KOMUTLAR / GEZİNME (kullanıcı özellikle bir yere gitmek/okumak isterse; görme engelli kullanıcılar için önemli):
+- Kullanıcı bir sayfaya gitmek isterse KISA bir onay cümlesi ver ve yanıtının EN SONUNA ayrı satırda [[GIT:sayfa]] ekle. Geçerli sayfalar: home, meds, appts, health, notes, contacts, community, chat, settings, pCard. Örn "ilaçlarıma git" → [[GIT:meds]].
+- Kullanıcı kayıtlı verisini SESLİ okumanı isterse [[OKU:tür]] ekle (tür: meds, appts, health). Uygulama listeyi kendisi sesli okuyacak, sen listeyi tekrar yazma. Örn "ilaçlarımı oku" → [[OKU:meds]].
+- Kullanıcı ilk yardım isterse [[ILKYARDIM]] ekle (İlk Yardım ekranını açar).
+- Bu direktifleri YALNIZCA kullanıcı gerçekten isterse kullan; uydurma bilgi verme.${voiceNote}`,messages:history},apiKey);
     let reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
     const wantsPulse=/\[\[\s*(OLC:NABIZ|MEASURE:PULSE)\s*\]\]/i.test(reply);
-    reply=reply.replace(/\[\[\s*(OLC:NABIZ|MEASURE:PULSE)\s*\]\]/ig,"").trim()||(lang==="tr"?"Nabzını ölçelim.":"Let's measure your pulse.");
+    const navM=reply.match(/\[\[\s*GIT:(\w+)\s*\]\]/i);
+    const readM=reply.match(/\[\[\s*OKU:(\w+)\s*\]\]/i);
+    const wantsFA=/\[\[\s*(ILKYARDIM|FIRSTAID)\s*\]\]/i.test(reply);
+    reply=reply.replace(/\[\[[^\]]*\]\]/g,"").trim()||(lang==="tr"?"Tamamdır.":"Done.");
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
     if(wantsPulse)setTimeout(()=>startPulseMeasure(true),500);
+    if(navM){const norm={home:"home",meds:"meds",appts:"appts",health:"health",notes:"notes",contacts:"contacts",community:"community",chat:"chat",settings:"settings",pcard:"pCard",admin:"admin"}[navM[1].toLowerCase()];if(norm)setTimeout(()=>goTo(norm),400);}
+    if(wantsFA)setTimeout(()=>{setFaOpen(null);setShowFirstAid(true);},400);
+    if(readM)setTimeout(()=>readData(readM[1].toLowerCase()),500);
     if(voiceActiveRef.current){
       // Speak the reply; when speech truly ends, resume listening (no fragile polling)
       speak(reply,null,()=>{
