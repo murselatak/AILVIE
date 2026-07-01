@@ -3035,7 +3035,7 @@ const renderNotes=()=>{
           {n.pinned&&<span style={{position:"absolute",top:6,right:8,fontSize:14}}>📌</span>}
           {isEditing?<>
             <input value={n.title} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,title:e.target.value}:x))} placeholder={lang==="tr"?"Başlık":"Title"} style={{fontWeight:700,background:"transparent",border:"none",padding:0,color:dark?tc:"#1a1a1a",fontSize:fs+1,outline:"none",width:"100%",boxSizing:"border-box"}}/>
-            <textarea value={n.content} onChange={e=>{setNotes(p=>p.map(x=>x.id===n.id?{...x,content:e.target.value}:x));const el=e.target;const mx=Math.max(160,Math.round(window.innerHeight*0.4));el.style.height='auto';el.style.height=Math.min(mx,Math.max(60,el.scrollHeight))+'px';}} placeholder={lang==="tr"?"Not al...":"Take a note..."} style={{background:"transparent",border:"none",padding:0,resize:"none",minHeight:60,maxHeight:"40vh",width:"100%",maxWidth:"100%",boxSizing:"border-box",color:dark?tc:"#333",fontSize:fs-1,outline:"none",fontFamily:"inherit",wordBreak:"break-word",overflowWrap:"anywhere",whiteSpace:"pre-wrap",direction:lang==="ar"?"rtl":"ltr",overflowY:"auto",WebkitOverflowScrolling:"touch"}} ref={el=>{if(el){const mx=Math.max(160,Math.round(window.innerHeight*0.4));el.style.height='auto';el.style.height=Math.min(mx,Math.max(60,el.scrollHeight))+'px';}}}/>
+            <textarea className="note-ta" value={n.content} onChange={e=>{setNotes(p=>p.map(x=>x.id===n.id?{...x,content:e.target.value}:x));const el=e.target;el.style.height='auto';el.style.height=Math.min(220,Math.max(72,el.scrollHeight))+'px';}} placeholder={lang==="tr"?"Not al...":"Take a note..."} style={{background:"transparent",border:"none",padding:0,resize:"none",minHeight:72,height:72,maxHeight:220,width:"100%",maxWidth:"100%",boxSizing:"border-box",color:dark?tc:"#333",fontSize:fs-1,outline:"none",fontFamily:"inherit",wordBreak:"break-word",overflowWrap:"anywhere",whiteSpace:"pre-wrap",direction:lang==="ar"?"rtl":"ltr",overflowY:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"thin",scrollbarColor:`${ac}88 transparent`}} ref={el=>{if(el){el.style.height='auto';el.style.height=Math.min(220,Math.max(72,el.scrollHeight))+'px';}}}/>
             <div style={{display:"flex",gap:3,flexWrap:"wrap",marginTop:4}}>{NCOL.map(c=><button key={c} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,color:c}:x))} style={{width:20,height:20,borderRadius:10,background:c,border:n.color===c?"2px solid "+ac:"2px solid transparent",cursor:"pointer",flexShrink:0}}/>)}</div>
             <div style={{display:"flex",gap:6,marginTop:4}}>
               <button onClick={()=>{const note=notes.find(x=>x.id===n.id);if(note&&!note.title?.trim()&&!note.content?.trim()){setNotes(p=>p.filter(x=>x.id!==n.id));}setEditNote(null);}} style={{...BP,padding:"6px 14px",fontSize:fs-1}}>✓ {lang==="tr"?"Kaydet":"Save"}</button>
@@ -3694,6 +3694,10 @@ return (
       .chat-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,.05);border-radius:5px}
       .chat-scroll::-webkit-scrollbar-thumb{background:rgba(0,180,216,.6);border-radius:5px;border:2px solid transparent;background-clip:padding-box;min-height:40px}
       .chat-scroll::-webkit-scrollbar-thumb:hover{background:rgba(0,180,216,.9);background-clip:padding-box}
+      .note-ta{scrollbar-gutter:stable}
+      .note-ta::-webkit-scrollbar{width:8px;-webkit-appearance:none}
+      .note-ta::-webkit-scrollbar-track{background:${ac}18;border-radius:4px}
+      .note-ta::-webkit-scrollbar-thumb{background:${ac}99;border-radius:4px;min-height:28px}
       @keyframes scanLine{0%{top:10%}50%{top:85%}100%{top:10%}}
       *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;word-wrap:break-word;overflow-wrap:break-word}
       .msg-card{max-width:100%;overflow-wrap:anywhere;word-break:break-word;hyphens:auto}
