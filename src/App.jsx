@@ -367,6 +367,7 @@ const[showEmergency,setShowEmergency]=useState(false);
 const[showMenu,setShowMenu]=useState(false);
 const[showFirstAid,setShowFirstAid]=useState(false);
 const[showNav,setShowNav]=useState(false);
+const[navQuery,setNavQuery]=useState("");
 const[faOpen,setFaOpen]=useState(null);
 const[voiceFirst,setVoiceFirst]=useState(()=>{try{return localStorage.getItem("ailvie_vf")==="1";}catch{return false;}});
 useEffect(()=>{try{localStorage.setItem("ailvie_vf",voiceFirst?"1":"0");}catch{}},[voiceFirst]);
@@ -1508,7 +1509,7 @@ SESLİ KOMUTLAR / GEZİNME (kullanıcı özellikle bir yere gitmek/okumak isters
 - Kullanıcı bir sayfaya gitmek isterse KISA bir onay cümlesi ver ve yanıtının EN SONUNA ayrı satırda [[GIT:sayfa]] ekle. Geçerli sayfalar: home, meds, appts, health, notes, contacts, community, chat, settings, pCard. Örn "ilaçlarıma git" → [[GIT:meds]].
 - Kullanıcı kayıtlı verisini SESLİ okumanı isterse [[OKU:tür]] ekle (tür: meds, appts, health). Uygulama listeyi kendisi sesli okuyacak, sen listeyi tekrar yazma. Örn "ilaçlarımı oku" → [[OKU:meds]].
 - Kullanıcı ilk yardım isterse [[ILKYARDIM]] ekle (İlk Yardım ekranını açar).
-- Kullanıcı bir yere yol tarifi/navigasyon isterse (en yakın hastane, eczane, nöbetçi eczane, acil servis, klinik vb.) [[NAV:arama]] ekle; "arama" kısmına haritada aranacak yeri yaz (ör. [[NAV:nöbetçi eczane]]). Uygulama konumu kullanıp harita yol tarifini açacak.
+- NAVİGASYON: Kullanıcı yakında bir sağlık yeri bulmak/yol tarifi isterse (hastane, acil servis, eczane, nöbetçi eczane, klinik, diş hekimi, laboratuvar, görüntüleme, aile sağlığı merkezi, psikolog, göz/optik, kan bağışı, ya da kardiyoloji/fizyoterapi gibi bir branş) yanıtının EN SONUNA ayrı satırda [[NAV:arama]] ekle. "arama" kısmına haritada aranacak yeri KULLANICININ DİLİNDE yaz (ör. [[NAV:nöbetçi eczane]] veya [[NAV:cardiologist]]). Uygulama kullanıcının konumunu kullanıp harita uygulamasında yol tarifini açar. Kullanıcı bir yakınma/ihtiyaç belirtirse (ör. "dişim ağrıyor") uygun yeri nazikçe öner ve isterse [[NAV:diş hekimi]] ekle.
 - Bu direktifleri YALNIZCA kullanıcı gerçekten isterse kullan; uydurma bilgi verme.${voiceNote}`,messages:history},apiKey);
     let reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
     const wantsPulse=/\[\[\s*(OLC:NABIZ|MEASURE:PULSE)\s*\]\]/i.test(reply);
@@ -1777,16 +1778,19 @@ const navTo=(query)=>{
     ()=>open(`https://www.google.com/maps/search/${q}`),
     {enableHighAccuracy:true,timeout:8000});
 };
-const NAV_PLACES=()=>{const tr=lang==="tr";return[
-  {ic:"🏥",label:tr?"En yakın hastane":"Nearest hospital",q:tr?"hastane":"hospital"},
-  {ic:"🚑",label:tr?"Acil servis":"Emergency room",q:tr?"acil servis":"emergency room"},
-  {ic:"💊",label:tr?"Eczane":"Pharmacy",q:tr?"eczane":"pharmacy"},
-  {ic:"🌙",label:tr?"Nöbetçi eczane":"On-duty pharmacy",q:tr?"nöbetçi eczane":"24 hour pharmacy"},
-  {ic:"🩺",label:tr?"Klinik / Poliklinik":"Clinic",q:tr?"özel klinik poliklinik":"medical clinic"},
-  {ic:"🦷",label:tr?"Diş hekimi":"Dentist",q:tr?"diş hekimi":"dentist"},
-  {ic:"🔬",label:tr?"Laboratuvar / Tahlil":"Lab",q:tr?"tıbbi tahlil laboratuvarı":"medical laboratory"},
-  {ic:"🩻",label:tr?"Görüntüleme (MR/Röntgen)":"Imaging center",q:tr?"radyoloji görüntüleme merkezi":"radiology imaging center"},
-];};
+const NAV_ICONS=["🏥","🚑","💊","🌙","🩺","🦷","🔬","🩻","👨‍⚕️","🧠","👁️","🩸"];
+const NAV_NAMES={
+  tr:["Hastane","Acil servis","Eczane","Nöbetçi eczane","Klinik / Poliklinik","Diş hekimi","Tahlil laboratuvarı","Görüntüleme merkezi","Aile sağlığı merkezi","Psikolog / Psikiyatri","Göz / Optik","Kan bağışı merkezi"],
+  en:["Hospital","Emergency room","Pharmacy","24 hour pharmacy","Clinic","Dentist","Medical laboratory","Imaging center","Family health center","Psychologist","Optician","Blood donation center"],
+  de:["Krankenhaus","Notaufnahme","Apotheke","Notdienst-Apotheke","Klinik","Zahnarzt","Labor","Radiologie","Hausarztpraxis","Psychologe","Optiker","Blutspende"],
+  ru:["Больница","Скорая помощь","Аптека","Круглосуточная аптека","Клиника","Стоматолог","Лаборатория","Радиология","Поликлиника","Психолог","Оптика","Донорский пункт"],
+  zh:["医院","急诊","药店","24小时药店","诊所","牙医","化验所","影像中心","社区卫生中心","心理医生","眼镜店","献血中心"],
+  hi:["अस्पताल","आपातकालीन","फार्मेसी","24 घंटे फार्मेसी","क्लिनिक","दंत चिकित्सक","प्रयोगशाला","इमेजिंग सेंटर","स्वास्थ्य केंद्र","मनोवैज्ञानिक","ऑप्टिकल","रक्तदान केंद्र"],
+  nl:["Ziekenhuis","Spoedeisende hulp","Apotheek","24-uurs apotheek","Kliniek","Tandarts","Laboratorium","Radiologie","Huisartsenpraktijk","Psycholoog","Opticien","Bloeddonatie"],
+  es:["Hospital","Urgencias","Farmacia","Farmacia de guardia","Clínica","Dentista","Laboratorio","Centro de imagen","Centro de salud","Psicólogo","Óptica","Donación de sangre"],
+  ar:["مستشفى","طوارئ","صيدلية","صيدلية مناوبة","عيادة","طبيب أسنان","مختبر","مركز أشعة","مركز صحي","طبيب نفسي","بصريات","مركز تبرع بالدم"]
+};
+const NAV_PLACES=()=>{const n=NAV_NAMES[lang]||NAV_NAMES.en;return n.map((name,i)=>({ic:NAV_ICONS[i],label:name,q:name}));};
 
 // ─── STYLES (v2 preserved) ───
 const bg=dark?(hc?"#000":"#0a0e14"):(hc?"#fff":"#f2f5f9");
@@ -2128,7 +2132,7 @@ const renderAppts=()=>{
     {/* 3. Upcoming / Past */}
     <div style={{display:"flex",gap:6}}>{["up","past"].map(tab=><button key={tab} onClick={()=>goTo(tab==="up"?"appts":"appts")} style={pill(true)}>{t[tab]}</button>)}</div>
     {appts.filter(a=>a.date>=today).length===0&&<div style={{textAlign:"center",color:mt,padding:16}}>{t.noA}</div>}
-    {appts.filter(a=>a.date>=today).map(a=>(<div key={a.id} style={CS}><div style={{fontWeight:700,fontSize:fs+1}}>{a.doctor}</div><div style={{fontSize:fs-1,color:mt}}>🏥 {a.hospital} • {a.clinic}</div><div style={{color:ac}}>📅 {a.date} ⏰ {a.time}</div><div style={{fontSize:fs-3,color:sc,marginTop:2}}>🔔 1 gün + 6 saat önce alarm</div><div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}><a href={`https://www.google.com/maps/search/${encodeURIComponent(a.hospital)}`} target="_blank" rel="noopener noreferrer" style={{...BP,padding:"6px 12px",textDecoration:"none"}}>🗺️ {t.dir}</a><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.hospital)}&travelmode=transit`} target="_blank" rel="noopener noreferrer" style={{...BP,padding:"6px 12px",background:sc,textDecoration:"none"}}>🚌</a><button onClick={()=>{setEditApptId(a.id);setNewAppt({doctor:a.doctor||"",hospital:a.hospital||"",clinic:a.clinic||"",date:a.date||"",time:a.time||""});setShowAddAppt(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:ac,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button><button onClick={()=>toTrash("appt",a)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>🗑️</button></div></div>))}
+    {appts.filter(a=>a.date>=today).map(a=>(<div key={a.id} style={CS}><div style={{fontWeight:700,fontSize:fs+1}}>{a.doctor}</div><div style={{fontSize:fs-1,color:mt}}>🏥 {a.hospital} • {a.clinic}</div><div style={{color:ac}}>📅 {a.date} ⏰ {a.time}</div><div style={{fontSize:fs-3,color:sc,marginTop:2}}>🔔 1 gün + 6 saat önce alarm</div><div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.hospital)}`} target="_blank" rel="noopener noreferrer" aria-label={`${t.dir} ${a.hospital}`} style={{...BP,padding:"6px 12px",textDecoration:"none"}}>🗺️ {t.dir}</a><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.hospital)}&travelmode=transit`} target="_blank" rel="noopener noreferrer" style={{...BP,padding:"6px 12px",background:sc,textDecoration:"none"}}>🚌</a><button onClick={()=>{setEditApptId(a.id);setNewAppt({doctor:a.doctor||"",hospital:a.hospital||"",clinic:a.clinic||"",date:a.date||"",time:a.time||""});setShowAddAppt(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:ac,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button><button onClick={()=>toTrash("appt",a)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>🗑️</button></div></div>))}
     {/* 4. AI Location + Transit */}
     <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
       <button onClick={getLoc} style={{...BP,padding:"6px 12px"}}>📍 {t.loc}</button>
@@ -3431,6 +3435,10 @@ return (
             </div>
             <div style={{padding:"12px 16px",overflowY:"auto"}}>
               <div style={{fontSize:fs-2,color:mt,marginBottom:10,lineHeight:1.5}}>{lang==="tr"?"Konumunu kullanıp yakındaki sağlık yerlerine yol tarifini harita uygulamasında açar.":"Uses your location to open directions to nearby health places in your maps app."}</div>
+              <div style={{display:"flex",gap:6,marginBottom:12}}>
+                <input value={navQuery} onChange={e=>setNavQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&navQuery.trim()){navTo(navQuery.trim());setNavQuery("");}}} placeholder={lang==="tr"?"Ara: kardiyoloji, fizyoterapi, göz…":"Search: cardiology, physio, eye…"} aria-label={lang==="tr"?"Yer ara":"Search place"} style={{...IS,flex:1}}/>
+                <button onClick={()=>{if(navQuery.trim()){navTo(navQuery.trim());setNavQuery("");}}} aria-label={lang==="tr"?"Ara":"Search"} style={{...BP,padding:"0 16px",fontSize:18}}>🔍</button>
+              </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                 {NAV_PLACES().map(pl=><button key={pl.q} onClick={()=>navTo(pl.q)} aria-label={pl.label} style={{...BP,display:"flex",alignItems:"center",gap:8,padding:"12px 10px",fontSize:fs-2,textAlign:"left",background:"transparent",border:`1px solid ${bd}`,color:tc}}>
                   <span style={{fontSize:22,flexShrink:0}}>{pl.ic}</span><span style={{fontWeight:600}}>{pl.label}</span>
