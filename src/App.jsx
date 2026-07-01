@@ -345,7 +345,7 @@ useEffect(()=>{try{document.documentElement.lang=lang;document.documentElement.d
 const[page,setPage]=useState("home");
 const[pageHist,setPageHist]=useState(["home"]);
 const[histIdx,setHistIdx]=useState(0);
-const goTo=(p)=>{const nh=[...pageHist.slice(0,histIdx+1),p];setPageHist(nh);setHistIdx(nh.length-1);setPage(p);};
+const goTo=(p)=>{const nh=[...pageHist.slice(0,histIdx+1),p];setPageHist(nh);setHistIdx(nh.length-1);setPage(p);if(voiceFirstRef.current){try{haptic(12);const m={home:t.home,meds:t.meds,appts:t.appts,health:t.health,notes:t.notes,contacts:t.contacts,community:t.community,chat:t.chat,admin:t.adminCh,settings:t.settings,pCard:t.pCard};const lbl=m[p]||p;if(lbl)speak(lbl,lang);}catch(e){}}};
 const goBack=()=>{if(histIdx>0){setHistIdx(histIdx-1);setPage(pageHist[histIdx-1]);}};
 const[trIn,setTrIn]=useState("");
 const[trOut,setTrOut]=useState(null);
@@ -367,6 +367,10 @@ const[showEmergency,setShowEmergency]=useState(false);
 const[showMenu,setShowMenu]=useState(false);
 const[showFirstAid,setShowFirstAid]=useState(false);
 const[faOpen,setFaOpen]=useState(null);
+const[voiceFirst,setVoiceFirst]=useState(()=>{try{return localStorage.getItem("ailvie_vf")==="1";}catch{return false;}});
+useEffect(()=>{try{localStorage.setItem("ailvie_vf",voiceFirst?"1":"0");}catch{}},[voiceFirst]);
+const voiceFirstRef=useRef(false);useEffect(()=>{voiceFirstRef.current=voiceFirst;},[voiceFirst]);
+const haptic=(pat)=>{try{if(navigator.vibrate)navigator.vibrate(pat);}catch(e){}};
 const[online,setOnline]=useState(typeof navigator!=="undefined"?navigator.onLine:true);
 const[installEvt,setInstallEvt]=useState(null);
 const[iosHelp,setIosHelp]=useState(false);
@@ -416,6 +420,7 @@ useEffect(()=>{const bip=(e)=>{e.preventDefault();setInstallEvt(e);};const inst=
 const[notifs,setNotifs]=useState([]);
 const unread=notifs.filter(n=>!n.read).length;
 const notify=useCallback((txt)=>{
+  try{if(navigator.vibrate)navigator.vibrate(15);}catch(e){}
   setNotifs(p=>[{id:Date.now(),text:txt,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),read:false},...p]);
   setToast(txt);if(toastTm.current)clearTimeout(toastTm.current);
   toastTm.current=setTimeout(()=>setToast(null),3000);
@@ -2315,6 +2320,10 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   {(all||s==="all")&&<div style={{...CS,borderLeft:`3px solid ${ac}`}}>
     <div style={{fontWeight:700,marginBottom:4}}>♿ {lang==="tr"?"Erişilebilirlik":"Accessibility"}</div>
     <div style={{fontSize:fs-2,color:mt,lineHeight:1.5}}>{lang==="tr"?"Görme güçlüğü yaşıyorsan: sağ üstteki 🎙️ ile AILVIE'yle konuşabilir, sesli diyaloğu açtığında AILVIE yanıtları sesli okur. Aşağıdan yüksek kontrast, büyük yazı ve ekran yakınlaştırma (+/−) seçeneklerini kullanabilirsin. Uygulama TalkBack/VoiceOver ekran okuyucularıyla uyumludur.":"If you have low vision: use the 🎙️ button (top right) to talk to AILVIE; with voice dialog on, AILVIE reads answers aloud. Below you'll find high contrast, large text and screen zoom (+/−). The app works with TalkBack/VoiceOver screen readers."}</div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:10}}>
+      <span style={{fontSize:fs-1}}>🗣️ {lang==="tr"?"Sesli-öncelikli mod":"Voice-first mode"}<div style={{fontSize:fs-4,color:mt}}>{lang==="tr"?"Sayfa değişince adını sesli söyler + titreşim":"Announces each screen aloud + haptic"}</div></span>
+      <button onClick={()=>{const nv=!voiceFirst;setVoiceFirst(nv);haptic(15);if(nv)speak(lang==="tr"?"Sesli-öncelikli mod açık":"Voice-first mode on",lang);}} aria-label={lang==="tr"?"Sesli-öncelikli mod":"Voice-first mode"} style={{width:48,height:26,borderRadius:13,background:voiceFirst?ac:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:20,height:20,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:voiceFirst?25:3,transition:"left .2s"}}/></button>
+    </div>
   </div>}
   {(all||s==="all")&&<>{[{l:`🌙 ${t.dark}`,v:dark,f:()=>setDark(!dark)},{l:`🔆 ${t.hc}`,v:hc,f:()=>setHc(!hc)}].map(x=>(<div key={x.l} style={{...CS,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span>{x.l}</span><button onClick={x.f} aria-label={x.l} style={{width:48,height:26,borderRadius:13,background:x.v?ac:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:20,height:20,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:x.v?25:3,transition:"left .2s"}}/></button></div>))}
   <div style={CS}><div style={{marginBottom:6}}>📝 {t.fSize}: {fs}</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[12,13,14,16,18,20,22].map(sz=><button key={sz} onClick={()=>setFs(sz)} aria-label={`${t.fSize} ${sz}`} style={pill(fs===sz)}>{sz}</button>)}</div></div>
@@ -2450,7 +2459,7 @@ const finishPulse=(samples)=>{
   const res=computeBPM(samples);
   const fromChat=pulseFromChatRef.current;pulseFromChatRef.current=false;
   if(res&&res.bpm){
-    setHd(p=>({...p,pulse:res.bpm}));setPulseM({phase:"done",bpm:res.bpm,quality:res.quality});
+    setHd(p=>({...p,pulse:res.bpm}));setPulseM({phase:"done",bpm:res.bpm,quality:res.quality});haptic([40,60,40]);
     notify(lang==="tr"?`❤️ Nabız: ${res.bpm} bpm`:`❤️ Pulse: ${res.bpm} bpm`);
     if(fromChat){const q=res.quality==="good"?(lang==="tr"?"iyi":"good"):res.quality==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük":"low");setTimeout(()=>{setPulseM(null);goTo("chat");sendChat(lang==="tr"?`(Ölçüm tamamlandı) Nabzım ${res.bpm} bpm ölçüldü (kalite: ${q}). Bunu benim için yorumlar mısın?`:`(Measurement done) My pulse measured ${res.bpm} bpm (quality: ${q}). Can you interpret this for me?`);},700);}
   }else{
