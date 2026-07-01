@@ -364,6 +364,12 @@ const[pat,setPat]=useState({name:"",birthDate:"",bloodType:"",allergies:"",chron
 const[records,setRecords]=useState([]);
 const[showAddRec,setShowAddRec]=useState(false);
 const[newRec,setNewRec]=useState({type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""});
+const[medImages,setMedImages]=useState([]);
+const[imgType,setImgType]=useState("xray");
+const[imgBusy,setImgBusy]=useState(null); // id being interpreted
+const[imgView,setImgView]=useState(null); // image object being viewed
+const[imgDrag,setImgDrag]=useState(false);
+const imgFileRef=useRef(null),imgCamRef=useRef(null),imgBarRef=useRef(null);
 const patAge=pat.birthDate?Math.floor((Date.now()-new Date(pat.birthDate))/(365.25*86400000)):"";
 
 // Permissions
@@ -1246,6 +1252,8 @@ if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
 }catch{}},[]); // load once
 useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM,moodLog,groups}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM,moodLog,groups]); // enhanced auto-save
+useEffect(()=>{try{const s=localStorage.getItem("ailvie_medimg");if(s){const a=JSON.parse(s);if(Array.isArray(a))setMedImages(a);}}catch(e){}},[]);
+useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_medimg",JSON.stringify(medImages));}catch(e){}},800);return()=>clearTimeout(tm);},[medImages]);
 // Auto-cleanup empty notes that are not being edited
 useEffect(()=>{const tm=setTimeout(()=>{setNotes(p=>{const filtered=p.filter(n=>(n.title?.trim()||n.content?.trim()||editNote===n.id));return filtered.length===p.length?p:filtered;});},3000);return()=>clearTimeout(tm);},[notes,editNote]);
 
@@ -2622,6 +2630,50 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   </div>
 </div>);};
 
+const resizeImage=(file,maxDim=1280,q=0.72)=>new Promise((res,rej)=>{
+  if(!file||!file.type||!file.type.startsWith("image/")){rej(new Error("not image"));return;}
+  const r=new FileReader();
+  r.onload=()=>{const img=new Image();img.onload=()=>{
+    let w=img.width,h=img.height;const sc=Math.min(1,maxDim/Math.max(w,h));w=Math.round(w*sc);h=Math.round(h*sc);
+    const cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(img,0,0,w,h);
+    try{res(cv.toDataURL("image/jpeg",q));}catch(e){rej(e);}
+  };img.onerror=()=>rej(new Error("img"));img.src=r.result;};
+  r.onerror=()=>rej(new Error("read"));r.readAsDataURL(file);
+});
+const addMedImage=async(file,type)=>{
+  if(!file)return;
+  if(!file.type||!file.type.startsWith("image/")){notify(lang==="tr"?"Lütfen bir görüntü dosyası seçin":"Please select an image file");return;}
+  try{const dataUrl=await resizeImage(file);
+    setMedImages(p=>[{id:Date.now()+Math.floor(Math.random()*1000),name:file.name||("goruntu-"+Date.now()),type:type||imgType,dataUrl,date:new Date().toISOString().slice(0,10),aiNote:""},...p]);
+    notify(lang==="tr"?"✅ Görüntü eklendi":"✅ Image added");
+  }catch(e){notify(lang==="tr"?"Görüntü yüklenemedi":"Could not load image");}
+};
+const addMedFiles=async(files,type)=>{const arr=Array.from(files||[]);for(const f of arr){await addMedImage(f,type);}};
+const scanCodeFromImage=async(file)=>{
+  try{if("BarcodeDetector" in window){const bmp=await createImageBitmap(file);const det=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e","qr_code","code_128","code_39"]});const codes=await det.detect(bmp);
+    if(codes&&codes.length)notify(lang==="tr"?`🔎 Kod okundu: ${codes[0].rawValue}`:`🔎 Code: ${codes[0].rawValue}`);}
+  }catch(e){}
+  await addMedImage(file,imgType);
+};
+const interpretImage=async(img)=>{
+  setImgBusy(img.id);
+  try{
+    const b64=(img.dataUrl||"").split(",")[1]||"";
+    const typeLabel=(t[img.type]||img.type);
+    const sys=lang==="tr"
+      ?`Sen AILVIE tıbbi asistanısın. Kullanıcı bir tıbbi görüntü (${typeLabel}) yükledi. Görselde NE GÖRÜNDÜĞÜNÜ sade, anlaşılır bir dille betimle ve genel bilgi ver. KESİN TANI KOYMA, kesin ölçüm/derece verme. Ciddi/acil bir bulgu ihtimali görürsen vakit kaybetmeden hekime/acile başvurulmasını söyle. Yanıtı MUTLAKA şu uyarıyla bitir: "⚠️ Bu bir tıbbi tanı değildir. Kesin değerlendirme için mutlaka radyolog/hekiminize danışın." Kısa ve net ol.`
+      :`You are AILVIE medical assistant. The user uploaded a medical image (${typeLabel}). Describe in plain language what is VISIBLE and give general info. DO NOT give a definitive diagnosis or exact measurements. If a serious/urgent finding seems possible, advise seeing a doctor/ER promptly. ALWAYS end with: "⚠️ This is not a medical diagnosis. Always consult your radiologist/doctor for a definitive assessment." Be concise.`;
+    const body={model:"claude-sonnet-4-6",max_tokens:1000,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}},{type:"text",text:lang==="tr"?"Bu görüntüde ne görünüyor? Genel olarak yorumla.":"What is visible here? Interpret generally."}]}]};
+    const d=await callAI(body,apiKey);
+    const txt=(d.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("\n").trim()||(lang==="tr"?"Yanıt alınamadı.":"No response.");
+    setMedImages(p=>p.map(x=>x.id===img.id?{...x,aiNote:txt}:x));setImgView(v=>v&&v.id===img.id?{...v,aiNote:txt}:v);
+  }catch(e){
+    const msg=(e.message||"").includes("NO_KEY")
+      ?(lang==="tr"?"AI yorumu için sunucu anahtarı (ANTHROPIC_API_KEY) gerekli — Cloudflare'de ayarlanınca çalışır.":"AI needs a server key (ANTHROPIC_API_KEY) — works once set in Cloudflare.")
+      :(lang==="tr"?"Yorumlama başarısız. Bağlantıyı kontrol edin.":"Interpretation failed. Check connection.");
+    setMedImages(p=>p.map(x=>x.id===img.id?{...x,aiNote:"⚠️ "+msg}:x));setImgView(v=>v&&v.id===img.id?{...v,aiNote:"⚠️ "+msg}:v);
+  }finally{setImgBusy(null);}
+};
 const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <span style={{fontWeight:700,fontSize:fs+2}}>🪪 {t.pCard}</span>
   {/* Kimlik Bilgileri */}
@@ -2707,6 +2759,50 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   </div>
   {records.map(r=>(<div key={r.id} style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,color:ac}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-2,color:mt}}>{r.date}</span></div><div style={{fontSize:fs-1,color:mt}}>{r.doctor} — {r.hospital}</div><div style={{marginTop:4,wordBreak:"break-word"}}>{r.content}</div><div style={{display:"flex",gap:6,marginTop:4}}><button onClick={()=>{setEditRecId(r.id);setNewRec({type:r.type||"diag",doctor:r.doctor||"",hospital:r.hospital||"",date:r.date||"",content:r.content||"",notes:r.notes||""});setShowAddRec(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:ac,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button><button onClick={()=>toTrash("record",r)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>🗑️ {t.del}</button></div></div>))}
   {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><div style={{fontWeight:700,marginBottom:8,color:ac}}>{editRecId?"✏️ "+(lang==="tr"?"Kaydı Düzenle":"Edit Record"):"+ "+(lang==="tr"?"Yeni Kayıt":"New Record")}</div><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><textarea placeholder={lang==="tr"?"İçerik / Sonuç":"Content / Result"} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newRec.content){if(editRecId){setRecords(p=>p.map(x=>x.id===editRecId?{...x,...newRec}:x));notify("✅ "+(lang==="tr"?"Kayıt güncellendi":"Record updated"));}else{setRecords(p=>[...p,{id:Date.now(),...newRec}]);}setNewRec({type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""});setEditRecId(null);setShowAddRec(false);}}} style={BP}>{editRecId?(lang==="tr"?"Güncelle":"Update"):t.save}</button><button onClick={()=>{setShowAddRec(false);setEditRecId(null);}} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
+  <div style={{...CS}}>
+    <div style={{fontWeight:700,marginBottom:4,color:ac}}>🩻 {lang==="tr"?"Tıbbi Görüntüleme & Belgeler":"Medical Imaging & Documents"}</div>
+    <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"Röntgen, tomografi, MR, ultrason, tahlil… Pencereden seç, sürükle-bırak, fotoğraf çek ya da QR/barkod ile yükle. AILVIE görüntüyü okuyup genel yorum yapar.":"X-ray, CT, MRI, ultrasound, labs… Pick, drag & drop, take a photo, or upload via QR/barcode. AILVIE reads and gives a general interpretation."}</div>
+    <select value={imgType} onChange={e=>setImgType(e.target.value)} style={{...IS,marginBottom:8}}>{[["xray","Röntgen"],["ct","Tomografi (BT)"],["mri","MR"],["ultra","Ultrason"],["lab","Tahlil/Rapor"],["other","Diğer"]].map(([v,l])=><option key={v} value={v}>{t[v]||l}</option>)}</select>
+    <div onDragOver={e=>{e.preventDefault();setImgDrag(true);}} onDragLeave={()=>setImgDrag(false)} onDrop={e=>{e.preventDefault();setImgDrag(false);addMedFiles(e.dataTransfer.files,imgType);}} style={{border:`2px dashed ${imgDrag?ac:bd}`,borderRadius:12,padding:"14px 10px",textAlign:"center",background:imgDrag?`${ac}12`:"transparent",marginBottom:8,transition:"all .15s"}}>
+      <div style={{fontSize:26,marginBottom:2}}>📥</div>
+      <div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Dosyaları buraya sürükleyip bırakın":"Drag & drop files here"}</div>
+    </div>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+      <button onClick={()=>imgFileRef.current&&imgFileRef.current.click()} style={{...BP,flex:"1 1 45%",padding:"8px",fontSize:fs-2}}>🗂️ {lang==="tr"?"Pencereden Seç":"Choose files"}</button>
+      <button onClick={()=>imgCamRef.current&&imgCamRef.current.click()} style={{...BP,flex:"1 1 45%",padding:"8px",fontSize:fs-2}}>📷 {lang==="tr"?"Fotoğraf Çek":"Take photo"}</button>
+      <button onClick={()=>imgBarRef.current&&imgBarRef.current.click()} style={{...BP,flex:"1 1 100%",padding:"8px",fontSize:fs-2,background:`linear-gradient(135deg,${a2},${ac})`}}>🔳 {lang==="tr"?"QR / Barkod ile Yükle":"Upload via QR / Barcode"}</button>
+    </div>
+    <input ref={imgFileRef} type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{addMedFiles(e.target.files,imgType);e.target.value="";}}/>
+    <input ref={imgCamRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={e=>{addMedFiles(e.target.files,imgType);e.target.value="";}}/>
+    <input ref={imgBarRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files&&e.target.files[0];if(f)scanCodeFromImage(f);e.target.value="";}}/>
+    {medImages.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(92px,1fr))",gap:8,marginTop:10}}>
+      {medImages.map(im=><div key={im.id} style={{border:`1px solid ${bd}`,borderRadius:10,overflow:"hidden",background:cd}}>
+        <img src={im.dataUrl} alt="" onClick={()=>setImgView(im)} style={{width:"100%",height:70,objectFit:"cover",cursor:"pointer",display:"block"}}/>
+        <div style={{padding:"4px 5px"}}>
+          <div style={{fontSize:fs-4,fontWeight:700,color:ac,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t[im.type]||({ct:lang==="tr"?"Tomografi":"CT",other:lang==="tr"?"Diğer":"Other"}[im.type])||im.type}{im.aiNote?" ✓":""}</div>
+          <div style={{display:"flex",gap:4,marginTop:3}}>
+            <button onClick={()=>interpretImage(im)} disabled={imgBusy===im.id} title={lang==="tr"?"AI Yorumla":"AI interpret"} style={{flex:1,background:imgBusy===im.id?mt:`linear-gradient(135deg,${ac},${a2})`,border:"none",color:"#fff",borderRadius:6,padding:"3px 0",fontSize:fs-4,cursor:"pointer"}}>{imgBusy===im.id?"…":"🤖"}</button>
+            <button onClick={()=>setImgView(im)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 6px",fontSize:fs-4,cursor:"pointer",color:tc}}>👁️</button>
+            <button onClick={()=>{if(confirm(lang==="tr"?"Silinsin mi?":"Delete?"))setMedImages(p=>p.filter(x=>x.id!==im.id));}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:6,padding:"3px 6px",fontSize:fs-4,cursor:"pointer",color:dg}}>🗑️</button>
+          </div>
+        </div>
+      </div>)}
+    </div>}
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.5}}>⚠️ {lang==="tr"?"AI yorumu bilgilendirme amaçlıdır, tıbbi tanı değildir. Kesin değerlendirme için radyolog/hekiminize danışın. (AI için sunucu anahtarı Cloudflare'de ayarlı olmalı.)":"AI interpretation is informational, not a diagnosis. Consult your radiologist/doctor. (Requires the server key set in Cloudflare.)"}</div>
+  </div>
+  {imgView&&<div onClick={()=>setImgView(null)} style={{position:"fixed",inset:0,zIndex:360,background:"rgba(0,0,0,.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
+    <img src={imgView.dataUrl} alt="" onClick={e=>e.stopPropagation()} style={{maxWidth:"100%",maxHeight:"52vh",objectFit:"contain",borderRadius:8}}/>
+    <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,borderRadius:12,padding:14,marginTop:12,maxWidth:460,width:"100%",maxHeight:"34vh",overflowY:"auto"}}>
+      <div style={{fontWeight:700,color:ac,marginBottom:6}}>{t[imgView.type]||({ct:lang==="tr"?"Tomografi":"CT",other:lang==="tr"?"Diğer":"Other"}[imgView.type])||imgView.type} · {imgView.date}</div>
+      {imgView.aiNote
+        ? <div style={{fontSize:fs-1,whiteSpace:"pre-wrap",lineHeight:1.5}}>{imgView.aiNote}</div>
+        : <div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Henüz AI yorumu yok. 🤖 ile yorumlatabilirsiniz.":"No AI interpretation yet. Use 🤖 to interpret."}</div>}
+      <div style={{display:"flex",gap:8,marginTop:10}}>
+        <button onClick={()=>interpretImage(imgView)} disabled={imgBusy===imgView.id} style={{...BP,flex:1,padding:"7px",fontSize:fs-2}}>{imgBusy===imgView.id?"…":"🤖 "+(lang==="tr"?"Yorumla":"Interpret")}</button>
+        <button onClick={()=>setImgView(null)} style={{...BP,flex:1,padding:"7px",fontSize:fs-2,background:mt}}>{lang==="tr"?"Kapat":"Close"}</button>
+      </div>
+    </div>
+  </div>}
 </div>);
 
 const renderNotes=()=>{
