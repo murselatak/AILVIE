@@ -1051,7 +1051,7 @@ appts.forEach(a=>{
 // Health
 const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0,steps:0,sleep:0,spo2:0,calories:0,restPulse:0});
 const[pulseM,setPulseM]=useState(null); // {phase:'init'|'measuring'|'done'|'error',progress,bpm,quality,msg}
-const pulseStreamRef=useRef(null),pulseRafRef=useRef(null);
+const pulseStreamRef=useRef(null),pulseRafRef=useRef(null),pulseFromChatRef=useRef(false);
 const[editH,setEditH]=useState(null);
 const[tmpH,setTmpH]=useState("");
 const[wellness,setWellness]=useState({water:0,sleep:0,mood:0,steps:0,exercise:0,waterGoal:8,sleepGoal:8,stepsGoal:10000});
@@ -1440,9 +1440,17 @@ KURALLAR:
 7) Sesli yanıt özelliğin VAR (🔊 dinleme, 🎙️ sesli diyalog). "Sesli veremiyorum" deme.
 8) Kullanıcının cihazını/mikrofonunu GÖREMEZSİN. "Seni duyamıyorum", "mikrofonun kapalı" gibi cihaz durumu hakkında uydurma yapma.
 9) Kendi teknik altyapın hakkında konuşma. "Makine öğrenimim yok", "önceki günü hatırlamıyorum", "ben sadece bir dil modeliyim", "hafızam yok" gibi teknik açıklamalar YAPMA. Bunlar kullanıcının kafasını karıştırır. Sadece bir sağlık asistanı gibi davran ve sağlık konusuna odaklan.
-10) İlaç hakkında soru sorulduğunda: İlacı tanıyorsan etken maddesini, ne için kullanıldığını, yan etkilerini ve uyarılarını açıkla. İlacın adını net anlamadıysan kısaca "Hangi ilaç olduğunu netleştirir misin (etken madde veya kullanım amacı)?" diye SADECE BİR KEZ sor, sonra elindeki bilgiyle yardımcı ol. İlaç bilgisi verirken mutlaka "kesin bilgi için doktor/eczacıya danışın" uyarısı ekle.${voiceNote}`,messages:history},apiKey);
-    const reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
+10) İlaç hakkında soru sorulduğunda: İlacı tanıyorsan etken maddesini, ne için kullanıldığını, yan etkilerini ve uyarılarını açıkla. İlacın adını net anlamadıysan kısaca "Hangi ilaç olduğunu netleştirir misin (etken madde veya kullanım amacı)?" diye SADECE BİR KEZ sor, sonra elindeki bilgiyle yardımcı ol. İlaç bilgisi verirken mutlaka "kesin bilgi için doktor/eczacıya danışın" uyarısı ekle.
+
+ÖLÇÜMLER (ölçümleri baştan sona SEN yönet, hastayı yönlendir):
+- Uygulama içinde NABIZ (kalp atışı) ölçümünü BAŞLATABİLİRSİN: telefonun arka kamerası + flaşı ile parmak ucundan. Kullanıcı nabzını/kalp atışını ölçmek isterse (veya klinik olarak faydalıysa ve kullanıcı kabul ederse): önce KISACA yönlendir (parmak ucunu arka kameraya ve flaşa hafifçe kapat, 15 sn sabit ve iyi ışıkta tut), sonra yanıtının EN SONUNA ayrı bir satırda tam olarak [[OLC:NABIZ]] yaz. Uygulama ölçümü yapacak ve gerçek sonucu ("Nabzım X bpm ölçüldü") sana geri gönderecek.
+- ASLA bir ölçüm değeri UYDURMA. Yalnızca uygulamanın gönderdiği GERÇEK sonucu yorumla. Sonuç gelince: kişinin yaşına göre normal aralıkla karşılaştır, sakin bir dille normal/yüksek/düşük olduğunu söyle, gerekli ise doktora yönlendir. Bu bir tıbbi tanı değildir; endişe verici değerlerde hekime başvurmasını nazikçe öner.
+- Telefonla GÜVENİLİR ölçülemeyen değerler (tansiyon, SpO2/oksijen, EKG, ateş, kan şekeri): dürüstçe bunların sertifikalı bir cihaz / oksimetre / giyilebilir gerektirdiğini söyle; ölçüyormuş gibi YAPMA. İstersen değeri elle kaydetmeyi öner.${voiceNote}`,messages:history},apiKey);
+    let reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
+    const wantsPulse=/\[\[\s*(OLC:NABIZ|MEASURE:PULSE)\s*\]\]/i.test(reply);
+    reply=reply.replace(/\[\[\s*(OLC:NABIZ|MEASURE:PULSE)\s*\]\]/ig,"").trim()||(lang==="tr"?"Nabzını ölçelim.":"Let's measure your pulse.");
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
+    if(wantsPulse)setTimeout(()=>startPulseMeasure(true),500);
     if(voiceActiveRef.current){
       // Speak the reply; when speech truly ends, resume listening (no fragile polling)
       speak(reply,null,()=>{
@@ -2401,16 +2409,23 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
 // Simplified page renders for health, pCard, notes, contacts, community, chat (same logic as v5)
 const stopPulseStream=()=>{
   try{if(pulseRafRef.current)cancelAnimationFrame(pulseRafRef.current);}catch(e){}
-  try{const s=pulseStreamRef.current;if(s){s.getTracks().forEach(tr=>{try{tr.applyConstraints&&tr.applyConstraints({advanced:[{torch:false}]});}catch(e){}tr.stop();});}pulseStreamRef.current=null;}catch(e){}
+  try{const s=pulseStreamRef.current;if(s){s.getTracks().forEach(tr=>{try{const pr=tr.applyConstraints&&tr.applyConstraints({advanced:[{torch:false}]});if(pr&&pr.catch)pr.catch(()=>{});}catch(e){}tr.stop();});}pulseStreamRef.current=null;}catch(e){}
 };
 const finishPulse=(samples)=>{
   stopPulseStream();
   const res=computeBPM(samples);
-  if(res&&res.bpm){setHd(p=>({...p,pulse:res.bpm}));setPulseM({phase:"done",bpm:res.bpm,quality:res.quality});notify(lang==="tr"?`❤️ Nabız: ${res.bpm} bpm`:`❤️ Pulse: ${res.bpm} bpm`);}
-  else setPulseM({phase:"error",msg:lang==="tr"?"Ölçüm alınamadı. Parmağını arka kameraya (ve flaşa) tam kapat, sabit tut ve tekrar dene.":"Couldn't measure. Cover the rear camera (and flash) fully, hold still, and try again."});
+  const fromChat=pulseFromChatRef.current;pulseFromChatRef.current=false;
+  if(res&&res.bpm){
+    setHd(p=>({...p,pulse:res.bpm}));setPulseM({phase:"done",bpm:res.bpm,quality:res.quality});
+    notify(lang==="tr"?`❤️ Nabız: ${res.bpm} bpm`:`❤️ Pulse: ${res.bpm} bpm`);
+    if(fromChat){const q=res.quality==="good"?(lang==="tr"?"iyi":"good"):res.quality==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük":"low");setTimeout(()=>{setPulseM(null);goTo("chat");sendChat(lang==="tr"?`(Ölçüm tamamlandı) Nabzım ${res.bpm} bpm ölçüldü (kalite: ${q}). Bunu benim için yorumlar mısın?`:`(Measurement done) My pulse measured ${res.bpm} bpm (quality: ${q}). Can you interpret this for me?`);},700);}
+  }else{
+    setPulseM({phase:"error",msg:lang==="tr"?"Ölçüm alınamadı. Parmağını arka kameraya (ve flaşa) tam kapat, sabit tut ve tekrar dene.":"Couldn't measure. Cover the rear camera (and flash) fully, hold still, and try again."});
+  }
 };
-const startPulseMeasure=async()=>{
+const startPulseMeasure=async(fromChat)=>{
   if(pulseM&&(pulseM.phase==="measuring"||pulseM.phase==="init"))return;
+  pulseFromChatRef.current=!!fromChat;
   setPulseM({phase:"init",progress:0});
   let stream;
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:320},height:{ideal:240}},audio:false});}
@@ -2488,32 +2503,9 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     </div>
     <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
       {hd.pulse>0&&<span style={{padding:"3px 8px",borderRadius:6,fontSize:fs-3,fontWeight:600,background:pulseOk?`${sc}22`:`${dg}22`,color:pulseOk?sc:dg}}>{pulseOk?t.norm:t.caut}</span>}
-      <button onClick={startPulseMeasure} style={{...BP,padding:"5px 9px",fontSize:fs-3,whiteSpace:"nowrap",background:`linear-gradient(135deg,${dg},#c0392b)`}}>📷 {lang==="tr"?"Ölç":"Measure"}</button>
+      <button onClick={()=>startPulseMeasure()} style={{...BP,padding:"5px 9px",fontSize:fs-3,whiteSpace:"nowrap",background:`linear-gradient(135deg,${dg},#c0392b)`}}>📷 {lang==="tr"?"Ölç":"Measure"}</button>
     </div>
   </div>
-  {pulseM&&<div style={{position:"fixed",inset:0,zIndex:370,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={pulseM.phase!=="measuring"&&pulseM.phase!=="init"?closePulse:undefined}>
-    <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:360,borderRadius:18,padding:22,textAlign:"center",border:`1px solid ${dg}`}}>
-      <div style={{fontSize:44,marginBottom:8,animation:(pulseM.phase==="measuring")?"pulse 1s infinite":"none"}}>❤️</div>
-      <div style={{fontWeight:700,fontSize:fs+2,marginBottom:6}}>{lang==="tr"?"Nabız Ölçümü":"Pulse Measurement"}</div>
-      {(pulseM.phase==="init")&&<div style={{color:mt,fontSize:fs-1}}>{lang==="tr"?"Kamera açılıyor…":"Opening camera…"}</div>}
-      {pulseM.phase==="measuring"&&<>
-        <div style={{fontSize:fs-2,color:mt,marginBottom:10,lineHeight:1.5}}>{lang==="tr"?"Parmağının ucunu arka kameraya ve flaşa hafifçe kapat, sabit tut.":"Gently cover the rear camera and flash with your fingertip, hold still."}</div>
-        <div style={{height:10,borderRadius:6,background:`${mt}33`,overflow:"hidden"}}><div style={{height:"100%",width:`${pulseM.progress||0}%`,background:`linear-gradient(90deg,${dg},#c0392b)`,transition:"width .2s"}}/></div>
-        <div style={{fontSize:fs-2,color:mt,marginTop:6}}>%{pulseM.progress||0} · {Math.max(0,Math.ceil((100-(pulseM.progress||0))*0.15))} {lang==="tr"?"sn":"s"}</div>
-      </>}
-      {pulseM.phase==="done"&&<>
-        <div style={{fontSize:40,fontWeight:800,color:dg}}>{pulseM.bpm} <span style={{fontSize:fs}}>{t.bpm}</span></div>
-        <div style={{fontSize:fs-2,color:mt,marginTop:4}}>{lang==="tr"?"Kalite":"Quality"}: {pulseM.quality==="good"?(lang==="tr"?"iyi ✓":"good ✓"):pulseM.quality==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük — tekrar dene":"low — retry")}</div>
-        <div style={{fontSize:fs-2,color:sc,marginTop:6}}>{lang==="tr"?"Sağlık verilerine kaydedildi.":"Saved to your health data."}</div>
-      </>}
-      {pulseM.phase==="error"&&<div style={{color:dg,fontSize:fs-1,lineHeight:1.5}}>{pulseM.msg}</div>}
-      <div style={{fontSize:fs-4,color:mt,marginTop:12,lineHeight:1.5}}>⚠️ {lang==="tr"?"Tahminî bir ölçümdür, tıbbi cihaz değildir. Kesin değer için tıbbi bir nabız/oksimetre cihazı veya hekiminizi kullanın.":"This is an estimate, not a medical device. For accuracy use a certified pulse oximeter or consult your doctor."}</div>
-      <div style={{display:"flex",gap:8,marginTop:14}}>
-        {(pulseM.phase==="done"||pulseM.phase==="error")&&<button onClick={startPulseMeasure} style={{...BP,flex:1,padding:"9px"}}>{lang==="tr"?"Tekrar Ölç":"Measure again"}</button>}
-        <button onClick={closePulse} style={{...BP,flex:1,padding:"9px",background:mt}}>{pulseM.phase==="measuring"||pulseM.phase==="init"?(lang==="tr"?"İptal":"Cancel"):(lang==="tr"?"Kapat":"Close")}</button>
-      </div>
-    </div>
-  </div>}
   <div style={CS}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:22}}>🩺</span><span style={{fontWeight:700,fontSize:fs+1}}>{t.bp} (SYS / DIA)</span></div>
     <div style={{display:"flex",gap:10,alignItems:"center"}}>
@@ -3166,7 +3158,7 @@ const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",ga
 
 const q1Dynamic=pat.name?`${pat.name.split(" ")[0]}, ${t.q1.toLowerCase()} ${lang==="tr"?"Umarım iyisindir 💙":"Hope you are well 💙"}`:t.q1;
 const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,flex:"1 1 0",minHeight:0,height:0,position:"relative"}}>
-  <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0,alignItems:"center"}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}{chatM.length>0&&<button onClick={()=>{if(confirm(lang==="tr"?"Tüm sohbet geçmişi silinsin mi?":"Clear all chat history?"))setChatM([]);}} style={{...pill(false),marginLeft:"auto",flexShrink:0,color:dg,borderColor:dg+"44",whiteSpace:"nowrap"}}>🗑️ {lang==="tr"?"Temizle":"Clear"}</button>}</div>
+  <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0,alignItems:"center"}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}<button onClick={()=>sendChat(lang==="tr"?"Nabzımı ölçmek istiyorum":"I want to measure my pulse")} style={{...pill(false),whiteSpace:"nowrap"}}>❤️ {lang==="tr"?"Nabzımı ölç":"Measure pulse"}</button>{chatM.length>0&&<button onClick={()=>{if(confirm(lang==="tr"?"Tüm sohbet geçmişi silinsin mi?":"Clear all chat history?"))setChatM([]);}} style={{...pill(false),marginLeft:"auto",flexShrink:0,color:dg,borderColor:dg+"44",whiteSpace:"nowrap"}}>🗑️ {lang==="tr"?"Temizle":"Clear"}</button>}</div>
   {(()=>{
     if(chatNudgeOff)return null;
     const nowMin=new Date().getHours()*60+new Date().getMinutes();
@@ -3330,6 +3322,29 @@ return (
         );})()}
 
         {/* LOCK SCREEN — shown when app is locked */}
+        {pulseM&&<div style={{position:"fixed",inset:0,zIndex:9998,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={pulseM.phase!=="measuring"&&pulseM.phase!=="init"?closePulse:undefined}>
+          <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:360,borderRadius:18,padding:22,textAlign:"center",border:`1px solid ${dg}`}}>
+            <div style={{fontSize:44,marginBottom:8,animation:(pulseM.phase==="measuring")?"pulse 1s infinite":"none"}}>❤️</div>
+            <div style={{fontWeight:700,fontSize:fs+2,marginBottom:6}}>{lang==="tr"?"Nabız Ölçümü":"Pulse Measurement"}</div>
+            {(pulseM.phase==="init")&&<div style={{color:mt,fontSize:fs-1}}>{lang==="tr"?"Kamera açılıyor…":"Opening camera…"}</div>}
+            {pulseM.phase==="measuring"&&<>
+              <div style={{fontSize:fs-2,color:mt,marginBottom:10,lineHeight:1.5}}>{lang==="tr"?"Parmağının ucunu arka kameraya ve flaşa hafifçe kapat, sabit tut.":"Gently cover the rear camera and flash with your fingertip, hold still."}</div>
+              <div style={{height:10,borderRadius:6,background:`${mt}33`,overflow:"hidden"}}><div style={{height:"100%",width:`${pulseM.progress||0}%`,background:`linear-gradient(90deg,${dg},#c0392b)`,transition:"width .2s"}}/></div>
+              <div style={{fontSize:fs-2,color:mt,marginTop:6}}>%{pulseM.progress||0} · {Math.max(0,Math.ceil((100-(pulseM.progress||0))*0.15))} {lang==="tr"?"sn":"s"}</div>
+            </>}
+            {pulseM.phase==="done"&&<>
+              <div style={{fontSize:40,fontWeight:800,color:dg}}>{pulseM.bpm} <span style={{fontSize:fs}}>{t.bpm}</span></div>
+              <div style={{fontSize:fs-2,color:mt,marginTop:4}}>{lang==="tr"?"Kalite":"Quality"}: {pulseM.quality==="good"?(lang==="tr"?"iyi ✓":"good ✓"):pulseM.quality==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük — tekrar dene":"low — retry")}</div>
+              <div style={{fontSize:fs-2,color:sc,marginTop:6}}>{lang==="tr"?"Sağlık verilerine kaydedildi. AILVIE yorumluyor…":"Saved. AILVIE is interpreting…"}</div>
+            </>}
+            {pulseM.phase==="error"&&<div style={{color:dg,fontSize:fs-1,lineHeight:1.5}}>{pulseM.msg}</div>}
+            <div style={{fontSize:fs-4,color:mt,marginTop:12,lineHeight:1.5}}>⚠️ {lang==="tr"?"Tahminî bir ölçümdür, tıbbi cihaz değildir. Kesin değer için tıbbi bir nabız/oksimetre cihazı veya hekiminizi kullanın.":"This is an estimate, not a medical device. For accuracy use a certified pulse oximeter or consult your doctor."}</div>
+            <div style={{display:"flex",gap:8,marginTop:14}}>
+              {(pulseM.phase==="done"||pulseM.phase==="error")&&<button onClick={()=>startPulseMeasure()} style={{...BP,flex:1,padding:"9px"}}>{lang==="tr"?"Tekrar Ölç":"Measure again"}</button>}
+              <button onClick={closePulse} style={{...BP,flex:1,padding:"9px",background:mt}}>{pulseM.phase==="measuring"||pulseM.phase==="init"?(lang==="tr"?"İptal":"Cancel"):(lang==="tr"?"Kapat":"Close")}</button>
+            </div>
+          </div>
+        </div>}
         {isLocked&&<div style={{position:"fixed",inset:0,zIndex:9999,background:`linear-gradient(160deg,${ac},${a2})`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:24,padding:24}}>
           <div style={{fontSize:64}}>🔒</div>
           <div style={{textAlign:"center",color:"#fff"}}>
