@@ -124,6 +124,37 @@ async function callAI(body,apiKey){
   if(proxyError&&!proxyError.includes("not configured"))throw new Error("AI_ERROR: "+proxyError);
   throw new Error("NO_KEY");
 }
+// Camera PPG → BPM via autocorrelation with a confidence gate (rejects noise). samples: [{t:ms, v:redAvg}].
+function computeBPM(samples){
+  if(!samples||samples.length<120)return null;
+  const t0=samples[0].t;
+  const s=samples.filter(x=>x.t-t0>1500); // drop ~1.5s settling
+  if(s.length<100)return null;
+  const vals=s.map(x=>x.v), ts=s.map(x=>x.t), n=vals.length;
+  const dt=(ts[n-1]-ts[0])/(n-1); // ms per sample
+  const win=Math.max(8,Math.round(1200/Math.max(dt,1))); // high-pass ~<0.4Hz baseline
+  const ma=new Array(n);
+  for(let i=0;i<n;i++){let a=Math.max(0,i-win),b=Math.min(n-1,i+win),sum=0,c=0;for(let j=a;j<=b;j++){sum+=vals[j];c++;}ma[i]=sum/c;}
+  const sig=vals.map((v,i)=>v-ma[i]);
+  const sm=sig.map((v,i)=>{const a=sig[i-1]!==undefined?sig[i-1]:v,b=sig[i+1]!==undefined?sig[i+1]:v;return (a+v+b)/3;});
+  const mean=sm.reduce((p,c)=>p+c,0)/n;
+  const c0=sm.map(v=>v-mean);
+  if(c0.reduce((p,c)=>p+c*c,0)/n<0.02)return null; // essentially flat / no light
+  const lagMin=Math.max(2,Math.round(300/dt));  // 200 bpm
+  const lagMax=Math.round(1500/dt);             // 40 bpm
+  let bestLag=-1,bestR=-2;
+  for(let lag=lagMin;lag<=lagMax&&lag<n-10;lag++){
+    let num=0,e1=0,e2=0;
+    for(let i=0;i+lag<n;i++){num+=c0[i]*c0[i+lag];e1+=c0[i]*c0[i];e2+=c0[i+lag]*c0[i+lag];}
+    const r=num/Math.sqrt((e1*e2)||1);
+    if(r>bestR){bestR=r;bestLag=lag;}
+  }
+  if(bestLag<0||bestR<0.4)return null; // no reliable periodicity → reject (noise/poor contact)
+  const bpm=Math.round(60000/(bestLag*dt));
+  if(bpm<40||bpm>200)return null;
+  return {bpm,quality:bestR>0.7?"good":bestR>0.55?"fair":"low",conf:Math.round(bestR*100)};
+}
+if(typeof window!=="undefined")window.__ppgBPM=computeBPM;
 
 
 const HOLIDAYS={"01-01":{tr:"Yılbaşı",en:"New Year"},"04-23":{tr:"Ulusal Egemenlik ve Çocuk Bayramı",en:"National Sovereignty Day"},"05-01":{tr:"Emek ve Dayanışma Günü",en:"Labour Day"},"05-19":{tr:"Gençlik ve Spor Bayramı",en:"Youth Day"},"07-15":{tr:"Demokrasi Günü",en:"Democracy Day"},"08-30":{tr:"Zafer Bayramı",en:"Victory Day"},"10-29":{tr:"Cumhuriyet Bayramı",en:"Republic Day"},"12-25":{tr:"Noel",en:"Christmas"},"03-30":{tr:"Ramazan Bayramı",en:"Eid al-Fitr"},"03-31":{tr:"Ramazan Bayramı",en:"Eid al-Fitr"},"04-01":{tr:"Ramazan Bayramı",en:"Eid al-Fitr"},"06-06":{tr:"Kurban Bayramı",en:"Eid al-Adha"},"06-07":{tr:"Kurban Bayramı",en:"Eid al-Adha"},"06-08":{tr:"Kurban Bayramı",en:"Eid al-Adha"},"06-09":{tr:"Kurban Bayramı",en:"Eid al-Adha"},"02-14":{tr:"Sevgililer Günü",en:"Valentine's Day"},"03-08":{tr:"Kadınlar Günü",en:"Women's Day"},"05-11":{tr:"Anneler Günü",en:"Mother's Day"},"06-15":{tr:"Babalar Günü",en:"Father's Day"},"11-24":{tr:"Öğretmenler Günü",en:"Teachers' Day"}};
@@ -1019,6 +1050,8 @@ appts.forEach(a=>{
 
 // Health
 const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0,steps:0,sleep:0,spo2:0,calories:0,restPulse:0});
+const[pulseM,setPulseM]=useState(null); // {phase:'init'|'measuring'|'done'|'error',progress,bpm,quality,msg}
+const pulseStreamRef=useRef(null),pulseRafRef=useRef(null);
 const[editH,setEditH]=useState(null);
 const[tmpH,setTmpH]=useState("");
 const[wellness,setWellness]=useState({water:0,sleep:0,mood:0,steps:0,exercise:0,waterGoal:8,sleepGoal:8,stepsGoal:10000});
@@ -2366,6 +2399,40 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
 </div>);};
 
 // Simplified page renders for health, pCard, notes, contacts, community, chat (same logic as v5)
+const stopPulseStream=()=>{
+  try{if(pulseRafRef.current)cancelAnimationFrame(pulseRafRef.current);}catch(e){}
+  try{const s=pulseStreamRef.current;if(s){s.getTracks().forEach(tr=>{try{tr.applyConstraints&&tr.applyConstraints({advanced:[{torch:false}]});}catch(e){}tr.stop();});}pulseStreamRef.current=null;}catch(e){}
+};
+const finishPulse=(samples)=>{
+  stopPulseStream();
+  const res=computeBPM(samples);
+  if(res&&res.bpm){setHd(p=>({...p,pulse:res.bpm}));setPulseM({phase:"done",bpm:res.bpm,quality:res.quality});notify(lang==="tr"?`❤️ Nabız: ${res.bpm} bpm`:`❤️ Pulse: ${res.bpm} bpm`);}
+  else setPulseM({phase:"error",msg:lang==="tr"?"Ölçüm alınamadı. Parmağını arka kameraya (ve flaşa) tam kapat, sabit tut ve tekrar dene.":"Couldn't measure. Cover the rear camera (and flash) fully, hold still, and try again."});
+};
+const startPulseMeasure=async()=>{
+  if(pulseM&&(pulseM.phase==="measuring"||pulseM.phase==="init"))return;
+  setPulseM({phase:"init",progress:0});
+  let stream;
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:320},height:{ideal:240}},audio:false});}
+  catch(e){setPulseM({phase:"error",msg:lang==="tr"?"Kamera izni gerekli. İzin verip tekrar deneyin.":"Camera permission needed. Allow it and retry."});return;}
+  pulseStreamRef.current=stream;
+  const track=stream.getVideoTracks()[0];
+  try{const caps=track.getCapabilities&&track.getCapabilities();if(caps&&caps.torch)await track.applyConstraints({advanced:[{torch:true}]});}catch(e){}
+  const video=document.createElement("video");video.setAttribute("playsinline","");video.muted=true;video.srcObject=stream;
+  try{await video.play();}catch(e){}
+  const cv=document.createElement("canvas");cv.width=64;cv.height=48;const ctx=cv.getContext("2d",{willReadFrequently:true});
+  const samples=[];const dur=15000;const start=performance.now();
+  setPulseM({phase:"measuring",progress:0});
+  const tick=()=>{
+    const now=performance.now();const el=now-start;
+    try{ctx.drawImage(video,0,0,64,48);const d=ctx.getImageData(16,12,32,24).data;let r=0,c=0;for(let i=0;i<d.length;i+=4){r+=d[i];c++;}samples.push({t:now,v:r/c});}catch(e){}
+    setPulseM(p=>p&&p.phase==="measuring"?{...p,progress:Math.min(100,Math.round(el/dur*100))}:p);
+    if(el<dur)pulseRafRef.current=requestAnimationFrame(tick);else finishPulse(samples);
+  };
+  pulseRafRef.current=requestAnimationFrame(tick);
+};
+const closePulse=()=>{stopPulseStream();setPulseM(null);};
+useEffect(()=>()=>stopPulseStream(),[]);
 const renderHealth=()=>{
 const pulseRef=(()=>{
   const age=patAge||30;
@@ -2419,8 +2486,34 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       :<div onClick={()=>{setEditH("pulse");setTmpH(hd.pulse>0?String(hd.pulse):"");}} style={{cursor:"pointer",fontWeight:700,fontSize:fs+2,color:hd.pulse>0?tc:mt,marginTop:2}}>{hd.pulse>0?`${hd.pulse} ${t.bpm}`:t.tap}</div>}
       {hd.pulse>0&&<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Referans":"Ref"}: {pulseRef.label} bpm {patAge?`(${patAge} ${t.age})`:""}</div>}
     </div>
-    {hd.pulse>0&&<span style={{padding:"3px 8px",borderRadius:6,fontSize:fs-3,fontWeight:600,background:pulseOk?`${sc}22`:`${dg}22`,color:pulseOk?sc:dg}}>{pulseOk?t.norm:t.caut}</span>}
+    <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
+      {hd.pulse>0&&<span style={{padding:"3px 8px",borderRadius:6,fontSize:fs-3,fontWeight:600,background:pulseOk?`${sc}22`:`${dg}22`,color:pulseOk?sc:dg}}>{pulseOk?t.norm:t.caut}</span>}
+      <button onClick={startPulseMeasure} style={{...BP,padding:"5px 9px",fontSize:fs-3,whiteSpace:"nowrap",background:`linear-gradient(135deg,${dg},#c0392b)`}}>📷 {lang==="tr"?"Ölç":"Measure"}</button>
+    </div>
   </div>
+  {pulseM&&<div style={{position:"fixed",inset:0,zIndex:370,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={pulseM.phase!=="measuring"&&pulseM.phase!=="init"?closePulse:undefined}>
+    <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:360,borderRadius:18,padding:22,textAlign:"center",border:`1px solid ${dg}`}}>
+      <div style={{fontSize:44,marginBottom:8,animation:(pulseM.phase==="measuring")?"pulse 1s infinite":"none"}}>❤️</div>
+      <div style={{fontWeight:700,fontSize:fs+2,marginBottom:6}}>{lang==="tr"?"Nabız Ölçümü":"Pulse Measurement"}</div>
+      {(pulseM.phase==="init")&&<div style={{color:mt,fontSize:fs-1}}>{lang==="tr"?"Kamera açılıyor…":"Opening camera…"}</div>}
+      {pulseM.phase==="measuring"&&<>
+        <div style={{fontSize:fs-2,color:mt,marginBottom:10,lineHeight:1.5}}>{lang==="tr"?"Parmağının ucunu arka kameraya ve flaşa hafifçe kapat, sabit tut.":"Gently cover the rear camera and flash with your fingertip, hold still."}</div>
+        <div style={{height:10,borderRadius:6,background:`${mt}33`,overflow:"hidden"}}><div style={{height:"100%",width:`${pulseM.progress||0}%`,background:`linear-gradient(90deg,${dg},#c0392b)`,transition:"width .2s"}}/></div>
+        <div style={{fontSize:fs-2,color:mt,marginTop:6}}>%{pulseM.progress||0} · {Math.max(0,Math.ceil((100-(pulseM.progress||0))*0.15))} {lang==="tr"?"sn":"s"}</div>
+      </>}
+      {pulseM.phase==="done"&&<>
+        <div style={{fontSize:40,fontWeight:800,color:dg}}>{pulseM.bpm} <span style={{fontSize:fs}}>{t.bpm}</span></div>
+        <div style={{fontSize:fs-2,color:mt,marginTop:4}}>{lang==="tr"?"Kalite":"Quality"}: {pulseM.quality==="good"?(lang==="tr"?"iyi ✓":"good ✓"):pulseM.quality==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük — tekrar dene":"low — retry")}</div>
+        <div style={{fontSize:fs-2,color:sc,marginTop:6}}>{lang==="tr"?"Sağlık verilerine kaydedildi.":"Saved to your health data."}</div>
+      </>}
+      {pulseM.phase==="error"&&<div style={{color:dg,fontSize:fs-1,lineHeight:1.5}}>{pulseM.msg}</div>}
+      <div style={{fontSize:fs-4,color:mt,marginTop:12,lineHeight:1.5}}>⚠️ {lang==="tr"?"Tahminî bir ölçümdür, tıbbi cihaz değildir. Kesin değer için tıbbi bir nabız/oksimetre cihazı veya hekiminizi kullanın.":"This is an estimate, not a medical device. For accuracy use a certified pulse oximeter or consult your doctor."}</div>
+      <div style={{display:"flex",gap:8,marginTop:14}}>
+        {(pulseM.phase==="done"||pulseM.phase==="error")&&<button onClick={startPulseMeasure} style={{...BP,flex:1,padding:"9px"}}>{lang==="tr"?"Tekrar Ölç":"Measure again"}</button>}
+        <button onClick={closePulse} style={{...BP,flex:1,padding:"9px",background:mt}}>{pulseM.phase==="measuring"||pulseM.phase==="init"?(lang==="tr"?"İptal":"Cancel"):(lang==="tr"?"Kapat":"Close")}</button>
+      </div>
+    </div>
+  </div>}
   <div style={CS}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:22}}>🩺</span><span style={{fontWeight:700,fontSize:fs+1}}>{t.bp} (SYS / DIA)</span></div>
     <div style={{display:"flex",gap:10,alignItems:"center"}}>
