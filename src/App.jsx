@@ -339,7 +339,9 @@ export default function AILVIE_App(){
 const[lang,setLang]=useState(function(){try{var s=localStorage.getItem("ailvie_lang");if(s)return s;}catch(e){}var b=(navigator.language||"tr").split("-")[0].toLowerCase();return["tr","en","de","ru","zh","hi","nl","es","ar"].indexOf(b)>=0?b:"en";});
 const[dark,setDark]=useState(true);
 const[hc,setHc]=useState(false);
-const[fs,setFs]=useState(15);
+const[fs,setFs]=useState(()=>{try{const v=parseInt(localStorage.getItem("ailvie_fs"));return v>=12&&v<=24?v:15;}catch{return 15;}});
+useEffect(()=>{try{localStorage.setItem("ailvie_fs",String(fs));}catch{}},[fs]);
+useEffect(()=>{try{document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";}catch{}},[lang]);
 const[page,setPage]=useState("home");
 const[pageHist,setPageHist]=useState(["home"]);
 const[histIdx,setHistIdx]=useState(0);
@@ -2310,8 +2312,12 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
 const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   {!all&&<button onClick={()=>setSettingsTab("all")} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:fs,textAlign:"left",padding:0}}>← {t.settings}</button>}
   {all&&<span style={{fontWeight:700,fontSize:fs+2}}>⚙️ {t.settings}</span>}
-  {(all||s==="all")&&<>{[{l:`🌙 ${t.dark}`,v:dark,f:()=>setDark(!dark)},{l:`🔆 ${t.hc}`,v:hc,f:()=>setHc(!hc)}].map(x=>(<div key={x.l} style={{...CS,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span>{x.l}</span><button onClick={x.f} style={{width:48,height:26,borderRadius:13,background:x.v?ac:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:20,height:20,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:x.v?25:3,transition:"left .2s"}}/></button></div>))}
-  <div style={CS}><div style={{marginBottom:6}}>📝 {t.fSize}: {fs}</div><div style={{display:"flex",gap:8}}>{[12,13,14,16,18].map(sz=><button key={sz} onClick={()=>setFs(sz)} style={pill(fs===sz)}>{sz}</button>)}</div></div>
+  {(all||s==="all")&&<div style={{...CS,borderLeft:`3px solid ${ac}`}}>
+    <div style={{fontWeight:700,marginBottom:4}}>♿ {lang==="tr"?"Erişilebilirlik":"Accessibility"}</div>
+    <div style={{fontSize:fs-2,color:mt,lineHeight:1.5}}>{lang==="tr"?"Görme güçlüğü yaşıyorsan: sağ üstteki 🎙️ ile AILVIE'yle konuşabilir, sesli diyaloğu açtığında AILVIE yanıtları sesli okur. Aşağıdan yüksek kontrast, büyük yazı ve ekran yakınlaştırma (+/−) seçeneklerini kullanabilirsin. Uygulama TalkBack/VoiceOver ekran okuyucularıyla uyumludur.":"If you have low vision: use the 🎙️ button (top right) to talk to AILVIE; with voice dialog on, AILVIE reads answers aloud. Below you'll find high contrast, large text and screen zoom (+/−). The app works with TalkBack/VoiceOver screen readers."}</div>
+  </div>}
+  {(all||s==="all")&&<>{[{l:`🌙 ${t.dark}`,v:dark,f:()=>setDark(!dark)},{l:`🔆 ${t.hc}`,v:hc,f:()=>setHc(!hc)}].map(x=>(<div key={x.l} style={{...CS,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span>{x.l}</span><button onClick={x.f} aria-label={x.l} style={{width:48,height:26,borderRadius:13,background:x.v?ac:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:20,height:20,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:x.v?25:3,transition:"left .2s"}}/></button></div>))}
+  <div style={CS}><div style={{marginBottom:6}}>📝 {t.fSize}: {fs}</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[12,13,14,16,18,20,22].map(sz=><button key={sz} onClick={()=>setFs(sz)} aria-label={`${t.fSize} ${sz}`} style={pill(fs===sz)}>{sz}</button>)}</div></div>
   <div style={CS}><div style={{marginBottom:6}}>🌍 {t.lang}</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4}}>{Object.entries(LL).map(([k,v])=>{const emj={tr:"🇹🇷",en:"🇬🇧",de:"🇩🇪",ru:"🇷🇺",zh:"🇨🇳",hi:"🇮🇳",nl:"🇳🇱",es:"🇪🇸",ar:"🇸🇦"};return<button key={k} onClick={()=>setLang(k)} style={pill(lang===k)}>{emj[k]||""} {v}</button>;})}</div></div>
   <div style={CS}><div style={{marginBottom:6}}>🤖 AI API Key <span style={{fontSize:fs-3,color:mt}}>(Anthropic)</span></div><div style={{display:"flex",gap:6}}><input type="password" value={apiKey} onChange={e=>{setApiKey(e.target.value);try{localStorage.setItem("ailvie_api_key",e.target.value);}catch(ex){}}} placeholder="sk-ant-..." style={{...IS,flex:1,fontFamily:"monospace",fontSize:fs-2}}/>{apiKey&&<button onClick={()=>{setApiKey("");try{localStorage.removeItem("ailvie_api_key");}catch(ex){}}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",color:dg,cursor:"pointer"}}>✕</button>}</div><div style={{fontSize:fs-3,color:apiKey?sc:mt,marginTop:4}}>{apiKey?(lang==="tr"?"✓ API anahtarı ayarlandı":"✓ API key set"):(lang==="tr"?"AI Sohbet, çeviri ve ilaç analizi için gerekli":"Required for AI Chat, translation & drug analysis")}</div></div>
   <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>setEmNums(p=>p.filter(x=>x.id!==en.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
@@ -3411,7 +3417,7 @@ return (
         {/* HEADER */}
         <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"2px 10px",paddingTop:"max(env(safe-area-inset-top),2px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"flex-end",gap:6,flex:1,minWidth:0}}>
-            <button onClick={()=>setShowMenu(true)} style={{background:"none",border:"none",color:"#fff",fontSize:22,cursor:"pointer",padding:0,flexShrink:0,alignSelf:"center"}}>☰</button>
+            <button onClick={()=>setShowMenu(true)} aria-label={lang==="tr"?"Menü":"Menu"} style={{background:"none",border:"none",color:"#fff",fontSize:22,cursor:"pointer",padding:0,flexShrink:0,alignSelf:"center"}}>☰</button>
             <img src="/avatar2.svg" alt="" style={{height:54,width:54,objectFit:"cover",flexShrink:0,borderRadius:6}} />
             <div onClick={()=>goTo("home")} title={t.home} role="button" style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",lineHeight:1,minWidth:0,cursor:"pointer"}}>
               <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:35,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"1px #e8a817",textShadow:"0 2px 6px rgba(0,0,0,0.5)",textAlign:"center"}}>AILVIE</div>
@@ -3438,8 +3444,8 @@ return (
               if(recRef.current)try{recRef.current.onend=null;recRef.current.onerror=null;recRef.current.abort();}catch(e){}
               recRef.current=null;
               setIsListen(false);setIsSpeak(false);
-            }}} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:27,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:1,filter:"drop-shadow(0 1px 3px rgba(0,0,0,0.55))"}}>🎙️</button>
-            <button onClick={()=>setShowNotif(!showNotif)} style={{background:"none",border:"none",color:"#fff",fontSize:25,cursor:"pointer",padding:0,position:"relative"}}>🔔{unread>0&&<span style={{position:"absolute",top:-4,right:-6,width:16,height:16,borderRadius:"50%",background:dg,color:"#fff",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{unread}</span>}</button>
+            }}} aria-label={t.voiceOn} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:27,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:1,filter:"drop-shadow(0 1px 3px rgba(0,0,0,0.55))"}}>🎙️</button>
+            <button onClick={()=>setShowNotif(!showNotif)} aria-label={t.notif} style={{background:"none",border:"none",color:"#fff",fontSize:25,cursor:"pointer",padding:0,position:"relative"}}>🔔{unread>0&&<span style={{position:"absolute",top:-4,right:-6,width:16,height:16,borderRadius:"50%",background:dg,color:"#fff",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{unread}</span>}</button>
           </div>
         </div>
 
@@ -3506,7 +3512,7 @@ return (
         </>}
 
         {/* Toast */}
-        {toast&&<div style={{position:"absolute",top:100,left:"50%",transform:"translateX(-50%)",background:cd,color:tc,padding:"10px 20px",borderRadius:12,boxShadow:"0 6px 24px rgba(0,0,0,.3)",zIndex:300,maxWidth:300,border:`1px solid ${ac}`,fontSize:fs,animation:"slideD .3s ease-out",textAlign:"center"}}>{toast}</div>}
+        {toast&&<div role="status" aria-live="polite" style={{position:"absolute",top:100,left:"50%",transform:"translateX(-50%)",background:cd,color:tc,padding:"10px 20px",borderRadius:12,boxShadow:"0 6px 24px rgba(0,0,0,.3)",zIndex:300,maxWidth:300,border:`1px solid ${ac}`,fontSize:fs,animation:"slideD .3s ease-out",textAlign:"center"}}>{toast}</div>}
 
         {/* Offline banner */}
         {!online&&<div style={{flexShrink:0,background:"#b91c1c",color:"#fff",fontSize:fs-2,textAlign:"center",padding:"4px 8px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>📡 {lang==="tr"?"Çevrimdışısınız — bazı özellikler sınırlı olabilir":"You're offline — some features may be limited"}</div>}
