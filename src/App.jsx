@@ -3032,7 +3032,7 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
 const NOTE_BGS=[{k:"none",g:null},{k:"dusk",g:"linear-gradient(135deg,#3a2f52,#523a5e)"},{k:"forest",g:"linear-gradient(135deg,#1e3a2e,#2f4f3e)"},{k:"ocean",g:"linear-gradient(135deg,#1e3a4f,#2f5a6e)"},{k:"sunset",g:"linear-gradient(135deg,#4f2e2e,#6e4a3a)"},{k:"grape",g:"linear-gradient(135deg,#3a2e4f,#5a3a6e)"}];
 const noteBg=(k)=>{const b=NOTE_BGS.find(x=>x.k===k);return b?b.g:null;};
 const pushHist=(nid,html)=>{const h=noteHistRef.current;if(h.nid!==nid){h.nid=nid;h.stack=[html];h.idx=0;return;}if(h.stack[h.idx]===html)return;h.stack=h.stack.slice(0,h.idx+1);h.stack.push(html);if(h.stack.length>60)h.stack.shift();h.idx=h.stack.length-1;};
-const setEditableHtml=(nid,html)=>{setNotes(p=>p.map(x=>x.id===nid?{...x,content:html}:x));if(editableRef.current)editableRef.current.innerHTML=html;};
+const setEditableHtml=(nid,html)=>{setNotes(p=>p.map(x=>x.id===nid?{...x,content:html}:x));if(editableRef.current){editableRef.current.innerHTML=html;syncNoteBar(editableRef.current);}};
 const doUndo=(nid)=>{const h=noteHistRef.current;if(h.nid!==nid||h.idx<=0)return;h.idx--;setEditableHtml(nid,h.stack[h.idx]);haptic(8);};
 const doRedo=(nid)=>{const h=noteHistRef.current;if(h.nid!==nid||h.idx>=h.stack.length-1)return;h.idx++;setEditableHtml(nid,h.stack[h.idx]);haptic(8);};
 const fmt=(cmd,val)=>{try{const el=editableRef.current;if(!el)return;el.focus();document.execCommand(cmd,false,val);const nid=noteHistRef.current.nid;const html=el.innerHTML;setNotes(p=>p.map(x=>x.id===nid?{...x,content:html}:x));pushHist(nid,html);}catch(e){}};
@@ -3051,6 +3051,7 @@ const startNoteRec=async(nid)=>{
   catch(e){notify(lang==="tr"?"Mikrofon izni gerekli":"Microphone permission needed");}
 };
 const saveDrawing=(dataUrl)=>{const nid=editNote;if(nid&&dataUrl)addNoteMedia(nid,{type:"drawing",data:dataUrl});setNoteDraw(false);};
+const syncNoteBar=(el)=>{if(!el||!el.parentElement)return;const th=el.parentElement.querySelector(".note-thumb");if(!th)return;if(el.scrollHeight>el.clientHeight+3){const h=Math.max(24,el.clientHeight*el.clientHeight/el.scrollHeight);th.style.height=h+"px";th.style.top=(el.scrollTop/(el.scrollHeight-el.clientHeight)*(el.clientHeight-h))+"px";th.style.opacity="1";}else th.style.opacity="0";};
 const renderNotes=()=>{
   const sorted=[...notes].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
   return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -3080,7 +3081,10 @@ const renderNotes=()=>{
                 <button onClick={()=>setCheck(n.id,n.checklist.filter(x=>x.id!==it.id))} aria-label={lang==="tr"?"Kaldır":"Remove"} style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:mt}}>✕</button>
               </div>)}
               <button onClick={()=>setCheck(n.id,[...n.checklist,{id:Date.now(),text:"",done:false}])} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:fs-1,textAlign:"left",padding:"2px 0"}}>+ {lang==="tr"?"Öğe ekle":"Add item"}</button>
-            </div>:<div contentEditable suppressContentEditableWarning className="note-ta note-edit" ref={el=>{editableRef.current=el;if(el&&el.dataset.nid!==String(n.id)){el.dataset.nid=String(n.id);el.innerHTML=n.content||"";noteHistRef.current={stack:[n.content||""],idx:0,nid:n.id};}}} onInput={e=>{const html=e.currentTarget.innerHTML;setNotes(p=>p.map(x=>x.id===n.id?{...x,content:html}:x));pushHist(n.id,html);}} data-ph={lang==="tr"?"Not al...":"Take a note..."} style={{minHeight:72,maxHeight:240,overflowY:"auto",outline:"none",color:dark?tc:"#333",fontSize:fs-1,lineHeight:1.5,wordBreak:"break-word",overflowWrap:"anywhere",whiteSpace:"pre-wrap",direction:lang==="ar"?"rtl":"ltr",scrollbarWidth:"thin",scrollbarColor:`${ac}88 transparent`}}/>}
+            </div>:<div style={{position:"relative"}}>
+              <div contentEditable suppressContentEditableWarning className="note-edit" ref={el=>{editableRef.current=el;if(el&&el.dataset.nid!==String(n.id)){el.dataset.nid=String(n.id);el.innerHTML=n.content||"";noteHistRef.current={stack:[n.content||""],idx:0,nid:n.id};setTimeout(()=>syncNoteBar(el),40);}}} onScroll={e=>syncNoteBar(e.currentTarget)} onInput={e=>{const html=e.currentTarget.innerHTML;setNotes(p=>p.map(x=>x.id===n.id?{...x,content:html}:x));pushHist(n.id,html);syncNoteBar(e.currentTarget);}} data-ph={lang==="tr"?"Not al...":"Take a note..."} style={{minHeight:72,maxHeight:240,overflowY:"auto",outline:"none",color:dark?tc:"#333",fontSize:fs-1,lineHeight:1.5,wordBreak:"break-word",overflowWrap:"anywhere",whiteSpace:"pre-wrap",direction:lang==="ar"?"rtl":"ltr",scrollbarWidth:"none",paddingRight:8,boxSizing:"border-box"}}/>
+              <div className="note-thumb" style={{position:"absolute",right:0,top:0,width:5,minHeight:24,borderRadius:3,background:`${ac}dd`,opacity:0,transition:"opacity .15s",pointerEvents:"none"}}/>
+            </div>}
             {media.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:4}}>{media.map((m,mi)=><div key={mi} style={{position:"relative"}}>{m.type==="audio"?<audio controls src={m.data} style={{height:34,maxWidth:200}}/>:<img alt="" src={m.data} style={{width:66,height:66,objectFit:"cover",borderRadius:8,display:"block"}}/>}<button onClick={()=>delNoteMedia(n.id,mi)} aria-label={lang==="tr"?"Kaldır":"Remove"} style={{position:"absolute",top:-6,right:-6,background:dg,color:"#fff",border:"none",borderRadius:"50%",width:18,height:18,fontSize:11,cursor:"pointer",lineHeight:1}}>✕</button></div>)}</div>}
             {(n.labels||[]).length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{n.labels.map(l=><span key={l} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,labels:(x.labels||[]).filter(y=>y!==l)}:x))} style={{fontSize:fs-3,background:`${ac}22`,color:ac,borderRadius:10,padding:"2px 8px",cursor:"pointer"}}>🏷️ {l} ✕</span>)}</div>}
             <div style={{display:"flex",alignItems:"center",gap:2,marginTop:6,borderTop:`1px solid ${dark?bd:"#00000018"}`,paddingTop:8}}>
@@ -3784,9 +3788,8 @@ return (
       .chat-scroll::-webkit-scrollbar-thumb{background:rgba(0,180,216,.6);border-radius:5px;border:2px solid transparent;background-clip:padding-box;min-height:40px}
       .chat-scroll::-webkit-scrollbar-thumb:hover{background:rgba(0,180,216,.9);background-clip:padding-box}
       .note-ta{scrollbar-gutter:stable}
-      .note-ta::-webkit-scrollbar{width:8px;-webkit-appearance:none}
-      .note-ta::-webkit-scrollbar-track{background:${ac}18;border-radius:4px}
-      .note-ta::-webkit-scrollbar-thumb{background:${ac}99;border-radius:4px;min-height:28px}
+      .note-edit::-webkit-scrollbar{width:0;height:0;display:none}
+      .note-edit{-ms-overflow-style:none}
       .note-edit:empty:before{content:attr(data-ph);color:${mt};pointer-events:none}
       .note-edit h1{font-size:1.4em;font-weight:700;margin:4px 0}
       .note-edit h2{font-size:1.2em;font-weight:700;margin:3px 0}
