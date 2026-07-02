@@ -368,6 +368,15 @@ const[showMenu,setShowMenu]=useState(false);
 const[showFirstAid,setShowFirstAid]=useState(false);
 const[showNav,setShowNav]=useState(false);
 const[navQuery,setNavQuery]=useState("");
+const[noteSheet,setNoteSheet]=useState(null); // 'add'|'color'|'format'|'more'
+const[noteDraw,setNoteDraw]=useState(false);
+const[noteRec,setNoteRec]=useState(null); // {id,sec} while recording
+const[noteMedia,setNoteMedia]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_notemedia"))||{};}catch{return{};}});
+useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_notemedia",JSON.stringify(noteMedia));}catch(e){}},800);return()=>clearTimeout(tm);},[noteMedia]);
+const editableRef=useRef(null);
+const noteHistRef=useRef({stack:[],idx:-1,nid:null});
+const noteRecRef=useRef(null);
+const drawCanvasRef=useRef(null);
 const[faOpen,setFaOpen]=useState(null);
 const[voiceFirst,setVoiceFirst]=useState(()=>{try{return localStorage.getItem("ailvie_vf")==="1";}catch{return false;}});
 useEffect(()=>{try{localStorage.setItem("ailvie_vf",voiceFirst?"1":"0");}catch{}},[voiceFirst]);
@@ -3020,6 +3029,28 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   </div>}
 </div>);
 
+const NOTE_BGS=[{k:"none",g:null},{k:"dusk",g:"linear-gradient(135deg,#3a2f52,#523a5e)"},{k:"forest",g:"linear-gradient(135deg,#1e3a2e,#2f4f3e)"},{k:"ocean",g:"linear-gradient(135deg,#1e3a4f,#2f5a6e)"},{k:"sunset",g:"linear-gradient(135deg,#4f2e2e,#6e4a3a)"},{k:"grape",g:"linear-gradient(135deg,#3a2e4f,#5a3a6e)"}];
+const noteBg=(k)=>{const b=NOTE_BGS.find(x=>x.k===k);return b?b.g:null;};
+const pushHist=(nid,html)=>{const h=noteHistRef.current;if(h.nid!==nid){h.nid=nid;h.stack=[html];h.idx=0;return;}if(h.stack[h.idx]===html)return;h.stack=h.stack.slice(0,h.idx+1);h.stack.push(html);if(h.stack.length>60)h.stack.shift();h.idx=h.stack.length-1;};
+const setEditableHtml=(nid,html)=>{setNotes(p=>p.map(x=>x.id===nid?{...x,content:html}:x));if(editableRef.current)editableRef.current.innerHTML=html;};
+const doUndo=(nid)=>{const h=noteHistRef.current;if(h.nid!==nid||h.idx<=0)return;h.idx--;setEditableHtml(nid,h.stack[h.idx]);haptic(8);};
+const doRedo=(nid)=>{const h=noteHistRef.current;if(h.nid!==nid||h.idx>=h.stack.length-1)return;h.idx++;setEditableHtml(nid,h.stack[h.idx]);haptic(8);};
+const fmt=(cmd,val)=>{try{const el=editableRef.current;if(!el)return;el.focus();document.execCommand(cmd,false,val);const nid=noteHistRef.current.nid;const html=el.innerHTML;setNotes(p=>p.map(x=>x.id===nid?{...x,content:html}:x));pushHist(nid,html);}catch(e){}};
+const addNoteMedia=(nid,item)=>{setNoteMedia(p=>{const next={...p,[nid]:[...(p[nid]||[]),item]};try{if(JSON.stringify(next).length>4200000){notify(lang==="tr"?"Depolama dolu — medya eklenemedi":"Storage full — media not added");return p;}}catch(e){}return next;});haptic(12);};
+const delNoteMedia=(nid,idx)=>setNoteMedia(p=>({...p,[nid]:(p[nid]||[]).filter((_,i)=>i!==idx)}));
+const pickNoteImage=(nid,useCamera)=>{const inp=document.createElement("input");inp.type="file";inp.accept="image/*";if(useCamera)inp.capture="environment";inp.onchange=async()=>{const f=inp.files&&inp.files[0];if(!f)return;try{const data=await resizeImage(f);addNoteMedia(nid,{type:"image",data});}catch(e){notify(lang==="tr"?"Resim eklenemedi":"Could not add image");}};inp.click();setNoteSheet(null);};
+const duplicateNote=(n)=>{const id=Date.now();setNotes(p=>[{...JSON.parse(JSON.stringify(n)),id,pinned:false},...p]);if(noteMedia[n.id])setNoteMedia(p=>({...p,[id]:JSON.parse(JSON.stringify(p[n.id]))}));setEditNote(null);setNoteSheet(null);notify(lang==="tr"?"📋 Kopya oluşturuldu":"📋 Copy created");};
+const shareNote=async(n)=>{const text=(n.title?n.title+"\n":"")+((n.checklist?n.checklist.map(i=>(i.done?"☑ ":"☐ ")+i.text).join("\n"):(n.content||"")).replace(/<br\s*\/?>/gi,"\n").replace(/<[^>]+>/g,""));try{if(navigator.share)await navigator.share({title:n.title||"Not",text});else{await navigator.clipboard.writeText(text);notify(lang==="tr"?"Panoya kopyalandı":"Copied to clipboard");}}catch(e){}setNoteSheet(null);};
+const toggleChecklist=(n)=>{setNotes(p=>p.map(x=>{if(x.id!==n.id)return x;if(x.checklist)return{...x,checklist:null,content:x.checklist.map(i=>i.text).join("<br>")};const items=(x.content||"").replace(/<br\s*\/?>/gi,"\n").replace(/<\/(div|p)>/gi,"\n").replace(/<[^>]+>/g,"").split("\n").filter(l=>l.trim()).map((l,i)=>({id:Date.now()+i,text:l.trim(),done:false}));return{...x,checklist:items.length?items:[{id:Date.now(),text:"",done:false}],content:""};}));setNoteSheet(null);};
+const setCheck=(nid,items)=>setNotes(p=>p.map(x=>x.id===nid?{...x,checklist:items}:x));
+const stopNoteRec=()=>{const r=noteRecRef.current;if(r){try{clearInterval(r.timer);if(r.mr&&r.mr.state!=="inactive")r.mr.stop();}catch(e){}noteRecRef.current=null;}setNoteRec(null);};
+const startNoteRec=async(nid)=>{
+  if(!navigator.mediaDevices||!window.MediaRecorder){notify(lang==="tr"?"Kayıt bu cihazda desteklenmiyor":"Recording not supported");return;}
+  setNoteSheet(null);
+  try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});const mr=new MediaRecorder(stream);const chunks=[];mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};mr.onstop=()=>{try{stream.getTracks().forEach(t=>t.stop());}catch(e){}const blob=new Blob(chunks,{type:mr.mimeType||"audio/webm"});const fr=new FileReader();fr.onload=()=>addNoteMedia(nid,{type:"audio",data:fr.result});fr.readAsDataURL(blob);};mr.start();noteRecRef.current={mr,nid,t0:Date.now(),timer:setInterval(()=>{const s=Math.floor((Date.now()-noteRecRef.current.t0)/1000);setNoteRec({id:nid,sec:s});if(s>=120)stopNoteRec();},250)};setNoteRec({id:nid,sec:0});}
+  catch(e){notify(lang==="tr"?"Mikrofon izni gerekli":"Microphone permission needed");}
+};
+const saveDrawing=(dataUrl)=>{const nid=editNote;if(nid&&dataUrl)addNoteMedia(nid,{type:"drawing",data:dataUrl});setNoteDraw(false);};
 const renderNotes=()=>{
   const sorted=[...notes].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
   return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -3031,27 +3062,50 @@ const renderNotes=()=>{
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
       {sorted.map(n=>{
         const isEditing=editNote===n.id;
-        return(<div key={n.id} style={{background:dark?n.color+"22":n.color,borderRadius:12,padding:12,border:isEditing?"2px solid "+ac:"1px solid "+(dark?bd:n.color),width:"100%",maxWidth:"100%",boxSizing:"border-box",overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",gap:6}}>
+        const cbg=(n.bg&&noteBg(n.bg))?noteBg(n.bg):(dark?n.color+"22":n.color);
+        const tbBtn={background:"none",border:"none",fontSize:19,cursor:"pointer",color:dark?tc:"#333",padding:"5px 9px",borderRadius:8,lineHeight:1};
+        const media=noteMedia[n.id]||[];
+        const saveNote=()=>{const note=notes.find(x=>x.id===n.id);const empty=note&&!note.title?.trim()&&!(note.content||"").replace(/<[^>]+>/g,"").trim()&&!(note.checklist&&note.checklist.some(i=>i.text.trim()))&&!(noteMedia[n.id]||[]).length;if(empty){setNotes(p=>p.filter(x=>x.id!==n.id));setNoteMedia(p=>{const q={...p};delete q[n.id];return q;});}setEditNote(null);setNoteSheet(null);};
+        return(<div key={n.id} style={{background:cbg,borderRadius:12,padding:12,border:isEditing?"2px solid "+ac:"1px solid "+(dark?bd:n.color),width:"100%",maxWidth:"100%",boxSizing:"border-box",overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",gap:6}}>
           {n.pinned&&<span style={{position:"absolute",top:6,right:8,fontSize:14}}>📌</span>}
           {isEditing?<>
             <input value={n.title} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,title:e.target.value}:x))} placeholder={lang==="tr"?"Başlık":"Title"} style={{fontWeight:700,background:"transparent",border:"none",padding:0,color:dark?tc:"#1a1a1a",fontSize:fs+1,outline:"none",width:"100%",boxSizing:"border-box"}}/>
-            <textarea className="note-ta" value={n.content} onChange={e=>{setNotes(p=>p.map(x=>x.id===n.id?{...x,content:e.target.value}:x));const el=e.target;el.style.height='auto';el.style.height=Math.min(220,Math.max(72,el.scrollHeight))+'px';}} placeholder={lang==="tr"?"Not al...":"Take a note..."} style={{background:"transparent",border:"none",padding:0,resize:"none",minHeight:72,height:72,maxHeight:220,width:"100%",maxWidth:"100%",boxSizing:"border-box",color:dark?tc:"#333",fontSize:fs-1,outline:"none",fontFamily:"inherit",wordBreak:"break-word",overflowWrap:"anywhere",whiteSpace:"pre-wrap",direction:lang==="ar"?"rtl":"ltr",overflowY:"auto",WebkitOverflowScrolling:"touch",scrollbarWidth:"thin",scrollbarColor:`${ac}88 transparent`}} ref={el=>{if(el){el.style.height='auto';el.style.height=Math.min(220,Math.max(72,el.scrollHeight))+'px';}}}/>
-            <div style={{display:"flex",gap:3,flexWrap:"wrap",marginTop:4}}>{NCOL.map(c=><button key={c} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,color:c}:x))} style={{width:20,height:20,borderRadius:10,background:c,border:n.color===c?"2px solid "+ac:"2px solid transparent",cursor:"pointer",flexShrink:0}}/>)}</div>
-            <div style={{display:"flex",gap:6,marginTop:4}}>
-              <button onClick={()=>{const note=notes.find(x=>x.id===n.id);if(note&&!note.title?.trim()&&!note.content?.trim()){setNotes(p=>p.filter(x=>x.id!==n.id));}setEditNote(null);}} style={{...BP,padding:"6px 14px",fontSize:fs-1}}>✓ {lang==="tr"?"Kaydet":"Save"}</button>
-              <button onClick={()=>setEditNote(null)} style={{...BP,background:mt,padding:"6px 14px",fontSize:fs-1}}>{t.cancel}</button>
+            {n.checklist?<div style={{display:"flex",flexDirection:"column",gap:4}}>
+              {n.checklist.map(it=><div key={it.id} style={{display:"flex",alignItems:"center",gap:8}}>
+                <button onClick={()=>setCheck(n.id,n.checklist.map(x=>x.id===it.id?{...x,done:!x.done}:x))} aria-label={lang==="tr"?"İşaretle":"Toggle"} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,padding:0}}>{it.done?"☑️":"⬜"}</button>
+                <input value={it.text} onChange={e=>setCheck(n.id,n.checklist.map(x=>x.id===it.id?{...x,text:e.target.value}:x))} placeholder={lang==="tr"?"Öğe":"Item"} style={{flex:1,background:"transparent",border:"none",outline:"none",color:dark?tc:"#333",fontSize:fs-1,textDecoration:it.done?"line-through":"none",opacity:it.done?0.55:1}}/>
+                <button onClick={()=>setCheck(n.id,n.checklist.filter(x=>x.id!==it.id))} aria-label={lang==="tr"?"Kaldır":"Remove"} style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:mt}}>✕</button>
+              </div>)}
+              <button onClick={()=>setCheck(n.id,[...n.checklist,{id:Date.now(),text:"",done:false}])} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:fs-1,textAlign:"left",padding:"2px 0"}}>+ {lang==="tr"?"Öğe ekle":"Add item"}</button>
+            </div>:<div contentEditable suppressContentEditableWarning className="note-ta note-edit" ref={el=>{editableRef.current=el;if(el&&el.dataset.nid!==String(n.id)){el.dataset.nid=String(n.id);el.innerHTML=n.content||"";noteHistRef.current={stack:[n.content||""],idx:0,nid:n.id};}}} onInput={e=>{const html=e.currentTarget.innerHTML;setNotes(p=>p.map(x=>x.id===n.id?{...x,content:html}:x));pushHist(n.id,html);}} data-ph={lang==="tr"?"Not al...":"Take a note..."} style={{minHeight:72,maxHeight:240,overflowY:"auto",outline:"none",color:dark?tc:"#333",fontSize:fs-1,lineHeight:1.5,wordBreak:"break-word",overflowWrap:"anywhere",whiteSpace:"pre-wrap",direction:lang==="ar"?"rtl":"ltr",scrollbarWidth:"thin",scrollbarColor:`${ac}88 transparent`}}/>}
+            {media.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:4}}>{media.map((m,mi)=><div key={mi} style={{position:"relative"}}>{m.type==="audio"?<audio controls src={m.data} style={{height:34,maxWidth:200}}/>:<img alt="" src={m.data} style={{width:66,height:66,objectFit:"cover",borderRadius:8,display:"block"}}/>}<button onClick={()=>delNoteMedia(n.id,mi)} aria-label={lang==="tr"?"Kaldır":"Remove"} style={{position:"absolute",top:-6,right:-6,background:dg,color:"#fff",border:"none",borderRadius:"50%",width:18,height:18,fontSize:11,cursor:"pointer",lineHeight:1}}>✕</button></div>)}</div>}
+            {(n.labels||[]).length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{n.labels.map(l=><span key={l} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,labels:(x.labels||[]).filter(y=>y!==l)}:x))} style={{fontSize:fs-3,background:`${ac}22`,color:ac,borderRadius:10,padding:"2px 8px",cursor:"pointer"}}>🏷️ {l} ✕</span>)}</div>}
+            <div style={{display:"flex",alignItems:"center",gap:2,marginTop:6,borderTop:`1px solid ${dark?bd:"#00000018"}`,paddingTop:8}}>
+              <button onClick={()=>setNoteSheet(noteSheet==="add"?null:"add")} aria-label={lang==="tr"?"Ekle":"Add"} style={tbBtn}>⊞</button>
+              <button onClick={()=>setNoteSheet(noteSheet==="color"?null:"color")} aria-label={lang==="tr"?"Renk ve arka plan":"Color & background"} style={tbBtn}>🎨</button>
+              <button onClick={()=>setNoteSheet(noteSheet==="format"?null:"format")} aria-label={lang==="tr"?"Biçimlendirme":"Formatting"} style={{...tbBtn,fontWeight:800,fontSize:17,textDecoration:"underline"}}>A</button>
+              <div style={{flex:1}}/>
+              <button onClick={()=>doUndo(n.id)} aria-label={lang==="tr"?"Geri al":"Undo"} style={tbBtn}>↩</button>
+              <button onClick={()=>doRedo(n.id)} aria-label={lang==="tr"?"İleri al":"Redo"} style={tbBtn}>↪</button>
+              <button onClick={()=>setNoteSheet(noteSheet==="more"?null:"more")} aria-label={lang==="tr"?"Diğer":"More"} style={tbBtn}>⋮</button>
+            </div>
+            <div style={{display:"flex",gap:6,marginTop:2}}>
+              <button onClick={saveNote} style={{...BP,padding:"6px 14px",fontSize:fs-1}}>✓ {lang==="tr"?"Kaydet":"Save"}</button>
+              <button onClick={()=>{setEditNote(null);setNoteSheet(null);}} style={{...BP,background:mt,padding:"6px 14px",fontSize:fs-1}}>{t.cancel}</button>
             </div>
           </>:<>
-            <div onClick={()=>setEditNote(n.id)} style={{cursor:"pointer",width:"100%",maxWidth:"100%",overflow:"hidden"}}>
+            <div onClick={()=>{setEditNote(n.id);setNoteSheet(null);}} style={{cursor:"pointer",width:"100%",maxWidth:"100%",overflow:"hidden"}}>
               {n.title&&<div style={{fontWeight:700,marginBottom:4,color:dark?tc:"#1a1a1a",fontSize:fs+1,wordBreak:"break-word",overflowWrap:"anywhere"}}>{n.title}</div>}
-              <div style={{fontSize:fs-1,color:dark?mt:"#444",whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:180,overflow:"hidden"}}>{n.content||(lang==="tr"?"Boş not":"Empty note")}</div>
+              {n.checklist?<div style={{display:"flex",flexDirection:"column",gap:2}}>{n.checklist.slice(0,8).map(it=><div key={it.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:fs-1,color:dark?mt:"#444"}}><span>{it.done?"☑️":"⬜"}</span><span style={{textDecoration:it.done?"line-through":"none",opacity:it.done?0.6:1,wordBreak:"break-word"}}>{it.text}</span></div>)}</div>:<div dangerouslySetInnerHTML={{__html:(n.content||"").trim()||(lang==="tr"?"Boş not":"Empty note")}} style={{fontSize:fs-1,color:dark?mt:"#444",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:180,overflow:"hidden"}}/>}
+              {media.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}}>{media.slice(0,4).map((m,mi)=>m.type==="audio"?<span key={mi} style={{fontSize:fs-1}}>🎤</span>:<img key={mi} alt="" src={m.data} style={{width:56,height:56,objectFit:"cover",borderRadius:8,display:"block"}}/>)}</div>}
+              {(n.labels||[]).length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>{n.labels.map(l=><span key={l} style={{fontSize:fs-3,background:`${ac}22`,color:ac,borderRadius:10,padding:"2px 8px"}}>🏷️ {l}</span>)}</div>}
             </div>
             <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
-              <button onClick={()=>setEditNote(n.id)} style={{background:`${ac}22`,border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:fs-2,color:ac,fontWeight:600}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button>
-              <button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,opacity:n.pinned?1:0.5}}>📌</button>
-              <button onClick={()=>copyTxt(n.content)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14}}>📋</button>
-              <SpeakBtn text={n.content}/>
-              <button onClick={()=>toTrash("note",n)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,color:dg,marginLeft:"auto"}}>🗑️</button>
+              <button onClick={()=>{setEditNote(n.id);setNoteSheet(null);}} style={{background:`${ac}22`,border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:fs-2,color:ac,fontWeight:600}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button>
+              <button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} aria-label={lang==="tr"?"Sabitle":"Pin"} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,opacity:n.pinned?1:0.5}}>📌</button>
+              <button onClick={()=>copyTxt((n.content||"").replace(/<[^>]+>/g,""))} aria-label={lang==="tr"?"Kopyala":"Copy"} style={{background:"none",border:"none",cursor:"pointer",fontSize:14}}>📋</button>
+              <SpeakBtn text={(n.content||"").replace(/<[^>]+>/g,"")}/>
+              <button onClick={()=>toTrash("note",n)} aria-label={lang==="tr"?"Sil":"Delete"} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,color:dg,marginLeft:"auto"}}>🗑️</button>
             </div>
           </>}
         </div>);
@@ -3449,6 +3503,54 @@ return (
             </div>
           </div>
         </div>}
+        {noteSheet&&editNote&&(()=>{const en=notes.find(x=>x.id===editNote);if(!en)return null;
+          const wrap=(children)=><div style={{position:"fixed",inset:0,zIndex:9990,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setNoteSheet(null)}><div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"12px 4px 22px",maxHeight:"72vh",overflowY:"auto"}}>{children}</div></div>;
+          const row=(ic,label,onClick)=><button onClick={onClick} style={{display:"flex",alignItems:"center",gap:18,width:"100%",padding:"13px 20px",background:"none",border:"none",cursor:"pointer",color:tc,textAlign:"left",fontSize:fs}}><span style={{fontSize:20,width:24,textAlign:"center",flexShrink:0}}>{ic}</span><span>{label}</span></button>;
+          if(noteSheet==="add")return wrap(<>
+            {row("📷",lang==="tr"?"Fotoğraf çek":"Take photo",()=>pickNoteImage(en.id,true))}
+            {row("🖼️",lang==="tr"?"Resim ekle":"Add image",()=>pickNoteImage(en.id,false))}
+            {row("🖌️",lang==="tr"?"Çizim":"Drawing",()=>{setNoteSheet(null);setNoteDraw(true);})}
+            {row("🎤",lang==="tr"?"Kayıt":"Recording",()=>startNoteRec(en.id))}
+            {row("☑️",lang==="tr"?"Onay kutuları":"Checkboxes",()=>toggleChecklist(en))}
+          </>);
+          if(noteSheet==="color")return wrap(<>
+            <div style={{fontWeight:700,padding:"4px 20px 8px"}}>{lang==="tr"?"Renk":"Color"}</div>
+            <div style={{display:"flex",gap:10,overflowX:"auto",padding:"0 20px 14px"}}>{NCOL.map(c=><button key={c} onClick={()=>setNotes(p=>p.map(x=>x.id===en.id?{...x,color:c}:x))} aria-label={lang==="tr"?"Renk":"Color"} style={{width:46,height:46,borderRadius:23,background:c,border:en.color===c?`3px solid ${ac}`:"3px solid transparent",cursor:"pointer",flexShrink:0,color:"#333",fontWeight:800}}>{en.color===c?"✓":""}</button>)}</div>
+            <div style={{fontWeight:700,padding:"4px 20px 8px"}}>{lang==="tr"?"Arka plan":"Background"}</div>
+            <div style={{display:"flex",gap:10,overflowX:"auto",padding:"0 20px 4px"}}>{NOTE_BGS.map(bgp=><button key={bgp.k} onClick={()=>setNotes(p=>p.map(x=>x.id===en.id?{...x,bg:bgp.k==="none"?null:bgp.k}:x))} aria-label={bgp.k} style={{width:54,height:54,borderRadius:27,background:bgp.g||(dark?"#0d1520":"#eee"),border:((en.bg||"none")===bgp.k)?`3px solid ${ac}`:`2px solid ${bd}`,cursor:"pointer",flexShrink:0,color:tc,fontSize:18}}>{bgp.k==="none"?"🚫":""}</button>)}</div>
+          </>);
+          if(noteSheet==="more")return wrap(<>
+            <div style={{fontSize:fs-2,color:mt,padding:"4px 20px 10px"}}>{lang==="tr"?"Az önce düzenlendi":"Edited just now"}</div>
+            {row("🗑️",lang==="tr"?"Sil":"Delete",()=>{toTrash("note",en);setNoteMedia(p=>{const q={...p};delete q[en.id];return q;});setEditNote(null);setNoteSheet(null);})}
+            {row("📋",lang==="tr"?"Kopya oluştur":"Make a copy",()=>duplicateNote(en))}
+            {row("📤",lang==="tr"?"Gönder":"Send",()=>shareNote(en))}
+            {row("👥",lang==="tr"?"Ortak çalışan":"Collaborator",()=>{notify(lang==="tr"?"Ortak çalışma yakında — hesap/sunucu gerekli":"Collaboration coming soon — needs account/server");setNoteSheet(null);})}
+            {row("🏷️",lang==="tr"?"Etiketler":"Labels",()=>{const l=prompt(lang==="tr"?"Etiket adı:":"Label name:");if(l&&l.trim())setNotes(p=>p.map(x=>x.id===en.id?{...x,labels:[...new Set([...(x.labels||[]),l.trim()])]}:x));setNoteSheet(null);})}
+            {row("❓",lang==="tr"?"Yardım ve geri bildirim":"Help & feedback",()=>{setNoteSheet(null);setEditNote(null);goTo("admin");})}
+          </>);
+          if(noteSheet==="format"){const fmtBtn={background:"none",border:"none",color:tc,fontSize:fs+2,cursor:"pointer",padding:"6px 12px",borderRadius:8};return <div style={{position:"fixed",left:0,right:0,bottom:0,zIndex:9990,background:cd,borderTop:`1px solid ${bd}`,display:"flex",alignItems:"center",gap:2,padding:"12px 8px",justifyContent:"center",boxShadow:"0 -4px 16px rgba(0,0,0,.3)"}}>
+            <button onClick={()=>fmt("formatBlock","H1")} style={fmtBtn}>H1</button>
+            <button onClick={()=>fmt("formatBlock","H2")} style={fmtBtn}>H2</button>
+            <button onClick={()=>fmt("formatBlock","div")} style={fmtBtn}>Aa</button>
+            <span style={{width:1,height:24,background:bd,margin:"0 8px"}}/>
+            <button onClick={()=>fmt("bold")} style={{...fmtBtn,fontWeight:800}}>B</button>
+            <button onClick={()=>fmt("italic")} style={{...fmtBtn,fontStyle:"italic"}}>I</button>
+            <button onClick={()=>fmt("underline")} style={{...fmtBtn,textDecoration:"underline"}}>U</button>
+            <span style={{width:1,height:24,background:bd,margin:"0 8px"}}/>
+            <button onClick={()=>setNoteSheet(null)} aria-label={lang==="tr"?"Kapat":"Close"} style={fmtBtn}>✕</button>
+          </div>;}
+          return null;
+        })()}
+        {noteDraw&&<div style={{position:"fixed",inset:0,zIndex:9992,background:"rgba(0,0,0,.7)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:cd,borderRadius:16,padding:14,width:"100%",maxWidth:420}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><span style={{fontWeight:700,color:tc}}>🖌️ {lang==="tr"?"Çizim":"Drawing"}</span><button onClick={()=>setNoteDraw(false)} aria-label={lang==="tr"?"Kapat":"Close"} style={{background:"none",border:"none",fontSize:20,color:tc,cursor:"pointer"}}>✕</button></div>
+            <canvas width={640} height={640} ref={el=>{drawCanvasRef.current=el;if(el&&!el._init){el._init=true;const c=el.getContext("2d");c.fillStyle=dark?"#0a0e14":"#fff";c.fillRect(0,0,el.width,el.height);c.lineWidth=5;c.lineCap="round";c.lineJoin="round";c.strokeStyle=dark?"#fff":"#111";el._ctx=c;}}} onPointerDown={e=>{const el=e.currentTarget;try{el.setPointerCapture(e.pointerId);}catch(x){}const r=el.getBoundingClientRect();el._drawing=true;el._last=[(e.clientX-r.left)*(el.width/r.width),(e.clientY-r.top)*(el.height/r.height)];}} onPointerMove={e=>{const el=e.currentTarget;if(!el._drawing)return;const r=el.getBoundingClientRect();const x=(e.clientX-r.left)*(el.width/r.width),y=(e.clientY-r.top)*(el.height/r.height);const c=el._ctx;c.beginPath();c.moveTo(el._last[0],el._last[1]);c.lineTo(x,y);c.stroke();el._last=[x,y];}} onPointerUp={e=>{e.currentTarget._drawing=false;}} onPointerLeave={e=>{e.currentTarget._drawing=false;}} style={{width:"100%",aspectRatio:"1",background:dark?"#0a0e14":"#fff",borderRadius:12,touchAction:"none",border:`1px solid ${bd}`,cursor:"crosshair"}}/>
+            <div style={{display:"flex",gap:8,marginTop:12}}>
+              <button onClick={()=>{const el=drawCanvasRef.current;if(el&&el._ctx){el._ctx.fillStyle=dark?"#0a0e14":"#fff";el._ctx.fillRect(0,0,el.width,el.height);}}} style={{...BP,background:mt,flex:1}}>{lang==="tr"?"Temizle":"Clear"}</button>
+              <button onClick={()=>{const el=drawCanvasRef.current;if(el)saveDrawing(el.toDataURL("image/png"));}} style={{...BP,flex:1}}>{lang==="tr"?"Kaydet":"Save"}</button>
+            </div>
+          </div>
+        </div>}
         {showFirstAid&&<div style={{position:"fixed",inset:0,zIndex:9997,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowFirstAid(false)}>
           <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:520,maxHeight:"92vh",borderRadius:"18px 18px 0 0",display:"flex",flexDirection:"column",overflow:"hidden"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
@@ -3698,6 +3800,9 @@ return (
       .note-ta::-webkit-scrollbar{width:8px;-webkit-appearance:none}
       .note-ta::-webkit-scrollbar-track{background:${ac}18;border-radius:4px}
       .note-ta::-webkit-scrollbar-thumb{background:${ac}99;border-radius:4px;min-height:28px}
+      .note-edit:empty:before{content:attr(data-ph);color:${mt};pointer-events:none}
+      .note-edit h1{font-size:1.4em;font-weight:700;margin:4px 0}
+      .note-edit h2{font-size:1.2em;font-weight:700;margin:3px 0}
       @keyframes scanLine{0%{top:10%}50%{top:85%}100%{top:10%}}
       *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;word-wrap:break-word;overflow-wrap:break-word}
       .msg-card{max-width:100%;overflow-wrap:anywhere;word-break:break-word;hyphens:auto}
