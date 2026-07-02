@@ -371,6 +371,7 @@ const[navQuery,setNavQuery]=useState("");
 const[noteSheet,setNoteSheet]=useState(null); // 'add'|'color'|'format'|'more'
 const[noteDraw,setNoteDraw]=useState(false);
 const[noteRec,setNoteRec]=useState(null); // {id,sec} while recording
+const[noteBar,setNoteBar]=useState({show:false,h:0,top:0});
 const[noteMedia,setNoteMedia]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_notemedia"))||{};}catch{return{};}});
 useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_notemedia",JSON.stringify(noteMedia));}catch(e){}},800);return()=>clearTimeout(tm);},[noteMedia]);
 const editableRef=useRef(null);
@@ -3051,7 +3052,7 @@ const startNoteRec=async(nid)=>{
   catch(e){notify(lang==="tr"?"Mikrofon izni gerekli":"Microphone permission needed");}
 };
 const saveDrawing=(dataUrl)=>{const nid=editNote;if(nid&&dataUrl)addNoteMedia(nid,{type:"drawing",data:dataUrl});setNoteDraw(false);};
-const syncNoteBar=(el)=>{if(!el||!el.parentElement)return;const th=el.parentElement.querySelector(".note-thumb");if(!th)return;if(el.scrollHeight>el.clientHeight+3){const h=Math.max(24,el.clientHeight*el.clientHeight/el.scrollHeight);th.style.height=h+"px";th.style.top=(el.scrollTop/(el.scrollHeight-el.clientHeight)*(el.clientHeight-h))+"px";th.style.opacity="1";}else th.style.opacity="0";};
+const syncNoteBar=(el)=>{if(!el)return;if(el.scrollHeight>el.clientHeight+3){const h=Math.max(24,el.clientHeight*el.clientHeight/el.scrollHeight);const top=(el.scrollHeight-el.clientHeight)>0?el.scrollTop/(el.scrollHeight-el.clientHeight)*(el.clientHeight-h):0;setNoteBar(p=>(p.show&&Math.abs(p.h-h)<1&&Math.abs(p.top-top)<1)?p:{show:true,h,top});}else setNoteBar(p=>p.show?{show:false,h:0,top:0}:p);};
 const renderNotes=()=>{
   const sorted=[...notes].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
   return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -3083,7 +3084,7 @@ const renderNotes=()=>{
               <button onClick={()=>setCheck(n.id,[...n.checklist,{id:Date.now(),text:"",done:false}])} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:fs-1,textAlign:"left",padding:"2px 0"}}>+ {lang==="tr"?"Öğe ekle":"Add item"}</button>
             </div>:<div style={{position:"relative"}}>
               <div contentEditable suppressContentEditableWarning className="note-edit" ref={el=>{editableRef.current=el;if(el&&el.dataset.nid!==String(n.id)){el.dataset.nid=String(n.id);el.innerHTML=n.content||"";noteHistRef.current={stack:[n.content||""],idx:0,nid:n.id};setTimeout(()=>syncNoteBar(el),40);}}} onScroll={e=>syncNoteBar(e.currentTarget)} onInput={e=>{const html=e.currentTarget.innerHTML;setNotes(p=>p.map(x=>x.id===n.id?{...x,content:html}:x));pushHist(n.id,html);syncNoteBar(e.currentTarget);}} data-ph={lang==="tr"?"Not al...":"Take a note..."} style={{minHeight:72,maxHeight:240,overflowY:"auto",outline:"none",color:dark?tc:"#333",fontSize:fs-1,lineHeight:1.5,wordBreak:"break-word",overflowWrap:"anywhere",whiteSpace:"pre-wrap",direction:lang==="ar"?"rtl":"ltr",scrollbarWidth:"none",paddingRight:8,boxSizing:"border-box"}}/>
-              <div className="note-thumb" ref={el=>{if(el&&!el._init){el._init=true;el.style.opacity="0";el.style.top="0px";}}} style={{position:"absolute",right:0,width:6,minHeight:24,borderRadius:3,background:`${ac}ee`,transition:"opacity .15s",pointerEvents:"none"}}/>
+              <div style={{position:"absolute",right:0,width:6,borderRadius:3,background:ac,opacity:noteBar.show?1:0,height:noteBar.h,top:noteBar.top,transition:"opacity .15s",pointerEvents:"none"}}/>
             </div>}
             {media.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:4}}>{media.map((m,mi)=><div key={mi} style={{position:"relative"}}>{m.type==="audio"?<audio controls src={m.data} style={{height:34,maxWidth:200}}/>:<img alt="" src={m.data} style={{width:66,height:66,objectFit:"cover",borderRadius:8,display:"block"}}/>}<button onClick={()=>delNoteMedia(n.id,mi)} aria-label={lang==="tr"?"Kaldır":"Remove"} style={{position:"absolute",top:-6,right:-6,background:dg,color:"#fff",border:"none",borderRadius:"50%",width:18,height:18,fontSize:11,cursor:"pointer",lineHeight:1}}>✕</button></div>)}</div>}
             {(n.labels||[]).length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{n.labels.map(l=><span key={l} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,labels:(x.labels||[]).filter(y=>y!==l)}:x))} style={{fontSize:fs-3,background:`${ac}22`,color:ac,borderRadius:10,padding:"2px 8px",cursor:"pointer"}}>🏷️ {l} ✕</span>)}</div>}
