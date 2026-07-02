@@ -373,8 +373,9 @@ const[noteDraw,setNoteDraw]=useState(false);
 const[noteRec,setNoteRec]=useState(null); // {id,sec} while recording
 const[noteBar,setNoteBar]=useState({show:false,h:0,top:0});
 const[vvh,setVvh]=useState(0);
+const[vvTop,setVvTop]=useState(0);
 const[fmtState,setFmtState]=useState({b:false,i:false,u:false,block:""});
-useEffect(()=>{const vv=window.visualViewport;if(!vv)return;const on=()=>setVvh(Math.round(vv.height));on();vv.addEventListener("resize",on);vv.addEventListener("scroll",on);return()=>{vv.removeEventListener("resize",on);vv.removeEventListener("scroll",on);};},[]);
+useEffect(()=>{const vv=window.visualViewport;if(!vv)return;const on=()=>{setVvh(Math.round(vv.height));setVvTop(Math.round(vv.offsetTop));};on();vv.addEventListener("resize",on);vv.addEventListener("scroll",on);return()=>{vv.removeEventListener("resize",on);vv.removeEventListener("scroll",on);};},[]);
 const[noteMedia,setNoteMedia]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_notemedia"))||{};}catch{return{};}});
 useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_notemedia",JSON.stringify(noteMedia));}catch(e){}},800);return()=>clearTimeout(tm);},[noteMedia]);
 const editableRef=useRef(null);
@@ -3489,9 +3490,8 @@ return (
           const fbtn=(on,extra)=>({background:on?active:"none",border:"none",color:dark?tc:"#333",fontSize:fs+3,cursor:"pointer",padding:"8px 14px",borderRadius:10,lineHeight:1,minWidth:46,textAlign:"center",...(extra||{})});
           const noP=e=>e.preventDefault();
           const hh=noteHistRef.current;const canU=hh.nid===n.id&&hh.idx>0;const canR=hh.nid===n.id&&hh.idx<hh.stack.length-1;const blk=fmtState.block;
-          const kb=vvh>0?Math.max(0,(window.innerHeight||vvh)-vvh):0;
           const saveClose=()=>{const empty=!n.title?.trim()&&!(n.content||"").replace(/<[^>]+>/g,"").trim()&&!(n.checklist&&n.checklist.some(i=>i.text.trim()))&&!media.length;if(empty){setNotes(p=>p.filter(x=>x.id!==n.id));setNoteMedia(p=>{const q={...p};delete q[n.id];return q;});}setEditNote(null);setNoteSheet(null);};
-          return(<div style={{position:"fixed",inset:0,zIndex:9991,background:cbg,display:"flex",flexDirection:"column",paddingBottom:kb?kb+"px":0}}>
+          return(<><div style={{position:"fixed",inset:0,zIndex:9990,background:cbg}}/><div style={{position:"fixed",top:vvTop||0,left:0,right:0,height:vvh>0?vvh+"px":"100dvh",zIndex:9991,background:cbg,display:"flex",flexDirection:"column"}}>
             <div style={{display:"flex",alignItems:"center",gap:6,padding:"10px 8px 6px",flexShrink:0}}>
               <button onClick={saveClose} aria-label={lang==="tr"?"Geri":"Back"} style={{background:"none",border:"none",fontSize:26,color:dark?tc:"#333",cursor:"pointer",padding:"4px 10px",lineHeight:1}}>←</button>
               <div style={{flex:1}}/>
@@ -3540,7 +3540,7 @@ return (
               <button onMouseDown={noP} onClick={()=>canR&&doRedo(n.id)} aria-label={lang==="tr"?"İleri al":"Redo"} style={{...tbBtn,opacity:canR?1:0.3}}>↪</button>
               <button onClick={()=>setNoteSheet(noteSheet==="more"?null:"more")} aria-label={lang==="tr"?"Diğer":"More"} style={{...tbBtn,background:noteSheet==="more"?active:"none"}}>⋮</button>
             </div>}
-          </div>);
+          </div></>);
         })()}
         {noteDraw&&<div style={{position:"fixed",inset:0,zIndex:9992,background:"rgba(0,0,0,.7)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
           <div style={{background:cd,borderRadius:16,padding:14,width:"100%",maxWidth:420}}>
