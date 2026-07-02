@@ -159,7 +159,7 @@ if(typeof window!=="undefined")window.__ppgBPM=computeBPM;
 
 const HOLIDAYS={"01-01":{tr:"Yılbaşı",en:"New Year"},"04-23":{tr:"Ulusal Egemenlik ve Çocuk Bayramı",en:"National Sovereignty Day"},"05-01":{tr:"Emek ve Dayanışma Günü",en:"Labour Day"},"05-19":{tr:"Gençlik ve Spor Bayramı",en:"Youth Day"},"07-15":{tr:"Demokrasi Günü",en:"Democracy Day"},"08-30":{tr:"Zafer Bayramı",en:"Victory Day"},"10-29":{tr:"Cumhuriyet Bayramı",en:"Republic Day"},"12-25":{tr:"Noel",en:"Christmas"},"03-30":{tr:"Ramazan Bayramı",en:"Eid al-Fitr"},"03-31":{tr:"Ramazan Bayramı",en:"Eid al-Fitr"},"04-01":{tr:"Ramazan Bayramı",en:"Eid al-Fitr"},"06-06":{tr:"Kurban Bayramı",en:"Eid al-Adha"},"06-07":{tr:"Kurban Bayramı",en:"Eid al-Adha"},"06-08":{tr:"Kurban Bayramı",en:"Eid al-Adha"},"06-09":{tr:"Kurban Bayramı",en:"Eid al-Adha"},"02-14":{tr:"Sevgililer Günü",en:"Valentine's Day"},"03-08":{tr:"Kadınlar Günü",en:"Women's Day"},"05-11":{tr:"Anneler Günü",en:"Mother's Day"},"06-15":{tr:"Babalar Günü",en:"Father's Day"},"11-24":{tr:"Öğretmenler Günü",en:"Teachers' Day"}};
 const EMOJIS=["😊","😷","🤒","🤕","💪","❤️","🙏","👍","👋","🌟","💊","🏥","🩺","🩹","🫀","🧠","🦴","👁️","🦷","💉","🔬","📋","✅","⚠️","❓","😀","😢","😴","🤔","🥰"];
-const NCOL=["#fff3b0","#b6f7c1","#b0d4f1","#f7b6d2","#f7d6b0","#d4b0f7","#b0f7ef","#f7b0b0"];
+const NCOLS=[{k:"default",l:"#ffffff",d:"#202124"},{k:"coral",l:"#faafa8",d:"#77172e"},{k:"peach",l:"#f39f76",d:"#692b17"},{k:"sand",l:"#fff8b8",d:"#7c4a03"},{k:"mint",l:"#e2f6d3",d:"#264d3b"},{k:"sage",l:"#b4ddd3",d:"#0c625d"},{k:"fog",l:"#d4e4ed",d:"#256377"},{k:"storm",l:"#aeccdc",d:"#284255"},{k:"dusk",l:"#d3bfdb",d:"#472e5b"},{k:"blossom",l:"#f6e2dd",d:"#6c394f"},{k:"clay",l:"#e9e3d4",d:"#4b443a"},{k:"chalk",l:"#efeff1",d:"#232427"}];
 const HSYS=[{id:"mhrs",n:"MHRS",f:"tr",u:"https://mhrs.gov.tr"},{id:"nhs",n:"NHS",f:"gb",u:"https://www.nhs.uk"},{id:"mychart",n:"MyChart",f:"us",u:"https://www.mychart.com"},{id:"doctolib",n:"Doctolib",f:"fr",u:"https://www.doctolib.fr"},{id:"jameda",n:"Jameda",f:"de",u:"https://www.jameda.de"}];
 
 // Full-body female doctor avatar
@@ -1197,7 +1197,7 @@ useEffect(()=>{if(!editNote)return;const upd=()=>{try{setFmtState({b:document.qu
 const[nOpen,setNOpen]=useState(false);
 const[nT,setNT]=useState("");
 const[nC,setNC]=useState("");
-const[nCol,setNCol]=useState(NCOL[0]);
+const[nCol,setNCol]=useState(null);
 const[noteApps,setNoteApps]=useState([{name:"Google Keep",url:"https://keep.google.com",icon:"📒"},{name:"Notion",url:"https://notion.so",icon:"📓"},{name:"Evernote",url:"https://evernote.com",icon:"🐘"}]);
 const[showAddNApp,setShowAddNApp]=useState(false);
 const[newNApp,setNewNApp]=useState({name:"",url:"",icon:"📱"});
@@ -2725,7 +2725,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <div style={{...CS,border:`1px solid ${bd}`}}>
     <div style={{fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>🤒 {lang==="tr"?"Hızlı Semptom Kaydı":"Quick Symptom Log"}</div>
     <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-      {(lang==="tr"?["Baş ağrısı","Mide ağrısı","Yorgunluk","Ateş","Öksürük","Bulantı","Baş dönmesi","Kas ağrısı"]:["Headache","Stomachache","Fatigue","Fever","Cough","Nausea","Dizziness","Muscle pain"]).map(s=><button key={s} onClick={()=>{setNotes(p=>[{id:Date.now(),title:s,content:`${now.toLocaleString(lc)} — ${s}`,color:NCOL[0],pinned:false},...p]);notify("📝 "+s+" "+(lang==="tr"?"not olarak eklendi":"added as note"));}} style={pill(false)}>{s}</button>)}
+      {(lang==="tr"?["Baş ağrısı","Mide ağrısı","Yorgunluk","Ateş","Öksürük","Bulantı","Baş dönmesi","Kas ağrısı"]:["Headache","Stomachache","Fatigue","Fever","Cough","Nausea","Dizziness","Muscle pain"]).map(s=><button key={s} onClick={()=>{setNotes(p=>[{id:Date.now(),title:s,content:`${now.toLocaleString(lc)} — ${s}`,color:"default",pinned:false},...p]);notify("📝 "+s+" "+(lang==="tr"?"not olarak eklendi":"added as note"));}} style={pill(false)}>{s}</button>)}
     </div>
   </div>
   {/* Reminders */}
@@ -3037,6 +3037,7 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
 
 const NOTE_BGS=[{k:"none",g:null},{k:"dusk",g:"linear-gradient(135deg,#3a2f52,#523a5e)"},{k:"forest",g:"linear-gradient(135deg,#1e3a2e,#2f4f3e)"},{k:"ocean",g:"linear-gradient(135deg,#1e3a4f,#2f5a6e)"},{k:"sunset",g:"linear-gradient(135deg,#4f2e2e,#6e4a3a)"},{k:"grape",g:"linear-gradient(135deg,#3a2e4f,#5a3a6e)"}];
 const noteBg=(k)=>{const b=NOTE_BGS.find(x=>x.k===k);return b?b.g:null;};
+const noteColor=(key)=>{if(!key||key==="default")return null;if(typeof key==="string"&&key[0]==="#")return key;const c=NCOLS.find(x=>x.k===key);return c?(dark?c.d:c.l):null;};
 const pushHist=(nid,html)=>{const h=noteHistRef.current;if(h.nid!==nid){h.nid=nid;h.stack=[html];h.idx=0;return;}if(h.stack[h.idx]===html)return;h.stack=h.stack.slice(0,h.idx+1);h.stack.push(html);if(h.stack.length>60)h.stack.shift();h.idx=h.stack.length-1;};
 const setEditableHtml=(nid,html)=>{setNotes(p=>p.map(x=>x.id===nid?{...x,content:html}:x));if(editableRef.current){editableRef.current.innerHTML=html;syncNoteBar(editableRef.current);}};
 const doUndo=(nid)=>{const h=noteHistRef.current;if(h.nid!==nid||h.idx<=0)return;h.idx--;setEditableHtml(nid,h.stack[h.idx]);haptic(8);};
@@ -3063,14 +3064,14 @@ const renderNotes=()=>{
   return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <span style={{fontWeight:700,fontSize:fs+2}}>📝 {t.notes}</span>
-      <button onClick={()=>{const id=Date.now();setNotes(p=>[{id,title:"",content:"",color:NCOL[Math.floor(Math.random()*8)],pinned:false},...p]);setEditNote(id);}} style={{...BP,padding:"7px 14px"}}>+ {t.nNote}</button>
+      <button onClick={()=>{const id=Date.now();setNotes(p=>[{id,title:"",content:"",color:"default",pinned:false},...p]);setEditNote(id);}} style={{...BP,padding:"7px 14px"}}>+ {t.nNote}</button>
     </div>
     {sorted.length===0&&<div style={{textAlign:"center",color:mt,padding:24}}>{t.noN}</div>}
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
       {sorted.map(n=>{
-        const cbg=(n.bg&&noteBg(n.bg))?noteBg(n.bg):(dark?n.color+"22":n.color);
+        const cbg=(n.bg&&noteBg(n.bg))?noteBg(n.bg):(noteColor(n.color)||(dark?"#12151c":"#ffffff"));
         const media=noteMedia[n.id]||[];
-        return(<div key={n.id} style={{background:cbg,borderRadius:12,padding:12,border:"1px solid "+(dark?bd:n.color),width:"100%",maxWidth:"100%",boxSizing:"border-box",overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",gap:6}}>
+        return(<div key={n.id} style={{background:cbg,borderRadius:12,padding:12,border:"1px solid "+(dark?bd:"#0000001a"),width:"100%",maxWidth:"100%",boxSizing:"border-box",overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",gap:6}}>
           {n.pinned&&<span style={{position:"absolute",top:6,right:8,fontSize:14}}>📌</span>}
           <div onClick={()=>{setEditNote(n.id);setNoteSheet(null);}} style={{cursor:"pointer",width:"100%",maxWidth:"100%",overflow:"hidden"}}>
             {n.title&&<div style={{fontWeight:700,marginBottom:4,color:dark?tc:"#1a1a1a",fontSize:fs+1,wordBreak:"break-word",overflowWrap:"anywhere"}}>{n.title}</div>}
@@ -3481,7 +3482,7 @@ return (
           </div>
         </div>}
         {editNote&&(()=>{const n=notes.find(x=>x.id===editNote);if(!n)return null;
-          const cbg=(n.bg&&noteBg(n.bg))?noteBg(n.bg):(dark?"#0d1117":"#fdfdfb");
+          const cbg=(n.bg&&noteBg(n.bg))?noteBg(n.bg):(noteColor(n.color)||(dark?"#0d1117":"#fdfdfb"));
           const media=noteMedia[n.id]||[];
           const active=dark?"#2b3542":"#e7ebf0";
           const tbBtn={background:"none",border:"none",fontSize:23,cursor:"pointer",color:dark?tc:"#333",padding:"8px 12px",borderRadius:10,lineHeight:1};
@@ -3513,7 +3514,7 @@ return (
             {noteSheet==="add"&&<div style={sheetBox}>{[["📷",lang==="tr"?"Fotoğraf çek":"Take photo",()=>pickNoteImage(n.id,true)],["🖼️",lang==="tr"?"Resim ekle":"Add image",()=>pickNoteImage(n.id,false)],["🖌️",lang==="tr"?"Çizim":"Drawing",()=>{setNoteSheet(null);setNoteDraw(true);}],["🎤",lang==="tr"?"Kayıt":"Recording",()=>startNoteRec(n.id)],["☑️",lang==="tr"?"Onay kutuları":"Checkboxes",()=>toggleChecklist(n)]].map(([ic,lb,fn])=><button key={lb} onClick={fn} style={sheetRow}><span style={{fontSize:20,width:24,textAlign:"center",flexShrink:0}}>{ic}</span>{lb}</button>)}</div>}
             {noteSheet==="color"&&<div style={{...sheetBox,padding:"10px"}}>
               <div style={{fontWeight:700,fontSize:fs-1,marginBottom:8}}>{lang==="tr"?"Renk":"Color"}</div>
-              <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:10}}>{NCOL.map(c=><button key={c} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,color:c}:x))} aria-label={lang==="tr"?"Renk":"Color"} style={{width:42,height:42,borderRadius:21,background:c,border:n.color===c?`3px solid ${ac}`:"3px solid transparent",cursor:"pointer",flexShrink:0,color:"#333",fontWeight:800}}>{n.color===c?"✓":""}</button>)}</div>
+              <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:10}}>{NCOLS.map(c=>{const sel=n.color===c.k||(c.k==="default"&&(!n.color||n.color==="default"));const sw=c.k==="default"?(dark?"#202124":"#fff"):(dark?c.d:c.l);return <button key={c.k} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,color:c.k}:x))} aria-label={c.k} style={{width:42,height:42,borderRadius:21,background:sw,border:sel?`3px solid ${ac}`:`2px solid ${dark?"#ffffff2e":"#00000022"}`,cursor:"pointer",flexShrink:0,color:dark?"#fff":"#333",fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17}}>{sel?"✓":(c.k==="default"?"🚫":"")}</button>;})}</div>
               <div style={{fontWeight:700,fontSize:fs-1,margin:"2px 0 8px"}}>{lang==="tr"?"Arka plan":"Background"}</div>
               <div style={{display:"flex",gap:10,overflowX:"auto"}}>{NOTE_BGS.map(bgp=><button key={bgp.k} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,bg:bgp.k==="none"?null:bgp.k}:x))} aria-label={bgp.k} style={{width:48,height:48,borderRadius:24,background:bgp.g||(dark?"#0a0e14":"#eee"),border:((n.bg||"none")===bgp.k)?`3px solid ${ac}`:`2px solid ${bd}`,cursor:"pointer",flexShrink:0,color:tc,fontSize:17}}>{bgp.k==="none"?"🚫":""}</button>)}</div>
             </div>}
