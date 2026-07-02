@@ -3489,8 +3489,9 @@ return (
           const fbtn=(on,extra)=>({background:on?active:"none",border:"none",color:dark?tc:"#333",fontSize:fs+3,cursor:"pointer",padding:"8px 14px",borderRadius:10,lineHeight:1,minWidth:46,textAlign:"center",...(extra||{})});
           const noP=e=>e.preventDefault();
           const hh=noteHistRef.current;const canU=hh.nid===n.id&&hh.idx>0;const canR=hh.nid===n.id&&hh.idx<hh.stack.length-1;const blk=fmtState.block;
+          const kb=vvh>0?Math.max(0,(window.innerHeight||vvh)-vvh):0;
           const saveClose=()=>{const empty=!n.title?.trim()&&!(n.content||"").replace(/<[^>]+>/g,"").trim()&&!(n.checklist&&n.checklist.some(i=>i.text.trim()))&&!media.length;if(empty){setNotes(p=>p.filter(x=>x.id!==n.id));setNoteMedia(p=>{const q={...p};delete q[n.id];return q;});}setEditNote(null);setNoteSheet(null);};
-          return(<div style={{position:"fixed",left:0,right:0,top:0,height:vvh>0?vvh+"px":"100dvh",zIndex:9991,background:cbg,display:"flex",flexDirection:"column"}}>
+          return(<div style={{position:"fixed",inset:0,zIndex:9991,background:cbg,display:"flex",flexDirection:"column",paddingBottom:kb?kb+"px":0}}>
             <div style={{display:"flex",alignItems:"center",gap:6,padding:"10px 8px 6px",flexShrink:0}}>
               <button onClick={saveClose} aria-label={lang==="tr"?"Geri":"Back"} style={{background:"none",border:"none",fontSize:26,color:dark?tc:"#333",cursor:"pointer",padding:"4px 10px",lineHeight:1}}>←</button>
               <div style={{flex:1}}/>
