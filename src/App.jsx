@@ -3486,7 +3486,9 @@ return (
           const cbg=(n.bg&&noteBg(n.bg))?noteBg(n.bg):(noteColor(n.color)||(dark?"#0d1117":"#fdfdfb"));
           const media=noteMedia[n.id]||[];
           const active=dark?"#2b3542":"#e7ebf0";
-          const tbBtn={background:"none",border:"none",fontSize:23,cursor:"pointer",color:dark?tc:"#333",padding:"8px 12px",borderRadius:10,lineHeight:1};
+          const tbBtn={background:"none",border:"none",cursor:"pointer",color:dark?tc:"#333",width:44,height:44,borderRadius:22,display:"flex",alignItems:"center",justifyContent:"center",padding:0,flexShrink:0};
+          const ICO={back:"M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z",pin:"M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z",add:"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-8-2h2v-4h4v-2h-4V7h-2v4H7v2h4z",palette:"M12 22C6.49 22 2 17.51 2 12S6.49 2 12 2s10 4.04 10 9c0 3.31-2.69 6-6 6h-1.77c-.28 0-.5.22-.5.5 0 .12.05.23.13.33.41.47.64 1.06.64 1.67 0 1.38-1.12 2.5-2.5 2.5zm0-18c-4.41 0-8 3.59-8 8s3.59 8 8 8c.28 0 .5-.22.5-.5 0-.16-.08-.28-.14-.35-.41-.46-.63-1.05-.63-1.65 0-1.38 1.12-2.5 2.5-2.5H16c2.21 0 4-1.79 4-4 0-3.86-3.59-7-8-7zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z",format:"M12 17c3.31 0 6-2.69 6-6V3h-2.5v8c0 1.93-1.57 3.5-3.5 3.5S8.5 12.93 8.5 11V3H6v8c0 3.31 2.69 6 6 6zm-7 2v2h14v-2H5z",undo:"M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z",redo:"M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7z",more:"M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"};
+          const svgIco=(d,sz)=><svg width={sz||24} height={sz||24} viewBox="0 0 24 24" fill="currentColor" style={{display:"block"}}><path d={d}/></svg>;
           const sheetBox={margin:"0 10px",border:`1px solid ${dark?bd:"#00000018"}`,borderRadius:12,background:dark?"#161c26":"#f4f6f9",padding:"4px",display:"flex",flexDirection:"column"};
           const sheetRow={display:"flex",alignItems:"center",gap:16,width:"100%",padding:"13px 16px",background:"none",border:"none",cursor:"pointer",color:dark?tc:"#333",textAlign:"left",fontSize:fs};
           const fbtn=(on,extra)=>({background:on?active:"none",border:"none",color:dark?tc:"#333",fontSize:fs+3,cursor:"pointer",padding:"8px 14px",borderRadius:10,lineHeight:1,minWidth:46,textAlign:"center",...(extra||{})});
@@ -3495,9 +3497,9 @@ return (
           const saveClose=()=>{const empty=!n.title?.trim()&&!(n.content||"").replace(/<[^>]+>/g,"").trim()&&!(n.checklist&&n.checklist.some(i=>i.text.trim()))&&!media.length;if(empty){setNotes(p=>p.filter(x=>x.id!==n.id));setNoteMedia(p=>{const q={...p};delete q[n.id];return q;});}setEditNote(null);setNoteSheet(null);};
           return(<><div style={{position:"fixed",inset:0,zIndex:9990,background:cbg}}/><div style={{position:"fixed",top:vvTop||0,left:0,right:0,height:vvh>0?vvh+"px":"100dvh",zIndex:9991,background:cbg,display:"flex",flexDirection:"column"}}>
             <div style={{display:"flex",alignItems:"center",gap:6,padding:"10px 8px 6px",flexShrink:0}}>
-              <button onClick={saveClose} aria-label={lang==="tr"?"Geri":"Back"} style={{background:"none",border:"none",fontSize:26,color:dark?tc:"#333",cursor:"pointer",padding:"4px 10px",lineHeight:1}}>←</button>
+              <button onClick={saveClose} aria-label={lang==="tr"?"Geri":"Back"} style={{...tbBtn}}>{svgIco(ICO.back,26)}</button>
               <div style={{flex:1}}/>
-              <button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} aria-label={lang==="tr"?"Sabitle":"Pin"} style={{background:"none",border:"none",fontSize:20,color:dark?tc:"#333",cursor:"pointer",padding:"6px 10px",opacity:n.pinned?1:0.55}}>📌</button>
+              <button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} aria-label={lang==="tr"?"Sabitle":"Pin"} style={{...tbBtn,color:n.pinned?ac:(dark?tc:"#333")}}>{svgIco(ICO.pin,22)}</button>
             </div>
             <div style={{flex:"1 1 0",minHeight:0,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 18px 24px"}}>
               <input value={n.title} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,title:e.target.value}:x))} placeholder={lang==="tr"?"Başlık":"Title"} style={{fontWeight:700,background:"transparent",border:"none",padding:"6px 0",color:dark?tc:"#1a1a1a",fontSize:fs+9,outline:"none",width:"100%",boxSizing:"border-box",direction:lang==="ar"?"rtl":"ltr"}}/>
@@ -3534,13 +3536,13 @@ return (
               <span style={{width:1,height:26,background:bd,margin:"0 8px"}}/>
               <button onMouseDown={noP} onClick={()=>setNoteSheet(null)} aria-label={lang==="tr"?"Kapat":"Close"} style={fbtn(false)}>✕</button>
             </div>:<div style={{display:"flex",alignItems:"center",gap:2,padding:"6px 8px",borderTop:`1px solid ${dark?bd:"#00000018"}`,flexShrink:0,background:cbg}}>
-              <button onClick={()=>setNoteSheet(noteSheet==="add"?null:"add")} aria-label={lang==="tr"?"Ekle":"Add"} style={{...tbBtn,background:noteSheet==="add"?active:"none"}}>⊞</button>
-              <button onClick={()=>setNoteSheet(noteSheet==="color"?null:"color")} aria-label={lang==="tr"?"Renk ve arka plan":"Color & background"} style={{...tbBtn,background:noteSheet==="color"?active:"none"}}>🎨</button>
-              <button onMouseDown={noP} onClick={()=>setNoteSheet("format")} aria-label={lang==="tr"?"Biçimlendirme":"Formatting"} style={{...tbBtn,fontWeight:800,fontSize:20,textDecoration:"underline"}}>A</button>
+              <button onClick={()=>setNoteSheet(noteSheet==="add"?null:"add")} aria-label={lang==="tr"?"Ekle":"Add"} style={{...tbBtn,background:noteSheet==="add"?active:"none"}}>{svgIco(ICO.add)}</button>
+              <button onClick={()=>setNoteSheet(noteSheet==="color"?null:"color")} aria-label={lang==="tr"?"Renk ve arka plan":"Color & background"} style={{...tbBtn,background:noteSheet==="color"?active:"none"}}>{svgIco(ICO.palette)}</button>
+              <button onMouseDown={noP} onClick={()=>setNoteSheet("format")} aria-label={lang==="tr"?"Biçimlendirme":"Formatting"} style={{...tbBtn,background:noteSheet==="format"?active:"none"}}>{svgIco(ICO.format)}</button>
               <div style={{flex:1}}/>
-              <button onMouseDown={noP} onClick={()=>canU&&doUndo(n.id)} aria-label={lang==="tr"?"Geri al":"Undo"} style={{...tbBtn,opacity:canU?1:0.3}}>↩</button>
-              <button onMouseDown={noP} onClick={()=>canR&&doRedo(n.id)} aria-label={lang==="tr"?"İleri al":"Redo"} style={{...tbBtn,opacity:canR?1:0.3}}>↪</button>
-              <button onClick={()=>setNoteSheet(noteSheet==="more"?null:"more")} aria-label={lang==="tr"?"Diğer":"More"} style={{...tbBtn,background:noteSheet==="more"?active:"none"}}>⋮</button>
+              <button onMouseDown={noP} onClick={()=>canU&&doUndo(n.id)} aria-label={lang==="tr"?"Geri al":"Undo"} style={{...tbBtn,opacity:canU?1:0.3}}>{svgIco(ICO.undo)}</button>
+              <button onMouseDown={noP} onClick={()=>canR&&doRedo(n.id)} aria-label={lang==="tr"?"İleri al":"Redo"} style={{...tbBtn,opacity:canR?1:0.3}}>{svgIco(ICO.redo)}</button>
+              <button onClick={()=>setNoteSheet(noteSheet==="more"?null:"more")} aria-label={lang==="tr"?"Diğer":"More"} style={{...tbBtn,background:noteSheet==="more"?active:"none"}}>{svgIco(ICO.more)}</button>
             </div>}
           </div></>);
         })()}
