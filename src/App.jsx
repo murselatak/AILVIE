@@ -3073,7 +3073,7 @@ const renderNotes=()=>{
           {n.pinned&&<span style={{position:"absolute",top:6,right:8,fontSize:14}}>📌</span>}
           <div onClick={()=>{setEditNote(n.id);setNoteSheet(null);}} style={{cursor:"pointer",width:"100%",maxWidth:"100%",overflow:"hidden"}}>
             {n.title&&<div style={{fontWeight:700,marginBottom:4,color:dark?tc:"#1a1a1a",fontSize:fs+1,wordBreak:"break-word",overflowWrap:"anywhere"}}>{n.title}</div>}
-            {n.checklist?<div style={{display:"flex",flexDirection:"column",gap:2}}>{n.checklist.slice(0,8).map(it=><div key={it.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:fs,color:dark?mt:"#444"}}><span>{it.done?"☑️":"⬜"}</span><span style={{textDecoration:it.done?"line-through":"none",opacity:it.done?0.6:1,wordBreak:"break-word"}}>{it.text}</span></div>)}</div>:<div dangerouslySetInnerHTML={{__html:(n.content||"").trim()||(lang==="tr"?"Boş not":"Empty note")}} style={{fontSize:fs,color:dark?mt:"#444",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:180,overflow:"hidden"}}/>}
+            {n.checklist?<div style={{display:"flex",flexDirection:"column",gap:2}}>{n.checklist.slice(0,8).map(it=><div key={it.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:fs,color:dark?mt:"#444"}}><span>{it.done?"☑️":"⬜"}</span><span style={{textDecoration:it.done?"line-through":"none",opacity:it.done?0.6:1,wordBreak:"break-word"}}>{it.text}</span></div>)}</div>:<div className="note-view" dangerouslySetInnerHTML={{__html:(n.content||"").trim()||(lang==="tr"?"Boş not":"Empty note")}} style={{fontSize:fs,color:dark?mt:"#444",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:180,overflow:"hidden"}}/>}
             {media.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}}>{media.slice(0,4).map((m,mi)=>m.type==="audio"?<span key={mi} style={{fontSize:fs-1}}>🎤</span>:<img key={mi} alt="" src={m.data} style={{width:56,height:56,objectFit:"cover",borderRadius:8,display:"block"}}/>)}</div>}
             {(n.labels||[]).length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>{n.labels.map(l=><span key={l} style={{fontSize:fs-3,background:`${ac}22`,color:ac,borderRadius:10,padding:"2px 8px"}}>🏷️ {l}</span>)}</div>}
           </div>
@@ -3802,6 +3802,7 @@ return (
       .note-edit:empty:before{content:attr(data-ph);color:${mt};pointer-events:none}
       .note-edit h1{font-size:1.6em;font-weight:700;margin:6px 0 2px}
       .note-edit h2{font-size:1.25em;font-weight:700;margin:5px 0 2px}
+      .note-edit u,.note-view u,.note-edit [style*="underline"],.note-view [style*="underline"]{text-decoration-skip-ink:none;text-underline-offset:0.16em;text-decoration-thickness:1.5px}
       @keyframes scanLine{0%{top:10%}50%{top:85%}100%{top:10%}}
       *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;word-wrap:break-word;overflow-wrap:break-word}
       .msg-card{max-width:100%;overflow-wrap:anywhere;word-break:break-word;hyphens:auto}
