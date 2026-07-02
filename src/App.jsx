@@ -3064,6 +3064,9 @@ const renderNotes=()=>{
         const isEditing=editNote===n.id;
         const cbg=(n.bg&&noteBg(n.bg))?noteBg(n.bg):(dark?n.color+"22":n.color);
         const tbBtn={background:"none",border:"none",fontSize:19,cursor:"pointer",color:dark?tc:"#333",padding:"5px 9px",borderRadius:8,lineHeight:1};
+        const sheetBox={marginTop:2,border:`1px solid ${dark?bd:"#00000018"}`,borderRadius:10,background:dark?"#0d1520":"#f8fafc",padding:"4px",display:"flex",flexDirection:"column"};
+        const sheetRow={display:"flex",alignItems:"center",gap:14,width:"100%",padding:"11px 12px",background:"none",border:"none",cursor:"pointer",color:dark?tc:"#333",textAlign:"left",fontSize:fs-1,borderRadius:8};
+        const fmtBtn={background:"none",border:"none",color:dark?tc:"#333",fontSize:fs+1,cursor:"pointer",padding:"6px 10px",borderRadius:8};
         const media=noteMedia[n.id]||[];
         const saveNote=()=>{const note=notes.find(x=>x.id===n.id);const empty=note&&!note.title?.trim()&&!(note.content||"").replace(/<[^>]+>/g,"").trim()&&!(note.checklist&&note.checklist.some(i=>i.text.trim()))&&!(noteMedia[n.id]||[]).length;if(empty){setNotes(p=>p.filter(x=>x.id!==n.id));setNoteMedia(p=>{const q={...p};delete q[n.id];return q;});}setEditNote(null);setNoteSheet(null);};
         return(<div key={n.id} style={{background:cbg,borderRadius:12,padding:12,border:isEditing?"2px solid "+ac:"1px solid "+(dark?bd:n.color),width:"100%",maxWidth:"100%",boxSizing:"border-box",overflow:"hidden",position:"relative",display:"flex",flexDirection:"column",gap:6}}>
@@ -3089,6 +3092,28 @@ const renderNotes=()=>{
               <button onClick={()=>doRedo(n.id)} aria-label={lang==="tr"?"İleri al":"Redo"} style={tbBtn}>↪</button>
               <button onClick={()=>setNoteSheet(noteSheet==="more"?null:"more")} aria-label={lang==="tr"?"Diğer":"More"} style={tbBtn}>⋮</button>
             </div>
+            {noteSheet==="add"&&<div style={sheetBox}>{[["📷",lang==="tr"?"Fotoğraf çek":"Take photo",()=>pickNoteImage(n.id,true)],["🖼️",lang==="tr"?"Resim ekle":"Add image",()=>pickNoteImage(n.id,false)],["🖌️",lang==="tr"?"Çizim":"Drawing",()=>{setNoteSheet(null);setNoteDraw(true);}],["🎤",lang==="tr"?"Kayıt":"Recording",()=>startNoteRec(n.id)],["☑️",lang==="tr"?"Onay kutuları":"Checkboxes",()=>toggleChecklist(n)]].map(([ic,lb,fn])=><button key={lb} onClick={fn} style={sheetRow}><span style={{fontSize:18,width:22,textAlign:"center",flexShrink:0}}>{ic}</span>{lb}</button>)}</div>}
+            {noteSheet==="color"&&<div style={{...sheetBox,padding:"8px"}}>
+              <div style={{fontWeight:700,fontSize:fs-2,marginBottom:6}}>{lang==="tr"?"Renk":"Color"}</div>
+              <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:8}}>{NCOL.map(c=><button key={c} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,color:c}:x))} aria-label={lang==="tr"?"Renk":"Color"} style={{width:38,height:38,borderRadius:19,background:c,border:n.color===c?`3px solid ${ac}`:"3px solid transparent",cursor:"pointer",flexShrink:0,color:"#333",fontWeight:800}}>{n.color===c?"✓":""}</button>)}</div>
+              <div style={{fontWeight:700,fontSize:fs-2,margin:"2px 0 6px"}}>{lang==="tr"?"Arka plan":"Background"}</div>
+              <div style={{display:"flex",gap:8,overflowX:"auto"}}>{NOTE_BGS.map(bgp=><button key={bgp.k} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,bg:bgp.k==="none"?null:bgp.k}:x))} aria-label={bgp.k} style={{width:44,height:44,borderRadius:22,background:bgp.g||(dark?"#0a0e14":"#eee"),border:((n.bg||"none")===bgp.k)?`3px solid ${ac}`:`2px solid ${bd}`,cursor:"pointer",flexShrink:0,color:tc,fontSize:16}}>{bgp.k==="none"?"🚫":""}</button>)}</div>
+            </div>}
+            {noteSheet==="format"&&<div style={{...sheetBox,flexDirection:"row",alignItems:"center",flexWrap:"wrap",gap:2,padding:"6px"}}>
+              <button onClick={()=>fmt("formatBlock","H1")} style={fmtBtn}>H1</button>
+              <button onClick={()=>fmt("formatBlock","H2")} style={fmtBtn}>H2</button>
+              <button onClick={()=>fmt("formatBlock","div")} style={fmtBtn}>Aa</button>
+              <span style={{width:1,height:20,background:bd,margin:"0 4px"}}/>
+              <button onClick={()=>fmt("bold")} style={{...fmtBtn,fontWeight:800}}>B</button>
+              <button onClick={()=>fmt("italic")} style={{...fmtBtn,fontStyle:"italic"}}>I</button>
+              <button onClick={()=>fmt("underline")} style={{...fmtBtn,textDecoration:"underline"}}>U</button>
+              <div style={{flex:1}}/>
+              <button onClick={()=>setNoteSheet(null)} aria-label={lang==="tr"?"Kapat":"Close"} style={fmtBtn}>✕</button>
+            </div>}
+            {noteSheet==="more"&&<div style={sheetBox}>
+              <div style={{fontSize:fs-3,color:mt,padding:"4px 12px 6px"}}>{lang==="tr"?"Az önce düzenlendi":"Edited just now"}</div>
+              {[["🗑️",lang==="tr"?"Sil":"Delete",()=>{toTrash("note",n);setNoteMedia(p=>{const q={...p};delete q[n.id];return q;});setEditNote(null);setNoteSheet(null);}],["📋",lang==="tr"?"Kopya oluştur":"Make a copy",()=>duplicateNote(n)],["📤",lang==="tr"?"Gönder":"Send",()=>shareNote(n)],["👥",lang==="tr"?"Ortak çalışan":"Collaborator",()=>{notify(lang==="tr"?"Ortak çalışma yakında — hesap/sunucu gerekli":"Collaboration coming soon — needs account/server");setNoteSheet(null);}],["🏷️",lang==="tr"?"Etiketler":"Labels",()=>{const l=prompt(lang==="tr"?"Etiket adı:":"Label name:");if(l&&l.trim())setNotes(p=>p.map(x=>x.id===n.id?{...x,labels:[...new Set([...(x.labels||[]),l.trim()])]}:x));setNoteSheet(null);}],["❓",lang==="tr"?"Yardım ve geri bildirim":"Help & feedback",()=>{setNoteSheet(null);setEditNote(null);goTo("admin");}]].map(([ic,lb,fn])=><button key={lb} onClick={fn} style={sheetRow}><span style={{fontSize:18,width:22,textAlign:"center",flexShrink:0}}>{ic}</span>{lb}</button>)}
+            </div>}
             <div style={{display:"flex",gap:6,marginTop:2}}>
               <button onClick={saveNote} style={{...BP,padding:"6px 14px",fontSize:fs-1}}>✓ {lang==="tr"?"Kaydet":"Save"}</button>
               <button onClick={()=>{setEditNote(null);setNoteSheet(null);}} style={{...BP,background:mt,padding:"6px 14px",fontSize:fs-1}}>{t.cancel}</button>
@@ -3503,44 +3528,6 @@ return (
             </div>
           </div>
         </div>}
-        {noteSheet&&editNote&&(()=>{const en=notes.find(x=>x.id===editNote);if(!en)return null;
-          const wrap=(children)=><div style={{position:"fixed",inset:0,zIndex:9990,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setNoteSheet(null)}><div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:520,borderRadius:"18px 18px 0 0",padding:"12px 4px 22px",maxHeight:"72vh",overflowY:"auto"}}>{children}</div></div>;
-          const row=(ic,label,onClick)=><button onClick={onClick} style={{display:"flex",alignItems:"center",gap:18,width:"100%",padding:"13px 20px",background:"none",border:"none",cursor:"pointer",color:tc,textAlign:"left",fontSize:fs}}><span style={{fontSize:20,width:24,textAlign:"center",flexShrink:0}}>{ic}</span><span>{label}</span></button>;
-          if(noteSheet==="add")return wrap(<>
-            {row("📷",lang==="tr"?"Fotoğraf çek":"Take photo",()=>pickNoteImage(en.id,true))}
-            {row("🖼️",lang==="tr"?"Resim ekle":"Add image",()=>pickNoteImage(en.id,false))}
-            {row("🖌️",lang==="tr"?"Çizim":"Drawing",()=>{setNoteSheet(null);setNoteDraw(true);})}
-            {row("🎤",lang==="tr"?"Kayıt":"Recording",()=>startNoteRec(en.id))}
-            {row("☑️",lang==="tr"?"Onay kutuları":"Checkboxes",()=>toggleChecklist(en))}
-          </>);
-          if(noteSheet==="color")return wrap(<>
-            <div style={{fontWeight:700,padding:"4px 20px 8px"}}>{lang==="tr"?"Renk":"Color"}</div>
-            <div style={{display:"flex",gap:10,overflowX:"auto",padding:"0 20px 14px"}}>{NCOL.map(c=><button key={c} onClick={()=>setNotes(p=>p.map(x=>x.id===en.id?{...x,color:c}:x))} aria-label={lang==="tr"?"Renk":"Color"} style={{width:46,height:46,borderRadius:23,background:c,border:en.color===c?`3px solid ${ac}`:"3px solid transparent",cursor:"pointer",flexShrink:0,color:"#333",fontWeight:800}}>{en.color===c?"✓":""}</button>)}</div>
-            <div style={{fontWeight:700,padding:"4px 20px 8px"}}>{lang==="tr"?"Arka plan":"Background"}</div>
-            <div style={{display:"flex",gap:10,overflowX:"auto",padding:"0 20px 4px"}}>{NOTE_BGS.map(bgp=><button key={bgp.k} onClick={()=>setNotes(p=>p.map(x=>x.id===en.id?{...x,bg:bgp.k==="none"?null:bgp.k}:x))} aria-label={bgp.k} style={{width:54,height:54,borderRadius:27,background:bgp.g||(dark?"#0d1520":"#eee"),border:((en.bg||"none")===bgp.k)?`3px solid ${ac}`:`2px solid ${bd}`,cursor:"pointer",flexShrink:0,color:tc,fontSize:18}}>{bgp.k==="none"?"🚫":""}</button>)}</div>
-          </>);
-          if(noteSheet==="more")return wrap(<>
-            <div style={{fontSize:fs-2,color:mt,padding:"4px 20px 10px"}}>{lang==="tr"?"Az önce düzenlendi":"Edited just now"}</div>
-            {row("🗑️",lang==="tr"?"Sil":"Delete",()=>{toTrash("note",en);setNoteMedia(p=>{const q={...p};delete q[en.id];return q;});setEditNote(null);setNoteSheet(null);})}
-            {row("📋",lang==="tr"?"Kopya oluştur":"Make a copy",()=>duplicateNote(en))}
-            {row("📤",lang==="tr"?"Gönder":"Send",()=>shareNote(en))}
-            {row("👥",lang==="tr"?"Ortak çalışan":"Collaborator",()=>{notify(lang==="tr"?"Ortak çalışma yakında — hesap/sunucu gerekli":"Collaboration coming soon — needs account/server");setNoteSheet(null);})}
-            {row("🏷️",lang==="tr"?"Etiketler":"Labels",()=>{const l=prompt(lang==="tr"?"Etiket adı:":"Label name:");if(l&&l.trim())setNotes(p=>p.map(x=>x.id===en.id?{...x,labels:[...new Set([...(x.labels||[]),l.trim()])]}:x));setNoteSheet(null);})}
-            {row("❓",lang==="tr"?"Yardım ve geri bildirim":"Help & feedback",()=>{setNoteSheet(null);setEditNote(null);goTo("admin");})}
-          </>);
-          if(noteSheet==="format"){const fmtBtn={background:"none",border:"none",color:tc,fontSize:fs+2,cursor:"pointer",padding:"6px 12px",borderRadius:8};return <div style={{position:"fixed",left:0,right:0,bottom:0,zIndex:9990,background:cd,borderTop:`1px solid ${bd}`,display:"flex",alignItems:"center",gap:2,padding:"12px 8px",justifyContent:"center",boxShadow:"0 -4px 16px rgba(0,0,0,.3)"}}>
-            <button onClick={()=>fmt("formatBlock","H1")} style={fmtBtn}>H1</button>
-            <button onClick={()=>fmt("formatBlock","H2")} style={fmtBtn}>H2</button>
-            <button onClick={()=>fmt("formatBlock","div")} style={fmtBtn}>Aa</button>
-            <span style={{width:1,height:24,background:bd,margin:"0 8px"}}/>
-            <button onClick={()=>fmt("bold")} style={{...fmtBtn,fontWeight:800}}>B</button>
-            <button onClick={()=>fmt("italic")} style={{...fmtBtn,fontStyle:"italic"}}>I</button>
-            <button onClick={()=>fmt("underline")} style={{...fmtBtn,textDecoration:"underline"}}>U</button>
-            <span style={{width:1,height:24,background:bd,margin:"0 8px"}}/>
-            <button onClick={()=>setNoteSheet(null)} aria-label={lang==="tr"?"Kapat":"Close"} style={fmtBtn}>✕</button>
-          </div>;}
-          return null;
-        })()}
         {noteDraw&&<div style={{position:"fixed",inset:0,zIndex:9992,background:"rgba(0,0,0,.7)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
           <div style={{background:cd,borderRadius:16,padding:14,width:"100%",maxWidth:420}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><span style={{fontWeight:700,color:tc}}>🖌️ {lang==="tr"?"Çizim":"Drawing"}</span><button onClick={()=>setNoteDraw(false)} aria-label={lang==="tr"?"Kapat":"Close"} style={{background:"none",border:"none",fontSize:20,color:tc,cursor:"pointer"}}>✕</button></div>
