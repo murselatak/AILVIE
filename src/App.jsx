@@ -129,6 +129,15 @@ async function callAI(body,apiKey){
   throw new Error("NO_KEY");
 }
 // Camera PPG → BPM via autocorrelation with a confidence gate (rejects noise). samples: [{t:ms, v:redAvg}].
+function swayIndex(samples){
+  // RMS of accelerometer deviations after removing per-axis mean (gravity/orientation). Pure, testable.
+  if(!samples||samples.length<80)return null;
+  const mean=k=>samples.reduce((p,c)=>p+c[k],0)/samples.length; const mx=mean("x"),my=mean("y"),mz=mean("z");
+  let sq=0;for(const c of samples){const dx=c.x-mx,dy=c.y-my,dz=c.z-mz;sq+=dx*dx+dy*dy+dz*dz;}
+  const sway=Math.sqrt(sq/samples.length);
+  return {sway,idx:Math.round(sway*100),band:sway<0.3?"high":sway<0.7?"mid":"low"};
+}
+if(typeof window!=="undefined")window.__swayIndex=swayIndex;
 function computeBPM(samples){
   // Real PPG signal analysis. Returns {ok:true,bpm,conf,quality,signalQuality,fps,durationMs}
   // or {ok:false,reason,fps,durationMs}. NEVER fabricates a value.
@@ -1160,6 +1169,8 @@ const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0,steps:0,sleep:0,
 const[pulseM,setPulseM]=useState(null); // {phase:'init'|'measuring'|'done'|'error',progress,bpm,quality,msg}
 const[bleHr,setBleHr]=useState(null); // Web Bluetooth HR: {connected,bpm,name}|{error}|{connecting,name}|null
 const[soundSess,setSoundSess]=useState(null); // on-device audio session: {active,cough,snore,other,level}|{error}|{done,...}|null
+const[balanceM,setBalanceM]=useState(null); // balance/sway test: {phase:'active'|'done'|'error',progress,sway,band,msg}
+const balanceRef=useRef({handler:null,samples:[],start:0,timer:null,prog:null});
 const soundRef=useRef({ctx:null,stream:null,raf:null,base:null,inEvt:false,evtStart:0,evtLow:0,evtHigh:0,evtPeak:0,last:0,cough:0,snore:0,other:0,fc:0});
 const pulseStreamRef=useRef(null),pulseRafRef=useRef(null),pulseFromChatRef=useRef(false),pulseHrvRef=useRef(false),bleRef=useRef(null);
 const[editH,setEditH]=useState(null);
@@ -2709,6 +2720,27 @@ const startSoundSession=async()=>{
   S.raf=requestAnimationFrame(loop);
 };
 useEffect(()=>()=>{const S=soundRef.current;try{if(S.raf)cancelAnimationFrame(S.raf);}catch(e){}try{if(S.stream)S.stream.getTracks().forEach(t=>t.stop());}catch(e){}try{if(S.ctx&&S.ctx.state!=="closed")S.ctx.close();}catch(e){}},[]);
+// ---- Balance/gait: postural sway from accelerometer (short foreground test; relative screening) ----
+const stopBalance=()=>{const B=balanceRef.current;try{if(B.handler)window.removeEventListener("devicemotion",B.handler);}catch(e){}try{if(B.timer)clearTimeout(B.timer);}catch(e){}try{if(B.prog)clearInterval(B.prog);}catch(e){}B.handler=null;B.timer=null;B.prog=null;};
+const finishBalance=()=>{
+  stopBalance();const r=swayIndex(balanceRef.current.samples);
+  if(!r){setBalanceM({phase:"error",msg:lang==="tr"?"Yeterli sensör verisi alınamadı. Telefonu göğsünüze tutup sabit durun, tekrar deneyin.":"Not enough sensor data. Hold the phone to your chest, stand still and retry."});return;}
+  setBalanceM({phase:"done",sway:r.idx,band:r.band});
+};
+const startBalance=async()=>{
+  if(balanceM&&balanceM.phase==="active")return;
+  if(typeof window==="undefined"||!window.DeviceMotionEvent){setBalanceM({phase:"error",msg:lang==="tr"?"Bu cihaz/tarayıcı hareket sensörünü desteklemiyor.":"This device/browser doesn't support motion sensors."});return;}
+  if(typeof DeviceMotionEvent.requestPermission==="function"){
+    try{const perm=await DeviceMotionEvent.requestPermission();if(perm!=="granted"){setBalanceM({phase:"error",msg:lang==="tr"?"Hareket sensörü izni gerekli.":"Motion sensor permission needed."});return;}}catch(e){setBalanceM({phase:"error",msg:lang==="tr"?"Hareket sensörü izni gerekli.":"Motion sensor permission needed."});return;}
+  }
+  const B=balanceRef.current;B.samples=[];B.start=Date.now();const dur=20000;
+  const handler=(e)=>{const a=(e.acceleration&&e.acceleration.x!=null)?e.acceleration:e.accelerationIncludingGravity;if(!a)return;B.samples.push({t:Date.now(),x:a.x||0,y:a.y||0,z:a.z||0});};
+  B.handler=handler;window.addEventListener("devicemotion",handler);
+  setBalanceM({phase:"active",progress:0});
+  B.prog=setInterval(()=>{const el=Date.now()-B.start;setBalanceM(m=>m&&m.phase==="active"?{...m,progress:Math.min(100,Math.round(el/dur*100))}:m);},250);
+  B.timer=setTimeout(finishBalance,dur);
+};
+useEffect(()=>()=>stopBalance(),[]);
 useEffect(()=>()=>{try{if(bleRef.current&&bleRef.current.gatt&&bleRef.current.gatt.connected)bleRef.current.gatt.disconnect();}catch(e){}},[]);
 useEffect(()=>()=>stopPulseStream(),[]);
 const renderHealth=()=>{
@@ -2806,6 +2838,20 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     {soundSess&&soundSess.active&&<div style={{height:8,borderRadius:4,background:`${mt}33`,overflow:"hidden",marginBottom:8}}><div style={{height:"100%",width:`${Math.min(100,(soundSess.level||0)*1.7)}%`,background:sc,transition:"width .1s"}}/></div>}
     <button onClick={soundSess&&soundSess.active?stopSoundSession:startSoundSession} style={{...BP,width:"100%",padding:"9px",background:soundSess&&soundSess.active?dg:`linear-gradient(135deg,${ac},${a2})`}}>{soundSess&&soundSess.active?(lang==="tr"?"⏹ Durdur":"⏹ Stop"):(lang==="tr"?"🎙️ Dinlemeyi Başlat":"🎙️ Start Listening")}</button>
     <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>🔒 {lang==="tr"?"Ses yalnızca cihazınızda işlenir; kaydedilmez/gönderilmez. Sadece uygulama ve ekran açıkken çalışır. Kaba bir tahmindir, tıbbi tanı değildir — gün boyu/arka planda güvenilir algılama native uygulama gerektirir.":"Audio is processed only on your device; never recorded or sent. Works only while the app & screen are on. This is a rough estimate, not a medical diagnosis — reliable all-night detection needs a native app."}</div>
+  </div>
+  <div style={CS}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:22}}>🧍</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Denge / Yürüyüş":"Balance / Gait"}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"denge testi":"balance test"}</span></span></div>
+    {(!balanceM||balanceM.phase==="error"||balanceM.phase==="done")&&<div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonu göğsünüze tutup 20 sn sabit durun.":"Hold the phone to your chest and stand still for 20s."}</div>}
+    {balanceM&&balanceM.phase==="active"&&<>
+      <div style={{fontSize:fs-2,color:mt,marginBottom:8,textAlign:"center"}}>{lang==="tr"?"Sabit durun…":"Stand still…"}</div>
+      <div style={{height:10,borderRadius:6,background:`${mt}33`,overflow:"hidden",marginBottom:6}}><div style={{height:"100%",width:`${balanceM.progress||0}%`,background:`linear-gradient(90deg,${ac},${a2})`,transition:"width .2s"}}/></div>
+      <div style={{fontSize:fs-2,color:mt,textAlign:"center",marginBottom:8}}>%{balanceM.progress||0} · {Math.max(0,Math.ceil((100-(balanceM.progress||0))/100*20))} {lang==="tr"?"sn":"s"}</div>
+    </>}
+    {balanceM&&balanceM.phase==="done"&&(()=>{const b=balanceM.band;const L=b==="high"?[lang==="tr"?"İyi denge ✓":"Good balance ✓",sc]:b==="mid"?[lang==="tr"?"Orta":"Moderate",ac]:[lang==="tr"?"Daha az stabil":"Less stable",dg];return <div style={{textAlign:"center",marginBottom:8}}><div style={{fontSize:34,fontWeight:800,color:L[1]}}>{balanceM.sway}</div><div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"sallanma indeksi (düşük = daha stabil)":"sway index (lower = more stable)"}</div><div style={{fontSize:fs,fontWeight:700,color:L[1],marginTop:4}}>{L[0]}</div></div>;})()}
+    {balanceM&&balanceM.phase==="error"&&<div style={{fontSize:fs-2,color:dg,marginBottom:8,lineHeight:1.4}}>{balanceM.msg}</div>}
+    {(!balanceM||balanceM.phase!=="active")&&<button onClick={startBalance} style={{...BP,width:"100%",padding:"9px",background:`linear-gradient(135deg,${ac},${a2})`}}>🧍 {balanceM&&balanceM.phase==="done"?(lang==="tr"?"Tekrar Test Et":"Test again"):(lang==="tr"?"Denge Testi Başlat":"Start Balance Test")}</button>}
+    {balanceM&&balanceM.phase==="active"&&<button onClick={()=>{stopBalance();setBalanceM(null);}} style={{...BP,width:"100%",padding:"9px",background:mt}}>{lang==="tr"?"İptal":"Cancel"}</button>}
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Telefon ivmeölçerinden hesaplanan göreli bir tarama indeksidir (yalnızca uygulama açıkken). Tıbbi denge/nörolojik değerlendirme yerine geçmez. Yürüyüş düzeni için Adım kartındaki canlı cadence'e bakın.":"A relative screening index from the phone accelerometer (app open only). Not a substitute for medical balance/neurological assessment. For gait rhythm see the live cadence in the Steps card."}</div>
   </div>
   {/* Daily Wellness Tracking */}
   <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🌱 {lang==="tr"?"Günlük Sağlık Takibi":"Daily Wellness Tracking"}</div>
