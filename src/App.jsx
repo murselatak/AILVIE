@@ -130,11 +130,24 @@ async function callAI(body,apiKey){
 }
 // Camera PPG → BPM via autocorrelation with a confidence gate (rejects noise). samples: [{t:ms, v:redAvg}].
 function computeBPM(samples){
-  if(!samples||samples.length<120)return null;
-  const t0=samples[0].t;
+  // Real PPG signal analysis. Returns {ok:true,bpm,conf,quality,signalQuality,fps,durationMs}
+  // or {ok:false,reason,fps,durationMs}. NEVER fabricates a value.
+  if(!samples||samples.length<120)return {ok:false,reason:"too_short"};
+  const t0=samples[0].t, tN=samples[samples.length-1].t, durMs=tN-t0;
+  const fps=samples.length/((durMs/1000)||1);
+  if(durMs<8000)return {ok:false,reason:"too_short",fps,durationMs:durMs};
+  if(fps<10)return {ok:false,reason:"unstable_fps",fps:Math.round(fps),durationMs:durMs}; // undersampled/unstable capture
   const s=samples.filter(x=>x.t-t0>1500); // drop ~1.5s settling
-  if(s.length<100)return null;
-  const vals=s.map(x=>x.v), ts=s.map(x=>x.t), n=vals.length;
+  if(s.length<100)return {ok:false,reason:"too_short",fps:Math.round(fps),durationMs:durMs};
+  const red=x=>x.r!=null?x.r:x.v; // backward compat
+  // finger-presence heuristic (fingertip over torch glows red & bright)
+  const mR=s.reduce((p,c)=>p+red(c),0)/s.length;
+  const hasRGB=s[0].g!=null;
+  const mG=hasRGB?s.reduce((p,c)=>p+c.g,0)/s.length:0, mB=hasRGB?s.reduce((p,c)=>p+c.b,0)/s.length:0;
+  const redDom=!hasRGB||(mR>mG*1.05&&mR>mB*1.05);
+  const fingerLikely=mR>55&&redDom;
+  // PPG signal from red channel
+  const vals=s.map(red), ts=s.map(x=>x.t), n=vals.length;
   const dt=(ts[n-1]-ts[0])/(n-1); // ms per sample
   const win=Math.max(8,Math.round(1200/Math.max(dt,1))); // high-pass ~<0.4Hz baseline
   const ma=new Array(n);
@@ -143,8 +156,8 @@ function computeBPM(samples){
   const sm=sig.map((v,i)=>{const a=sig[i-1]!==undefined?sig[i-1]:v,b=sig[i+1]!==undefined?sig[i+1]:v;return (a+v+b)/3;});
   const mean=sm.reduce((p,c)=>p+c,0)/n;
   const c0=sm.map(v=>v-mean);
-  if(c0.reduce((p,c)=>p+c*c,0)/n<0.02)return null; // essentially flat / no light
-  const lagMin=Math.max(2,Math.round(300/dt));  // 200 bpm
+  if(c0.reduce((p,c)=>p+c*c,0)/n<0.02)return {ok:false,reason:fingerLikely?"low_signal":"no_finger",fps:Math.round(fps),durationMs:durMs};
+  const lagMin=Math.max(2,Math.round(300/dt));  // 200 bpm  (band ~0.7–3.3 Hz)
   const lagMax=Math.round(1500/dt);             // 40 bpm
   let bestLag=-1,bestR=-2;
   for(let lag=lagMin;lag<=lagMax&&lag<n-10;lag++){
@@ -153,10 +166,11 @@ function computeBPM(samples){
     const r=num/Math.sqrt((e1*e2)||1);
     if(r>bestR){bestR=r;bestLag=lag;}
   }
-  if(bestLag<0||bestR<0.4)return null; // no reliable periodicity → reject (noise/poor contact)
+  if(bestLag<0||bestR<0.4)return {ok:false,reason:fingerLikely?"noisy":"no_finger",fps:Math.round(fps),durationMs:durMs}; // no reliable periodicity
   const bpm=Math.round(60000/(bestLag*dt));
-  if(bpm<40||bpm>200)return null;
-  return {bpm,quality:bestR>0.7?"good":bestR>0.55?"fair":"low",conf:Math.round(bestR*100)};
+  if(bpm<40||bpm>200)return {ok:false,reason:"out_of_range",fps:Math.round(fps),durationMs:durMs};
+  const signalQuality=bestR>0.8?"excellent":bestR>0.65?"good":bestR>0.5?"fair":"poor";
+  return {ok:true,bpm,conf:Math.round(bestR*100),quality:signalQuality,signalQuality,fps:Math.round(fps),durationMs:Math.round(durMs)};
 }
 if(typeof window!=="undefined")window.__ppgBPM=computeBPM;
 
@@ -2540,12 +2554,28 @@ const finishPulse=(samples)=>{
   stopPulseStream();
   const res=computeBPM(samples);
   const fromChat=pulseFromChatRef.current;pulseFromChatRef.current=false;
-  if(res&&res.bpm){
-    setHd(p=>({...p,pulse:res.bpm}));setPulseM({phase:"done",bpm:res.bpm,quality:res.quality});haptic([40,60,40]);
+  if(res&&res.ok){
+    setHd(p=>({...p,pulse:res.bpm}));setPulseM({phase:"done",bpm:res.bpm,quality:res.quality,conf:res.conf,fps:res.fps});haptic([40,60,40]);
     notify(lang==="tr"?`❤️ Nabız: ${res.bpm} bpm`:`❤️ Pulse: ${res.bpm} bpm`);
-    if(fromChat){const q=res.quality==="good"?(lang==="tr"?"iyi":"good"):res.quality==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük":"low");setTimeout(()=>{setPulseM(null);goTo("chat");sendChat(lang==="tr"?`(Ölçüm tamamlandı) Nabzım ${res.bpm} bpm ölçüldü (kalite: ${q}). Bunu benim için yorumlar mısın?`:`(Measurement done) My pulse measured ${res.bpm} bpm (quality: ${q}). Can you interpret this for me?`);},700);}
+    if(fromChat){const q=res.quality==="excellent"?(lang==="tr"?"mükemmel":"excellent"):res.quality==="good"?(lang==="tr"?"iyi":"good"):res.quality==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük":"poor");setTimeout(()=>{setPulseM(null);goTo("chat");sendChat(lang==="tr"?`(Ölçüm tamamlandı) Nabzım ${res.bpm} bpm ölçüldü (sinyal kalitesi: ${q}). Bunu benim için yorumlar mısın?`:`(Measurement done) My pulse measured ${res.bpm} bpm (signal quality: ${q}). Can you interpret this for me?`);},700);}
   }else{
-    setPulseM({phase:"error",msg:lang==="tr"?"Ölçüm alınamadı. Parmağını arka kameraya (ve flaşa) tam kapat, sabit tut ve tekrar dene.":"Couldn't measure. Cover the rear camera (and flash) fully, hold still, and try again."});
+    const reason=res&&res.reason;
+    const M=lang==="tr"?{
+      too_short:"Ölçüm çok kısa ya da yeterli kare alınamadı. Parmağını sabit tutup daha uzun bekle.",
+      unstable_fps:"Kamera kare hızı düşük/kararsız. Yeterli ışık olsun, telefonu ve parmağını sabit tut.",
+      no_finger:"Parmak algılanmadı. Parmağının ucunu arka kameraya ve flaşa tam kapat.",
+      low_signal:"Sinyal çok zayıf. Parmağını hafifçe (bastırmadan) tam kapat, sabit tut.",
+      noisy:"Sinyal gürültülü — güvenilir nabız bulunamadı. Sabit tut ve tekrar dene.",
+      out_of_range:"Geçerli bir nabız aralığı bulunamadı. Tekrar dene."
+    }:{
+      too_short:"Measurement too short or too few frames. Hold your fingertip still and wait longer.",
+      unstable_fps:"Camera frame rate too low/unstable. Ensure enough light and hold phone & finger still.",
+      no_finger:"No fingertip detected. Fully cover the rear camera and flash with your fingertip.",
+      low_signal:"Signal too weak. Gently (without pressing) cover fully and hold still.",
+      noisy:"Signal too noisy — no reliable pulse found. Hold still and try again.",
+      out_of_range:"No valid pulse range found. Please try again."
+    };
+    setPulseM({phase:"error",reason,msg:M[reason]||(lang==="tr"?"Sinyal kalitesi yetersiz — ölçüm alınamadı. Parmağını arka kameraya (ve flaşa) tam kapat, sabit tut ve tekrar dene.":"Signal quality insufficient — measurement failed. Cover the rear camera (and flash) fully, hold still, and try again.")});
   }
 };
 const startPulseMeasure=async(fromChat)=>{
@@ -2557,15 +2587,16 @@ const startPulseMeasure=async(fromChat)=>{
   catch(e){setPulseM({phase:"error",msg:lang==="tr"?"Kamera izni gerekli. İzin verip tekrar deneyin.":"Camera permission needed. Allow it and retry."});return;}
   pulseStreamRef.current=stream;
   const track=stream.getVideoTracks()[0];
-  try{const caps=track.getCapabilities&&track.getCapabilities();if(caps&&caps.torch)await track.applyConstraints({advanced:[{torch:true}]});}catch(e){}
+  let torchOn=false;
+  try{const caps=track.getCapabilities&&track.getCapabilities();if(caps&&caps.torch){await track.applyConstraints({advanced:[{torch:true}]});torchOn=true;}}catch(e){}
   const video=document.createElement("video");video.setAttribute("playsinline","");video.muted=true;video.srcObject=stream;
   try{await video.play();}catch(e){}
   const cv=document.createElement("canvas");cv.width=64;cv.height=48;const ctx=cv.getContext("2d",{willReadFrequently:true});
-  const samples=[];const dur=15000;const start=performance.now();
-  setPulseM({phase:"measuring",progress:0});
+  const samples=[];const dur=20000;const start=performance.now();
+  setPulseM({phase:"measuring",progress:0,torch:torchOn});
   const tick=()=>{
     const now=performance.now();const el=now-start;
-    try{ctx.drawImage(video,0,0,64,48);const d=ctx.getImageData(16,12,32,24).data;let r=0,c=0;for(let i=0;i<d.length;i+=4){r+=d[i];c++;}samples.push({t:now,v:r/c});}catch(e){}
+    try{ctx.drawImage(video,0,0,64,48);const d=ctx.getImageData(16,12,32,24).data;let r=0,g=0,b=0,c=0;for(let i=0;i<d.length;i+=4){r+=d[i];g+=d[i+1];b+=d[i+2];c++;}samples.push({t:now,r:r/c,g:g/c,b:b/c});}catch(e){}
     setPulseM(p=>p&&p.phase==="measuring"?{...p,progress:Math.min(100,Math.round(el/dur*100))}:p);
     if(el<dur)pulseRafRef.current=requestAnimationFrame(tick);else finishPulse(samples);
   };
@@ -3593,11 +3624,12 @@ return (
             {pulseM.phase==="measuring"&&<>
               <div style={{fontSize:fs-2,color:mt,marginBottom:10,lineHeight:1.5}}>{lang==="tr"?"Parmağının ucunu arka kameraya ve flaşa hafifçe kapat, sabit tut.":"Gently cover the rear camera and flash with your fingertip, hold still."}</div>
               <div style={{height:10,borderRadius:6,background:`${mt}33`,overflow:"hidden"}}><div style={{height:"100%",width:`${pulseM.progress||0}%`,background:`linear-gradient(90deg,${dg},#c0392b)`,transition:"width .2s"}}/></div>
-              <div style={{fontSize:fs-2,color:mt,marginTop:6}}>%{pulseM.progress||0} · {Math.max(0,Math.ceil((100-(pulseM.progress||0))*0.15))} {lang==="tr"?"sn":"s"}</div>
+              <div style={{fontSize:fs-2,color:mt,marginTop:6}}>%{pulseM.progress||0} · {Math.max(0,Math.ceil((100-(pulseM.progress||0))/100*20))} {lang==="tr"?"sn":"s"}</div>
+              <div style={{fontSize:fs-3,color:mt,marginTop:6}}>{pulseM.torch?(lang==="tr"?"🔦 Flaş açık":"🔦 Flash on"):(lang==="tr"?"🔦 Flaş yok — iyi ışıkta ölçün":"🔦 No flash — measure in good light")}</div>
             </>}
             {pulseM.phase==="done"&&<>
               <div style={{fontSize:40,fontWeight:800,color:dg}}>{pulseM.bpm} <span style={{fontSize:fs}}>{t.bpm}</span></div>
-              <div style={{fontSize:fs-2,color:mt,marginTop:4}}>{lang==="tr"?"Kalite":"Quality"}: {pulseM.quality==="good"?(lang==="tr"?"iyi ✓":"good ✓"):pulseM.quality==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük — tekrar dene":"low — retry")}</div>
+              {(()=>{const q=pulseM.quality;const L=q==="excellent"?(lang==="tr"?"mükemmel ✓✓":"excellent ✓✓"):q==="good"?(lang==="tr"?"iyi ✓":"good ✓"):q==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük — tekrar dene":"poor — retry");return <div style={{fontSize:fs-2,color:mt,marginTop:4}}>{lang==="tr"?"Sinyal kalitesi":"Signal quality"}: {L} · {lang==="tr"?"güven":"conf"} %{pulseM.conf}{pulseM.fps?` · ${pulseM.fps} fps`:""}</div>;})()}
               <div style={{fontSize:fs-2,color:sc,marginTop:6}}>{lang==="tr"?"Sağlık verilerine kaydedildi. AILVIE yorumluyor…":"Saved. AILVIE is interpreting…"}</div>
             </>}
             {pulseM.phase==="error"&&<div style={{color:dg,fontSize:fs-1,lineHeight:1.5}}>{pulseM.msg}</div>}
