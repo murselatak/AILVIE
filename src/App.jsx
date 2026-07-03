@@ -3440,7 +3440,7 @@ return (
               {obStep===1&&<>
                 <div style={{fontSize:fs+8,fontWeight:700,marginBottom:4}}>{ob.chooseLang}</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,width:"100%",maxWidth:360}}>
-                  {Object.entries(LL_NATIVE).sort((a,b)=>a[1].localeCompare(b[1])).map(([k,v])=><button key={k} onClick={()=>{setLang(k);try{localStorage.setItem("ailvie_lang",k);}catch(e){}}} style={{padding:"12px",borderRadius:12,border:lang===k?"2px solid #fff":"1px solid rgba(255,255,255,.4)",background:lang===k?"rgba(255,255,255,.25)":"rgba(255,255,255,.08)",color:"#fff",fontSize:fs,fontWeight:lang===k?700:500,cursor:"pointer"}}>{v}</button>)}
+                  {Object.entries(LL_NATIVE).sort((a,b)=>a[0]===lang?-1:b[0]===lang?1:a[1].localeCompare(b[1])).map(([k,v])=><button key={k} onClick={()=>{setLang(k);try{localStorage.setItem("ailvie_lang",k);}catch(e){}}} style={{padding:"12px",borderRadius:12,border:lang===k?"2px solid #fff":"1px solid rgba(255,255,255,.4)",background:lang===k?"rgba(255,255,255,.25)":"rgba(255,255,255,.08)",color:"#fff",fontSize:fs,fontWeight:lang===k?700:500,cursor:"pointer"}}>{v}</button>)}
                 </div>
               </>}
               {obStep===2&&<>
@@ -3775,7 +3775,7 @@ return (
         {/* Language Picker */}
         {showLangPicker&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.4)",zIndex:350}} onClick={()=>setShowLangPicker(false)}><div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:50,right:6,background:cd,borderRadius:14,padding:8,width:210,maxHeight:"80vh",overflowY:"auto",boxShadow:"0 8px 32px rgba(0,0,0,.5)",border:`1px solid ${bd}`}}>
           <div style={{marginBottom:8,fontWeight:700,fontSize:fs,color:ac}}>🌍 {t.lang}</div>
-          {Object.entries(LL).sort((a,b)=>((LL_LOCAL[lang]||LL_LOCAL.en)[a[0]]||a[1]).localeCompare((LL_LOCAL[lang]||LL_LOCAL.en)[b[0]]||b[1],lang)).map(([k,v])=><button key={k} onClick={()=>{setLang(k);try{localStorage.setItem("ailvie_lang",k);}catch(e){}setShowLangPicker(false);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"9px 12px",borderRadius:10,border:lang===k?`2px solid ${ac}`:`1px solid ${bd}`,background:lang===k?`${ac}12`:"transparent",marginBottom:4,cursor:"pointer",color:tc,fontSize:fs-1}}>
+          {Object.entries(LL).sort((a,b)=>a[0]===lang?-1:b[0]===lang?1:((LL_LOCAL[lang]||LL_LOCAL.en)[a[0]]||a[1]).localeCompare((LL_LOCAL[lang]||LL_LOCAL.en)[b[0]]||b[1],lang)).map(([k,v])=><button key={k} onClick={()=>{setLang(k);try{localStorage.setItem("ailvie_lang",k);}catch(e){}setShowLangPicker(false);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"9px 12px",borderRadius:10,border:lang===k?`2px solid ${ac}`:`1px solid ${bd}`,background:lang===k?`${ac}12`:"transparent",marginBottom:4,cursor:"pointer",color:tc,fontSize:fs-1}}>
             <Flag code={k} size={22}/>
             <span style={{fontWeight:lang===k?700:400}}>{(LL_LOCAL[lang]||LL_LOCAL.en)[k]||v}</span>
             {lang===k&&<span style={{marginLeft:"auto",color:ac}}>✓</span>}
