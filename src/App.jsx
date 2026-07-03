@@ -1163,6 +1163,7 @@ const pulseStreamRef=useRef(null),pulseRafRef=useRef(null),pulseFromChatRef=useR
 const[editH,setEditH]=useState(null);
 const[tmpH,setTmpH]=useState("");
 const[wellness,setWellness]=useState({water:0,sleep:0,mood:0,steps:0,exercise:0,waterGoal:8,sleepGoal:8,stepsGoal:10000});
+const[sleepTimes,setSleepTimes]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_sleep_times"))||{bed:"",wake:""};}catch{return {bed:"",wake:""};}});
 const[moodLog,setMoodLog]=useState([]);
 const[stepAuto,setStepAuto]=useState(()=>{try{return localStorage.getItem("ailvie_step_auto")==="1";}catch{return false;}});
 const stepRef=React.useRef({last:0,baseSteps:0,count:0,lastMag:0});
@@ -2682,6 +2683,8 @@ const pulseRef=(()=>{
 const pulseOk=hd.pulse>=pulseRef.min&&hd.pulse<=pulseRef.max;
 const waterPct=Math.min(100,(wellness.water/wellness.waterGoal)*100);
 const sleepPct=Math.min(100,(wellness.sleep/wellness.sleepGoal)*100);
+const computeSleepDur=(bed,wake)=>{if(!bed||!wake)return null;const[bh,bm]=bed.split(":").map(Number),[wh,wm]=wake.split(":").map(Number);let mins=(wh*60+wm)-(bh*60+bm);if(mins<=0)mins+=1440;return Math.round(mins/30)/2;};
+const setSleepTime=(field,val)=>{const nt={...sleepTimes,[field]:val};setSleepTimes(nt);try{localStorage.setItem("ailvie_sleep_times",JSON.stringify(nt));}catch(e){}const d=computeSleepDur(nt.bed,nt.wake);if(d!=null)setWellness(w=>({...w,sleep:d}));};
 const stepsPct=Math.min(100,(wellness.steps/wellness.stepsGoal)*100);
 const moods=[{v:1,e:"😢",l:lang==="tr"?"Çok Kötü":"Very Bad"},{v:2,e:"😕",l:lang==="tr"?"Kötü":"Bad"},{v:3,e:"😐",l:lang==="tr"?"Normal":"Normal"},{v:4,e:"🙂",l:lang==="tr"?"İyi":"Good"},{v:5,e:"😄",l:lang==="tr"?"Harika":"Great"}];
 return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -2778,8 +2781,15 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{height:10,background:`${mt}20`,borderRadius:5,overflow:"hidden",marginBottom:8}}>
       <div style={{height:"100%",width:`${sleepPct}%`,background:`linear-gradient(90deg,#8b5cf6,#6366f1)`,borderRadius:5,transition:"width .3s"}}/>
     </div>
+    <div style={{display:"flex",gap:8,marginBottom:8}}>
+      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>🛏️ {lang==="tr"?"Yatış":"Bedtime"}</div><input type="time" value={sleepTimes.bed} onChange={e=>setSleepTime("bed",e.target.value)} style={{...IS,padding:"6px 8px",width:"100%"}}/></div>
+      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>☀️ {lang==="tr"?"Kalkış":"Wake"}</div><input type="time" value={sleepTimes.wake} onChange={e=>setSleepTime("wake",e.target.value)} style={{...IS,padding:"6px 8px",width:"100%"}}/></div>
+    </div>
+    {sleepTimes.bed&&sleepTimes.wake&&<div style={{fontSize:fs-2,color:ac,textAlign:"center",marginBottom:6,fontWeight:600}}>{lang==="tr"?"Tahmini süre":"Estimated"}: {computeSleepDur(sleepTimes.bed,sleepTimes.wake)} {lang==="tr"?"saat":"h"} <span style={{color:mt,fontWeight:400}}>({sleepTimes.bed} → {sleepTimes.wake})</span></div>}
+    <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginBottom:4}}>{lang==="tr"?"veya süreyi elle ayarla":"or set duration manually"}</div>
     <input type="range" min="0" max="12" step="0.5" value={wellness.sleep} onChange={e=>setWellness(w=>({...w,sleep:Number(e.target.value)}))} style={{width:"100%"}}/>
     <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:2}}>{wellness.sleep>=7&&wellness.sleep<=9?(lang==="tr"?"✓ İdeal":"✓ Ideal"):wellness.sleep<6?(lang==="tr"?"⚠️ Yetersiz":"⚠️ Insufficient"):wellness.sleep>10?(lang==="tr"?"⚠️ Çok fazla":"⚠️ Too much"):(lang==="tr"?"Orta":"Average")}</div>
+    <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:6,lineHeight:1.4}}>ℹ️ {lang==="tr"?"Yatış/kalkış saatinden hesaplanan tahmini süredir; gerçek uyku evreleri (derin/REM) için giyilebilir cihaz gerekir.":"Estimated from bed/wake times; real sleep stages (deep/REM) need a wearable."}</div>
   </div>
   {/* Steps */}
   <div style={{...CS,border:`1px solid ${sc}33`}}>
