@@ -170,8 +170,8 @@ function computeBPM(samples){
   const bpm=Math.round(60000/(bestLag*dt));
   if(bpm<40||bpm>200)return {ok:false,reason:"out_of_range",fps:Math.round(fps),durationMs:durMs};
   const signalQuality=bestR>0.8?"excellent":bestR>0.65?"good":bestR>0.5?"fair":"poor";
-  // ---- hrvEstimator: only for long (>=45s) & stable measurements; else HRV stays null ----
-  let hrvRmssd=null,hrvSdnn=null,beats=null;
+  // ---- hrvEstimator + respiration: only for long (>=45s) & stable measurements ----
+  let hrvRmssd=null,hrvSdnn=null,beats=null,respRate=null;
   if(durMs>=45000&&bestR>=0.5){
     const std=Math.sqrt(c0.reduce((p,c)=>p+c*c,0)/n)||1;
     const thr=0.35*std, minDist=Math.max(2,Math.round(300/dt)); // >=200bpm spacing
@@ -191,8 +191,21 @@ function computeBPM(samples){
         beats=clean.length;
       }
     }
+    // ---- respiratory rate from PPG amplitude modulation (RIAV), respiratory band ~0.1–0.5 Hz ----
+    if(pk.length>=12){
+      const pt=pk.map(i=>ts[i]), pv=pk.map(i=>c0[i]);
+      const fsr=4, T0=pt[0], T1=pt[pt.length-1], M=Math.floor((T1-T0)/1000*fsr);
+      if(M>=16){
+        const rs=new Array(M);
+        for(let m=0,j=0;m<M;m++){const tm=T0+m*1000/fsr;while(j+1<pt.length&&pt[j+1]<tm)j++;const j2=Math.min(j+1,pt.length-1),t1=pt[j],t2=pt[j2],v1=pv[j],v2=pv[j2];rs[m]=t2>t1?v1+(v2-v1)*(tm-t1)/(t2-t1):v1;}
+        const mm=rs.reduce((p,c)=>p+c,0)/M, rc=rs.map(v=>v-mm);
+        const lo=Math.round(2*fsr), hi=Math.round(10*fsr); let bL=-1,bR=-2; // period 2–10 s => 6–30 br/min
+        for(let lag=lo;lag<=hi&&lag<M-4;lag++){let num=0,e1=0,e2=0;for(let i=0;i+lag<M;i++){num+=rc[i]*rc[i+lag];e1+=rc[i]*rc[i];e2+=rc[i+lag]*rc[i+lag];}const r=num/Math.sqrt((e1*e2)||1);if(r>bR){bR=r;bL=lag;}}
+        if(bL>0&&bR>0.35){const br=Math.round(60/(bL/fsr));if(br>=6&&br<=30)respRate=br;} // only when clearly periodic
+      }
+    }
   }
-  const out={ok:true,bpm,conf:Math.round(bestR*100),quality:signalQuality,signalQuality,fps:Math.round(fps),durationMs:Math.round(durMs),hrvRmssd,hrvSdnn,beats};
+  const out={ok:true,bpm,conf:Math.round(bestR*100),quality:signalQuality,signalQuality,fps:Math.round(fps),durationMs:Math.round(durMs),hrvRmssd,hrvSdnn,beats,respRate};
   if(typeof process!=="undefined"&&process.env&&process.env.NODE_ENV!=="production"){/* rawSignalDebugData in dev only */}
   return out;
 }
@@ -1143,7 +1156,7 @@ appts.forEach(a=>{
 },[now,meds,lang,calAlarms,calNotes,appts]);
 
 // Health
-const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0,steps:0,sleep:0,spo2:0,calories:0,restPulse:0,hrvRmssd:0,hrvSdnn:0});
+const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0,steps:0,sleep:0,spo2:0,calories:0,restPulse:0,hrvRmssd:0,hrvSdnn:0,resp:0});
 const[pulseM,setPulseM]=useState(null); // {phase:'init'|'measuring'|'done'|'error',progress,bpm,quality,msg}
 const pulseStreamRef=useRef(null),pulseRafRef=useRef(null),pulseFromChatRef=useRef(false),pulseHrvRef=useRef(false);
 const[editH,setEditH]=useState(null);
@@ -2581,7 +2594,7 @@ const finishPulse=(samples)=>{
   if(res&&res.ok){
     const wantHrv=pulseHrvRef.current;
     const hrvNote=(wantHrv&&res.hrvRmssd==null)?(res.durationMs<45000?"short":"unstable"):null;
-    setHd(p=>({...p,pulse:res.bpm,hrvRmssd:res.hrvRmssd!=null?res.hrvRmssd:p.hrvRmssd,hrvSdnn:res.hrvSdnn!=null?res.hrvSdnn:p.hrvSdnn}));setPulseM({phase:"done",bpm:res.bpm,quality:res.quality,conf:res.conf,fps:res.fps,hrvRmssd:res.hrvRmssd,hrvSdnn:res.hrvSdnn,beats:res.beats,wantHrv,hrvNote});haptic([40,60,40]);
+    setHd(p=>({...p,pulse:res.bpm,hrvRmssd:res.hrvRmssd!=null?res.hrvRmssd:p.hrvRmssd,hrvSdnn:res.hrvSdnn!=null?res.hrvSdnn:p.hrvSdnn,resp:res.respRate!=null?res.respRate:p.resp}));setPulseM({phase:"done",bpm:res.bpm,quality:res.quality,conf:res.conf,fps:res.fps,hrvRmssd:res.hrvRmssd,hrvSdnn:res.hrvSdnn,beats:res.beats,respRate:res.respRate,wantHrv,hrvNote});haptic([40,60,40]);
     notify(lang==="tr"?`❤️ Nabız: ${res.bpm} bpm`:`❤️ Pulse: ${res.bpm} bpm`);
     if(fromChat){const q=res.quality==="excellent"?(lang==="tr"?"mükemmel":"excellent"):res.quality==="good"?(lang==="tr"?"iyi":"good"):res.quality==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük":"poor");setTimeout(()=>{setPulseM(null);goTo("chat");sendChat(lang==="tr"?`(Ölçüm tamamlandı) Nabzım ${res.bpm} bpm ölçüldü (sinyal kalitesi: ${q}). Bunu benim için yorumlar mısın?`:`(Measurement done) My pulse measured ${res.bpm} bpm (signal quality: ${q}). Can you interpret this for me?`);},700);}
   }else{
@@ -2683,6 +2696,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       :<div onClick={()=>{setEditH("pulse");setTmpH(hd.pulse>0?String(hd.pulse):"");}} style={{cursor:"pointer",fontWeight:700,fontSize:fs+2,color:hd.pulse>0?tc:mt,marginTop:2}}>{hd.pulse>0?`${hd.pulse} ${t.bpm}`:t.tap}</div>}
       {hd.pulse>0&&<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Referans":"Ref"}: {pulseRef.label} bpm {patAge?`(${patAge} ${t.age})`:""}</div>}
       {hd.hrvRmssd>0&&<div style={{fontSize:fs-3,color:ac,marginTop:2}}>HRV · RMSSD {hd.hrvRmssd} ms · SDNN {hd.hrvSdnn} ms</div>}
+      {hd.resp>0&&<div style={{fontSize:fs-3,color:ac,marginTop:2}}>{lang==="tr"?"Solunum":"Resp"}: {hd.resp} {lang==="tr"?"/dk (tahmini)":"/min (est.)"}</div>}
     </div>
     <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
       {hd.pulse>0&&<span style={{padding:"3px 8px",borderRadius:6,fontSize:fs-3,fontWeight:600,background:pulseOk?`${sc}22`:`${dg}22`,color:pulseOk?sc:dg}}>{pulseOk?t.norm:t.caut}</span>}
@@ -3659,6 +3673,7 @@ return (
               <div style={{fontSize:40,fontWeight:800,color:dg}}>{pulseM.bpm} <span style={{fontSize:fs}}>{t.bpm}</span></div>
               {(()=>{const q=pulseM.quality;const L=q==="excellent"?(lang==="tr"?"mükemmel ✓✓":"excellent ✓✓"):q==="good"?(lang==="tr"?"iyi ✓":"good ✓"):q==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük — tekrar dene":"poor — retry");return <div style={{fontSize:fs-2,color:mt,marginTop:4}}>{lang==="tr"?"Sinyal kalitesi":"Signal quality"}: {L} · {lang==="tr"?"güven":"conf"} %{pulseM.conf}{pulseM.fps?` · ${pulseM.fps} fps`:""}</div>;})()}
               {pulseM.hrvRmssd!=null&&<div style={{fontSize:fs-2,color:ac,marginTop:6}}>HRV · RMSSD {pulseM.hrvRmssd} ms · SDNN {pulseM.hrvSdnn} ms{pulseM.beats?` · ${pulseM.beats} ${lang==="tr"?"atım":"beats"}`:""}</div>}
+              {pulseM.respRate!=null&&<div style={{fontSize:fs-2,color:ac,marginTop:4}}>{lang==="tr"?"Solunum (tahmini)":"Respiration (est.)"}: {pulseM.respRate} {lang==="tr"?"/dk":"/min"}</div>}
               {pulseM.wantHrv&&pulseM.hrvRmssd==null&&<div style={{fontSize:fs-3,color:mt,marginTop:6}}>{pulseM.hrvNote==="short"?(lang==="tr"?"HRV için ≥45 sn iyi sinyal gerekir.":"HRV needs ≥45s of good signal."):(lang==="tr"?"HRV: yeterli/kararlı atım bulunamadı — sabit tutup tekrar dene.":"HRV: not enough stable beats — hold still and retry.")}</div>}
               <div style={{fontSize:fs-2,color:sc,marginTop:6}}>{lang==="tr"?"Sağlık verilerine kaydedildi. AILVIE yorumluyor…":"Saved. AILVIE is interpreting…"}</div>
             </>}
