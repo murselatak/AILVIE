@@ -1159,6 +1159,8 @@ appts.forEach(a=>{
 const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0,steps:0,sleep:0,spo2:0,calories:0,restPulse:0,hrvRmssd:0,hrvSdnn:0,resp:0});
 const[pulseM,setPulseM]=useState(null); // {phase:'init'|'measuring'|'done'|'error',progress,bpm,quality,msg}
 const[bleHr,setBleHr]=useState(null); // Web Bluetooth HR: {connected,bpm,name}|{error}|{connecting,name}|null
+const[soundSess,setSoundSess]=useState(null); // on-device audio session: {active,cough,snore,other,level}|{error}|{done,...}|null
+const soundRef=useRef({ctx:null,stream:null,raf:null,base:null,inEvt:false,evtStart:0,evtLow:0,evtHigh:0,evtPeak:0,last:0,cough:0,snore:0,other:0,fc:0});
 const pulseStreamRef=useRef(null),pulseRafRef=useRef(null),pulseFromChatRef=useRef(false),pulseHrvRef=useRef(false),bleRef=useRef(null);
 const[editH,setEditH]=useState(null);
 const[tmpH,setTmpH]=useState("");
@@ -2667,6 +2669,46 @@ const connectBleHr=async()=>{
   }catch(e){setBleHr({error:(e&&e.name==="NotFoundError")?(lang==="tr"?"Cihaz seçilmedi.":"No device selected."):(lang==="tr"?"Bağlanılamadı. Cihazın açık ve eşleşme modunda olduğundan emin olun.":"Couldn't connect. Make sure the device is on and in pairing mode.")});}
 };
 const disconnectBle=()=>{try{if(bleRef.current&&bleRef.current.gatt&&bleRef.current.gatt.connected)bleRef.current.gatt.disconnect();}catch(e){}bleRef.current=null;setBleHr(null);};
+// ---- Cough/snore: on-device audio session (foreground only, no recording/upload; rough heuristic) ----
+const stopSoundSession=()=>{
+  const S=soundRef.current;
+  try{if(S.raf)cancelAnimationFrame(S.raf);}catch(e){}
+  try{if(S.stream)S.stream.getTracks().forEach(t=>t.stop());}catch(e){}
+  try{if(S.ctx&&S.ctx.state!=="closed")S.ctx.close();}catch(e){}
+  S.raf=null;S.stream=null;S.ctx=null;
+  setSoundSess(s=>(s&&(s.active))?{active:false,done:true,cough:S.cough,snore:S.snore,other:S.other}:s);
+};
+const startSoundSession=async()=>{
+  if(soundSess&&soundSess.active)return;
+  if(typeof navigator==="undefined"||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!(window.AudioContext||window.webkitAudioContext)){setSoundSess({error:lang==="tr"?"Bu tarayıcı ses analizini desteklemiyor.":"This browser doesn't support audio analysis."});return;}
+  let stream;
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true});}
+  catch(e){setSoundSess({error:lang==="tr"?"Mikrofon izni gerekli. İzin verip tekrar deneyin.":"Microphone permission needed. Allow it and retry."});return;}
+  const Ctx=window.AudioContext||window.webkitAudioContext;const ctx=new Ctx();
+  const src=ctx.createMediaStreamSource(stream);const an=ctx.createAnalyser();an.fftSize=2048;src.connect(an);
+  const binHz=ctx.sampleRate/an.fftSize;const loBin=Math.round(500/binHz),hiBin=Math.round(4000/binHz);
+  const freq=new Uint8Array(an.frequencyBinCount);const time=new Uint8Array(an.fftSize);
+  const S=soundRef.current;Object.assign(S,{ctx,stream,analyser:an,base:null,inEvt:false,evtStart:0,evtLow:0,evtHigh:0,evtPeak:0,last:0,cough:0,snore:0,other:0,fc:0});
+  setSoundSess({active:true,cough:0,snore:0,other:0,level:0});
+  const loop=()=>{
+    an.getByteTimeDomainData(time);an.getByteFrequencyData(freq);
+    let sum=0;for(let i=0;i<time.length;i++){const v=(time[i]-128)/128;sum+=v*v;}
+    const rms=Math.sqrt(sum/time.length);const level=Math.max(0,Math.round(20*Math.log10(rms+1e-6)+60)); // ~0..60
+    let low=0,high=0;for(let i=1;i<freq.length;i++){if(i<=loBin)low+=freq[i];else if(i<=hiBin)high+=freq[i];}
+    if(S.base==null)S.base=level;else S.base=S.base*0.99+level*0.01; // adaptive ambient baseline
+    const now=performance.now();const over=level>S.base+12;
+    if(over){ if(!S.inEvt&&now-S.last>400){S.inEvt=true;S.evtStart=now;S.evtLow=0;S.evtHigh=0;S.evtPeak=0;} if(S.inEvt){S.evtLow+=low;S.evtHigh+=high;if(level>S.evtPeak)S.evtPeak=level;} }
+    else if(S.inEvt){
+      const dur=now-S.evtStart,lowRatio=S.evtLow/((S.evtLow+S.evtHigh)||1);S.inEvt=false;S.last=now;
+      if(dur>250&&lowRatio>0.6)S.snore++; else if(S.evtPeak>S.base+18||dur<=250)S.cough++; else S.other++; // rough heuristic
+      setSoundSess(s=>s&&s.active?{...s,cough:S.cough,snore:S.snore,other:S.other}:s);
+    }
+    if((S.fc=(S.fc+1)%6)===0)setSoundSess(s=>s&&s.active?{...s,level}:s); // throttle level UI
+    S.raf=requestAnimationFrame(loop);
+  };
+  S.raf=requestAnimationFrame(loop);
+};
+useEffect(()=>()=>{const S=soundRef.current;try{if(S.raf)cancelAnimationFrame(S.raf);}catch(e){}try{if(S.stream)S.stream.getTracks().forEach(t=>t.stop());}catch(e){}try{if(S.ctx&&S.ctx.state!=="closed")S.ctx.close();}catch(e){}},[]);
 useEffect(()=>()=>{try{if(bleRef.current&&bleRef.current.gatt&&bleRef.current.gatt.connected)bleRef.current.gatt.disconnect();}catch(e){}},[]);
 useEffect(()=>()=>stopPulseStream(),[]);
 const renderHealth=()=>{
@@ -2754,6 +2796,16 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       {hd.bpS>0&&<span style={{padding:"4px 10px",borderRadius:8,fontSize:fs-2,fontWeight:600,background:hd.bpS>=90&&hd.bpS<=140?`${sc}22`:`${dg}22`,color:hd.bpS>=90&&hd.bpS<=140?sc:dg}}>{hd.bpS>=90&&hd.bpS<=140?t.norm:t.caut}</span>}
     </div>
     {hd.bpS>0&&<div style={{fontSize:fs-3,color:mt,marginTop:4}}>{lang==="tr"?"Referans: 90-120 / 60-80 mmHg":"Ref: 90-120 / 60-80 mmHg"}</div>}
+  </div>
+  <div style={CS}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:22}}>🎙️</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Öksürük / Horlama":"Cough / Snore"}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"ses oturumu":"audio session"}</span></span></div>
+    {soundSess&&soundSess.error&&<div style={{fontSize:fs-3,color:dg,marginBottom:6,lineHeight:1.4}}>{soundSess.error}</div>}
+    {soundSess&&(soundSess.active||soundSess.done)&&<div style={{display:"flex",gap:8,justifyContent:"space-around",marginBottom:8}}>
+      {[["cough",dg,lang==="tr"?"öksürük~":"cough~"],["snore",ac,lang==="tr"?"horlama~":"snore~"],["other",mt,lang==="tr"?"diğer ses":"other"]].map(([k,col,lab])=><div key={k} style={{textAlign:"center"}}><div style={{fontWeight:800,fontSize:fs+4,color:col}}>{soundSess[k]||0}</div><div style={{fontSize:fs-3,color:mt}}>{lab}</div></div>)}
+    </div>}
+    {soundSess&&soundSess.active&&<div style={{height:8,borderRadius:4,background:`${mt}33`,overflow:"hidden",marginBottom:8}}><div style={{height:"100%",width:`${Math.min(100,(soundSess.level||0)*1.7)}%`,background:sc,transition:"width .1s"}}/></div>}
+    <button onClick={soundSess&&soundSess.active?stopSoundSession:startSoundSession} style={{...BP,width:"100%",padding:"9px",background:soundSess&&soundSess.active?dg:`linear-gradient(135deg,${ac},${a2})`}}>{soundSess&&soundSess.active?(lang==="tr"?"⏹ Durdur":"⏹ Stop"):(lang==="tr"?"🎙️ Dinlemeyi Başlat":"🎙️ Start Listening")}</button>
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>🔒 {lang==="tr"?"Ses yalnızca cihazınızda işlenir; kaydedilmez/gönderilmez. Sadece uygulama ve ekran açıkken çalışır. Kaba bir tahmindir, tıbbi tanı değildir — gün boyu/arka planda güvenilir algılama native uygulama gerektirir.":"Audio is processed only on your device; never recorded or sent. Works only while the app & screen are on. This is a rough estimate, not a medical diagnosis — reliable all-night detection needs a native app."}</div>
   </div>
   {/* Daily Wellness Tracking */}
   <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🌱 {lang==="tr"?"Günlük Sağlık Takibi":"Daily Wellness Tracking"}</div>
