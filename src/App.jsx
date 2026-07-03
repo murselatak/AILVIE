@@ -1158,7 +1158,8 @@ appts.forEach(a=>{
 // Health
 const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0,steps:0,sleep:0,spo2:0,calories:0,restPulse:0,hrvRmssd:0,hrvSdnn:0,resp:0});
 const[pulseM,setPulseM]=useState(null); // {phase:'init'|'measuring'|'done'|'error',progress,bpm,quality,msg}
-const pulseStreamRef=useRef(null),pulseRafRef=useRef(null),pulseFromChatRef=useRef(false),pulseHrvRef=useRef(false);
+const[bleHr,setBleHr]=useState(null); // Web Bluetooth HR: {connected,bpm,name}|{error}|{connecting,name}|null
+const pulseStreamRef=useRef(null),pulseRafRef=useRef(null),pulseFromChatRef=useRef(false),pulseHrvRef=useRef(false),bleRef=useRef(null);
 const[editH,setEditH]=useState(null);
 const[tmpH,setTmpH]=useState("");
 const[wellness,setWellness]=useState({water:0,sleep:0,mood:0,steps:0,exercise:0,waterGoal:8,sleepGoal:8,stepsGoal:10000});
@@ -2646,6 +2647,26 @@ const startPulseMeasure=async(fromChat,hrvMode)=>{
   pulseRafRef.current=requestAnimationFrame(tick);
 };
 const closePulse=()=>{stopPulseStream();setPulseM(null);};
+// ---- External device: Web Bluetooth heart-rate monitor (standard Heart Rate Service 0x180D) ----
+const connectBleHr=async()=>{
+  if(typeof navigator==="undefined"||!navigator.bluetooth){setBleHr({error:lang==="tr"?"Bu tarayıcı/cihaz Web Bluetooth desteklemiyor (ör. iPhone Safari). Chrome/Android'de deneyin.":"This browser/device doesn't support Web Bluetooth (e.g. iPhone Safari). Try Chrome on Android."});return;}
+  try{
+    const dev=await navigator.bluetooth.requestDevice({filters:[{services:["heart_rate"]}]});
+    bleRef.current=dev;setBleHr({connecting:true,name:dev.name||(lang==="tr"?"Cihaz":"Device")});
+    dev.addEventListener("gattserverdisconnected",()=>setBleHr(b=>(b&&!b.error)?{...b,connected:false,connecting:false}:b));
+    const server=await dev.gatt.connect();
+    const svc=await server.getPrimaryService("heart_rate");
+    const ch=await svc.getCharacteristic("heart_rate_measurement");
+    await ch.startNotifications();
+    ch.addEventListener("characteristicvaluechanged",(e)=>{
+      const v=e.target.value;const flags=v.getUint8(0);const bpm=(flags&0x1)?v.getUint16(1,true):v.getUint8(1); // real device reading
+      if(bpm>0&&bpm<250){setBleHr({connected:true,bpm,name:dev.name||(lang==="tr"?"Cihaz":"Device")});setHd(p=>({...p,pulse:bpm}));}
+    });
+    setBleHr({connected:true,bpm:null,name:dev.name||(lang==="tr"?"Cihaz":"Device")});
+  }catch(e){setBleHr({error:(e&&e.name==="NotFoundError")?(lang==="tr"?"Cihaz seçilmedi.":"No device selected."):(lang==="tr"?"Bağlanılamadı. Cihazın açık ve eşleşme modunda olduğundan emin olun.":"Couldn't connect. Make sure the device is on and in pairing mode.")});}
+};
+const disconnectBle=()=>{try{if(bleRef.current&&bleRef.current.gatt&&bleRef.current.gatt.connected)bleRef.current.gatt.disconnect();}catch(e){}bleRef.current=null;setBleHr(null);};
+useEffect(()=>()=>{try{if(bleRef.current&&bleRef.current.gatt&&bleRef.current.gatt.connected)bleRef.current.gatt.disconnect();}catch(e){}},[]);
 useEffect(()=>()=>stopPulseStream(),[]);
 const renderHealth=()=>{
 const pulseRef=(()=>{
@@ -2707,6 +2728,19 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <button onClick={()=>startPulseMeasure()} style={{...BP,padding:"5px 9px",fontSize:fs-3,whiteSpace:"nowrap",background:`linear-gradient(135deg,${dg},#c0392b)`}}>📷 {lang==="tr"?"Ölç":"Measure"}</button>
       <button onClick={()=>startPulseMeasure(false,true)} style={{...BP,padding:"5px 9px",fontSize:fs-3,whiteSpace:"nowrap",background:`linear-gradient(135deg,${a2},${ac})`}}>❤️ HRV<span style={{fontSize:fs-5,opacity:0.8}}> 60s</span></button>
     </div>
+  </div>
+  <div style={{...CS,display:"flex",alignItems:"center",gap:10}}>
+    <span style={{fontSize:22}}>🔗</span>
+    <div style={{flex:1,minWidth:0}}>
+      <div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Harici Cihaz — Bluetooth nabız":"External Device — Bluetooth HR"}</div>
+      <div style={{fontWeight:700,fontSize:fs+1,marginTop:2,color:(bleHr&&bleHr.connected)?sc:tc}}>
+        {bleHr&&bleHr.connected?(bleHr.bpm?`${bleHr.bpm} ${t.bpm} · ${bleHr.name}`:(lang==="tr"?`Bağlı: ${bleHr.name}`:`Connected: ${bleHr.name}`)):bleHr&&bleHr.connecting?(lang==="tr"?"Bağlanıyor…":"Connecting…"):(lang==="tr"?"Bağlı değil":"Not connected")}
+      </div>
+      {bleHr&&bleHr.error&&<div style={{fontSize:fs-3,color:dg,marginTop:2,lineHeight:1.4}}>{bleHr.error}</div>}
+    </div>
+    {(bleHr&&(bleHr.connected||bleHr.connecting))
+      ?<button onClick={disconnectBle} style={{...BP,padding:"5px 10px",fontSize:fs-3,background:mt}}>{lang==="tr"?"Kes":"Disconnect"}</button>
+      :<button onClick={connectBleHr} style={{...BP,padding:"5px 10px",fontSize:fs-3,background:`linear-gradient(135deg,${ac},${a2})`}}>🔗 {lang==="tr"?"Bağlan":"Connect"}</button>}
   </div>
   <div style={CS}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:22}}>🩺</span><span style={{fontWeight:700,fontSize:fs+1}}>{t.bp} (SYS / DIA)</span></div>
@@ -2914,7 +2948,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     </div>
     <div style={{marginTop:8,padding:"7px 9px",borderRadius:7,background:`${ac}08`,fontSize:fs-3,color:mt,display:"flex",alignItems:"center",gap:6}}>
       <span style={{fontSize:14}}>📲</span>
-      <span>{lang==="tr"?"Şimdi manuel girin. Mobil uygulamada Apple Health & Google Health Connect ile otomatik senkronize olacak.":lang==="de"?"Jetzt manuell. In der mobilen App automatische Synchronisierung.":lang==="es"?"Manual ahora. Sincronización automática en la app móvil.":lang==="ru"?"Сейчас вручную. Автосинхронизация в мобильном приложении.":lang==="ar"?"يدوي الآن. مزامنة تلقائية في تطبيق الجوال.":"Manual now. Auto-syncs via Apple Health & Google Health Connect in the mobile app."}</span>
+      <span>{lang==="tr"?"🍎 Apple Health · 🤖 Health Connect: web sürümünde bağlanamaz (native API). Native uygulamada otomatik senkron gelecek. Şimdilik manuel girin veya Bluetooth cihaz bağlayın.":lang==="de"?"🍎 Apple Health · 🤖 Health Connect: im Web nicht verfügbar (native API). Autosync in der nativen App. Vorerst manuell eingeben oder Bluetooth-Gerät verbinden.":lang==="es"?"🍎 Apple Health · 🤖 Health Connect: no disponible en la web (API nativa). Autosincronización en la app nativa. Por ahora, manual o conecta un dispositivo Bluetooth.":lang==="ru"?"🍎 Apple Health · 🤖 Health Connect: недоступно в вебе (нативный API). Автосинхронизация в нативном приложении. Пока вручную или подключите Bluetooth.":lang==="ar"?"🍎 Apple Health · 🤖 Health Connect: غير متاح على الويب (واجهة أصلية). مزامنة تلقائية في التطبيق الأصلي. حالياً يدوياً أو وصّل جهاز بلوتوث.":"🍎 Apple Health · 🤖 Health Connect: not available on web (native API). Auto-sync in the native app. For now, enter manually or connect a Bluetooth device."}</span>
     </div>
   </div>
 </div>);};
