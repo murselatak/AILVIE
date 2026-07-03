@@ -170,7 +170,31 @@ function computeBPM(samples){
   const bpm=Math.round(60000/(bestLag*dt));
   if(bpm<40||bpm>200)return {ok:false,reason:"out_of_range",fps:Math.round(fps),durationMs:durMs};
   const signalQuality=bestR>0.8?"excellent":bestR>0.65?"good":bestR>0.5?"fair":"poor";
-  return {ok:true,bpm,conf:Math.round(bestR*100),quality:signalQuality,signalQuality,fps:Math.round(fps),durationMs:Math.round(durMs)};
+  // ---- hrvEstimator: only for long (>=45s) & stable measurements; else HRV stays null ----
+  let hrvRmssd=null,hrvSdnn=null,beats=null;
+  if(durMs>=45000&&bestR>=0.5){
+    const std=Math.sqrt(c0.reduce((p,c)=>p+c*c,0)/n)||1;
+    const thr=0.35*std, minDist=Math.max(2,Math.round(300/dt)); // >=200bpm spacing
+    const pk=[];
+    for(let i=1;i<n-1;i++){ if(c0[i]>thr&&c0[i]>=c0[i-1]&&c0[i]>c0[i+1]){ if(pk.length&&(i-pk[pk.length-1])<minDist){ if(c0[i]>c0[pk[pk.length-1]])pk[pk.length-1]=i; } else pk.push(i);} }
+    let rr=[];for(let k=1;k<pk.length;k++)rr.push(ts[pk[k]]-ts[pk[k-1]]);
+    const inRange=rr.filter(x=>x>=300&&x<=1500);
+    if(inRange.length>=20){
+      const med=[...inRange].sort((a,b)=>a-b)[Math.floor(inRange.length/2)];
+      const clean=inRange.filter(x=>Math.abs(x-med)<=0.25*med); // reject ectopic/motion artifacts
+      const artifact=1-clean.length/inRange.length;
+      if(clean.length>=25&&artifact<0.25){ // enough consistent beats
+        const meanRR=clean.reduce((p,c)=>p+c,0)/clean.length;
+        hrvSdnn=Math.round(Math.sqrt(clean.reduce((p,c)=>p+(c-meanRR)*(c-meanRR),0)/clean.length));
+        let sq=0;for(let k=1;k<clean.length;k++){const d=clean[k]-clean[k-1];sq+=d*d;}
+        hrvRmssd=Math.round(Math.sqrt(sq/(clean.length-1)));
+        beats=clean.length;
+      }
+    }
+  }
+  const out={ok:true,bpm,conf:Math.round(bestR*100),quality:signalQuality,signalQuality,fps:Math.round(fps),durationMs:Math.round(durMs),hrvRmssd,hrvSdnn,beats};
+  if(typeof process!=="undefined"&&process.env&&process.env.NODE_ENV!=="production"){/* rawSignalDebugData in dev only */}
+  return out;
 }
 if(typeof window!=="undefined")window.__ppgBPM=computeBPM;
 
@@ -1119,9 +1143,9 @@ appts.forEach(a=>{
 },[now,meds,lang,calAlarms,calNotes,appts]);
 
 // Health
-const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0,steps:0,sleep:0,spo2:0,calories:0,restPulse:0});
+const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0,steps:0,sleep:0,spo2:0,calories:0,restPulse:0,hrvRmssd:0,hrvSdnn:0});
 const[pulseM,setPulseM]=useState(null); // {phase:'init'|'measuring'|'done'|'error',progress,bpm,quality,msg}
-const pulseStreamRef=useRef(null),pulseRafRef=useRef(null),pulseFromChatRef=useRef(false);
+const pulseStreamRef=useRef(null),pulseRafRef=useRef(null),pulseFromChatRef=useRef(false),pulseHrvRef=useRef(false);
 const[editH,setEditH]=useState(null);
 const[tmpH,setTmpH]=useState("");
 const[wellness,setWellness]=useState({water:0,sleep:0,mood:0,steps:0,exercise:0,waterGoal:8,sleepGoal:8,stepsGoal:10000});
@@ -2555,7 +2579,9 @@ const finishPulse=(samples)=>{
   const res=computeBPM(samples);
   const fromChat=pulseFromChatRef.current;pulseFromChatRef.current=false;
   if(res&&res.ok){
-    setHd(p=>({...p,pulse:res.bpm}));setPulseM({phase:"done",bpm:res.bpm,quality:res.quality,conf:res.conf,fps:res.fps});haptic([40,60,40]);
+    const wantHrv=pulseHrvRef.current;
+    const hrvNote=(wantHrv&&res.hrvRmssd==null)?(res.durationMs<45000?"short":"unstable"):null;
+    setHd(p=>({...p,pulse:res.bpm,hrvRmssd:res.hrvRmssd!=null?res.hrvRmssd:p.hrvRmssd,hrvSdnn:res.hrvSdnn!=null?res.hrvSdnn:p.hrvSdnn}));setPulseM({phase:"done",bpm:res.bpm,quality:res.quality,conf:res.conf,fps:res.fps,hrvRmssd:res.hrvRmssd,hrvSdnn:res.hrvSdnn,beats:res.beats,wantHrv,hrvNote});haptic([40,60,40]);
     notify(lang==="tr"?`❤️ Nabız: ${res.bpm} bpm`:`❤️ Pulse: ${res.bpm} bpm`);
     if(fromChat){const q=res.quality==="excellent"?(lang==="tr"?"mükemmel":"excellent"):res.quality==="good"?(lang==="tr"?"iyi":"good"):res.quality==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük":"poor");setTimeout(()=>{setPulseM(null);goTo("chat");sendChat(lang==="tr"?`(Ölçüm tamamlandı) Nabzım ${res.bpm} bpm ölçüldü (sinyal kalitesi: ${q}). Bunu benim için yorumlar mısın?`:`(Measurement done) My pulse measured ${res.bpm} bpm (signal quality: ${q}). Can you interpret this for me?`);},700);}
   }else{
@@ -2578,10 +2604,10 @@ const finishPulse=(samples)=>{
     setPulseM({phase:"error",reason,msg:M[reason]||(lang==="tr"?"Sinyal kalitesi yetersiz — ölçüm alınamadı. Parmağını arka kameraya (ve flaşa) tam kapat, sabit tut ve tekrar dene.":"Signal quality insufficient — measurement failed. Cover the rear camera (and flash) fully, hold still, and try again.")});
   }
 };
-const startPulseMeasure=async(fromChat)=>{
+const startPulseMeasure=async(fromChat,hrvMode)=>{
   if(pulseM&&(pulseM.phase==="measuring"||pulseM.phase==="init"))return;
-  pulseFromChatRef.current=!!fromChat;
-  setPulseM({phase:"init",progress:0});
+  pulseFromChatRef.current=!!fromChat;pulseHrvRef.current=!!hrvMode;
+  setPulseM({phase:"init",progress:0,hrv:!!hrvMode});
   let stream;
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:320},height:{ideal:240}},audio:false});}
   catch(e){setPulseM({phase:"error",msg:lang==="tr"?"Kamera izni gerekli. İzin verip tekrar deneyin.":"Camera permission needed. Allow it and retry."});return;}
@@ -2592,8 +2618,8 @@ const startPulseMeasure=async(fromChat)=>{
   const video=document.createElement("video");video.setAttribute("playsinline","");video.muted=true;video.srcObject=stream;
   try{await video.play();}catch(e){}
   const cv=document.createElement("canvas");cv.width=64;cv.height=48;const ctx=cv.getContext("2d",{willReadFrequently:true});
-  const samples=[];const dur=20000;const start=performance.now();
-  setPulseM({phase:"measuring",progress:0,torch:torchOn});
+  const samples=[];const dur=hrvMode?60000:20000;const start=performance.now();
+  setPulseM({phase:"measuring",progress:0,torch:torchOn,hrv:!!hrvMode,dur});
   const tick=()=>{
     const now=performance.now();const el=now-start;
     try{ctx.drawImage(video,0,0,64,48);const d=ctx.getImageData(16,12,32,24).data;let r=0,g=0,b=0,c=0;for(let i=0;i<d.length;i+=4){r+=d[i];g+=d[i+1];b+=d[i+2];c++;}samples.push({t:now,r:r/c,g:g/c,b:b/c});}catch(e){}
@@ -2656,10 +2682,12 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       {editH==="pulse"?<div style={{display:"flex",gap:6,alignItems:"center",marginTop:3}}><input type="number" autoFocus value={tmpH} onChange={e=>setTmpH(e.target.value)} style={{...IS,width:80,padding:"6px 8px",fontWeight:700}} onKeyDown={e=>{if(e.key==="Enter"){setHd(p=>({...p,pulse:Number(tmpH)}));setEditH(null);}}}/><span style={{fontSize:fs-2,color:mt}}>{t.bpm}</span><button onClick={()=>{setHd(p=>({...p,pulse:Number(tmpH)}));setEditH(null);}} style={{...BP,padding:"5px 10px"}}>✓</button></div>
       :<div onClick={()=>{setEditH("pulse");setTmpH(hd.pulse>0?String(hd.pulse):"");}} style={{cursor:"pointer",fontWeight:700,fontSize:fs+2,color:hd.pulse>0?tc:mt,marginTop:2}}>{hd.pulse>0?`${hd.pulse} ${t.bpm}`:t.tap}</div>}
       {hd.pulse>0&&<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Referans":"Ref"}: {pulseRef.label} bpm {patAge?`(${patAge} ${t.age})`:""}</div>}
+      {hd.hrvRmssd>0&&<div style={{fontSize:fs-3,color:ac,marginTop:2}}>HRV · RMSSD {hd.hrvRmssd} ms · SDNN {hd.hrvSdnn} ms</div>}
     </div>
     <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
       {hd.pulse>0&&<span style={{padding:"3px 8px",borderRadius:6,fontSize:fs-3,fontWeight:600,background:pulseOk?`${sc}22`:`${dg}22`,color:pulseOk?sc:dg}}>{pulseOk?t.norm:t.caut}</span>}
       <button onClick={()=>startPulseMeasure()} style={{...BP,padding:"5px 9px",fontSize:fs-3,whiteSpace:"nowrap",background:`linear-gradient(135deg,${dg},#c0392b)`}}>📷 {lang==="tr"?"Ölç":"Measure"}</button>
+      <button onClick={()=>startPulseMeasure(false,true)} style={{...BP,padding:"5px 9px",fontSize:fs-3,whiteSpace:"nowrap",background:`linear-gradient(135deg,${a2},${ac})`}}>❤️ HRV<span style={{fontSize:fs-5,opacity:0.8}}> 60s</span></button>
     </div>
   </div>
   <div style={CS}>
@@ -3619,23 +3647,25 @@ return (
         {pulseM&&<div style={{position:"fixed",inset:0,zIndex:9998,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={pulseM.phase!=="measuring"&&pulseM.phase!=="init"?closePulse:undefined}>
           <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:360,borderRadius:18,padding:22,textAlign:"center",border:`1px solid ${dg}`}}>
             <div style={{fontSize:44,marginBottom:8,animation:(pulseM.phase==="measuring")?"pulse 1s infinite":"none"}}>❤️</div>
-            <div style={{fontWeight:700,fontSize:fs+2,marginBottom:6}}>{lang==="tr"?"Nabız Ölçümü":"Pulse Measurement"}</div>
+            <div style={{fontWeight:700,fontSize:fs+2,marginBottom:6}}>{pulseM.hrv?(lang==="tr"?"Nabız + HRV":"Pulse + HRV"):(lang==="tr"?"Nabız Ölçümü":"Pulse Measurement")}</div>
             {(pulseM.phase==="init")&&<div style={{color:mt,fontSize:fs-1}}>{lang==="tr"?"Kamera açılıyor…":"Opening camera…"}</div>}
             {pulseM.phase==="measuring"&&<>
               <div style={{fontSize:fs-2,color:mt,marginBottom:10,lineHeight:1.5}}>{lang==="tr"?"Parmağının ucunu arka kameraya ve flaşa hafifçe kapat, sabit tut.":"Gently cover the rear camera and flash with your fingertip, hold still."}</div>
               <div style={{height:10,borderRadius:6,background:`${mt}33`,overflow:"hidden"}}><div style={{height:"100%",width:`${pulseM.progress||0}%`,background:`linear-gradient(90deg,${dg},#c0392b)`,transition:"width .2s"}}/></div>
-              <div style={{fontSize:fs-2,color:mt,marginTop:6}}>%{pulseM.progress||0} · {Math.max(0,Math.ceil((100-(pulseM.progress||0))/100*20))} {lang==="tr"?"sn":"s"}</div>
+              <div style={{fontSize:fs-2,color:mt,marginTop:6}}>%{pulseM.progress||0} · {Math.max(0,Math.ceil((100-(pulseM.progress||0))/100*((pulseM.dur||20000)/1000)))} {lang==="tr"?"sn":"s"}</div>
               <div style={{fontSize:fs-3,color:mt,marginTop:6}}>{pulseM.torch?(lang==="tr"?"🔦 Flaş açık":"🔦 Flash on"):(lang==="tr"?"🔦 Flaş yok — iyi ışıkta ölçün":"🔦 No flash — measure in good light")}</div>
             </>}
             {pulseM.phase==="done"&&<>
               <div style={{fontSize:40,fontWeight:800,color:dg}}>{pulseM.bpm} <span style={{fontSize:fs}}>{t.bpm}</span></div>
               {(()=>{const q=pulseM.quality;const L=q==="excellent"?(lang==="tr"?"mükemmel ✓✓":"excellent ✓✓"):q==="good"?(lang==="tr"?"iyi ✓":"good ✓"):q==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük — tekrar dene":"poor — retry");return <div style={{fontSize:fs-2,color:mt,marginTop:4}}>{lang==="tr"?"Sinyal kalitesi":"Signal quality"}: {L} · {lang==="tr"?"güven":"conf"} %{pulseM.conf}{pulseM.fps?` · ${pulseM.fps} fps`:""}</div>;})()}
+              {pulseM.hrvRmssd!=null&&<div style={{fontSize:fs-2,color:ac,marginTop:6}}>HRV · RMSSD {pulseM.hrvRmssd} ms · SDNN {pulseM.hrvSdnn} ms{pulseM.beats?` · ${pulseM.beats} ${lang==="tr"?"atım":"beats"}`:""}</div>}
+              {pulseM.wantHrv&&pulseM.hrvRmssd==null&&<div style={{fontSize:fs-3,color:mt,marginTop:6}}>{pulseM.hrvNote==="short"?(lang==="tr"?"HRV için ≥45 sn iyi sinyal gerekir.":"HRV needs ≥45s of good signal."):(lang==="tr"?"HRV: yeterli/kararlı atım bulunamadı — sabit tutup tekrar dene.":"HRV: not enough stable beats — hold still and retry.")}</div>}
               <div style={{fontSize:fs-2,color:sc,marginTop:6}}>{lang==="tr"?"Sağlık verilerine kaydedildi. AILVIE yorumluyor…":"Saved. AILVIE is interpreting…"}</div>
             </>}
             {pulseM.phase==="error"&&<div style={{color:dg,fontSize:fs-1,lineHeight:1.5}}>{pulseM.msg}</div>}
-            <div style={{fontSize:fs-4,color:mt,marginTop:12,lineHeight:1.5}}>⚠️ {lang==="tr"?"Tahminî bir ölçümdür, tıbbi cihaz değildir. Kesin değer için tıbbi bir nabız/oksimetre cihazı veya hekiminizi kullanın.":"This is an estimate, not a medical device. For accuracy use a certified pulse oximeter or consult your doctor."}</div>
+            <div style={{fontSize:fs-4,color:mt,marginTop:12,lineHeight:1.5}}>⚠️ {lang==="tr"?"Sadece sağlıklı yaşam takibi içindir, tıbbi teşhis değildir. Kesin değer için tıbbi cihaz veya hekiminizi kullanın.":"For wellness tracking only. Not a medical diagnosis. For accuracy use a medical device or consult your doctor."}</div>
             <div style={{display:"flex",gap:8,marginTop:14}}>
-              {(pulseM.phase==="done"||pulseM.phase==="error")&&<button onClick={()=>startPulseMeasure()} style={{...BP,flex:1,padding:"9px"}}>{lang==="tr"?"Tekrar Ölç":"Measure again"}</button>}
+              {(pulseM.phase==="done"||pulseM.phase==="error")&&<button onClick={()=>startPulseMeasure(false,pulseM.hrv)} style={{...BP,flex:1,padding:"9px"}}>{lang==="tr"?"Tekrar Ölç":"Measure again"}</button>}
               <button onClick={closePulse} style={{...BP,flex:1,padding:"9px",background:mt}}>{pulseM.phase==="measuring"||pulseM.phase==="init"?(lang==="tr"?"İptal":"Cancel"):(lang==="tr"?"Kapat":"Close")}</button>
             </div>
           </div>
