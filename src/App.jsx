@@ -1165,26 +1165,30 @@ const[wellness,setWellness]=useState({water:0,sleep:0,mood:0,steps:0,exercise:0,
 const[moodLog,setMoodLog]=useState([]);
 const[stepAuto,setStepAuto]=useState(()=>{try{return localStorage.getItem("ailvie_step_auto")==="1";}catch{return false;}});
 const stepRef=React.useRef({last:0,baseSteps:0,count:0,lastMag:0});
-// Auto step counter via DeviceMotion
+const[stepInfo,setStepInfo]=useState({sess:0,cadence:0,dist:0});
+// Live step counter via DeviceMotion — FOREGROUND ONLY (browsers/PWA cannot count steps in the background)
 useEffect(()=>{
   if(!stepAuto)return;
   if(typeof window==="undefined"||!window.DeviceMotionEvent)return;
+  stepRef.current.sessStart=Date.now();stepRef.current.sessCount=0;setStepInfo({sess:0,cadence:0,dist:0});
+  const stride=hd.height>0?(hd.height*0.415/100):0.7; // metres per step (from height or default)
   const handler=(e)=>{
     const a=e.accelerationIncludingGravity||e.acceleration;
     if(!a)return;
     const mag=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);
     const now=Date.now();
-    // Detect step: peak above 12 m/s², at least 300ms since last
+    // real step: acceleration peak >12 m/s² (rising edge), min 300ms apart (<=200 steps/min)
     if(mag>12&&stepRef.current.lastMag<=12&&now-stepRef.current.last>300){
-      stepRef.current.last=now;
-      stepRef.current.count++;
-      if(stepRef.current.count%10===0){
-        setWellness(w=>({...w,steps:w.steps+10}));
+      stepRef.current.last=now;stepRef.current.count++;stepRef.current.sessCount++;
+      setWellness(w=>({...w,steps:w.steps+1})); // accurate: one real detected step
+      if(stepRef.current.sessCount%5===0){
+        const mins=(now-stepRef.current.sessStart)/60000;
+        const cad=mins>0.03?Math.round(stepRef.current.sessCount/mins):0;
+        setStepInfo({sess:stepRef.current.sessCount,cadence:cad,dist:Math.round(stepRef.current.sessCount*stride)});
       }
     }
     stepRef.current.lastMag=mag;
   };
-  // Request permission on iOS 13+
   if(typeof DeviceMotionEvent.requestPermission==="function"){
     DeviceMotionEvent.requestPermission().then(p=>{if(p==="granted")window.addEventListener("devicemotion",handler);}).catch(()=>{});
   }else{
@@ -2746,7 +2750,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   {/* Steps */}
   <div style={{...CS,border:`1px solid ${sc}33`}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>👟 {lang==="tr"?"Adım":"Steps"}{stepAuto&&<span style={{fontSize:fs-3,color:sc,fontWeight:500}}>🔴 {lang==="tr"?"Otomatik":"Auto"}</span>}</span>
+      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>👟 {lang==="tr"?"Adım":"Steps"}{stepAuto&&<span style={{fontSize:fs-3,color:sc,fontWeight:500}}>🔴 {lang==="tr"?"Canlı":"Live"}</span>}</span>
       <span style={{fontSize:fs-2,color:mt}}>{wellness.steps.toLocaleString()}/{wellness.stepsGoal.toLocaleString()}</span>
     </div>
     <div style={{height:10,background:`${mt}20`,borderRadius:5,overflow:"hidden",marginBottom:8}}>
@@ -2762,10 +2766,11 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         <div style={{width:14,height:14,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:stepAuto?19:3,transition:"left .2s"}}/>
       </div>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:fs-1,fontWeight:600,color:stepAuto?sc:mt}}>📱 {lang==="tr"?"Otomatik Adım Sayımı":"Automatic Step Counting"}</div>
-        <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Telefonunuzun hareket sensörünü kullanır":"Uses phone motion sensor"}</div>
+        <div style={{fontSize:fs-1,fontWeight:600,color:stepAuto?sc:mt}}>📱 {lang==="tr"?"Canlı Adım Sayımı":"Live Step Counting"}</div>
+        <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Telefon hareket sensörüyle sayar — yalnızca uygulama açıkken. Gün boyu/arka plan için Apple Health / Health Connect gerekir.":"Counts via phone motion sensor — only while the app is open. All-day/background needs Apple Health / Health Connect."}</div>
       </div>
     </div>
+    {stepAuto&&<div style={{fontSize:fs-3,color:sc,textAlign:"center",marginBottom:6}}>{lang==="tr"?"Bu oturum":"This session"}: {stepInfo.sess} {lang==="tr"?"adım":"steps"} · {stepInfo.cadence}/{lang==="tr"?"dk":"min"} · ~{stepInfo.dist} m</div>}
     <input type="number" value={wellness.steps||""} placeholder="0" onChange={e=>setWellness(w=>({...w,steps:Number(e.target.value)||0}))} disabled={stepAuto} style={{...IS,textAlign:"center",opacity:stepAuto?0.5:1}}/>
     {stepAuto&&<div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:4}}>{lang==="tr"?"Manuel giriş devre dışı":"Manual entry disabled"}</div>}
   </div>
