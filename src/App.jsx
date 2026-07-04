@@ -1196,7 +1196,7 @@ const reactTap=()=>{
     const rt=Math.round(performance.now()-R.goTime);
     if(rt<120){setReactM({...m,phase:"early"});return;} // anticipation, not a real reaction -> reject
     const trials=[...(m.trials||[]),rt];
-    if(trials.length>=5){const avg=Math.round(trials.reduce((a,b)=>a+b,0)/trials.length),best=Math.min(...trials),sd=Math.round(Math.sqrt(trials.reduce((a,b)=>a+(b-avg)**2,0)/trials.length));setReactM({phase:"done",trials,avg,best,sd});}
+    if(trials.length>=5){const avg=Math.round(trials.reduce((a,b)=>a+b,0)/trials.length),best=Math.min(...trials),sd=Math.round(Math.sqrt(trials.reduce((a,b)=>a+(b-avg)**2,0)/trials.length));setReactM({phase:"done",trials,avg,best,sd});setTests(t=>({...t,rxAvg:avg,rxBest:best,rxAt:Date.now()}));}
     else scheduleGo(trials);
     return;
   }
@@ -1208,6 +1208,8 @@ const[editH,setEditH]=useState(null);
 const[tmpH,setTmpH]=useState("");
 const[wellness,setWellness]=useState({water:0,sleep:0,mood:0,steps:0,exercise:0,waterGoal:8,sleepGoal:8,stepsGoal:10000});
 const[sleepTimes,setSleepTimes]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_sleep_times"))||{bed:"",wake:""};}catch{return {bed:"",wake:""};}});
+const[tests,setTests]=useState({}); // last screening results: {balSway,balBand,balAt,rxAvg,rxBest,rxAt,postAngle,postAt}
+const ago=(ts)=>{if(!ts)return"";const m=Math.round((Date.now()-ts)/60000);if(m<1)return lang==="tr"?"az önce":"just now";if(m<60)return lang==="tr"?`${m} dk önce`:`${m}m ago`;const h=Math.round(m/60);if(h<24)return lang==="tr"?`${h} saat önce`:`${h}h ago`;return lang==="tr"?`${Math.round(h/24)} gün önce`:`${Math.round(h/24)}d ago`;};
 const[moodLog,setMoodLog]=useState([]);
 const[stepAuto,setStepAuto]=useState(()=>{try{return localStorage.getItem("ailvie_step_auto")==="1";}catch{return false;}});
 const stepRef=React.useRef({last:0,baseSteps:0,count:0,lastMag:0});
@@ -1440,10 +1442,10 @@ riskPenalty
 // ═══ AUTO-SAVE/LOAD ═══
 useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
-if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(d.chatM?.length)setChatM(d.chatM);
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.tests)setTests(d.tests);if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(d.chatM?.length)setChatM(d.chatM);
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
 }catch{}},[]); // load once
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM,moodLog,groups}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,calNotes,calAlarms,records,msgs,chatM,moodLog,groups]); // enhanced auto-save
+useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups]); // enhanced auto-save
 useEffect(()=>{try{const s=localStorage.getItem("ailvie_medimg");if(s){const a=JSON.parse(s);if(Array.isArray(a))setMedImages(a);}}catch(e){}},[]);
 useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_medimg",JSON.stringify(medImages));}catch(e){}},800);return()=>clearTimeout(tm);},[medImages]);
 // Auto-cleanup empty notes that are not being edited
@@ -2758,7 +2760,7 @@ const stopBalance=()=>{const B=balanceRef.current;try{if(B.handler)window.remove
 const finishBalance=()=>{
   stopBalance();const r=swayIndex(balanceRef.current.samples);
   if(!r){setBalanceM({phase:"error",msg:lang==="tr"?"Yeterli sensör verisi alınamadı. Telefonu göğsünüze tutup sabit durun, tekrar deneyin.":"Not enough sensor data. Hold the phone to your chest, stand still and retry."});return;}
-  setBalanceM({phase:"done",sway:r.idx,band:r.band});
+  setBalanceM({phase:"done",sway:r.idx,band:r.band});setTests(t=>({...t,balSway:r.idx,balBand:r.band,balAt:Date.now()}));
 };
 const startBalance=async()=>{
   if(balanceM&&balanceM.phase==="active")return;
@@ -2894,6 +2896,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <div style={CS}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:22}}>🧍</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Denge / Yürüyüş":"Balance / Gait"}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"denge testi":"balance test"}</span></span></div>
     {(!balanceM||balanceM.phase==="error"||balanceM.phase==="done")&&<div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonu göğsünüze tutup 20 sn sabit durun.":"Hold the phone to your chest and stand still for 20s."}</div>}
+    {tests.balAt&&(!balanceM||balanceM.phase==="error")&&<div style={{fontSize:fs-3,color:sc,marginBottom:8}}>{lang==="tr"?"Son sonuç":"Last"}: {tests.balSway} · {ago(tests.balAt)}</div>}
     {balanceM&&balanceM.phase==="active"&&<>
       <div style={{fontSize:fs-2,color:mt,marginBottom:8,textAlign:"center"}}>{lang==="tr"?"Sabit durun…":"Stand still…"}</div>
       <div style={{height:10,borderRadius:6,background:`${mt}33`,overflow:"hidden",marginBottom:6}}><div style={{height:"100%",width:`${balanceM.progress||0}%`,background:`linear-gradient(90deg,${ac},${a2})`,transition:"width .2s"}}/></div>
@@ -2908,6 +2911,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <div style={CS}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:22}}>🧍‍♂️</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Postür":"Posture"}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"duruş açısı":"tilt angle"}</span></span></div>
     {(!postureM||postureM.phase==="error")&&<div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonu göğüs hizasında dik tutun (ekran size dönük); dik durup başlatın, referans alınır.":"Hold the phone upright at chest level (screen facing you); stand upright and start to set the reference."}</div>}
+    {tests.postAt&&(!postureM||postureM.phase==="error")&&<div style={{fontSize:fs-3,color:sc,marginBottom:8}}>{lang==="tr"?"Son sonuç":"Last"}: {tests.postAngle}° · {ago(tests.postAt)}</div>}
     {postureM&&postureM.phase==="calibrating"&&<div style={{fontSize:fs-1,color:ac,textAlign:"center",marginBottom:8}}>{lang==="tr"?"Kalibre ediliyor… dik durun":"Calibrating… stand upright"}</div>}
     {postureM&&postureM.phase==="live"&&(()=>{const b=postureM.band;const L=b==="good"?[lang==="tr"?"Dik ✓":"Upright ✓",sc]:b==="mild"?[lang==="tr"?"Hafif eğim":"Slight lean",ac]:[lang==="tr"?"Belirgin eğim — dikleş":"Notable lean — straighten",dg];return <div style={{textAlign:"center",marginBottom:8}}>
       <div style={{fontSize:38,fontWeight:800,color:L[1]}}>{postureM.angle}°</div>
@@ -2917,12 +2921,13 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     </div>;})()}
     {postureM&&postureM.phase==="error"&&<div style={{fontSize:fs-2,color:dg,marginBottom:8,lineHeight:1.4}}>{postureM.msg}</div>}
     {postureM&&postureM.phase==="live"
-      ?<button onClick={()=>{stopPosture();setPostureM(null);}} style={{...BP,width:"100%",padding:"9px",background:dg}}>{lang==="tr"?"⏹ Durdur":"⏹ Stop"}</button>
+      ?<button onClick={()=>{const a=postureM&&postureM.angle;stopPosture();if(a!=null)setTests(t=>({...t,postAngle:a,postAt:Date.now()}));setPostureM(null);}} style={{...BP,width:"100%",padding:"9px",background:dg}}>{lang==="tr"?"⏹ Durdur":"⏹ Stop"}</button>
       :<button onClick={startPosture} style={{...BP,width:"100%",padding:"9px",background:`linear-gradient(135deg,${ac},${a2})`}}>🧍‍♂️ {lang==="tr"?"Duruş Kontrolü Başlat":"Start Posture Check"}</button>}
     <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Telefon eğim açısından hesaplanan göreli bir duruş taramasıdır (yalnızca uygulama açıkken; telefon gövdenizle aynı hizada olmalı). Tıbbi postür/ortopedik değerlendirme yerine geçmez.":"A relative posture screening from the phone's tilt angle (app open only; phone must be aligned with your trunk). Not a substitute for medical/orthopedic posture assessment."}</div>
   </div>
   <div style={CS}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:22}}>🎯</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Reaksiyon / Odak":"Reaction / Focus"}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"reaksiyon testi":"reaction test"}</span></span></div>
+    {tests.rxAt&&!reactM&&<div style={{fontSize:fs-3,color:sc,marginBottom:8,textAlign:"center"}}>{lang==="tr"?"Son":"Last"}: {tests.rxAvg} ms ({lang==="tr"?"en iyi":"best"} {tests.rxBest}) · {ago(tests.rxAt)}</div>}
     {(()=>{const ph=reactM?reactM.phase:"idle";const box=ph==="waiting"?["#c0392b",lang==="tr"?"Bekle…":"Wait…"]:ph==="go"?[sc,lang==="tr"?"DOKUN!":"TAP!"]:ph==="early"?["#e67e22",lang==="tr"?"Çok erken! Dokunup tekrar dene":"Too early! Tap to retry"]:ph==="done"?[dark?"#22303a":"#eef3f6",lang==="tr"?"Bitti ✓":"Done ✓"]:[dark?"#2a2f38":"#e7ebf0",lang==="tr"?"Başlamak için dokun":"Tap to start"];return <div onClick={reactTap} style={{background:box[0],color:(ph==="idle"||ph==="done")?tc:"#fff",borderRadius:12,height:120,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:fs+4,cursor:"pointer",userSelect:"none",WebkitUserSelect:"none",textAlign:"center",padding:8}}>{box[1]}</div>;})()}
     {reactM&&(reactM.phase==="waiting"||reactM.phase==="go"||reactM.phase==="early")&&<div style={{fontSize:fs-2,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Deneme":"Trial"} {Math.min(5,(reactM.trials||[]).length+1)}/5</div>}
     {reactM&&reactM.phase==="done"&&(()=>{const a=reactM.avg;const L=a<250?[lang==="tr"?"Çok hızlı ✓✓":"Excellent ✓✓",sc]:a<350?[lang==="tr"?"İyi ✓":"Good ✓",sc]:a<450?[lang==="tr"?"Ortalama":"Average",ac]:[lang==="tr"?"Yavaş":"Slow",dg];return <div style={{textAlign:"center",marginTop:8}}>
