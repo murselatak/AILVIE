@@ -1184,6 +1184,24 @@ const[balanceM,setBalanceM]=useState(null); // balance/sway test: {phase:'active
 const balanceRef=useRef({handler:null,samples:[],start:0,timer:null,prog:null});
 const[postureM,setPostureM]=useState(null); // posture angle: {phase:'calibrating'|'live'|'error',angle,band,msg}
 const postureRef=useRef({handler:null,ref:null,g:[0,0,0],phase:"",calibSum:[0,0,0],calibN:0,timer:null,tick:null});
+const[reactM,setReactM]=useState(null); // reaction test: {phase:'idle'|'waiting'|'go'|'early'|'done',trials,avg,best,sd}
+const reactRef=useRef({timer:null,goTime:0});
+const reactTap=()=>{
+  const R=reactRef.current; const m=reactM||{phase:"idle",trials:[]};
+  const scheduleGo=(trials)=>{const delay=1500+Math.random()*2500;if(R.timer)clearTimeout(R.timer);R.timer=setTimeout(()=>{R.goTime=performance.now();setReactM(x=>x&&x.phase==="waiting"?{...x,phase:"go"}:x);},delay);setReactM({phase:"waiting",trials});};
+  if(m.phase==="idle"||m.phase==="done"){scheduleGo([]);return;}
+  if(m.phase==="early"){scheduleGo(m.trials||[]);return;}
+  if(m.phase==="waiting"){if(R.timer)clearTimeout(R.timer);setReactM({...m,phase:"early"});return;} // false start
+  if(m.phase==="go"){
+    const rt=Math.round(performance.now()-R.goTime);
+    if(rt<120){setReactM({...m,phase:"early"});return;} // anticipation, not a real reaction -> reject
+    const trials=[...(m.trials||[]),rt];
+    if(trials.length>=5){const avg=Math.round(trials.reduce((a,b)=>a+b,0)/trials.length),best=Math.min(...trials),sd=Math.round(Math.sqrt(trials.reduce((a,b)=>a+(b-avg)**2,0)/trials.length));setReactM({phase:"done",trials,avg,best,sd});}
+    else scheduleGo(trials);
+    return;
+  }
+};
+useEffect(()=>()=>{try{if(reactRef.current.timer)clearTimeout(reactRef.current.timer);}catch(e){}},[]);
 const soundRef=useRef({ctx:null,stream:null,raf:null,base:null,inEvt:false,evtStart:0,evtLow:0,evtHigh:0,evtPeak:0,last:0,cough:0,snore:0,other:0,fc:0});
 const pulseStreamRef=useRef(null),pulseRafRef=useRef(null),pulseFromChatRef=useRef(false),pulseHrvRef=useRef(false),bleRef=useRef(null);
 const[editH,setEditH]=useState(null);
@@ -2900,6 +2918,18 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       ?<button onClick={()=>{stopPosture();setPostureM(null);}} style={{...BP,width:"100%",padding:"9px",background:dg}}>{lang==="tr"?"⏹ Durdur":"⏹ Stop"}</button>
       :<button onClick={startPosture} style={{...BP,width:"100%",padding:"9px",background:`linear-gradient(135deg,${ac},${a2})`}}>🧍‍♂️ {lang==="tr"?"Duruş Kontrolü Başlat":"Start Posture Check"}</button>}
     <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Telefon eğim açısından hesaplanan göreli bir duruş taramasıdır (yalnızca uygulama açıkken; telefon gövdenizle aynı hizada olmalı). Tıbbi postür/ortopedik değerlendirme yerine geçmez.":"A relative posture screening from the phone's tilt angle (app open only; phone must be aligned with your trunk). Not a substitute for medical/orthopedic posture assessment."}</div>
+  </div>
+  <div style={CS}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:22}}>🎯</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Reaksiyon / Odak":"Reaction / Focus"}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"reaksiyon testi":"reaction test"}</span></span></div>
+    {(()=>{const ph=reactM?reactM.phase:"idle";const box=ph==="waiting"?["#c0392b",lang==="tr"?"Bekle…":"Wait…"]:ph==="go"?[sc,lang==="tr"?"DOKUN!":"TAP!"]:ph==="early"?["#e67e22",lang==="tr"?"Çok erken! Dokunup tekrar dene":"Too early! Tap to retry"]:ph==="done"?[dark?"#22303a":"#eef3f6",lang==="tr"?"Bitti ✓":"Done ✓"]:[dark?"#2a2f38":"#e7ebf0",lang==="tr"?"Başlamak için dokun":"Tap to start"];return <div onClick={reactTap} style={{background:box[0],color:(ph==="idle"||ph==="done")?tc:"#fff",borderRadius:12,height:120,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:fs+4,cursor:"pointer",userSelect:"none",WebkitUserSelect:"none",textAlign:"center",padding:8}}>{box[1]}</div>;})()}
+    {reactM&&(reactM.phase==="waiting"||reactM.phase==="go"||reactM.phase==="early")&&<div style={{fontSize:fs-2,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Deneme":"Trial"} {Math.min(5,(reactM.trials||[]).length+1)}/5</div>}
+    {reactM&&reactM.phase==="done"&&(()=>{const a=reactM.avg;const L=a<250?[lang==="tr"?"Çok hızlı ✓✓":"Excellent ✓✓",sc]:a<350?[lang==="tr"?"İyi ✓":"Good ✓",sc]:a<450?[lang==="tr"?"Ortalama":"Average",ac]:[lang==="tr"?"Yavaş":"Slow",dg];return <div style={{textAlign:"center",marginTop:8}}>
+      <div style={{fontSize:34,fontWeight:800,color:L[1]}}>{reactM.avg} ms</div>
+      <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"ortalama reaksiyon":"average reaction"} · {lang==="tr"?"en iyi":"best"} {reactM.best} ms · ±{reactM.sd}</div>
+      <div style={{fontSize:fs,fontWeight:700,color:L[1],marginTop:4}}>{L[0]}</div>
+      <button onClick={reactTap} style={{...BP,marginTop:8,padding:"7px 18px"}}>{lang==="tr"?"Tekrar":"Again"}</button>
+    </div>;})()}
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Basit bir görsel reaksiyon/uyanıklık taramasıdır; ekran ve dokunma gecikmesinden etkilenir. Tıbbi/nörolojik tanı değildir.":"A simple visual reaction/alertness screening; affected by screen and touch latency. Not a medical/neurological diagnosis."}</div>
   </div>
   {/* Daily Wellness Tracking */}
   <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🌱 {lang==="tr"?"Günlük Sağlık Takibi":"Daily Wellness Tracking"}</div>
