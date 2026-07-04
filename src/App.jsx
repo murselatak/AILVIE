@@ -138,6 +138,17 @@ function swayIndex(samples){
   return {sway,idx:Math.round(sway*100),band:sway<0.3?"high":sway<0.7?"mid":"low"};
 }
 if(typeof window!=="undefined")window.__swayIndex=swayIndex;
+function postureAngle(g,ref){
+  // angle (deg) between current gravity vector and a calibrated upright reference. Pure, testable.
+  if(!g||!ref)return null;
+  const dot=g[0]*ref[0]+g[1]*ref[1]+g[2]*ref[2];
+  const mg=Math.sqrt(g[0]*g[0]+g[1]*g[1]+g[2]*g[2]),mr=Math.sqrt(ref[0]*ref[0]+ref[1]*ref[1]+ref[2]*ref[2]);
+  if(mg<1||mr<1)return null;
+  let c=dot/(mg*mr); c=Math.max(-1,Math.min(1,c));
+  const ang=Math.acos(c)*180/Math.PI;
+  return {angle:Math.round(ang),band:ang<8?"good":ang<20?"mild":"notable"};
+}
+if(typeof window!=="undefined")window.__postureAngle=postureAngle;
 function computeBPM(samples){
   // Real PPG signal analysis. Returns {ok:true,bpm,conf,quality,signalQuality,fps,durationMs}
   // or {ok:false,reason,fps,durationMs}. NEVER fabricates a value.
@@ -1171,6 +1182,8 @@ const[bleHr,setBleHr]=useState(null); // Web Bluetooth HR: {connected,bpm,name}|
 const[soundSess,setSoundSess]=useState(null); // on-device audio session: {active,cough,snore,other,level}|{error}|{done,...}|null
 const[balanceM,setBalanceM]=useState(null); // balance/sway test: {phase:'active'|'done'|'error',progress,sway,band,msg}
 const balanceRef=useRef({handler:null,samples:[],start:0,timer:null,prog:null});
+const[postureM,setPostureM]=useState(null); // posture angle: {phase:'calibrating'|'live'|'error',angle,band,msg}
+const postureRef=useRef({handler:null,ref:null,g:[0,0,0],phase:"",calibSum:[0,0,0],calibN:0,timer:null,tick:null});
 const soundRef=useRef({ctx:null,stream:null,raf:null,base:null,inEvt:false,evtStart:0,evtLow:0,evtHigh:0,evtPeak:0,last:0,cough:0,snore:0,other:0,fc:0});
 const pulseStreamRef=useRef(null),pulseRafRef=useRef(null),pulseFromChatRef=useRef(false),pulseHrvRef=useRef(false),bleRef=useRef(null);
 const[editH,setEditH]=useState(null);
@@ -2741,6 +2754,25 @@ const startBalance=async()=>{
   B.timer=setTimeout(finishBalance,dur);
 };
 useEffect(()=>()=>stopBalance(),[]);
+// ---- Posture: trunk tilt angle from accelerometer gravity vs a calibrated upright (foreground; relative screening) ----
+const stopPosture=()=>{const P=postureRef.current;try{if(P.handler)window.removeEventListener("devicemotion",P.handler);}catch(e){}try{if(P.timer)clearTimeout(P.timer);}catch(e){}try{if(P.tick)clearInterval(P.tick);}catch(e){}P.handler=null;P.timer=null;P.tick=null;};
+const startPosture=async()=>{
+  if(postureM&&(postureM.phase==="live"||postureM.phase==="calibrating"))return;
+  if(typeof window==="undefined"||!window.DeviceMotionEvent){setPostureM({phase:"error",msg:lang==="tr"?"Bu cihaz/tarayıcı hareket sensörünü desteklemiyor.":"This device/browser doesn't support motion sensors."});return;}
+  if(typeof DeviceMotionEvent.requestPermission==="function"){
+    try{const perm=await DeviceMotionEvent.requestPermission();if(perm!=="granted"){setPostureM({phase:"error",msg:lang==="tr"?"Hareket sensörü izni gerekli.":"Motion sensor permission needed."});return;}}catch(e){setPostureM({phase:"error",msg:lang==="tr"?"Hareket sensörü izni gerekli.":"Motion sensor permission needed."});return;}
+  }
+  const P=postureRef.current;Object.assign(P,{ref:null,g:[0,0,0],phase:"calibrating",calibSum:[0,0,0],calibN:0});
+  const handler=(e)=>{const a=e.accelerationIncludingGravity;if(!a||a.x==null)return;const g=[a.x,a.y,a.z];P.g=P.g.map((v,i)=>v*0.8+g[i]*0.2);if(P.phase==="calibrating"){P.calibSum=P.calibSum.map((v,i)=>v+g[i]);P.calibN++;}};
+  P.handler=handler;window.addEventListener("devicemotion",handler);
+  setPostureM({phase:"calibrating"});
+  P.timer=setTimeout(()=>{
+    if(!P.calibN){setPostureM({phase:"error",msg:lang==="tr"?"Sensör verisi alınamadı. Telefonu dik tutup tekrar deneyin.":"No sensor data. Hold the phone upright and retry."});stopPosture();return;}
+    P.ref=P.calibSum.map(v=>v/P.calibN);P.phase="live";setPostureM({phase:"live",angle:0,band:"good"});
+    P.tick=setInterval(()=>{const r=postureAngle(P.g,P.ref);if(r)setPostureM(m=>m&&m.phase==="live"?{...m,angle:r.angle,band:r.band}:m);},200);
+  },1300);
+};
+useEffect(()=>()=>stopPosture(),[]);
 useEffect(()=>()=>{try{if(bleRef.current&&bleRef.current.gatt&&bleRef.current.gatt.connected)bleRef.current.gatt.disconnect();}catch(e){}},[]);
 useEffect(()=>()=>stopPulseStream(),[]);
 const renderHealth=()=>{
@@ -2852,6 +2884,22 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     {(!balanceM||balanceM.phase!=="active")&&<button onClick={startBalance} style={{...BP,width:"100%",padding:"9px",background:`linear-gradient(135deg,${ac},${a2})`}}>🧍 {balanceM&&balanceM.phase==="done"?(lang==="tr"?"Tekrar Test Et":"Test again"):(lang==="tr"?"Denge Testi Başlat":"Start Balance Test")}</button>}
     {balanceM&&balanceM.phase==="active"&&<button onClick={()=>{stopBalance();setBalanceM(null);}} style={{...BP,width:"100%",padding:"9px",background:mt}}>{lang==="tr"?"İptal":"Cancel"}</button>}
     <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Telefon ivmeölçerinden hesaplanan göreli bir tarama indeksidir (yalnızca uygulama açıkken). Tıbbi denge/nörolojik değerlendirme yerine geçmez. Yürüyüş düzeni için Adım kartındaki canlı cadence'e bakın.":"A relative screening index from the phone accelerometer (app open only). Not a substitute for medical balance/neurological assessment. For gait rhythm see the live cadence in the Steps card."}</div>
+  </div>
+  <div style={CS}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:22}}>🧍‍♂️</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Postür":"Posture"}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"duruş açısı":"tilt angle"}</span></span></div>
+    {(!postureM||postureM.phase==="error")&&<div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonu göğüs hizasında dik tutun (ekran size dönük); dik durup başlatın, referans alınır.":"Hold the phone upright at chest level (screen facing you); stand upright and start to set the reference."}</div>}
+    {postureM&&postureM.phase==="calibrating"&&<div style={{fontSize:fs-1,color:ac,textAlign:"center",marginBottom:8}}>{lang==="tr"?"Kalibre ediliyor… dik durun":"Calibrating… stand upright"}</div>}
+    {postureM&&postureM.phase==="live"&&(()=>{const b=postureM.band;const L=b==="good"?[lang==="tr"?"Dik ✓":"Upright ✓",sc]:b==="mild"?[lang==="tr"?"Hafif eğim":"Slight lean",ac]:[lang==="tr"?"Belirgin eğim — dikleş":"Notable lean — straighten",dg];return <div style={{textAlign:"center",marginBottom:8}}>
+      <div style={{fontSize:38,fontWeight:800,color:L[1]}}>{postureM.angle}°</div>
+      <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"dik referanstan sapma":"deviation from upright"}</div>
+      <div style={{fontSize:fs,fontWeight:700,color:L[1],marginTop:4}}>{L[0]}</div>
+      <div style={{height:8,borderRadius:4,background:`${mt}33`,overflow:"hidden",marginTop:8}}><div style={{height:"100%",width:`${Math.min(100,(postureM.angle||0)*3)}%`,background:L[1],transition:"width .2s"}}/></div>
+    </div>;})()}
+    {postureM&&postureM.phase==="error"&&<div style={{fontSize:fs-2,color:dg,marginBottom:8,lineHeight:1.4}}>{postureM.msg}</div>}
+    {postureM&&postureM.phase==="live"
+      ?<button onClick={()=>{stopPosture();setPostureM(null);}} style={{...BP,width:"100%",padding:"9px",background:dg}}>{lang==="tr"?"⏹ Durdur":"⏹ Stop"}</button>
+      :<button onClick={startPosture} style={{...BP,width:"100%",padding:"9px",background:`linear-gradient(135deg,${ac},${a2})`}}>🧍‍♂️ {lang==="tr"?"Duruş Kontrolü Başlat":"Start Posture Check"}</button>}
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Telefon eğim açısından hesaplanan göreli bir duruş taramasıdır (yalnızca uygulama açıkken; telefon gövdenizle aynı hizada olmalı). Tıbbi postür/ortopedik değerlendirme yerine geçmez.":"A relative posture screening from the phone's tilt angle (app open only; phone must be aligned with your trunk). Not a substitute for medical/orthopedic posture assessment."}</div>
   </div>
   {/* Daily Wellness Tracking */}
   <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🌱 {lang==="tr"?"Günlük Sağlık Takibi":"Daily Wellness Tracking"}</div>
