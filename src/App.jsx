@@ -1569,9 +1569,11 @@ const sendChat=async(text)=>{
     if(pat.bloodType)cx.push(`Kan grubu: ${pat.bloodType}`);
     if(hd.weight>0&&hd.height>0)cx.push(`BMI: ${bmi}, Kilo: ${hd.weight}kg, Boy: ${hd.height}cm`);
     if(hd.pulse>0)cx.push(`Nabız: ${hd.pulse} bpm`);
+    if(hd.hrvRmssd>0)cx.push(`HRV: RMSSD ${hd.hrvRmssd} ms, SDNN ${hd.hrvSdnn} ms`);
+    if(hd.resp>0)cx.push(`Solunum: ${hd.resp}/dk (tahmini)`);
     if(hd.bpS>0)cx.push(`Tansiyon: ${hd.bpS}/${hd.bpD}`);
-    if(hd.steps>0)cx.push(`Günlük adım: ${hd.steps}`);
-    if(hd.sleep>0)cx.push(`Uyku: ${hd.sleep} saat`);
+    if(wellness.steps>0)cx.push(`Günlük adım: ${wellness.steps}`);
+    if(wellness.sleep>0)cx.push(`Uyku: ${wellness.sleep} saat`);
     if(hd.spo2>0)cx.push(`Kan oksijeni (SpO2): %${hd.spo2}`);
     if(hd.calories>0)cx.push(`Aktif kalori: ${hd.calories} kcal`);
     if(hd.restPulse>0)cx.push(`Dinlenik nabız: ${hd.restPulse} bpm`);
@@ -1582,7 +1584,7 @@ const sendChat=async(text)=>{
     if(records.length)cx.push(`Tıbbi kayıtlar: ${records.slice(0,3).map(r=>`${r.type}: ${r.content?.substring(0,50)}`).join("; ")}`);
     if(moodLog.length){const lbl={1:"çok kötü",2:"kötü",3:"normal",4:"iyi",5:"harika"};const last=moodLog.slice(-5);const recent=moodLog.slice(-3).map(e=>e.mood);const low=recent.length>=3&&recent.every(v=>v<=2);cx.push(`Son ruh hali kayıtları (eskiden yeniye): ${last.map(e=>lbl[e.mood]||e.mood).join(", ")}${low?" — son birkaç gündür sürekli düşük":""}`);}
     if(meds.length){const takenN=meds.filter(m=>m.taken).length;const pend=meds.filter(m=>!m.taken);const nowMin=_now.getHours()*60+_now.getMinutes();const overdue=pend.filter(m=>{const[h,mm]=(m.time||"00:00").split(":").map(Number);return (h*60+mm)<nowMin;});const nextP=pend.filter(m=>{const[h,mm]=(m.time||"00:00").split(":").map(Number);return (h*60+mm)>=nowMin;}).sort((a,b)=>((a.time||"00:00")>(b.time||"00:00")?1:-1))[0];cx.push(`BUGÜNKÜ İLAÇLAR: ${takenN}/${meds.length} alındı, ${pend.length} bekliyor${overdue.length?`; GECİKMİŞ: ${overdue.map(m=>`${m.name} (${m.time})`).join(", ")}`:""}${nextP?`; sıradaki: ${nextP.name} ${nextP.time}`:""}`);}
-    {const wp=[];if(wellness.water>0)wp.push(`su ${wellness.water}/${wellness.waterGoal} bardak`);if(wellness.mood>0){const ml={1:"çok kötü",2:"kötü",3:"normal",4:"iyi",5:"harika"};wp.push(`bugünkü ruh hali: ${ml[wellness.mood]}`);}if(wellness.sleep>0)wp.push(`uyku ${wellness.sleep} saat`);if(wellness.exercise>0)wp.push(`egzersiz ${wellness.exercise} dk`);if(wp.length)cx.push(`BUGÜNKÜ İYİ-OLUŞ: ${wp.join(", ")}`);}
+    {const wp=[];if(wellness.water>0)wp.push(`su ${wellness.water}/${wellness.waterGoal} bardak`);if(wellness.mood>0){const ml={1:"çok kötü",2:"kötü",3:"normal",4:"iyi",5:"harika"};wp.push(`bugünkü ruh hali: ${ml[wellness.mood]}`);}if(wellness.exercise>0)wp.push(`egzersiz ${wellness.exercise} dk`);if(wp.length)cx.push(`BUGÜNKÜ İYİ-OLUŞ: ${wp.join(", ")}`);}
     const ctxStr=cx.length?`\n\nHASTA PROFİLİ:\n${cx.join("\n")}\n`:"Hasta henüz bilgi girmemiş. ";
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
     const voiceNote=voiceActiveRef.current?"\n\nSESLİ MOD (şu an aktif): Kullanıcı seninle SESLİ konuşuyor ve yanıtın sesli okunacak. Yanıtın KISA, doğal ve konuşma dilinde olsun (genelde 1-3 cümle). Madde işareti, numaralı liste, başlık veya markdown KULLANMA; akıcı cümleler kur. En önemli bilgiyi önce söyle, ayrıntıya kullanıcı isterse gir.":"";
