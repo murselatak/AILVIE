@@ -523,6 +523,8 @@ const[pat,setPat]=useState({name:"",birthDate:"",bloodType:"",allergies:"",chron
 const[records,setRecords]=useState([]);
 const[showAddRec,setShowAddRec]=useState(false);
 const[newRec,setNewRec]=useState({type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""});
+const EMPTY_REC={type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""};
+const recDraftIdRef=useRef(null);
 const[medImages,setMedImages]=useState([]);
 const[imgType,setImgType]=useState("xray");
 const[imgBusy,setImgBusy]=useState(null); // id being interpreted
@@ -540,7 +542,19 @@ const[showAddMed,setShowAddMed]=useState(false);
 const[editMedId,setEditMedId]=useState(null);
 const[editApptId,setEditApptId]=useState(null);
 const[editRecId,setEditRecId]=useState(null);
+useEffect(()=>{if(!showAddRec){recDraftIdRef.current=null;return;}const ok=(newRec.content||"").trim();if(editRecId){setRecords(p=>p.map(x=>x.id===editRecId?{...x,...newRec}:x));return;}if(ok){if(recDraftIdRef.current==null){const id=Date.now();recDraftIdRef.current=id;setRecords(p=>[...p,{id,...newRec}]);}else{setRecords(p=>p.map(x=>x.id===recDraftIdRef.current?{...x,...newRec,id:x.id}:x));}}else if(recDraftIdRef.current!=null){const id=recDraftIdRef.current;recDraftIdRef.current=null;setRecords(p=>p.filter(x=>x.id!==id));}},[newRec,editRecId,showAddRec]);
 const[newMed,setNewMed]=useState({name:"",dose:"",time:"",startDate:"",alarmType:"both",count:30,timesPerDay:1,recurring:true});
+const EMPTY_MED={name:"",dose:"",time:"",startDate:"",alarmType:"both",count:30,timesPerDay:1,recurring:true};
+const medDraftIdRef=useRef(null);
+useEffect(()=>{
+  if(!showAddMed){medDraftIdRef.current=null;return;}
+  const nm=(newMed.name||"").trim();
+  if(editMedId){setMeds(p=>p.map(x=>x.id===editMedId?{...x,...newMed}:x));return;} // live edit existing
+  if(nm){
+    if(medDraftIdRef.current==null){const id=Date.now();medDraftIdRef.current=id;const today=new Date().toISOString().split("T")[0];setMeds(p=>[...p,{id,...newMed,startDate:newMed.startDate||today,recurring:newMed.recurring!==false,taken:false}]);} // materialize on name
+    else{setMeds(p=>p.map(x=>x.id===medDraftIdRef.current?{...x,...newMed,id:x.id}:x));} // live update new
+  }else if(medDraftIdRef.current!=null){const id=medDraftIdRef.current;medDraftIdRef.current=null;setMeds(p=>p.filter(x=>x.id!==id));} // name cleared -> remove
+},[newMed,editMedId,showAddMed]);
 const WORD_TOPICS={
 health:[
 {tr:"Kalp",en:"Heart",de:"Herz",ru:"Сердце",zh:"心脏",hi:"हृदय",nl:"Hart",es:"Corazón",ar:"قلب"},
@@ -1055,6 +1069,9 @@ IMPORTANT: All values MUST be in ${langName} language. Keep each field concise (
 const[appts,setAppts]=useState([]);
 const[showAddAppt,setShowAddAppt]=useState(false);
 const[newAppt,setNewAppt]=useState({doctor:"",hospital:"",clinic:"",date:"",time:""});
+const EMPTY_APPT={doctor:"",hospital:"",clinic:"",date:"",time:""};
+const apptDraftIdRef=useRef(null);
+useEffect(()=>{if(!showAddAppt){apptDraftIdRef.current=null;return;}const ok=(newAppt.doctor||"").trim()&&(newAppt.date||"").trim();if(editApptId){setAppts(p=>p.map(x=>x.id===editApptId?{...x,...newAppt}:x));return;}if(ok){if(apptDraftIdRef.current==null){const id=Date.now();apptDraftIdRef.current=id;setAppts(p=>[...p,{id,...newAppt,source:""}]);}else{setAppts(p=>p.map(x=>x.id===apptDraftIdRef.current?{...x,...newAppt,id:x.id}:x));}}else if(apptDraftIdRef.current!=null){const id=apptDraftIdRef.current;apptDraftIdRef.current=null;setAppts(p=>p.filter(x=>x.id!==id));}},[newAppt,editApptId,showAddAppt]);
 const[connSys,setConnSys]=useState([]);
 
 // Med Alarm System — voice + pre-alarm + bell sound
@@ -1387,6 +1404,9 @@ const COUNTRY_CODES=[
   {code:"+57",flag:"co",n:{tr:"Kolombiya",en:"Colombia",de:"Kolumbien",ru:"Колумбия",zh:"哥伦比亚",hi:"कोलंबिया",nl:"Colombia",es:"Colombia",ar:"كولومبيا"}},
   {code:"+51",flag:"pe",n:{tr:"Peru",en:"Peru",de:"Peru",ru:"Перу",zh:"秘鲁",hi:"पेरू",nl:"Peru",es:"Perú",ar:"بيرو"}}];
 const[newC,setNewC]=useState({name:"",phone:"",countryCode:"+90",category:"doctor",note:""});
+const EMPTY_C={name:"",phone:"",countryCode:"+90",category:"doctor",note:""};
+const cDraftIdRef=useRef(null);
+useEffect(()=>{if(!showAddC){cDraftIdRef.current=null;return;}const ok=(newC.name||"").trim()&&(newC.phone||"").trim();const it=()=>({name:newC.name,phone:newC.countryCode+" "+newC.phone,category:newC.category,note:newC.note});if(editContactId){setContacts(p=>p.map(x=>x.id===editContactId?{...x,...it()}:x));return;}if(ok){if(cDraftIdRef.current==null){const id=Date.now();cDraftIdRef.current=id;setContacts(p=>[...p,{id,...it()}]);}else{setContacts(p=>p.map(x=>x.id===cDraftIdRef.current?{...x,...it(),id:x.id}:x));}}else if(cDraftIdRef.current!=null){const id=cDraftIdRef.current;cDraftIdRef.current=null;setContacts(p=>p.filter(x=>x.id!==id));}},[newC,editContactId,showAddC]);
 
 // Community
 const[msgs,setMsgs]=useState([{id:1,user:"Hasta_42",text:"Merhaba herkese! 👋",likes:3,time:"10:30"}]);
@@ -2243,7 +2263,7 @@ const renderAppts=()=>{
       </div>
     </div>
     {/* 2. Add Appt */}
-    <button onClick={()=>setShowAddAppt(true)} style={{...CS,border:`2px solid ${ac}`,textAlign:"center",cursor:"pointer",padding:14,background:`${ac}06`}}>
+    <button onClick={()=>{setEditApptId(null);setNewAppt(EMPTY_APPT);apptDraftIdRef.current=null;setShowAddAppt(true);}} style={{...CS,border:`2px solid ${ac}`,textAlign:"center",cursor:"pointer",padding:14,background:`${ac}06`}}>
       <span style={{fontSize:24}}>📝</span>
       <div style={{fontWeight:700,color:ac,marginTop:4}}>+ {t.addAppt}</div>
     </button>
@@ -2252,7 +2272,7 @@ const renderAppts=()=>{
       <input placeholder={t.hosp} value={newAppt.hospital} onChange={e=>setNewAppt({...newAppt,hospital:e.target.value})} style={{...IS,marginBottom:6}}/>
       <input placeholder={t.clin} value={newAppt.clinic} onChange={e=>setNewAppt({...newAppt,clinic:e.target.value})} style={{...IS,marginBottom:6}}/>
       <div style={{display:"flex",gap:6,marginBottom:6}}><input type="date" value={newAppt.date} onChange={e=>setNewAppt({...newAppt,date:e.target.value})} style={{...IS,flex:1}}/><input type="time" value={newAppt.time} onChange={e=>setNewAppt({...newAppt,time:e.target.value})} style={{...IS,flex:1}}/></div>
-      <div style={{display:"flex",gap:6}}><button onClick={()=>{if(newAppt.doctor&&newAppt.date){if(editApptId){setAppts(p=>p.map(x=>x.id===editApptId?{...x,...newAppt}:x));notify("✅ "+(lang==="tr"?"Randevu güncellendi":"Appointment updated"));}else{setAppts(p=>[...p,{id:Date.now(),...newAppt,source:""}]);notify(`📅⏰ ${newAppt.doctor} — ${t.alarmSet}`);}setNewAppt({doctor:"",hospital:"",clinic:"",date:"",time:""});setEditApptId(null);setShowAddAppt(false);}}} style={BP}>{editApptId?(lang==="tr"?"Güncelle":"Update"):t.save}</button><button onClick={()=>{setShowAddAppt(false);setEditApptId(null);}} style={{...BP,background:mt}}>{t.cancel}</button></div>
+      <div style={{display:"flex",gap:6}}><button onClick={()=>{apptDraftIdRef.current=null;setNewAppt(EMPTY_APPT);setEditApptId(null);setShowAddAppt(false);}} style={BP}>{lang==="tr"?"Bitti":"Done"}</button><button onClick={()=>{if(!editApptId&&apptDraftIdRef.current!=null){const id=apptDraftIdRef.current;setAppts(p=>p.filter(x=>x.id!==id));}apptDraftIdRef.current=null;setNewAppt(EMPTY_APPT);setEditApptId(null);setShowAddAppt(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div>
     </div>}
     {/* 3. Upcoming / Past */}
     <div style={{display:"flex",gap:6}}>{["up","past"].map(tab=><button key={tab} onClick={()=>goTo(tab==="up"?"appts":"appts")} style={pill(true)}>{t[tab]}</button>)}</div>
@@ -2377,7 +2397,7 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
     <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:460,borderRadius:"18px 18px 0 0",padding:"16px 16px max(env(safe-area-inset-bottom),18px)",border:`1px solid ${bd}`,boxShadow:"0 -8px 32px rgba(0,0,0,.4)"}}>
       <div style={{width:38,height:4,borderRadius:2,background:bd,margin:"0 auto 14px"}}/>
       <div style={{fontWeight:700,fontSize:fs+2,marginBottom:12}}>💊 {t.addMed}</div>
-      <button onClick={()=>{setShowAddChooser(false);setShowAddMed(true);}} style={{...CS,display:"flex",alignItems:"center",gap:12,width:"100%",cursor:"pointer",border:`1px solid ${bd}`,marginBottom:10,textAlign:"left"}}>
+      <button onClick={()=>{setShowAddChooser(false);setEditMedId(null);setNewMed(EMPTY_MED);medDraftIdRef.current=null;setShowAddMed(true);}} style={{...CS,display:"flex",alignItems:"center",gap:12,width:"100%",cursor:"pointer",border:`1px solid ${bd}`,marginBottom:10,textAlign:"left"}}>
         <span style={{fontSize:24}}>✏️</span><div><div style={{fontWeight:600,color:tc}}>{lang==="tr"?"Manuel Ekle":"Add Manually"}</div><div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Bilgileri elle girin":"Enter details by hand"}</div></div>
       </button>
       <div style={{fontSize:fs-2,color:mt,fontWeight:600,margin:"4px 0 8px"}}>📷 {t.scanAdd}</div>
@@ -2495,7 +2515,7 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
     <div style={{marginBottom:6}}><div style={{fontSize:fs-2,color:mt,marginBottom:4}}>⏰ {t.alarmType}</div><div style={{display:"flex",gap:6}}>{["ring","vibrate","both"].map(at=><button key={at} onClick={()=>setNewMed({...newMed,alarmType:at})} style={pill(newMed.alarmType===at)}>{at==="ring"?"🔔 "+t.ring:at==="vibrate"?"📳 "+t.vibrate:"🔔📳 "+t.both}</button>)}</div></div>
     <div style={{display:"flex",gap:6,marginBottom:6,alignItems:"center",flexWrap:"wrap"}}><span style={{fontSize:fs-2,color:mt}}>💊 {lang==="tr"?"Kutu adedi":"Box count"}:</span><input type="number" min="1" value={newMed.count} onChange={e=>setNewMed({...newMed,count:Number(e.target.value)})} style={{...IS,width:65,textAlign:"center",fontWeight:700}}/><span style={{fontSize:fs-2,color:mt}}>🔁 {lang==="tr"?"Günde":"Per day"}:</span><input type="number" min="1" max="6" value={newMed.timesPerDay||1} onChange={e=>setNewMed({...newMed,timesPerDay:Number(e.target.value)})} style={{...IS,width:50,textAlign:"center",fontWeight:700}}/></div>
     {(newMed.timesPerDay||1)>1&&<div style={{fontSize:fs-3,color:ac,marginBottom:6,padding:"4px 8px",background:`${ac}08`,borderRadius:6}}>💡 {lang==="tr"?`Günde ${newMed.timesPerDay} doz: Her doz için ayrı saat girerek ekleyin.`:`${newMed.timesPerDay} doses/day: Add each dose with a different time.`}</div>}
-    <div style={{display:"flex",gap:8}}><button onClick={()=>{if(newMed.name){const today=new Date().toISOString().split("T")[0];if(editMedId){setMeds(p=>p.map(x=>x.id===editMedId?{...x,...newMed}:x));notify("✅ "+(lang==="tr"?"İlaç güncellendi":"Medication updated"));}else{setMeds(p=>[...p,{id:Date.now(),...newMed,startDate:newMed.startDate||today,recurring:newMed.recurring!==false,taken:false}]);notify(`💊⏰ ${newMed.name} — ${t.alarmSet} (${newMed.time})${newMed.recurring!==false?" 🔁":""}${newMed.count?` • ${newMed.count} ${lang==="tr"?"adet":"pcs"}`:""}`);}setNewMed({name:"",dose:"",time:"",startDate:"",alarmType:"both",count:30,timesPerDay:1,recurring:true});setEditMedId(null);setShowAddMed(false);}}} style={BP}>{editMedId?(lang==="tr"?"Güncelle":"Update"):t.save}</button><button onClick={()=>{setShowAddMed(false);setEditMedId(null);}} style={{...BP,background:mt}}>{t.cancel}</button></div>
+    <div style={{display:"flex",gap:8}}><button onClick={()=>{medDraftIdRef.current=null;setNewMed(EMPTY_MED);setEditMedId(null);setShowAddMed(false);}} style={BP}>{lang==="tr"?"Bitti":"Done"}</button><button onClick={()=>{if(!editMedId&&medDraftIdRef.current!=null){const id=medDraftIdRef.current;setMeds(p=>p.filter(x=>x.id!==id));}medDraftIdRef.current=null;setNewMed(EMPTY_MED);setEditMedId(null);setShowAddMed(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div>
   </div>}
   <div style={{...CS,border:`2px dashed ${ac}33`}}><div style={{fontWeight:700,marginBottom:8}}>🔍 {t.drugR}</div><div style={{display:"flex",gap:8}}><input placeholder={t.drugN} value={drugQ} onChange={e=>setDrugQ(e.target.value)} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter")analyzeDrug();}}/><button onClick={analyzeDrug} disabled={drugLoad} style={BP}>{drugLoad?"⏳":t.anlz}</button></div>{drugRes&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:5}}>{[[t.cls,"class"],[t.usg,"usage"],[t.dose,"dose"],[t.sEff,"sideEffects"],[t.wrn,"warnings"],[t.intr,"interactions"]].map(([l,k])=><div key={k} style={{fontSize:fs-1}}><span style={{fontWeight:700,color:ac}}>{l}: </span><span>{drugRes[k]}</span></div>)}</div>}</div>
 </div>);
@@ -3279,10 +3299,10 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   {/* Tıbbi Kayıtlar */}
   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
     <span style={{fontWeight:700}}>📋 {t.diag} / {t.lab}</span>
-    <button onClick={()=>setShowAddRec(true)} style={{...BP,padding:"6px 14px"}}>+ {t.add}</button>
+    <button onClick={()=>{setEditRecId(null);setNewRec(EMPTY_REC);recDraftIdRef.current=null;setShowAddRec(true);}} style={{...BP,padding:"6px 14px"}}>+ {t.add}</button>
   </div>
   {records.map(r=>(<div key={r.id} style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,color:ac}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-2,color:mt}}>{r.date}</span></div><div style={{fontSize:fs-1,color:mt}}>{r.doctor} — {r.hospital}</div><div style={{marginTop:4,wordBreak:"break-word"}}>{r.content}</div><div style={{display:"flex",gap:6,marginTop:4}}><button onClick={()=>{setEditRecId(r.id);setNewRec({type:r.type||"diag",doctor:r.doctor||"",hospital:r.hospital||"",date:r.date||"",content:r.content||"",notes:r.notes||""});setShowAddRec(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:ac,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button><button onClick={()=>toTrash("record",r)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>🗑️ {t.del}</button></div></div>))}
-  {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><div style={{fontWeight:700,marginBottom:8,color:ac}}>{editRecId?"✏️ "+(lang==="tr"?"Kaydı Düzenle":"Edit Record"):"+ "+(lang==="tr"?"Yeni Kayıt":"New Record")}</div><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><textarea placeholder={lang==="tr"?"İçerik / Sonuç":"Content / Result"} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newRec.content){if(editRecId){setRecords(p=>p.map(x=>x.id===editRecId?{...x,...newRec}:x));notify("✅ "+(lang==="tr"?"Kayıt güncellendi":"Record updated"));}else{setRecords(p=>[...p,{id:Date.now(),...newRec}]);}setNewRec({type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""});setEditRecId(null);setShowAddRec(false);}}} style={BP}>{editRecId?(lang==="tr"?"Güncelle":"Update"):t.save}</button><button onClick={()=>{setShowAddRec(false);setEditRecId(null);}} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
+  {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><div style={{fontWeight:700,marginBottom:8,color:ac}}>{editRecId?"✏️ "+(lang==="tr"?"Kaydı Düzenle":"Edit Record"):"+ "+(lang==="tr"?"Yeni Kayıt":"New Record")}</div><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><textarea placeholder={lang==="tr"?"İçerik / Sonuç":"Content / Result"} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={BP}>{lang==="tr"?"Bitti":"Done"}</button><button onClick={()=>{if(!editRecId&&recDraftIdRef.current!=null){const id=recDraftIdRef.current;setRecords(p=>p.filter(x=>x.id!==id));}recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
   <div style={{...CS}}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
       <span style={{fontSize:20}}>🩺</span>
@@ -3413,7 +3433,7 @@ const renderContacts=()=>{
   return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <span style={{fontWeight:700,fontSize:fs+2}}>📞 {t.contacts}</span>
-      <button onClick={()=>{setEditContactId(null);setNewC({name:"",phone:"",countryCode:"+90",category:"doctor",note:""});setShowAddC(true);}} style={{...BP,padding:"7px 14px"}}>+ {t.add}</button>
+      <button onClick={()=>{setEditContactId(null);setNewC(EMPTY_C);cDraftIdRef.current=null;setShowAddC(true);}} style={{...BP,padding:"7px 14px"}}>+ {t.add}</button>
     </div>
     <div style={{display:"flex",gap:6}}>{["all","doctor","taxi","special","emergency"].map(k=><button key={k} onClick={()=>setCatF(k)} style={pill(catF===k)}>{k==="all"?"🏠":k==="doctor"?"👨‍⚕️":k==="taxi"?"🚕":k==="special"?"⭐":"🚨"}</button>)}</div>
     <div style={{...CS,background:`${dg}08`,border:`1px solid ${dg}22`}}>
@@ -3474,22 +3494,7 @@ const renderContacts=()=>{
         {catOptions.map(([k,ic,lb])=><option key={k} value={k}>{ic} {lb}</option>)}
       </select>
       <div style={{display:"flex",gap:6}}>
-        <button onClick={()=>{
-          if(newC.name&&newC.phone){
-            const fullPhone=newC.countryCode+" "+newC.phone;
-            if(editContactId){
-              setContacts(p=>p.map(x=>x.id===editContactId?{...x,name:newC.name,phone:fullPhone,category:newC.category,note:newC.note}:x));
-              notify("✅ "+(lang==="tr"?"Kişi güncellendi":"Contact updated"));
-            }else{
-              setContacts(p=>[...p,{id:Date.now(),name:newC.name,phone:fullPhone,category:newC.category,note:""}]);
-              notify("✅ "+(lang==="tr"?"Kişi eklendi":"Contact added"));
-            }
-            setNewC({name:"",phone:"",countryCode:"+90",category:"doctor",note:""});
-            setEditContactId(null);
-            setShowAddC(false);
-          }
-        }} style={BP}>{editContactId?(lang==="tr"?"Güncelle":"Update"):t.save}</button>
-        <button onClick={()=>{setShowAddC(false);setEditContactId(null);}} style={{...BP,background:mt}}>{t.cancel}</button>
+        <button onClick={()=>{cDraftIdRef.current=null;setNewC(EMPTY_C);setEditContactId(null);setShowAddC(false);}} style={BP}>{lang==="tr"?"Bitti":"Done"}</button><button onClick={()=>{if(!editContactId&&cDraftIdRef.current!=null){const id=cDraftIdRef.current;setContacts(p=>p.filter(x=>x.id!==id));}cDraftIdRef.current=null;setNewC(EMPTY_C);setEditContactId(null);setShowAddC(false);}} style={{...BP,background:mt}}>{t.cancel}</button>
       </div>
     </div>}
   </div>);
