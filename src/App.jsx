@@ -177,6 +177,25 @@ async function lookupDrugAPIs(q){
     source:"RxNav/OpenFDA"};
 }
 if(typeof window!=="undefined")window.__lookupDrugAPIs=lookupDrugAPIs;
+// ---- Best-effort barcode -> OpenFDA NDC (US drugs; global EAN/GTIN falls back to photo/AI) ----
+async function lookupBarcodeOpenFDA(code){
+  const d=String(code||"").replace(/\D/g,"");
+  if(d.length<8)return null;
+  const core=d.length>=11?d.slice(1,11):d; // strip UPC-A leading digit -> ~10-digit NDC core
+  const cands=[];
+  const seg=(a,b,c)=>core.length>=a+b+c?`${core.slice(0,a)}-${core.slice(a,a+b)}-${core.slice(a+b,a+b+c)}`:null;
+  [seg(5,4,2),seg(5,4,1),seg(5,3,2),seg(4,4,2)].forEach(x=>x&&cands.push(["packaging.package_ndc",x]));
+  const prod=(a,b)=>core.length>=a+b?`${core.slice(0,a)}-${core.slice(a,a+b)}`:null;
+  [prod(5,4),prod(4,4),prod(5,3)].forEach(x=>x&&cands.push(["product_ndc",x]));
+  const J=async(u)=>{try{const r=await fetch(u);return r.ok?await r.json():null;}catch(e){return null;}};
+  for(const [field,c] of cands){
+    const j=await J(`https://api.fda.gov/drug/ndc.json?search=${field}:%22${encodeURIComponent(c)}%22&limit=1`);
+    const res=j&&j.results&&j.results[0];
+    if(res){const name=res.brand_name||res.generic_name||"";const inn=res.generic_name||(res.active_ingredients&&res.active_ingredients[0]&&res.active_ingredients[0].name)||"";if(name)return {name,inn};}
+  }
+  return null;
+}
+if(typeof window!=="undefined")window.__lookupBarcode=lookupBarcodeOpenFDA;
 function computeBPM(samples){
   // Real PPG signal analysis. Returns {ok:true,bpm,conf,quality,signalQuality,fps,durationMs}
   // or {ok:false,reason,fps,durationMs}. NEVER fabricates a value.
@@ -872,7 +891,8 @@ const aiRecognize=async(im)=>{
       if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
       if(scanIntervalRef.current){clearInterval(scanIntervalRef.current);scanIntervalRef.current=null;}
       setScanError("");setShowScanner(false);setScanResult(null);setCamOn(false);
-      setRecog({name:p.name||"",ingredient:p.ingredient||"",dose:p.dose||"",form:p.form||""});
+      setRecog({name:p.name||"",ingredient:p.ingredient||"",dose:p.dose||"",form:p.form||"",verifying:true});
+      try{const api=await lookupDrugAPIs(p.ingredient||p.name);setRecog(r=>r?{...r,verifying:false,verified:!!api,inn:api?api.inn:null,dbClass:api?api.class:null}:r);}catch(e){setRecog(r=>r?{...r,verifying:false,verified:false}:r);} // validate against global DBs
     }else{
       setScanError(lang==="tr"?"İlaç tanınamadı. Kutuyu net ve yakın çekip tekrar deneyin ya da manuel girin.":"Could not recognize. Take a clear, close photo of the box and retry, or enter manually.");
     }
@@ -924,7 +944,7 @@ const stopScanner=()=>{
   setShowScanner(false);
 };
 
-const handleBarcodeScan=(code)=>{
+const handleBarcodeScan=async(code)=>{
   stopScanner();
   const match=BARCODE_DB[code];
   if(match){
@@ -937,8 +957,18 @@ const handleBarcodeScan=(code)=>{
     notify(`✅ ${lang==="tr"?"İlaç tanındı":"Drug recognized"}: ${match.name}`);
     setShowAddMed(true);
   }else{
-    setScanResult({code,found:false});
-    notify(`⚠️ ${lang==="tr"?"Barkod kayıtlı değil. '🖼️ Fotoğraf' ile kutuyu çekip yapay zekayla tanıyın.":"Barcode not in cache. Use '🖼️ Photo' to capture the box for AI recognition."}`);
+    setScanResult({code,found:false,checking:true});
+    let ndc=null;try{ndc=await lookupBarcodeOpenFDA(code);}catch(e){}
+    if(ndc){
+      setScanResult({code,found:true,name:ndc.name,dose:"",drug:ndc.inn||ndc.name,source:"OpenFDA"});
+      setNewMed(p=>({...p,name:ndc.name,dose:""}));
+      setDrugQ(ndc.inn||ndc.name);
+      notify(`✅ ${lang==="tr"?"İlaç tanındı (OpenFDA)":"Recognized (OpenFDA)"}: ${ndc.name}`);
+      setShowAddMed(true);
+    }else{
+      setScanResult({code,found:false});
+      notify(`⚠️ ${lang==="tr"?"Barkod bulunamadı. '🖼️ Fotoğraf' ile kutuyu çekip yapay zekayla tanıyın.":"Barcode not found. Use '🖼️ Photo' to capture the box for AI recognition."}`);
+    }
   }
 };
 
@@ -2468,10 +2498,13 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
           <div style={{flex:1}}><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"Form":"Form"}</div><input value={recog.form} onChange={e=>setRecog(r=>({...r,form:e.target.value}))} placeholder={lang==="tr"?"tablet/şurup":"tablet/syrup"} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
         </div>
         <div><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"Etken madde":"Active ingredient"}</div><input value={recog.ingredient} onChange={e=>setRecog(r=>({...r,ingredient:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
+        {recog.verifying&&<div style={{fontSize:fs-2,color:mt}}>🔎 {lang==="tr"?"Küresel veritabanında doğrulanıyor…":"Verifying in global database…"}</div>}
+        {recog.verified&&<div style={{fontSize:fs-2,color:sc,lineHeight:1.4}}>✓ {lang==="tr"?"RxNav/OpenFDA doğrulandı":"Verified via RxNav/OpenFDA"}{recog.inn?` · INN: ${recog.inn}`:""}</div>}
+        {recog.verified===false&&!recog.verifying&&<div style={{fontSize:fs-3,color:mt,lineHeight:1.4}}>ℹ️ {lang==="tr"?"Küresel veritabanında bulunamadı (yerel ilaç olabilir)":"Not in global database (may be a local drug)"}</div>}
       </div>
       <div style={{display:"flex",gap:10,marginTop:16}}>
         <button onClick={()=>{const rc=recog;setRecog(null);photoInputRef.current&&photoInputRef.current.click();}} style={{...BP,flexShrink:0,background:"transparent",border:`1px solid ${bd}`,color:mt,padding:"11px 14px"}}>🔄 {lang==="tr"?"Yeniden":"Retry"}</button>
-        <button onClick={()=>{const rc=recog;setNewMed(pr=>({...pr,name:rc.name,dose:rc.dose}));setDrugQ(rc.ingredient||rc.name);const db=DR[(rc.ingredient||"").toLowerCase()];if(db){const raw=db[lang]||db.tr||db.en;if(raw)setDrugRes(pD(raw));}setRecog(null);notify(`✅ ${lang==="tr"?"İlaç eklendi":"Added"}: ${rc.name}`);setShowAddMed(true);}} disabled={!recog.name.trim()} style={{...BP,flex:1,padding:"11px",opacity:recog.name.trim()?1:.5}}>{lang==="tr"?"Ekle":"Add"} →</button>
+        <button onClick={()=>{const rc=recog;setNewMed(pr=>({...pr,name:rc.name,dose:rc.dose}));setDrugQ(rc.inn||rc.ingredient||rc.name);const db=DR[(rc.ingredient||"").toLowerCase()];if(db){const raw=db[lang]||db.tr||db.en;if(raw)setDrugRes(pD(raw));}setRecog(null);notify(`✅ ${lang==="tr"?"İlaç eklendi":"Added"}: ${rc.name}`);setShowAddMed(true);}} disabled={!recog.name.trim()} style={{...BP,flex:1,padding:"11px",opacity:recog.name.trim()?1:.5}}>{lang==="tr"?"Ekle":"Add"} →</button>
       </div>
       <button onClick={()=>setRecog(null)} style={{...BP,width:"100%",marginTop:8,background:"transparent",border:"none",color:mt,fontSize:fs-1}}>{t.cancel}</button>
     </div>
