@@ -149,6 +149,34 @@ function postureAngle(g,ref){
   return {angle:Math.round(ang),band:ang<8?"good":ang<20?"mild":"notable"};
 }
 if(typeof window!=="undefined")window.__postureAngle=postureAngle;
+// ---- Global drug databases: RxNav (NIH/NLM) name->RxCUI->ingredient(INN) + OpenFDA label ----
+async function lookupDrugAPIs(q){
+  if(!q||!q.trim())return null;
+  const enc=encodeURIComponent(q.trim());
+  const J=async(u)=>{try{const r=await fetch(u);return r.ok?await r.json():null;}catch(e){return null;}};
+  let rxcui=null,name=q.trim(),inn=null;
+  const ja=await J(`https://rxnav.nlm.nih.gov/REST/approximateTerm.json?term=${enc}&maxEntries=6`); // ranked: exact ingredient > brand > misspelling
+  const cands=(ja&&ja.approximateGroup&&ja.approximateGroup.candidate)||[];
+  if(cands.length){rxcui=cands[0].rxcui;const nm=cands.find(c=>c.name);if(nm)name=nm.name;}
+  if(rxcui){const ji=await J(`https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/related.json?tty=IN`);const g2=ji&&ji.relatedGroup&&ji.relatedGroup.conceptGroup;if(g2){for(const g of g2){if(g.tty==="IN"&&g.conceptProperties&&g.conceptProperties.length){inn=g.conceptProperties[0].name;break;}}}} // INN (localization anchor)
+  const term=inn||name||q.trim();const te=encodeURIComponent(term);
+  const jo=await J(`https://api.fda.gov/drug/label.json?search=(openfda.generic_name:%22${te}%22+OR+openfda.brand_name:%22${te}%22+OR+openfda.substance_name:%22${te}%22)&limit=1`);
+  const label=jo&&jo.results&&jo.results[0];
+  if(!rxcui&&!label)return null; // not in global DBs
+  const g=(x)=>Array.isArray(x)?x.join(" "):(x||"");
+  const clip=(x,n)=>{let s=g(x).replace(/\s+/g," ").trim();return s.length>n?s.slice(0,n).replace(/\s\S*$/,"")+"…":s;};
+  const pc=label&&label.openfda&&(label.openfda.pharm_class_epc||label.openfda.pharm_class_moa);
+  const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):"";
+  return {found:true,name,inn,
+    class:((inn?cap(inn):"")+(pc?(inn?" · ":"")+g(pc):""))||"-",
+    usage:clip(label&&(label.indications_and_usage||label.purpose),260)||"-",
+    dose:clip(label&&label.dosage_and_administration,220)||"-",
+    sideEffects:clip(label&&(label.adverse_reactions||label.warnings),220)||"-",
+    warnings:clip(label&&(label.boxed_warning||label.warnings||label.warnings_and_cautions),220)||"-",
+    interactions:clip(label&&label.drug_interactions,220)||"-",
+    source:"RxNav/OpenFDA"};
+}
+if(typeof window!=="undefined")window.__lookupDrugAPIs=lookupDrugAPIs;
 function computeBPM(samples){
   // Real PPG signal analysis. Returns {ok:true,bpm,conf,quality,signalQuality,fps,durationMs}
   // or {ok:false,reason,fps,durationMs}. NEVER fabricates a value.
@@ -1021,7 +1049,27 @@ const analyzeDrug=async()=>{
       }
     }
   }catch(e){}
-  // 3) AI analysis
+  // 3) Global medical databases (RxNav + OpenFDA) — INN-based worldwide matching
+  try{
+    const api=await lookupDrugAPIs(drugQ);
+    if(api){
+      let res={class:api.class,usage:api.usage,dose:api.dose,sideEffects:api.sideEffects,warnings:api.warnings,interactions:api.interactions};
+      if(lang!=="en"){ // OpenFDA labels are English -> translate/condense to user language if AI available
+        try{
+          const langName=LL[lang]||"English";
+          const tp=`Translate & condense these medication facts into ${langName}. Each field under 130 chars, plain text. Respond ONLY with JSON {"class","usage","dose","sideEffects","warnings","interactions"} — no markdown.\n${JSON.stringify(res)}`;
+          const d=await callAI({model:"claude-sonnet-4-6",max_tokens:700,messages:[{role:"user",content:tp}]},apiKey);
+          const txt=d.content?.map(c=>c.text||"").join("").trim()||"";const m=txt.replace(/```json\s*/g,"").replace(/```/g,"").match(/\{[\s\S]*\}/);
+          if(m){const pj=JSON.parse(m[0]);res={...res,...pj};}
+        }catch(e){/* keep English database data if translation unavailable */}
+      }
+      if(api.inn&&res.class&&res.class.toLowerCase().indexOf(api.inn.toLowerCase())<0)res.class=`${res.class} · ${api.inn}`;
+      setDrugRes(res);setDrugLoad(false);
+      try{localStorage.setItem(`drug_${lang}_${key}`,JSON.stringify({ts:Date.now(),data:res}));}catch(e){}
+      return;
+    }
+  }catch(e){}
+  // 4) AI analysis (fallback for local brands not in global DBs, e.g. Parol)
   try{
     const langName=LL[lang]||"English";
     const prompt=`Provide medical information about the medication "${drugQ}".
