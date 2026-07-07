@@ -486,6 +486,8 @@ const[acctEmail,setAcctEmail]=useState(()=>{try{return localStorage.getItem("ail
 const[emailIn,setEmailIn]=useState(()=>{try{return localStorage.getItem("ailvie_account_email")||"";}catch(e){return"";}});
 const[apiKey,setApiKey]=useState(()=>{try{return localStorage.getItem("ailvie_api_key")||"";}catch(e){return"";}});
 const[showNotif,setShowNotif]=useState(false);
+const[activeAlert,setActiveAlert]=useState(null); // big red half-screen health alert overlay
+const[showAlerts,setShowAlerts]=useState(false); // full UYARILAR window
 const[showEmergency,setShowEmergency]=useState(false);
 const[showMenu,setShowMenu]=useState(false);
 const[showFirstAid,setShowFirstAid]=useState(false);
@@ -578,6 +580,16 @@ useEffect(()=>{const bip=(e)=>{e.preventDefault();setInstallEvt(e);};const inst=
 // Notifications
 const[notifs,setNotifs]=useState([]);
 const unread=notifs.filter(n=>!n.read).length;
+const getActiveWarnings=()=>{
+  const out=[];const nowMin=now.getHours()*60+now.getMinutes();const tr=lang==='tr';
+  meds.forEach(m=>{if(m.taken||!m.time)return;const[h,mm]=(m.time||'0:0').split(':').map(Number);const d=nowMin-(h*60+mm);
+    if(d>=0&&d<=240)out.push({id:'med'+m.id,icon:'💊',kind:'med',ref:m,title:m.name+(m.dose?' '+m.dose:''),sub:d<=0?(tr?'Şimdi · '+m.time:'Now · '+m.time):(tr?`${d} dk geçti · ${m.time}`:`${d} min ago · ${m.time}`),high:d>0});});
+  appts.forEach(a=>{if(!a.date)return;const aDate=new Date(a.date+'T'+(a.time||'09:00'));const dMin=Math.round((aDate-now)/60000);
+    if(dMin<=180&&dMin>=-180)out.push({id:'appt'+a.id,icon:'🏥',kind:'appt',ref:a,title:a.doctor||(tr?'Randevu':'Appointment'),sub:dMin>=0?(tr?`${dMin} dk kaldı`:`in ${dMin} min`):(tr?`${-dMin} dk geçti`:`${-dMin} min ago`),high:dMin<=0});});
+  const isoD=now.toISOString().split('T')[0];
+  if(calAlarms[isoD]){const[h,mm]=(calAlarms[isoD]||'0:0').split(':').map(Number);const d=nowMin-(h*60+mm);if(d>=-60&&d<=240)out.push({id:'cal'+isoD,icon:'📅',kind:'cal',title:calNotes[isoD]||(tr?'Takvim alarmı':'Calendar alarm'),sub:calAlarms[isoD],high:d>=0});}
+  return out.sort((a,b)=>(b.high?1:0)-(a.high?1:0));
+};
 const notify=useCallback((txt)=>{
   try{if(navigator.vibrate)navigator.vibrate(15);}catch(e){}
   setNotifs(p=>[{id:Date.now(),text:txt,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),read:false},...p]);
@@ -1236,6 +1248,7 @@ meds.forEach(m=>{
       speakAlarm((lang==='tr'?'İlaç zamanı: ':'Med time: ')+m.name+' '+m.dose);
       notify('💊 '+m.name+' - '+m.dose);
       sendNotification('💊 '+(lang==='tr'?'İlaç Zamanı':'Med Time'),m.name+' '+m.dose+' — '+m.time);
+      setActiveAlert({icon:'💊',title:(lang==='tr'?'İLAÇ ZAMANI':'MED TIME'),msg:m.name+(m.dose?' '+m.dose:'')+' — '+m.time});
     }
   }
   // Late med warning — every 15 min for unmissed meds past their time
@@ -1252,6 +1265,7 @@ meds.forEach(m=>{
         :`Medication time passed by ${timeStr}. If you took ${m.name}, please confirm.`;
       notify('⚠️ '+msg);
       sendNotification('⚠️ '+(lang==='tr'?'İlaç Gecikmesi':'Medication Late'),msg);
+      setActiveAlert({icon:'⚠️',title:(lang==='tr'?'İLAÇ GECİKTİ':'MED OVERDUE'),msg});
       speakAlarm(msg);
     }
   }
@@ -1274,6 +1288,7 @@ if(calAlarms[isoD]&&calAlarms[isoD]===hhmm&&!firedAlarms.current.has('cal-'+isoD
   speakAlarm(lang==='tr'?'Takvim hatırlatması: ':'Calendar reminder: '+(calNotes[isoD]||''));
   notify('📅 '+(calNotes[isoD]||'Alarm'));
   sendNotification('📅 '+(lang==='tr'?'Takvim':'Calendar'),calNotes[isoD]||'Alarm');
+  setActiveAlert({icon:'📅',title:(lang==='tr'?'TAKVİM HATIRLATMA':'CALENDAR'),msg:calNotes[isoD]||'Alarm'});
 }
 // Appointment alarms (1 day + 6 hours before, and 1 hour before)
 appts.forEach(a=>{
@@ -1285,6 +1300,7 @@ appts.forEach(a=>{
     playAlarmBell();
     notify('🏥 '+a.doctor+' — '+(lang==='tr'?'1 saat sonra!':'in 1 hour!'));
     sendNotification('🏥 '+(lang==='tr'?'Randevu':'Appointment'),a.doctor+' — '+(lang==='tr'?'1 saat sonra':'in 1 hour'));
+    setActiveAlert({icon:'🏥',title:(lang==='tr'?'RANDEVU':'APPOINTMENT'),msg:a.doctor+' — '+(lang==='tr'?'1 saat sonra':'in 1 hour')});
   }
 });
 }
@@ -4218,7 +4234,34 @@ return (
         <div style={{flex:"1 1 0",minHeight:0,height:0,overflowY:page==="chat"?"hidden":"auto",overflowX:"hidden",padding:page==="chat"?"10px 12px 8px":"10px 12px 24px",display:page==="chat"?"flex":"block",flexDirection:"column",WebkitOverflowScrolling:"touch",cursor:"default",zoom:page==="chat"?1:zoom}} onClick={(e)=>{if(e.target===e.currentTarget){setEditNote(null);setNOpen(false);setShowAddMed(false);setShowAddAppt(false);setShowAddC(false);setShowWordLangPicker(false);setSelDate(null);}}}>{pages[page]?.()}</div>
 
         {/* Notif Panel */}
-        {showNotif&&<><div onClick={()=>setShowNotif(false)} style={{position:"absolute",inset:0,zIndex:249}}/><div style={{position:"absolute",bottom:86,left:0,right:0,maxHeight:"50%",background:cd,borderRadius:"16px 16px 0 0",boxShadow:"0 -6px 24px rgba(0,0,0,.3)",zIndex:250,padding:"14px 16px",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontWeight:700}}>🔔 {t.notif}</span><div style={{display:"flex",gap:8}}><button onClick={()=>setNotifs(p=>p.map(n=>({...n,read:true})))} aria-label={lang==="tr"?"Tümünü okundu işaretle":"Mark all read"} style={{fontSize:fs-2,color:ac,background:"none",border:"none",cursor:"pointer"}}>✓</button><button onClick={()=>setNotifs([])} aria-label={lang==="tr"?"Bildirimleri temizle":"Clear notifications"} style={{fontSize:fs-2,color:dg,background:"none",border:"none",cursor:"pointer"}}>✕</button><button onClick={()=>setShowNotif(false)} aria-label={lang==="tr"?"Kapat":"Close"} style={{background:"none",border:"none",fontSize:16,cursor:"pointer",color:tc}}>✕</button></div></div>{notifs.length===0&&<div style={{textAlign:"center",color:mt,padding:16}}>—</div>}{notifs.map(n=><div key={n.id} style={{padding:"6px 0",borderBottom:`1px solid ${bd}`,opacity:n.read?0.4:1}}><div>{n.text}</div><div style={{fontSize:fs-3,color:mt}}>{n.time}</div></div>)}</div></>}
+        {showNotif&&<><div onClick={()=>setShowNotif(false)} style={{position:"absolute",inset:0,zIndex:249}}/><div style={{position:"absolute",bottom:86,left:0,right:0,maxHeight:"50%",background:cd,borderRadius:"16px 16px 0 0",boxShadow:"0 -6px 24px rgba(0,0,0,.3)",zIndex:250,padding:"14px 16px",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontWeight:700}}>🔔 {t.notif}</span><div style={{display:"flex",gap:8,alignItems:"center"}}><button onClick={()=>{setShowNotif(false);setShowAlerts(true);}} style={{fontSize:fs-3,color:dg,background:"none",border:`1px solid ${dg}55`,borderRadius:8,padding:"2px 8px",cursor:"pointer",fontWeight:700}}>⚠️ {lang==="tr"?"UYARILAR":"ALERTS"}</button><button onClick={()=>setNotifs(p=>p.map(n=>({...n,read:true})))} aria-label={lang==="tr"?"Tümünü okundu işaretle":"Mark all read"} style={{fontSize:fs-2,color:ac,background:"none",border:"none",cursor:"pointer"}}>✓</button><button onClick={()=>setNotifs([])} aria-label={lang==="tr"?"Bildirimleri temizle":"Clear notifications"} style={{fontSize:fs-2,color:dg,background:"none",border:"none",cursor:"pointer"}}>✕</button><button onClick={()=>setShowNotif(false)} aria-label={lang==="tr"?"Kapat":"Close"} style={{background:"none",border:"none",fontSize:16,cursor:"pointer",color:tc}}>✕</button></div></div>{notifs.length===0&&<div style={{textAlign:"center",color:mt,padding:16}}>—</div>}{notifs.map(n=><div key={n.id} style={{padding:"6px 0",borderBottom:`1px solid ${bd}`,opacity:n.read?0.4:1}}><div>{n.text}</div><div style={{fontSize:fs-3,color:mt}}>{n.time}</div></div>)}</div></>}
+        {/* Big red half-screen health alert overlay */}
+        {activeAlert&&<div onClick={()=>{setActiveAlert(null);setShowAlerts(true);}} style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,.78)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{width:"100%",maxWidth:460,minHeight:"50vh",background:"linear-gradient(160deg,#e63946,#b71c2c)",borderRadius:22,boxShadow:"0 14px 44px rgba(0,0,0,.55)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"26px 18px",border:"3px solid rgba(255,255,255,.28)"}}>
+            <div style={{fontSize:82,lineHeight:1}}>❗</div>
+            <div style={{fontSize:32,fontWeight:900,color:"#fff",letterSpacing:1,marginTop:6,textShadow:"0 2px 8px rgba(0,0,0,.45)"}}>{activeAlert.icon} {activeAlert.title}</div>
+            <div style={{fontSize:22,fontWeight:700,color:"#fff",marginTop:14,lineHeight:1.35}}>{activeAlert.msg}</div>
+            <div style={{fontSize:fs-1,color:"rgba(255,255,255,.8)",marginTop:18}}>{lang==="tr"?"Tüm uyarılar için dokun":"Tap for all alerts"}</div>
+            <div style={{display:"flex",gap:10,marginTop:22,width:"100%"}}>
+              <button onClick={e=>{e.stopPropagation();setActiveAlert(null);setShowAlerts(true);}} style={{flex:1,padding:"14px",borderRadius:13,border:"none",background:"#fff",color:"#b71c2c",fontSize:fs+1,fontWeight:900,cursor:"pointer"}}>{lang==="tr"?"UYARILAR":"ALERTS"}</button>
+              <button onClick={e=>{e.stopPropagation();setActiveAlert(null);}} style={{flex:1,padding:"14px",borderRadius:13,border:"2px solid #fff",background:"transparent",color:"#fff",fontSize:fs+1,fontWeight:800,cursor:"pointer"}}>{lang==="tr"?"Tamam":"OK"}</button>
+            </div>
+          </div>
+        </div>}
+        {/* Full ALERTS window */}
+        {showAlerts&&(()=>{const W=getActiveWarnings();return <div style={{position:"fixed",inset:0,zIndex:395,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowAlerts(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:520,maxHeight:"82vh",overflow:"auto",borderRadius:"18px 18px 0 0",padding:16}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><b style={{fontSize:fs+4,color:dg,letterSpacing:1}}>⚠️ {lang==="tr"?"UYARILAR":"ALERTS"}{W.length?` (${W.length})`:""}</b><button onClick={()=>setShowAlerts(false)} style={{background:"none",border:"none",color:mt,fontSize:22,cursor:"pointer"}}>✕</button></div>
+            {W.length===0&&<div style={{textAlign:"center",color:mt,padding:"30px 0",fontSize:fs}}>✅ {lang==="tr"?"Şu an bekleyen uyarı yok":"No active alerts"}</div>}
+            {W.map(w=><div key={w.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px",borderRadius:12,marginBottom:8,background:w.high?dg+"1a":"transparent",border:`1.5px solid ${w.high?dg:bd}`}}>
+              <span style={{fontSize:30}}>{w.icon}</span>
+              <div style={{flex:1,minWidth:0}}><div style={{fontSize:fs+1,fontWeight:800,color:w.high?dg:tc}}>{w.title}</div><div style={{fontSize:fs-2,color:w.high?dg:mt,marginTop:2}}>{w.high?"❗ ":""}{w.sub}</div></div>
+              {w.kind==="med"&&<button onClick={()=>setMeds(p=>p.map(m=>m.id===w.ref.id?{...m,taken:true}:m))} style={{padding:"7px 12px",borderRadius:10,border:"none",background:sc,color:"#fff",fontWeight:700,fontSize:fs-2,cursor:"pointer",flexShrink:0}}>{lang==="tr"?"Aldım":"Taken"}</button>}
+              {w.kind==="appt"&&<button onClick={()=>{setShowAlerts(false);goTo("appts");}} style={{padding:"7px 12px",borderRadius:10,border:`1px solid ${ac}`,background:"transparent",color:ac,fontWeight:700,fontSize:fs-2,cursor:"pointer",flexShrink:0}}>{lang==="tr"?"Git":"View"}</button>}
+            </div>)}
+            <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:8}}>{lang==="tr"?"İlaç · randevu · takvim alarmları":"Meds · appointments · calendar alarms"}</div>
+          </div>
+        </div>;})()}
 
         {/* Emergency */}
         {showEmergency&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.75)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setShowEmergency(false)}><div onClick={e=>e.stopPropagation()} style={{background:cd,borderRadius:20,padding:20,width:"85%",maxHeight:"80%",overflowY:"auto"}}><div style={{textAlign:"center",marginBottom:12}}><div style={{fontSize:44}}>🚨</div><h3 style={{margin:0,color:dg}}>{t.emergency}</h3></div>{emNums.map(en=>(<a key={en.id} href={`tel:${en.number}`} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",borderRadius:12,background:`${dg}08`,border:`1px solid ${dg}22`,textDecoration:"none",color:tc,marginBottom:6}}><span style={{fontSize:26}}>{en.icon}</span><div style={{flex:1}}><div style={{fontWeight:700}}>{en.name}</div><div style={{fontSize:fs+2,color:dg,fontWeight:800}}>{en.number}</div></div><span style={{fontSize:22}}>📞</span></a>))}<button onClick={()=>setShowEmergency(false)} style={{...BP,width:"100%",marginTop:8,background:mt}}>{t.cancel}</button></div></div>}
