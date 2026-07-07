@@ -564,19 +564,21 @@ const loadWeather=useCallback(()=>{ // request location + fetch Open-Meteo (no A
   if(!navigator.geolocation){setWeather({err:"unsupported"});return;}
   navigator.geolocation.getCurrentPosition(p=>{
     const lat=p.coords.latitude.toFixed(3),lon=p.coords.longitude.toFixed(3);
+    try{localStorage.setItem("ailvie_geo","1");}catch(e){} // remember grant -> auto-connect next launches
     setPerms(pr=>({...pr,loc:true}));
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=7`).then(r=>r.ok?r.json():null).then(j=>{setWeather(j?{cur:j.current,hourly:j.hourly,daily:j.daily}:{err:"net"});}).catch(()=>setWeather({err:"net"}));
-  },()=>setWeather({err:"loc"}),{timeout:9000,maximumAge:600000});
+  },(err)=>{if(err&&err.code===1){try{localStorage.removeItem("ailvie_geo");}catch(e){}setPerms(pr=>({...pr,loc:false}));}setWeather({err:"loc"});},{timeout:9000,maximumAge:600000});
 },[]);
-useEffect(()=>{ // only auto-fetch if location ALREADY granted; never prompt at startup
+useEffect(()=>{ // auto-connect to weather whenever location is (or was) granted; no startup prompt otherwise
   if(!navigator.geolocation){setWeather({err:"unsupported"});return;}
+  let granted=false;try{granted=localStorage.getItem("ailvie_geo")==="1";}catch(e){}
   if(navigator.permissions&&navigator.permissions.query){
     navigator.permissions.query({name:"geolocation"}).then(ps=>{
-      if(ps.state==="granted"){setPerms(pr=>({...pr,loc:true}));loadWeather();}
+      if(ps.state==="granted"||granted){setPerms(pr=>({...pr,loc:true}));loadWeather();}
       else{setPerms(pr=>({...pr,loc:false}));setWeather({err:"loc"});} // needs location -> chip shows tap-to-enable, no prompt
       ps.onchange=()=>{if(ps.state==="granted"){setPerms(pr=>({...pr,loc:true}));loadWeather();}else setPerms(pr=>({...pr,loc:false}));};
-    }).catch(()=>setWeather({err:"loc"}));
-  }else setWeather({err:"loc"}); // can't query -> wait for user tap (no startup prompt)
+    }).catch(()=>{if(granted)loadWeather();else setWeather({err:"loc"});});
+  }else{if(granted)loadWeather();else setWeather({err:"loc"});} // iOS Safari (no permissions.query): use remembered grant
 },[loadWeather]);
 const attachCompass=()=>{const handler=(e)=>{let h=null;if(e.webkitCompassHeading!=null)h=e.webkitCompassHeading;else if(e.alpha!=null&&e.absolute)h=360-e.alpha;if(h!=null){setHeading((h+360)%360);setCompassErr(null);}};oriHandlerRef.current=handler;window.addEventListener("deviceorientationabsolute",handler,true);window.addEventListener("deviceorientation",handler,true);};
 const startCompass=()=>{if(typeof DeviceOrientationEvent==="undefined"){setCompassErr("unsupported");return;}if(typeof DeviceOrientationEvent.requestPermission==="function"){DeviceOrientationEvent.requestPermission().then(s=>{s==="granted"?attachCompass():setCompassErr("perm");}).catch(()=>setCompassErr("perm"));}else attachCompass();};
