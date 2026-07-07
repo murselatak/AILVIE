@@ -1375,6 +1375,12 @@ const pulseStreamRef=useRef(null),pulseRafRef=useRef(null),pulseFromChatRef=useR
 const[editH,setEditH]=useState(null);
 const[tmpH,setTmpH]=useState("");
 const[wellness,setWellness]=useState({water:0,sleep:0,mood:0,steps:0,exercise:0,waterGoal:8,sleepGoal:8,stepsGoal:10000});
+const[diet,setDiet]=useState({meals:[],done:{},water:{},goalWater:8}); // dietitian-prescribed program tracker
+const[glucose,setGlucose]=useState([]); // blood glucose readings [{id,ts,val,type}]
+const[dietSlot,setDietSlot]=useState(lang==="tr"?"Kahvaltı":"Breakfast");
+const[dietText,setDietText]=useState("");
+const[gluVal,setGluVal]=useState("");
+const[gluType,setGluType]=useState("fasting");
 const[sleepTimes,setSleepTimes]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_sleep_times"))||{bed:"",wake:""};}catch{return {bed:"",wake:""};}});
 const[tests,setTests]=useState({}); // last screening results: {balSway,balBand,balAt,rxAvg,rxBest,rxAt,postAngle,postAt}
 const ago=(ts)=>{if(!ts)return"";const m=Math.round((Date.now()-ts)/60000);if(m<1)return lang==="tr"?"az önce":"just now";if(m<60)return lang==="tr"?`${m} dk önce`:`${m}m ago`;const h=Math.round(m/60);if(h<24)return lang==="tr"?`${h} saat önce`:`${h}h ago`;return lang==="tr"?`${Math.round(h/24)} gün önce`:`${Math.round(h/24)}d ago`;};
@@ -1613,10 +1619,10 @@ riskPenalty
 // ═══ AUTO-SAVE/LOAD ═══
 useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
-if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(d.chatM?.length)setChatM(d.chatM);
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(d.chatM?.length)setChatM(d.chatM);
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
 }catch{}},[]); // load once
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays]); // enhanced auto-save (incl. drafts + trash)
+useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose]); // enhanced auto-save (incl. drafts + trash + diet/glucose)
 useEffect(()=>{try{const s=localStorage.getItem("ailvie_medimg");if(s){const a=JSON.parse(s);if(Array.isArray(a))setMedImages(a);}}catch(e){}},[]);
 useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_medimg",JSON.stringify(medImages));}catch(e){}},800);return()=>clearTimeout(tm);},[medImages]);
 // Auto-cleanup empty notes that are not being edited
@@ -3052,6 +3058,59 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     </div>
     <div style={{fontSize:fs-3,color:mt,marginTop:6,textAlign:"center"}}>{bmi<18.5?(lang==="tr"?"Zayıf — Kilo almanız önerilir":"Underweight — weight gain recommended"):bmi<25?(lang==="tr"?"✓ Normal":"✓ Normal"):bmi<30?(lang==="tr"?"Fazla kilolu":"Overweight"):(lang==="tr"?"Obez — Doktora başvurun":"Obese — Consult doctor")}</div>
   </div>}
+  {/* Diet Program (dietitian tracker) */}
+  {(()=>{const tk=new Date().toISOString().split('T')[0];const meals=diet.meals||[];const doneToday=meals.filter(m=>diet.done&&diet.done[tk+'_'+m.id]).length;const water=(diet.water&&diet.water[tk])||0;const gw=diet.goalWater||8;
+  return <div style={{...CS}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><b style={{fontSize:fs+1,color:tc}}>🥗 {lang==="tr"?"Diyet Programı":"Diet Program"}</b>{meals.length>0&&<span style={{fontSize:fs-2,color:doneToday===meals.length?sc:mt,fontWeight:700}}>{lang==="tr"?"bugün":"today"} {doneToday}/{meals.length} ✓</span>}</div>
+    <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{lang==="tr"?"Diyetisyeninizin verdiği programı girin. AILVIE diyet oluşturmaz, yalnızca takip eder.":"Enter the program your dietitian gave you. AILVIE doesn't create diets, only tracks."}</div>
+    {meals.map(m=>{const dk=tk+'_'+m.id;const on=diet.done&&diet.done[dk];return <div key={m.id} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 0",borderBottom:`1px solid ${bd}`}}>
+      <button onClick={()=>setDiet(d=>({...d,done:{...(d.done||{}),[dk]:!on}}))} style={{flexShrink:0,width:24,height:24,borderRadius:7,border:`2px solid ${on?sc:bd}`,background:on?sc:"transparent",color:"#fff",cursor:"pointer",fontSize:14,lineHeight:1}}>{on?"✓":""}</button>
+      <div style={{flex:1,minWidth:0}}><div style={{fontSize:fs-2,fontWeight:700,color:ac}}>{m.slot}</div><div style={{fontSize:fs-1,color:tc,opacity:on?0.55:1,textDecoration:on?"line-through":"none"}}>{m.text}</div></div>
+      <button onClick={()=>setDiet(d=>({...d,meals:d.meals.filter(x=>x.id!==m.id)}))} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:fs}}>✕</button>
+    </div>;})}
+    {meals.length===0&&<div style={{color:mt,fontSize:fs-2,padding:"6px 0"}}>{lang==="tr"?"Henüz öğün eklenmedi.":"No meals added yet."}</div>}
+    <div style={{display:"flex",gap:6,marginTop:8}}>
+      <select value={dietSlot} onChange={e=>setDietSlot(e.target.value)} style={{...IS,flex:"0 0 36%",padding:"9px 6px"}}>{(lang==="tr"?["Kahvaltı","Ara Öğün","Öğle","İkindi","Akşam","Gece"]:["Breakfast","Snack","Lunch","Afternoon","Dinner","Night"]).map(x=><option key={x} value={x}>{x}</option>)}</select>
+      <input value={dietText} onChange={e=>setDietText(e.target.value)} placeholder={lang==="tr"?"Ne yenecek…":"What to eat…"} style={{...IS,flex:1}}/>
+    </div>
+    <button onClick={()=>{if(dietText.trim()){setDiet(d=>({...d,meals:[...(d.meals||[]),{id:Date.now(),slot:dietSlot,text:dietText.trim()}]}));setDietText("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Öğün Ekle":"Add Meal"}</button>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:12,paddingTop:10,borderTop:`1px solid ${bd}`}}>
+      <span style={{fontSize:fs-1,color:tc}}>💧 {lang==="tr"?"Su":"Water"} <b style={{color:water>=gw?sc:ac}}>{water}</b>/{gw} {lang==="tr"?"bardak":"cups"}</span>
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={()=>setDiet(d=>({...d,water:{...(d.water||{}),[tk]:Math.max(0,water-1)}}))} style={{...BP,background:mt,width:36,padding:"6px 0"}}>−</button>
+        <button onClick={()=>setDiet(d=>({...d,water:{...(d.water||{}),[tk]:water+1}}))} style={{...BP,width:36,padding:"6px 0"}}>+</button>
+      </div>
+    </div>
+  </div>;})()}
+  {/* Blood Glucose tracking */}
+  {(()=>{
+    const gluClass=(val,type)=>{val=+val;if(!val)return{c:mt,l:""};if(type==="fasting"){if(val<70)return{c:"#e9a23b",l:lang==="tr"?"düşük":"low"};if(val<=99)return{c:sc,l:lang==="tr"?"normal":"normal"};if(val<=125)return{c:"#e9a23b",l:lang==="tr"?"sınırda":"borderline"};return{c:dg,l:lang==="tr"?"yüksek":"high"};}if(val<140)return{c:sc,l:lang==="tr"?"normal":"normal"};if(val<200)return{c:"#e9a23b",l:lang==="tr"?"sınırda":"borderline"};return{c:dg,l:lang==="tr"?"yüksek":"high"};};
+    const readings=[...glucose].sort((a,b)=>a.ts-b.ts);const recent=readings.slice(-8);
+    const typeLbl=(t)=>t==="fasting"?(lang==="tr"?"Açlık":"Fasting"):t==="postmeal"?(lang==="tr"?"Tokluk":"Post-meal"):(lang==="tr"?"Rastgele":"Random");
+    const vals=recent.map(r=>r.val);const mn=Math.min(70,...vals),mx=Math.max(200,...vals);const yy=v=>78-((v-mn)/(mx-mn||1))*74-2;
+    return <div style={{...CS}}>
+      <b style={{fontSize:fs+1,color:tc}}>🩸 {lang==="tr"?"Şeker (Glikoz) Takibi":"Blood Glucose"}</b>
+      <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{lang==="tr"?"Ölçüm cihazınızın değerini girin. Tarama amaçlıdır, tıbbi tanı değildir — doktorunuza danışın.":"Enter your meter reading. Screening only, not a diagnosis — consult your doctor."}</div>
+      <div style={{display:"flex",gap:6}}>
+        <input type="number" inputMode="numeric" value={gluVal} onChange={e=>setGluVal(e.target.value)} placeholder="mg/dL" style={{...IS,flex:"0 0 32%"}}/>
+        <select value={gluType} onChange={e=>setGluType(e.target.value)} style={{...IS,flex:1}}><option value="fasting">{lang==="tr"?"Açlık":"Fasting"}</option><option value="postmeal">{lang==="tr"?"Tokluk (2 saat)":"Post-meal (2h)"}</option><option value="random">{lang==="tr"?"Rastgele":"Random"}</option></select>
+      </div>
+      <button onClick={()=>{const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);setGluVal("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Ölçüm Ekle":"Add Reading"}</button>
+      {recent.length>=2&&<div style={{marginTop:12}}>
+        <svg width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none">
+          <polyline fill="none" stroke={ac} strokeWidth="2" points={recent.map((r,i)=>`${(i/(recent.length-1))*300},${yy(r.val)}`).join(" ")}/>
+          {recent.map((r,i)=>{const cl=gluClass(r.val,r.type);return <circle key={r.id} cx={(i/(recent.length-1))*300} cy={yy(r.val)} r="3.5" fill={cl.c}/>;})}
+        </svg>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-4,color:mt}}><span>{mn}</span><span>mg/dL</span><span>{mx}</span></div>
+      </div>}
+      {[...readings].reverse().slice(0,6).map(r=>{const cl=gluClass(r.val,r.type);const dt=new Date(r.ts);return <div key={r.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:`1px solid ${bd}`}}>
+        <div style={{flexShrink:0,width:64}}><b style={{fontSize:fs+3,color:cl.c}}>{r.val}</b> <span style={{fontSize:fs-4,color:mt}}>mg/dL</span></div>
+        <div style={{flex:1,textAlign:"right",minWidth:0}}><span style={{fontSize:fs-2,color:cl.c,fontWeight:700}}>{cl.l}</span> <span style={{fontSize:fs-3,color:mt}}>· {typeLbl(r.type)} · {dt.toLocaleDateString(lc,{day:"2-digit",month:"2-digit"})} {dt.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</span></div>
+        <button onClick={()=>setGlucose(g=>g.filter(x=>x.id!==r.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:fs-1,marginLeft:6,flexShrink:0}}>✕</button>
+      </div>;})}
+      {readings.length===0&&<div style={{color:mt,fontSize:fs-2,marginTop:8}}>{lang==="tr"?"Henüz ölçüm yok.":"No readings yet."}</div>}
+      <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{lang==="tr"?"Referans (yaklaşık): Açlık 70–99 normal, 100–125 sınırda, ≥126 yüksek · Tokluk <140 normal. Kişisel hedefler için doktorunuza danışın.":"Ref (approx): Fasting 70–99 normal, 100–125 borderline, ≥126 high · Post-meal <140 normal. Ask your doctor for personal targets."}</div>
+    </div>;})()}
   {/* Vital Signs */}
   <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🫀 {lang==="tr"?"Yaşamsal Değerler":"Vital Signs"}</div>
   <div style={{...CS,display:"flex",alignItems:"center",gap:10}}>
