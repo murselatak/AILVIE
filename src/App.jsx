@@ -560,14 +560,23 @@ const[showWx,setShowWx]=useState(false);
 const[heading,setHeading]=useState(null);
 const[compassErr,setCompassErr]=useState(null);
 const oriHandlerRef=useRef(null);
-const loadWeather=useCallback((manual)=>{ // request location + fetch Open-Meteo (no API key)
-  if(!navigator.geolocation){setWeather({err:"unsupported"});if(manual)notify(lang==="tr"?"Bu cihaz konumu desteklemiyor.":"Location not supported.");return;}
+const loadWeather=useCallback((manual)=>{ // location -> Open-Meteo (no API key); GPS first, IP fallback
+  const fetchWx=(lat,lon,src)=>{
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=7`).then(r=>r.ok?r.json():null).then(j=>{if(j){if(src==="gps"){try{localStorage.setItem("ailvie_geo","1");}catch(e){}}setWeather({cur:j.current,hourly:j.hourly,daily:j.daily,approx:src==="ip"});}else setWeather({err:"net"});}).catch(()=>setWeather({err:"net"}));
+  };
+  const fail=()=>{setWeather({err:"loc"});if(manual)notify(lang==="tr"?"Konum alınamadı. Telefon konum servisini açıp tekrar deneyin.":"Couldn't get location. Turn on device location services and retry.");};
+  const ipFallback=()=>{ // approximate (city-level) location by IP, keyless
+    fetch("https://ipwho.is/").then(r=>r.ok?r.json():null).then(j=>{if(j&&j.success&&j.latitude!=null)fetchWx(j.latitude,j.longitude,"ip");else throw 0;}).catch(()=>{fetch("https://get.geojs.io/v1/ip/geo.json").then(r=>r.ok?r.json():null).then(j=>{if(j&&j.latitude!=null)fetchWx(j.latitude,j.longitude,"ip");else fail();}).catch(fail);});
+  };
+  if(!navigator.geolocation){ipFallback();return;}
   navigator.geolocation.getCurrentPosition(p=>{
-    const lat=p.coords.latitude.toFixed(3),lon=p.coords.longitude.toFixed(3);
-    try{localStorage.setItem("ailvie_geo","1");}catch(e){} // remember grant -> auto-connect next launches
     if(manual)notify(lang==="tr"?"✓ Konum açık — hava durumu yükleniyor":"✓ Location on — loading weather");
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=7`).then(r=>r.ok?r.json():null).then(j=>{setWeather(j?{cur:j.current,hourly:j.hourly,daily:j.daily}:{err:"net"});}).catch(()=>setWeather({err:"net"}));
-  },(err)=>{const denied=err&&err.code===1;if(denied){try{localStorage.removeItem("ailvie_geo");}catch(e){}}setWeather({err:"loc"});if(manual)notify(denied?(lang==="tr"?"⚠️ Konum tarayıcıda engelli. Tarayıcı ayarları > Site izinleri > Konum'u açın.":"⚠️ Location blocked in browser. Enable it in browser site settings."):(lang==="tr"?"Konum alınamadı, tekrar deneyin.":"Couldn't get location, try again."));},{timeout:9000,maximumAge:600000});
+    fetchWx(p.coords.latitude.toFixed(3),p.coords.longitude.toFixed(3),"gps");
+  },(err)=>{ // GPS denied/timeout/unavailable -> approximate by IP so weather still loads
+    if(err&&err.code===1){try{localStorage.removeItem("ailvie_geo");}catch(e){}}
+    if(manual)notify(lang==="tr"?"📍 Kesin konum yok — yaklaşık konumla getiriliyor…":"📍 Using approximate location…");
+    ipFallback();
+  },{timeout:12000,maximumAge:600000,enableHighAccuracy:false});
 },[lang]);
 useEffect(()=>{ // auto-connect to weather whenever location is (or was) granted; no startup prompt otherwise
   if(!navigator.geolocation){setWeather({err:"unsupported"});return;}
@@ -2176,7 +2185,7 @@ const renderHome=()=>{
           <div style={{fontSize:fs-1,fontWeight:700,color:tc,margin:"12px 0 4px"}}>{lang==="tr"?"7 Günlük (haftalık)":"7-Day (weekly)"}</div>
           <div>{weather.daily.time.map((x,i)=>{const d=new Date(x+"T00:00");const wd=d.toLocaleDateString(lc,{weekday:"long"});return <div key={x} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 0",borderBottom:`1px solid ${bd}`}}><span style={{fontSize:fs-1,color:tc,flex:1,textTransform:"capitalize"}}>{i===0?(lang==="tr"?"Bugün":"Today"):wd}</span><span style={{fontSize:20,width:36,textAlign:"center"}}>{wxIcon(weather.daily.weather_code[i])}</span><span style={{fontSize:fs-1,color:mt,width:88,textAlign:"right"}}>{Math.round(weather.daily.temperature_2m_min[i])}° / <b style={{color:tc}}>{Math.round(weather.daily.temperature_2m_max[i])}°</b></span></div>;})}</div>
         </>:<div style={{color:mt,fontSize:fs-1,padding:"24px 0",textAlign:"center"}}>{weather&&weather.err?(<><div>{lang==="tr"?"Hava durumu için konum gerekiyor.":"Weather needs your location."}</div><button onClick={()=>loadWeather(true)} style={{marginTop:12,padding:"10px 18px",borderRadius:12,border:"none",background:ac,color:"#fff",fontWeight:700,fontSize:fs,cursor:"pointer"}}>📍 {lang==="tr"?"Konumu Etkinleştir":"Enable Location"}</button></>):(lang==="tr"?"Yükleniyor…":"Loading…")}</div>}
-        <div style={{fontSize:fs-4,color:mt,marginTop:12,textAlign:"center"}}>Open-Meteo · {lang==="tr"?"tarama amaçlıdır":"informational"}</div>
+        <div style={{fontSize:fs-4,color:mt,marginTop:12,textAlign:"center"}}>{weather&&weather.approx?(lang==="tr"?"📍 yaklaşık konum · ":"📍 approximate · "):""}Open-Meteo</div>
       </div>
     </div>}
     {/* Health + Med Progress strip */}
