@@ -612,6 +612,7 @@ const getActiveWarnings=()=>{
     if(dMin<=180&&dMin>=-180)out.push({id:'appt'+a.id,icon:'🏥',kind:'appt',ref:a,title:a.doctor||(tr?'Randevu':'Appointment'),sub:dMin>=0?(tr?`${dMin} dk kaldı`:`in ${dMin} min`):(tr?`${-dMin} dk geçti`:`${-dMin} min ago`),high:dMin<=0});});
   const isoD=now.toISOString().split('T')[0];
   if(calAlarms[isoD]){const[h,mm]=(calAlarms[isoD]||'0:0').split(':').map(Number);const d=nowMin-(h*60+mm);if(d>=-60&&d<=240)out.push({id:'cal'+isoD,icon:'📅',kind:'cal',title:calNotes[isoD]||(tr?'Takvim alarmı':'Calendar alarm'),sub:calAlarms[isoD],high:d>=0});}
+  try{if(glucose&&glucose.length){const g=glucose[glucose.length-1];if(g&&(Date.now()-g.ts)<864e5&&(g.val<70||g.val>=250))out.push({id:'gluW',icon:'🩸',kind:'info',title:(tr?'Şeker':'Glucose')+' '+g.val+' mg/dL',sub:g.val<70?(tr?'düşük — dikkat':'low'):(tr?'yüksek — doktorunuza danışın':'high'),high:g.val<54||g.val>=300});}const bl=(healthLog||[]).filter(x=>x.type==='bp');if(bl.length){const bp=bl[bl.length-1];const sV=bp.val,dV=(bp.meta&&bp.meta.d)||0;if((Date.now()-bp.ts)<864e5&&(sV>=140||dV>=90||sV<90))out.push({id:'bpW',icon:'🩺',kind:'info',title:(tr?'Tansiyon':'BP')+' '+sV+'/'+dV,sub:(sV>=140||dV>=90)?(tr?'yüksek':'high'):(tr?'düşük':'low'),high:sV>=180||dV>=120});}}catch(e){}
   return out.sort((a,b)=>(b.high?1:0)-(a.high?1:0));
 };
 const notify=useCallback((txt)=>{
@@ -1383,7 +1384,31 @@ const[gluVal,setGluVal]=useState("");
 const[gluType,setGluType]=useState("fasting");
 const[healthLog,setHealthLog]=useState([]); // timestamped vital history [{id,ts,type,val,meta}]
 const[repMetric,setRepMetric]=useState("weight");
+const[repRange,setRepRange]=useState(30); // days; 0=all
+const[hba1cVal,setHba1cVal]=useState("");
+const[goals,setGoals]=useState({weight:""});
 const logMetric=useCallback((type,val,meta)=>{const v=Number(val);if(!v||v<=0)return;setHealthLog(l=>[...l,{id:Date.now()+"_"+Math.random().toString(36).slice(2,6),ts:Date.now(),type,val:v,meta:meta||null}]);},[]);
+const exportReportPDF=()=>{
+  const tr=lang==="tr";
+  const esc=(x)=>String(x==null?"":x).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  const dstr=(ts)=>{const d=new Date(ts);return d.toLocaleDateString(lc,{day:"2-digit",month:"2-digit",year:"numeric"})+" "+d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});};
+  const metrics=[["weight",tr?"Kilo":"Weight","kg"],["pulse",tr?"Nabız":"Pulse","bpm"],["bp",tr?"Tansiyon":"Blood Pressure","mmHg"],["spo2","SpO2","%"],["glucose",tr?"Şeker":"Glucose","mg/dL"]];
+  let body="";
+  metrics.forEach(([k,lbl,u])=>{
+    const ser=(k==="glucose"?[...glucose].map(r=>({ts:r.ts,val:r.val,meta:r.type})):healthLog.filter(x=>x.type===k).map(x=>({ts:x.ts,val:x.val,meta:x.meta}))).sort((a,b)=>a.ts-b.ts);
+    if(!ser.length)return;
+    const vals=ser.map(s=>s.val),avg=Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*10)/10,mn=Math.min(...vals),mx=Math.max(...vals),cur=ser[ser.length-1];
+    const fv=(s)=>k==="bp"?(s.val+"/"+((s.meta&&s.meta.d)||"?")):s.val;
+    const rows=[...ser].reverse().slice(0,20).map(x=>"<tr><td>"+esc(dstr(x.ts))+"</td><td style='text-align:right;font-weight:600'>"+esc(fv(x))+" "+u+"</td></tr>").join("");
+    body+="<h3>"+esc(lbl)+"</h3><p>"+(tr?"Son":"Latest")+": <b>"+esc(fv(cur))+" "+u+"</b> \u00b7 "+(tr?"Ortalama":"Avg")+": "+avg+" \u00b7 "+(tr?"En d\u00fc\u015f\u00fck":"Min")+": "+mn+" \u00b7 "+(tr?"En y\u00fcksek":"Max")+": "+mx+" \u00b7 "+(tr?"\u00d6l\u00e7\u00fcm":"Count")+": "+ser.length+"</p><table><thead><tr><th>"+(tr?"Tarih \u00b7 Saat":"Date \u00b7 Time")+"</th><th style='text-align:right'>"+(tr?"De\u011fer":"Value")+"</th></tr></thead><tbody>"+rows+"</tbody></table>";
+  });
+  if(!body)body="<p>"+(tr?"Hen\u00fcz kay\u0131t yok.":"No records yet.")+"</p>";
+  const gen=new Date().toLocaleString(lc);
+  const html="<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>AILVIE</title><style>body{font-family:system-ui,Arial,sans-serif;color:#111;padding:22px;max-width:820px;margin:auto}h1{color:#0077b6;margin:0 0 2px;font-size:22px}h3{margin:18px 0 4px;color:#0077b6;border-bottom:2px solid #e8a817;padding-bottom:2px;font-size:16px}table{width:100%;border-collapse:collapse;margin:4px 0 12px;font-size:13px}th,td{border-bottom:1px solid #ddd;padding:5px 8px;text-align:left}p{font-size:13px;color:#333;margin:4px 0}.m{color:#666;font-size:12px;margin-bottom:6px}.w{margin-top:20px;font-size:11px;color:#666;border-top:1px solid #ddd;padding-top:8px}</style></head><body><h1>AILVIE \u2014 "+(tr?"Sa\u011fl\u0131k Raporu":"Health Report")+"</h1><div class='m'>"+esc(pat.name||"")+" \u00b7 "+(tr?"Olu\u015fturma":"Generated")+": "+esc(gen)+"</div>"+body+"<div class='w'>"+(tr?"Bu rapor tarama ama\u00e7l\u0131d\u0131r, t\u0131bbi tan\u0131/tedavi yerine ge\u00e7mez. Sa\u011fl\u0131k kararlar\u0131 i\u00e7in doktorunuza dan\u0131\u015f\u0131n.":"Screening only; not a medical diagnosis. Consult your doctor.")+"</div></body></html>";
+  const w=window.open("","_blank");
+  if(!w){notify(tr?"Pop-up engellendi \u2014 taray\u0131c\u0131 ayar\u0131ndan izin verin.":"Popup blocked \u2014 allow popups.");return;}
+  w.document.write(html);w.document.close();setTimeout(()=>{try{w.focus();w.print();}catch(e){}},500);
+};
 const[sleepTimes,setSleepTimes]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_sleep_times"))||{bed:"",wake:""};}catch{return {bed:"",wake:""};}});
 const[tests,setTests]=useState({}); // last screening results: {balSway,balBand,balAt,rxAvg,rxBest,rxAt,postAngle,postAt}
 const ago=(ts)=>{if(!ts)return"";const m=Math.round((Date.now()-ts)/60000);if(m<1)return lang==="tr"?"az önce":"just now";if(m<60)return lang==="tr"?`${m} dk önce`:`${m}m ago`;const h=Math.round(m/60);if(h<24)return lang==="tr"?`${h} saat önce`:`${h}h ago`;return lang==="tr"?`${Math.round(h/24)} gün önce`:`${Math.round(h/24)}d ago`;};
@@ -1622,10 +1647,10 @@ riskPenalty
 // ═══ AUTO-SAVE/LOAD ═══
 useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
-if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(d.chatM?.length)setChatM(d.chatM);
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(d.chatM?.length)setChatM(d.chatM);
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
 }catch{}},[]); // load once
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose,healthLog]); // enhanced auto-save (incl. drafts + trash + diet/glucose/log)
+useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog,goals}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose,healthLog,goals]); // enhanced auto-save (incl. drafts + trash + diet/glucose/log/goals)
 useEffect(()=>{try{const s=localStorage.getItem("ailvie_medimg");if(s){const a=JSON.parse(s);if(Array.isArray(a))setMedImages(a);}}catch(e){}},[]);
 useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_medimg",JSON.stringify(medImages));}catch(e){}},800);return()=>clearTimeout(tm);},[medImages]);
 // Auto-cleanup empty notes that are not being edited
@@ -3098,7 +3123,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         <input type="number" inputMode="numeric" value={gluVal} onChange={e=>setGluVal(e.target.value)} placeholder="mg/dL" style={{...IS,flex:"0 0 32%"}}/>
         <select value={gluType} onChange={e=>setGluType(e.target.value)} style={{...IS,flex:1}}><option value="fasting">{lang==="tr"?"Açlık":"Fasting"}</option><option value="postmeal">{lang==="tr"?"Tokluk (2 saat)":"Post-meal (2h)"}</option><option value="random">{lang==="tr"?"Rastgele":"Random"}</option></select>
       </div>
-      <button onClick={()=>{const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric('glucose',v,gluType);setGluVal("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Ölçüm Ekle":"Add Reading"}</button>
+      <button onClick={()=>{const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric('glucose',v,gluType);if(v<54||v>=300)setActiveAlert({icon:"🩸",title:lang==="tr"?"KRİTİK ŞEKER":"CRITICAL GLUCOSE",msg:v+" mg/dL — "+(lang==="tr"?"acil kontrol edin / doktorunuza danışın":"seek medical attention")});setGluVal("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Ölçüm Ekle":"Add Reading"}</button>
       {recent.length>=2&&<div style={{marginTop:12}}>
         <svg width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none">
           <polyline fill="none" stroke={ac} strokeWidth="2" points={recent.map((r,i)=>`${(i/(recent.length-1))*300},${yy(r.val)}`).join(" ")}/>
@@ -3113,14 +3138,19 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       </div>;})}
       {readings.length===0&&<div style={{color:mt,fontSize:fs-2,marginTop:8}}>{lang==="tr"?"Henüz ölçüm yok.":"No readings yet."}</div>}
       <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{lang==="tr"?"Referans (yaklaşık): Açlık 70–99 normal, 100–125 sınırda, ≥126 yüksek · Tokluk <140 normal. Kişisel hedefler için doktorunuza danışın.":"Ref (approx): Fasting 70–99 normal, 100–125 borderline, ≥126 high · Post-meal <140 normal. Ask your doctor for personal targets."}</div>
+      <div style={{display:"flex",gap:6,alignItems:"center",marginTop:10,paddingTop:8,borderTop:`1px solid ${bd}`}}><span style={{fontSize:fs-1,color:tc,flex:1}}>🧪 HbA1c <span style={{fontSize:fs-3,color:mt}}>(%)</span></span><input type="number" step="0.1" inputMode="decimal" value={hba1cVal} onChange={e=>setHba1cVal(e.target.value)} placeholder="5.6" style={{...IS,width:74,textAlign:"center"}}/><button onClick={()=>{const v=parseFloat(hba1cVal);if(v>0){logMetric("hba1c",v);setHba1cVal("");notify(lang==="tr"?"✓ HbA1c kaydedildi":"✓ HbA1c logged");}}} style={{...BP,padding:"8px 14px"}}>+</button></div>
     </div>;})()}
   {/* Health Report & History */}
   {(()=>{
     const M=lang==="tr"
-      ?[{k:"weight",lbl:"Kilo",u:"kg",ic:"⚖️"},{k:"pulse",lbl:"Nabız",u:"bpm",ic:"❤️"},{k:"bp",lbl:"Tansiyon",u:"mmHg",ic:"🩸"},{k:"spo2",lbl:"SpO₂",u:"%",ic:"🫁"},{k:"glucose",lbl:"Şeker",u:"mg/dL",ic:"🍬"}]
-      :[{k:"weight",lbl:"Weight",u:"kg",ic:"⚖️"},{k:"pulse",lbl:"Pulse",u:"bpm",ic:"❤️"},{k:"bp",lbl:"Blood Pressure",u:"mmHg",ic:"🩸"},{k:"spo2",lbl:"SpO₂",u:"%",ic:"🫁"},{k:"glucose",lbl:"Glucose",u:"mg/dL",ic:"🍬"}];
+      ?[{k:"weight",lbl:"Kilo",u:"kg",ic:"⚖️"},{k:"pulse",lbl:"Nabız",u:"bpm",ic:"❤️"},{k:"bp",lbl:"Tansiyon",u:"mmHg",ic:"🩸"},{k:"spo2",lbl:"SpO₂",u:"%",ic:"🫁"},{k:"glucose",lbl:"Şeker",u:"mg/dL",ic:"🍬"},{k:"hba1c",lbl:"HbA1c",u:"%",ic:"🧪"}]
+      :[{k:"weight",lbl:"Weight",u:"kg",ic:"⚖️"},{k:"pulse",lbl:"Pulse",u:"bpm",ic:"❤️"},{k:"bp",lbl:"Blood Pressure",u:"mmHg",ic:"🩸"},{k:"spo2",lbl:"SpO₂",u:"%",ic:"🫁"},{k:"glucose",lbl:"Glucose",u:"mg/dL",ic:"🍬"},{k:"hba1c",lbl:"HbA1c",u:"%",ic:"🧪"}];
     const sel=repMetric,mi=M.find(x=>x.k===sel)||M[0];
-    const series=(sel==="glucose"?[...glucose].map(r=>({ts:r.ts,val:r.val,meta:r.type})):healthLog.filter(x=>x.type===sel).map(x=>({ts:x.ts,val:x.val,meta:x.meta}))).sort((a,b)=>a.ts-b.ts);
+    const allSeries=(sel==="glucose"?[...glucose].map(r=>({ts:r.ts,val:r.val,meta:r.type})):healthLog.filter(x=>x.type===sel).map(x=>({ts:x.ts,val:x.val,meta:x.meta}))).sort((a,b)=>a.ts-b.ts);
+    const rMs=repRange>0?repRange*864e5:0,cutoff=Date.now()-rMs;
+    const series=repRange>0?allSeries.filter(x=>x.ts>=cutoff):allSeries;
+    const prevSeries=repRange>0?allSeries.filter(x=>x.ts>=cutoff-rMs&&x.ts<cutoff):[];
+    const pAvg=prevSeries.length?Math.round(prevSeries.reduce((a,b)=>a+b.val,0)/prevSeries.length*10)/10:null;
     const vals=series.map(s=>s.val),n=series.length;
     const cur=n?series[n-1]:null,prev=n>1?series[n-2]:null;
     const avg=n?Math.round(vals.reduce((a,b)=>a+b,0)/n*10)/10:0,mn=n?Math.min(...vals):0,mx=n?Math.max(...vals):0;
@@ -3134,21 +3164,25 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       else if(sel==="pulse"){const ok=cur.val>=60&&cur.val<=100;concl=tr?`Son nabız ${cur.val} bpm — ${ok?"normal aralıkta (60–100)":"aralık dışı, dikkat"}. Ortalama ${avg} bpm.`:`Latest ${cur.val} bpm — ${ok?"normal (60–100)":"out of range"}. Avg ${avg}.`;}
       else if(sel==="bp"){const sV=cur.val,dV=(cur.meta&&cur.meta.d)||0;const ok=sV<120&&dV<80;const hi=sV>=140||dV>=90;concl=tr?`Son tansiyon ${sV}/${dV} — ${ok?"ideal":hi?"yüksek, doktorunuza danışın":"sınırda"}. Ortalama sistolik ${avg}.`:`Latest ${sV}/${dV} — ${ok?"ideal":hi?"high, consult doctor":"borderline"}.`;}
       else if(sel==="spo2"){const ok=cur.val>=95;concl=tr?`Son SpO₂ %${cur.val} — ${ok?"normal (≥95)":cur.val>=90?"hafif düşük":"düşük, dikkat"}.`:`Latest ${cur.val}% — ${ok?"normal":"low"}.`;}
+      else if(sel==="hba1c"){const c=cur.val;const cat=c<5.7?(tr?"normal":"normal"):c<6.5?(tr?"prediyabet":"prediabetes"):(tr?"diyabet aralığı":"diabetes range");const eag=Math.round(28.7*c-46.7);concl=tr?`Son HbA1c %${c} — ${cat}. Tahmini ortalama glikoz ~${eag} mg/dL. Doktorunuza danışın.`:`Latest ${c}% — ${cat}. eAG ~${eag} mg/dL.`;}
       else if(sel==="glucose"){concl=tr?`${n} ölçüm, ortalama ${avg} mg/dL (en düşük ${mn}, en yüksek ${mx}). Kişisel hedef için doktorunuza danışın.`:`${n} readings, avg ${avg} mg/dL (min ${mn}, max ${mx}).`;}
     }
     const yy=v=>78-((v-mn)/((mx-mn)||1))*72-3;
     return <div style={{...CS}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6}}>
         <b style={{fontSize:fs+1,color:tc}}>📊 {lang==="tr"?"Sağlık Raporu & Geçmiş":"Health Report & History"}</b>
-        <button onClick={()=>{const t=Date.now();const add=[];if(hd.weight>0)add.push({type:"weight",val:hd.weight});if(hd.pulse>0)add.push({type:"pulse",val:hd.pulse});if(hd.bpS>0)add.push({type:"bp",val:hd.bpS,meta:{d:hd.bpD||0}});if(hd.spo2>0)add.push({type:"spo2",val:hd.spo2});if(!add.length){notify(lang==="tr"?"Önce Yaşamsal Değerler'e değer girin.":"Enter vitals first.");return;}setHealthLog(l=>[...l,...add.map((a,i)=>({id:t+"_"+i,ts:t,...a,meta:a.meta||null}))]);notify(lang==="tr"?`✓ ${add.length} değer geçmişe kaydedildi`:`✓ ${add.length} values logged`);}} style={{...BP,padding:"6px 12px",fontSize:fs-2}}>📌 {lang==="tr"?"Bugünü Kaydet":"Log Today"}</button>
+        <button onClick={()=>{const t=Date.now();const add=[];if(hd.weight>0)add.push({type:"weight",val:hd.weight});if(hd.pulse>0)add.push({type:"pulse",val:hd.pulse});if(hd.bpS>0)add.push({type:"bp",val:hd.bpS,meta:{d:hd.bpD||0}});if(hd.spo2>0)add.push({type:"spo2",val:hd.spo2});if(!add.length){notify(lang==="tr"?"Önce Yaşamsal Değerler'e değer girin.":"Enter vitals first.");return;}setHealthLog(l=>[...l,...add.map((a,i)=>({id:t+"_"+i,ts:t,...a,meta:a.meta||null}))]);notify(lang==="tr"?`✓ ${add.length} değer geçmişe kaydedildi`:`✓ ${add.length} values logged`);if(hd.bpS>=180||hd.bpD>=120)setActiveAlert({icon:"🩺",title:lang==="tr"?"YÜKSEK TANSİYON":"HIGH BLOOD PRESSURE",msg:hd.bpS+"/"+hd.bpD+" — "+(lang==="tr"?"doktorunuza danışın":"consult your doctor")});}} style={{...BP,padding:"6px 12px",fontSize:fs-2}}>📌 {lang==="tr"?"Bugünü Kaydet":"Log Today"}</button><button onClick={exportReportPDF} style={{...BP,background:sc,padding:"6px 12px",fontSize:fs-2}}>📄 PDF</button>
       </div>
       <div style={{display:"flex",gap:6,overflowX:"auto",margin:"10px 0",paddingBottom:2}}>{M.map(m=><button key={m.k} onClick={()=>setRepMetric(m.k)} style={{flex:"0 0 auto",padding:"6px 12px",borderRadius:20,border:`1px solid ${sel===m.k?ac:bd}`,background:sel===m.k?ac:"transparent",color:sel===m.k?"#fff":mt,fontSize:fs-2,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{m.ic} {m.lbl}</button>)}</div>
+      <div style={{display:"flex",gap:6,marginBottom:8}}>{[[7,lang==="tr"?"7 gün":"7d"],[30,lang==="tr"?"30 gün":"30d"],[90,lang==="tr"?"90 gün":"90d"],[0,lang==="tr"?"Tümü":"All"]].map(([d,l])=><button key={d} onClick={()=>setRepRange(d)} style={{flex:1,padding:"5px 0",borderRadius:8,border:`1px solid ${repRange===d?ac:bd}`,background:repRange===d?`${ac}22`:"transparent",color:repRange===d?ac:mt,fontSize:fs-3,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
       {n===0?<div style={{color:mt,fontSize:fs-2,padding:"14px 0",textAlign:"center"}}>{lang==="tr"?"Bu metrik için henüz kayıt yok. Değer girip 'Bugünü Kaydet' ile geçmişe ekleyin.":"No records yet. Enter a value and tap 'Log Today'."}</div>:<>
         {n>=2&&<div style={{marginTop:4}}><svg width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"><polyline fill="none" stroke={ac} strokeWidth="2" points={series.slice(-12).map((s,i,a)=>`${(i/(a.length-1||1))*300},${yy(s.val)}`).join(" ")}/>{series.slice(-12).map((s,i,a)=><circle key={i} cx={(i/(a.length-1||1))*300} cy={yy(s.val)} r="3" fill={ac}/>)}</svg><div style={{display:"flex",justifyContent:"space-between",fontSize:fs-4,color:mt}}><span>{mn}</span><span>{mi.u}</span><span>{mx}</span></div></div>}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,margin:"10px 0"}}>
           {[[lang==="tr"?"Son":"Latest",fmt(cur),tc],[lang==="tr"?"Önceki":"Prev",prev?fmt(prev):"—",mt],[lang==="tr"?"Değişim":"Change",(delta>0?"▲ +":delta<0?"▼ ":"")+ (sel==="bp"?delta:delta),delta>0?dg:delta<0?sc:mt],[lang==="tr"?"Ortalama":"Avg",avg,tc],[lang==="tr"?"En düşük":"Min",mn,tc],[lang==="tr"?"En yüksek":"Max",mx,tc]].map(([l,v,c],i)=><div key={i} style={{background:dark?"#0e1620":"#f4f7fa",borderRadius:10,padding:"8px 6px",textAlign:"center"}}><div style={{fontSize:fs-4,color:mt}}>{l}</div><div style={{fontSize:fs+1,fontWeight:800,color:c}}>{v}</div></div>)}
         </div>
         {concl&&<div style={{background:`${ac}14`,border:`1px solid ${ac}33`,borderRadius:10,padding:"9px 11px",fontSize:fs-1,color:tc,lineHeight:1.4,marginBottom:8}}>🧭 {concl}</div>}
+        {pAvg!=null&&n>0&&<div style={{fontSize:fs-2,color:mt,marginBottom:8}}>{lang==="tr"?"Önceki döneme göre:":"vs previous period:"} {pAvg} → <b style={{color:tc}}>{avg}</b> {mi.u} <span style={{color:avg>pAvg?"#e9a23b":avg<pAvg?ac:mt,fontWeight:700}}>({avg>pAvg?"+":""}{Math.round((avg-pAvg)*10)/10})</span></div>}
+        {sel==="weight"&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}><span style={{fontSize:fs-2,color:mt}}>🎯 {lang==="tr"?"Hedef kilo":"Goal weight"}:</span><input type="number" value={goals.weight} onChange={e=>setGoals(g=>({...g,weight:e.target.value}))} placeholder="kg" style={{...IS,width:70,textAlign:"center",padding:"5px 6px"}}/>{goals.weight>0&&cur&&<span style={{fontSize:fs-2,color:tc,fontWeight:600}}>{(()=>{const diff=Math.round((cur.val-parseFloat(goals.weight))*10)/10;return diff===0?(lang==="tr"?"🎉 hedefte!":"🎉 reached!"):(lang==="tr"?`${Math.abs(diff)} kg ${diff>0?"vermeniz":"almanız"} gerek`:`${Math.abs(diff)} kg to ${diff>0?"lose":"gain"}`);})()}</span>}</div>}
         <div style={{fontSize:fs-2,fontWeight:700,color:mt,margin:"4px 0"}}>{lang==="tr"?"Kayıtlar (tarih · saat)":"Records (date · time)"}</div>
         {[...series].reverse().slice(0,10).map((s,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span style={{fontSize:fs-2,color:mt}}>{dstr(s.ts)}</span><b style={{fontSize:fs,color:tc}}>{fmt(s)} {mi.u}{sel==="glucose"&&s.meta?` · ${s.meta==="fasting"?(lang==="tr"?"Açlık":"Fast"):s.meta==="postmeal"?(lang==="tr"?"Tokluk":"Post"):(lang==="tr"?"Rastgele":"Rand")}`:""}</b></div>)}
         <div style={{fontSize:fs-4,color:mt,marginTop:8}}>{lang==="tr"?"Değerler tarama amaçlıdır; tıbbi karar için doktorunuza danışın.":"Values are for screening; consult your doctor for medical decisions."}</div>
