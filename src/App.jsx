@@ -1228,8 +1228,19 @@ if(today!==lastResetDay.current){
 const firedAlarms=useRef(new Set());
 // Request notification permission on mount
 useEffect(()=>{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission();},[]);
+useEffect(()=>{ // open ALERTS window when app is opened/focused from a notification
+  try{const u=new URL(window.location.href);if(u.searchParams.get('alerts')==='1'){setShowAlerts(true);u.searchParams.delete('alerts');window.history.replaceState({},'',u.pathname+(u.search||''));}}catch(e){}
+  const onMsg=(e)=>{if(e.data&&e.data.type==='OPEN_ALERTS')setShowAlerts(true);};
+  if(navigator.serviceWorker)navigator.serviceWorker.addEventListener('message',onMsg);
+  return()=>{if(navigator.serviceWorker)navigator.serviceWorker.removeEventListener('message',onMsg);};
+},[]);
 const sendNotification=(title,body)=>{
-  try{if('Notification' in window&&Notification.permission==='granted')new Notification(title,{body,icon:'/icon.svg',tag:title,requireInteraction:true});}catch(e){}
+  try{
+    if(!('Notification'in window)||Notification.permission!=='granted')return;
+    const opts={body,icon:'/icon-192.png',badge:'/icon-192.png',tag:title,renotify:true,requireInteraction:true,vibrate:[300,150,300,150,300],data:{url:'/?alerts=1'},actions:[{action:'alerts',title:lang==='tr'?'UYARILAR':'ALERTS'},{action:'ok',title:'OK'}]};
+    if(navigator.serviceWorker&&navigator.serviceWorker.ready)navigator.serviceWorker.ready.then(reg=>reg.showNotification(title,opts)).catch(()=>{try{new Notification(title,{body,icon:'/icon-192.png',tag:title,requireInteraction:true});}catch(e){}});
+    else new Notification(title,{body,icon:'/icon-192.png',tag:title,requireInteraction:true});
+  }catch(e){}
 };
 useEffect(()=>{
 const _n=now;

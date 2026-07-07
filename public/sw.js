@@ -53,3 +53,39 @@ self.addEventListener("fetch", (e) => {
     })
   );
 });
+
+// ---- Push notifications (health reminders) ----
+self.addEventListener("push", (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { try { d = { body: e.data && e.data.text() }; } catch (__) {} }
+  const title = d.title || "AILVIE";
+  const opts = {
+    body: d.body || "",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    tag: d.tag || "ailvie-alert",
+    renotify: true,
+    requireInteraction: true,
+    vibrate: [300, 150, 300, 150, 300],
+    data: { url: d.url || "/?alerts=1" },
+    actions: [
+      { action: "alerts", title: "UYARILAR" },
+      { action: "ok", title: "OK" }
+    ]
+  };
+  e.waitUntil(self.registration.showNotification(title, opts));
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  if (e.action === "ok") return;
+  const url = (e.notification.data && e.notification.data.url) || "/?alerts=1";
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((cls) => {
+      for (const c of cls) {
+        if ("focus" in c) { c.focus(); c.postMessage({ type: "OPEN_ALERTS" }); return; }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    })
+  );
+});
