@@ -2024,7 +2024,7 @@ const NAV_PLACES=()=>{const n=NAV_NAMES[lang]||NAV_NAMES.en;return n.map((name,i
 const bg=dark?(hc?"#000":"#0a0e14"):(hc?"#fff":"#f2f5f9");
 const cd=dark?(hc?"#111":"#151d2b"):(hc?"#fff":"#fff");
 const tc=dark?(hc?"#fff":"#d5dde8"):(hc?"#000":"#1a2332");
-const ac="#00b4d8",a2="#0077b6",dg="#e63946",sc="#2a9d8f",mt=dark?"#556677":"#8899aa",bd=dark?"#1e2d3d":"#dde3ea";
+const ac="#00b4d8",a2="#0077b6",dg="#e63946",sc="#2a9d8f",mt=dark?"#93a4b6":"#5a6b7d",bd=dark?"#1e2d3d":"#dde3ea";
 const CS={background:cd,borderRadius:14,padding:"12px 14px",boxShadow:dark?"0 2px 8px rgba(0,0,0,.3)":"0 1px 6px rgba(0,0,0,.06)",border:`1px solid ${bd}`,overflow:"hidden",minWidth:0};
 const BP={background:`linear-gradient(135deg,${ac},${a2})`,color:"#fff",border:"none",borderRadius:10,padding:"8px 16px",cursor:"pointer",fontWeight:600,fontSize:fs-1};
 const BD={...BP,background:`linear-gradient(135deg,${dg},#c1121f)`};
@@ -4185,10 +4185,10 @@ return (
         {/* BOTTOM NAV — compact 2 rows */}
         <div style={{flexShrink:0,background:cd,borderTop:`1px solid ${bd}`,paddingBottom:"max(env(safe-area-inset-bottom),0px)"}}>
           <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)"}}>
-            {nav1.map(n=>(<button key={n.key} onClick={()=>page===n.key?goTo("home"):goTo(n.key)} style={{background:"none",border:"none",padding:"9px 1px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:mt,position:"relative",minWidth:0}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"25%",right:"25%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:19}}>{n.icon}</span><span style={{fontSize:10.5,fontWeight:page===n.key?700:400,lineHeight:1.05,textAlign:"center",wordBreak:"break-word"}}>{n.label}</span></button>))}
+            {nav1.map(n=>(<button key={n.key} onClick={()=>page===n.key?goTo("home"):goTo(n.key)} style={{background:"none",border:"none",padding:"9px 1px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:(dark?"#aab7c4":"#465563"),position:"relative",minWidth:0}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"25%",right:"25%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:20,filter:page===n.key?"none":"none",opacity:1}}>{n.icon}</span><span style={{fontSize:10.5,fontWeight:page===n.key?700:500,lineHeight:1.05,textAlign:"center",wordBreak:"break-word"}}>{n.label}</span></button>))}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",borderTop:`1px solid ${bd}`}}>
-            {nav2.map(n=>(<button key={n.key} onClick={()=>{if(n.onNav)n.onNav();if(n.key==="settings"){if(page==="settings"&&settingsTab==="all")goTo("home");else{setSettingsTab("all");goTo("settings");}}else if(page===n.key)goTo("home");else goTo(n.key);}} style={{background:"none",border:"none",padding:"8px 0 6px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:mt,position:"relative"}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:19}}>{n.icon}</span><span style={{fontSize:10.5,fontWeight:page===n.key?700:400}}>{n.label}</span></button>))}
+            {nav2.map(n=>(<button key={n.key} onClick={()=>{if(n.onNav)n.onNav();if(n.key==="settings"){if(page==="settings"&&settingsTab==="all")goTo("home");else{setSettingsTab("all");goTo("settings");}}else if(page===n.key)goTo("home");else goTo(n.key);}} style={{background:"none",border:"none",padding:"8px 0 6px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:(dark?"#aab7c4":"#465563"),position:"relative"}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:20,opacity:1}}>{n.icon}</span><span style={{fontSize:10.5,fontWeight:page===n.key?700:500}}>{n.label}</span></button>))}
           </div>
         </div>
 
