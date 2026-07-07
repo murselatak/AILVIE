@@ -1381,6 +1381,9 @@ const[dietSlot,setDietSlot]=useState(lang==="tr"?"Kahvaltı":"Breakfast");
 const[dietText,setDietText]=useState("");
 const[gluVal,setGluVal]=useState("");
 const[gluType,setGluType]=useState("fasting");
+const[healthLog,setHealthLog]=useState([]); // timestamped vital history [{id,ts,type,val,meta}]
+const[repMetric,setRepMetric]=useState("weight");
+const logMetric=useCallback((type,val,meta)=>{const v=Number(val);if(!v||v<=0)return;setHealthLog(l=>[...l,{id:Date.now()+"_"+Math.random().toString(36).slice(2,6),ts:Date.now(),type,val:v,meta:meta||null}]);},[]);
 const[sleepTimes,setSleepTimes]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_sleep_times"))||{bed:"",wake:""};}catch{return {bed:"",wake:""};}});
 const[tests,setTests]=useState({}); // last screening results: {balSway,balBand,balAt,rxAvg,rxBest,rxAt,postAngle,postAt}
 const ago=(ts)=>{if(!ts)return"";const m=Math.round((Date.now()-ts)/60000);if(m<1)return lang==="tr"?"az önce":"just now";if(m<60)return lang==="tr"?`${m} dk önce`:`${m}m ago`;const h=Math.round(m/60);if(h<24)return lang==="tr"?`${h} saat önce`:`${h}h ago`;return lang==="tr"?`${Math.round(h/24)} gün önce`:`${Math.round(h/24)}d ago`;};
@@ -1619,10 +1622,10 @@ riskPenalty
 // ═══ AUTO-SAVE/LOAD ═══
 useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
-if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(d.chatM?.length)setChatM(d.chatM);
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(d.chatM?.length)setChatM(d.chatM);
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
 }catch{}},[]); // load once
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose]); // enhanced auto-save (incl. drafts + trash + diet/glucose)
+useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose,healthLog]); // enhanced auto-save (incl. drafts + trash + diet/glucose/log)
 useEffect(()=>{try{const s=localStorage.getItem("ailvie_medimg");if(s){const a=JSON.parse(s);if(Array.isArray(a))setMedImages(a);}}catch(e){}},[]);
 useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_medimg",JSON.stringify(medImages));}catch(e){}},800);return()=>clearTimeout(tm);},[medImages]);
 // Auto-cleanup empty notes that are not being edited
@@ -2141,7 +2144,7 @@ const EmojiPicker=({onPick,onClose})=>(<div style={{position:"absolute",bottom:5
 
 const HField=({icon,label,field,unit})=>{
   const v=hd[field];const ed=editH===field;
-  return(<div style={{...CS,display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:22}}>{icon}</span><div style={{flex:1}}><div style={{fontSize:fs-2,color:mt}}>{label}</div>{ed?<div style={{display:"flex",gap:6,alignItems:"center",marginTop:3}}><input type="number" autoFocus value={tmpH} onChange={e=>setTmpH(e.target.value)} style={{...IS,width:80,padding:"6px 8px",fontWeight:700}} onKeyDown={e=>{if(e.key==="Enter"){setHd(p=>({...p,[field]:Number(tmpH)}));setEditH(null);}}}/><span style={{fontSize:fs-2,color:mt}}>{unit}</span><button onClick={()=>{setHd(p=>({...p,[field]:Number(tmpH)}));setEditH(null);}} style={{...BP,padding:"5px 10px"}}>✓</button></div>:<div onClick={()=>{setEditH(field);setTmpH(v>0?String(v):"");}} style={{cursor:"pointer",fontWeight:700,fontSize:fs+2,color:v>0?tc:mt,marginTop:2}}>{v>0?`${v} ${unit}`:t.tap}</div>}</div>{v>0&&field==="pulse"&&<span style={{padding:"3px 8px",borderRadius:6,fontSize:fs-3,fontWeight:600,background:v>=60&&v<=100?`${sc}22`:`${dg}22`,color:v>=60&&v<=100?sc:dg}}>{v>=60&&v<=100?t.norm:t.caut}</span>}</div>);
+  return(<div style={{...CS,display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:22}}>{icon}</span><div style={{flex:1}}><div style={{fontSize:fs-2,color:mt}}>{label}</div>{ed?<div style={{display:"flex",gap:6,alignItems:"center",marginTop:3}}><input type="number" autoFocus value={tmpH} onChange={e=>setTmpH(e.target.value)} style={{...IS,width:80,padding:"6px 8px",fontWeight:700}} onKeyDown={e=>{if(e.key==="Enter"){setHd(p=>({...p,[field]:Number(tmpH)}));logMetric(field,Number(tmpH));setEditH(null);}}}/><span style={{fontSize:fs-2,color:mt}}>{unit}</span><button onClick={()=>{setHd(p=>({...p,[field]:Number(tmpH)}));logMetric(field,Number(tmpH));setEditH(null);}} style={{...BP,padding:"5px 10px"}}>✓</button></div>:<div onClick={()=>{setEditH(field);setTmpH(v>0?String(v):"");}} style={{cursor:"pointer",fontWeight:700,fontSize:fs+2,color:v>0?tc:mt,marginTop:2}}>{v>0?`${v} ${unit}`:t.tap}</div>}</div>{v>0&&field==="pulse"&&<span style={{padding:"3px 8px",borderRadius:6,fontSize:fs-3,fontWeight:600,background:v>=60&&v<=100?`${sc}22`:`${dg}22`,color:v>=60&&v<=100?sc:dg}}>{v>=60&&v<=100?t.norm:t.caut}</span>}</div>);
 };
 
 // Analog Clock
@@ -2864,7 +2867,7 @@ const finishPulse=(samples)=>{
   if(res&&res.ok){
     const wantHrv=pulseHrvRef.current;
     const hrvNote=(wantHrv&&res.hrvRmssd==null)?(res.durationMs<45000?"short":"unstable"):null;
-    setHd(p=>({...p,pulse:res.bpm,hrvRmssd:res.hrvRmssd!=null?res.hrvRmssd:p.hrvRmssd,hrvSdnn:res.hrvSdnn!=null?res.hrvSdnn:p.hrvSdnn,resp:res.respRate!=null?res.respRate:p.resp}));setPulseM({phase:"done",bpm:res.bpm,quality:res.quality,conf:res.conf,fps:res.fps,hrvRmssd:res.hrvRmssd,hrvSdnn:res.hrvSdnn,beats:res.beats,respRate:res.respRate,wantHrv,hrvNote});haptic([40,60,40]);
+    setHd(p=>({...p,pulse:res.bpm,hrvRmssd:res.hrvRmssd!=null?res.hrvRmssd:p.hrvRmssd,hrvSdnn:res.hrvSdnn!=null?res.hrvSdnn:p.hrvSdnn,resp:res.respRate!=null?res.respRate:p.resp}));logMetric("pulse",res.bpm);setPulseM({phase:"done",bpm:res.bpm,quality:res.quality,conf:res.conf,fps:res.fps,hrvRmssd:res.hrvRmssd,hrvSdnn:res.hrvSdnn,beats:res.beats,respRate:res.respRate,wantHrv,hrvNote});haptic([40,60,40]);
     notify(lang==="tr"?`❤️ Nabız: ${res.bpm} bpm`:`❤️ Pulse: ${res.bpm} bpm`);
     if(fromChat){const q=res.quality==="excellent"?(lang==="tr"?"mükemmel":"excellent"):res.quality==="good"?(lang==="tr"?"iyi":"good"):res.quality==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük":"poor");setTimeout(()=>{setPulseM(null);goTo("chat");sendChat(lang==="tr"?`(Ölçüm tamamlandı) Nabzım ${res.bpm} bpm ölçüldü (sinyal kalitesi: ${q}). Bunu benim için yorumlar mısın?`:`(Measurement done) My pulse measured ${res.bpm} bpm (signal quality: ${q}). Can you interpret this for me?`);},700);}
   }else{
@@ -3095,7 +3098,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         <input type="number" inputMode="numeric" value={gluVal} onChange={e=>setGluVal(e.target.value)} placeholder="mg/dL" style={{...IS,flex:"0 0 32%"}}/>
         <select value={gluType} onChange={e=>setGluType(e.target.value)} style={{...IS,flex:1}}><option value="fasting">{lang==="tr"?"Açlık":"Fasting"}</option><option value="postmeal">{lang==="tr"?"Tokluk (2 saat)":"Post-meal (2h)"}</option><option value="random">{lang==="tr"?"Rastgele":"Random"}</option></select>
       </div>
-      <button onClick={()=>{const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);setGluVal("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Ölçüm Ekle":"Add Reading"}</button>
+      <button onClick={()=>{const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric('glucose',v,gluType);setGluVal("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Ölçüm Ekle":"Add Reading"}</button>
       {recent.length>=2&&<div style={{marginTop:12}}>
         <svg width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none">
           <polyline fill="none" stroke={ac} strokeWidth="2" points={recent.map((r,i)=>`${(i/(recent.length-1))*300},${yy(r.val)}`).join(" ")}/>
@@ -3111,13 +3114,53 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       {readings.length===0&&<div style={{color:mt,fontSize:fs-2,marginTop:8}}>{lang==="tr"?"Henüz ölçüm yok.":"No readings yet."}</div>}
       <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{lang==="tr"?"Referans (yaklaşık): Açlık 70–99 normal, 100–125 sınırda, ≥126 yüksek · Tokluk <140 normal. Kişisel hedefler için doktorunuza danışın.":"Ref (approx): Fasting 70–99 normal, 100–125 borderline, ≥126 high · Post-meal <140 normal. Ask your doctor for personal targets."}</div>
     </div>;})()}
+  {/* Health Report & History */}
+  {(()=>{
+    const M=lang==="tr"
+      ?[{k:"weight",lbl:"Kilo",u:"kg",ic:"⚖️"},{k:"pulse",lbl:"Nabız",u:"bpm",ic:"❤️"},{k:"bp",lbl:"Tansiyon",u:"mmHg",ic:"🩸"},{k:"spo2",lbl:"SpO₂",u:"%",ic:"🫁"},{k:"glucose",lbl:"Şeker",u:"mg/dL",ic:"🍬"}]
+      :[{k:"weight",lbl:"Weight",u:"kg",ic:"⚖️"},{k:"pulse",lbl:"Pulse",u:"bpm",ic:"❤️"},{k:"bp",lbl:"Blood Pressure",u:"mmHg",ic:"🩸"},{k:"spo2",lbl:"SpO₂",u:"%",ic:"🫁"},{k:"glucose",lbl:"Glucose",u:"mg/dL",ic:"🍬"}];
+    const sel=repMetric,mi=M.find(x=>x.k===sel)||M[0];
+    const series=(sel==="glucose"?[...glucose].map(r=>({ts:r.ts,val:r.val,meta:r.type})):healthLog.filter(x=>x.type===sel).map(x=>({ts:x.ts,val:x.val,meta:x.meta}))).sort((a,b)=>a.ts-b.ts);
+    const vals=series.map(s=>s.val),n=series.length;
+    const cur=n?series[n-1]:null,prev=n>1?series[n-2]:null;
+    const avg=n?Math.round(vals.reduce((a,b)=>a+b,0)/n*10)/10:0,mn=n?Math.min(...vals):0,mx=n?Math.max(...vals):0;
+    const delta=cur&&prev?Math.round((cur.val-prev.val)*10)/10:0;
+    const fmt=(s)=>sel==="bp"?`${s.val}/${(s.meta&&s.meta.d)||"?"}`:`${s.val}`;
+    const dstr=(ts)=>{const d=new Date(ts);return d.toLocaleDateString(lc,{day:"2-digit",month:"2-digit",year:"numeric"})+" "+d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});};
+    // auto conclusion
+    let concl="";
+    if(n>0){const tr=lang==="tr";
+      if(sel==="weight"){const first=series[0].val,ch=Math.round((cur.val-first.val)*10)/10;concl=tr?`Güncel ${cur.val} kg. İlk kayıttan (${first} kg) bu yana ${ch>0?"+":""}${ch} kg ${ch>0?"arttı":ch<0?"azaldı":"değişmedi"}. Ortalama ${avg} kg.`:`Now ${cur.val} kg. ${ch>0?"+":""}${ch} kg since first (${first} kg). Avg ${avg} kg.`;}
+      else if(sel==="pulse"){const ok=cur.val>=60&&cur.val<=100;concl=tr?`Son nabız ${cur.val} bpm — ${ok?"normal aralıkta (60–100)":"aralık dışı, dikkat"}. Ortalama ${avg} bpm.`:`Latest ${cur.val} bpm — ${ok?"normal (60–100)":"out of range"}. Avg ${avg}.`;}
+      else if(sel==="bp"){const sV=cur.val,dV=(cur.meta&&cur.meta.d)||0;const ok=sV<120&&dV<80;const hi=sV>=140||dV>=90;concl=tr?`Son tansiyon ${sV}/${dV} — ${ok?"ideal":hi?"yüksek, doktorunuza danışın":"sınırda"}. Ortalama sistolik ${avg}.`:`Latest ${sV}/${dV} — ${ok?"ideal":hi?"high, consult doctor":"borderline"}.`;}
+      else if(sel==="spo2"){const ok=cur.val>=95;concl=tr?`Son SpO₂ %${cur.val} — ${ok?"normal (≥95)":cur.val>=90?"hafif düşük":"düşük, dikkat"}.`:`Latest ${cur.val}% — ${ok?"normal":"low"}.`;}
+      else if(sel==="glucose"){concl=tr?`${n} ölçüm, ortalama ${avg} mg/dL (en düşük ${mn}, en yüksek ${mx}). Kişisel hedef için doktorunuza danışın.`:`${n} readings, avg ${avg} mg/dL (min ${mn}, max ${mx}).`;}
+    }
+    const yy=v=>78-((v-mn)/((mx-mn)||1))*72-3;
+    return <div style={{...CS}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6}}>
+        <b style={{fontSize:fs+1,color:tc}}>📊 {lang==="tr"?"Sağlık Raporu & Geçmiş":"Health Report & History"}</b>
+        <button onClick={()=>{const t=Date.now();const add=[];if(hd.weight>0)add.push({type:"weight",val:hd.weight});if(hd.pulse>0)add.push({type:"pulse",val:hd.pulse});if(hd.bpS>0)add.push({type:"bp",val:hd.bpS,meta:{d:hd.bpD||0}});if(hd.spo2>0)add.push({type:"spo2",val:hd.spo2});if(!add.length){notify(lang==="tr"?"Önce Yaşamsal Değerler'e değer girin.":"Enter vitals first.");return;}setHealthLog(l=>[...l,...add.map((a,i)=>({id:t+"_"+i,ts:t,...a,meta:a.meta||null}))]);notify(lang==="tr"?`✓ ${add.length} değer geçmişe kaydedildi`:`✓ ${add.length} values logged`);}} style={{...BP,padding:"6px 12px",fontSize:fs-2}}>📌 {lang==="tr"?"Bugünü Kaydet":"Log Today"}</button>
+      </div>
+      <div style={{display:"flex",gap:6,overflowX:"auto",margin:"10px 0",paddingBottom:2}}>{M.map(m=><button key={m.k} onClick={()=>setRepMetric(m.k)} style={{flex:"0 0 auto",padding:"6px 12px",borderRadius:20,border:`1px solid ${sel===m.k?ac:bd}`,background:sel===m.k?ac:"transparent",color:sel===m.k?"#fff":mt,fontSize:fs-2,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{m.ic} {m.lbl}</button>)}</div>
+      {n===0?<div style={{color:mt,fontSize:fs-2,padding:"14px 0",textAlign:"center"}}>{lang==="tr"?"Bu metrik için henüz kayıt yok. Değer girip 'Bugünü Kaydet' ile geçmişe ekleyin.":"No records yet. Enter a value and tap 'Log Today'."}</div>:<>
+        {n>=2&&<div style={{marginTop:4}}><svg width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"><polyline fill="none" stroke={ac} strokeWidth="2" points={series.slice(-12).map((s,i,a)=>`${(i/(a.length-1||1))*300},${yy(s.val)}`).join(" ")}/>{series.slice(-12).map((s,i,a)=><circle key={i} cx={(i/(a.length-1||1))*300} cy={yy(s.val)} r="3" fill={ac}/>)}</svg><div style={{display:"flex",justifyContent:"space-between",fontSize:fs-4,color:mt}}><span>{mn}</span><span>{mi.u}</span><span>{mx}</span></div></div>}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,margin:"10px 0"}}>
+          {[[lang==="tr"?"Son":"Latest",fmt(cur),tc],[lang==="tr"?"Önceki":"Prev",prev?fmt(prev):"—",mt],[lang==="tr"?"Değişim":"Change",(delta>0?"▲ +":delta<0?"▼ ":"")+ (sel==="bp"?delta:delta),delta>0?dg:delta<0?sc:mt],[lang==="tr"?"Ortalama":"Avg",avg,tc],[lang==="tr"?"En düşük":"Min",mn,tc],[lang==="tr"?"En yüksek":"Max",mx,tc]].map(([l,v,c],i)=><div key={i} style={{background:dark?"#0e1620":"#f4f7fa",borderRadius:10,padding:"8px 6px",textAlign:"center"}}><div style={{fontSize:fs-4,color:mt}}>{l}</div><div style={{fontSize:fs+1,fontWeight:800,color:c}}>{v}</div></div>)}
+        </div>
+        {concl&&<div style={{background:`${ac}14`,border:`1px solid ${ac}33`,borderRadius:10,padding:"9px 11px",fontSize:fs-1,color:tc,lineHeight:1.4,marginBottom:8}}>🧭 {concl}</div>}
+        <div style={{fontSize:fs-2,fontWeight:700,color:mt,margin:"4px 0"}}>{lang==="tr"?"Kayıtlar (tarih · saat)":"Records (date · time)"}</div>
+        {[...series].reverse().slice(0,10).map((s,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span style={{fontSize:fs-2,color:mt}}>{dstr(s.ts)}</span><b style={{fontSize:fs,color:tc}}>{fmt(s)} {mi.u}{sel==="glucose"&&s.meta?` · ${s.meta==="fasting"?(lang==="tr"?"Açlık":"Fast"):s.meta==="postmeal"?(lang==="tr"?"Tokluk":"Post"):(lang==="tr"?"Rastgele":"Rand")}`:""}</b></div>)}
+        <div style={{fontSize:fs-4,color:mt,marginTop:8}}>{lang==="tr"?"Değerler tarama amaçlıdır; tıbbi karar için doktorunuza danışın.":"Values are for screening; consult your doctor for medical decisions."}</div>
+      </>}
+    </div>;})()}
   {/* Vital Signs */}
   <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🫀 {lang==="tr"?"Yaşamsal Değerler":"Vital Signs"}</div>
   <div style={{...CS,display:"flex",alignItems:"center",gap:10}}>
     <span style={{fontSize:22}}>❤️</span>
     <div style={{flex:1}}>
       <div style={{fontSize:fs-2,color:mt}}>{t.pulse}</div>
-      {editH==="pulse"?<div style={{display:"flex",gap:6,alignItems:"center",marginTop:3}}><input type="number" autoFocus value={tmpH} onChange={e=>setTmpH(e.target.value)} style={{...IS,width:80,padding:"6px 8px",fontWeight:700}} onKeyDown={e=>{if(e.key==="Enter"){setHd(p=>({...p,pulse:Number(tmpH)}));setEditH(null);}}}/><span style={{fontSize:fs-2,color:mt}}>{t.bpm}</span><button onClick={()=>{setHd(p=>({...p,pulse:Number(tmpH)}));setEditH(null);}} style={{...BP,padding:"5px 10px"}}>✓</button></div>
+      {editH==="pulse"?<div style={{display:"flex",gap:6,alignItems:"center",marginTop:3}}><input type="number" autoFocus value={tmpH} onChange={e=>setTmpH(e.target.value)} style={{...IS,width:80,padding:"6px 8px",fontWeight:700}} onKeyDown={e=>{if(e.key==="Enter"){setHd(p=>({...p,pulse:Number(tmpH)}));logMetric("pulse",Number(tmpH));setEditH(null);}}}/><span style={{fontSize:fs-2,color:mt}}>{t.bpm}</span><button onClick={()=>{setHd(p=>({...p,pulse:Number(tmpH)}));logMetric("pulse",Number(tmpH));setEditH(null);}} style={{...BP,padding:"5px 10px"}}>✓</button></div>
       :<div onClick={()=>{setEditH("pulse");setTmpH(hd.pulse>0?String(hd.pulse):"");}} style={{cursor:"pointer",fontWeight:700,fontSize:fs+2,color:hd.pulse>0?tc:mt,marginTop:2}}>{hd.pulse>0?`${hd.pulse} ${t.bpm}`:t.tap}</div>}
       {hd.pulse>0&&<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Referans":"Ref"}: {pulseRef.label} bpm {patAge?`(${patAge} ${t.age})`:""}</div>}
       {hd.hrvRmssd>0&&<div style={{fontSize:fs-3,color:ac,marginTop:2}}>HRV · RMSSD {hd.hrvRmssd} ms · SDNN {hd.hrvSdnn} ms</div>}
