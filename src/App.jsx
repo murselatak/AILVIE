@@ -552,6 +552,26 @@ const lc=LC[lang]||"en-US";
 
 const[now,setNow]=useState(new Date());
 useEffect(()=>{const i=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(i)},[]);
+// ---- Weather (Open-Meteo, keyless) + Compass (DeviceOrientation) ----
+const[weather,setWeather]=useState(null);
+const[showWx,setShowWx]=useState(false);
+const[heading,setHeading]=useState(null);
+const[compassErr,setCompassErr]=useState(null);
+const oriHandlerRef=useRef(null);
+useEffect(()=>{ // weather: geolocation -> Open-Meteo (no API key)
+  let done=false;
+  const go=(lat,lon)=>fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=7`).then(r=>r.ok?r.json():null).then(j=>{if(j&&!done)setWeather({cur:j.current,hourly:j.hourly,daily:j.daily});}).catch(()=>{if(!done)setWeather({err:"net"});});
+  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{if(!done)go(p.coords.latitude.toFixed(3),p.coords.longitude.toFixed(3));},()=>{if(!done)setWeather({err:"loc"});},{timeout:9000,maximumAge:600000});
+  else setWeather({err:"loc"});
+  return()=>{done=true;};
+},[]);
+const attachCompass=()=>{const handler=(e)=>{let h=null;if(e.webkitCompassHeading!=null)h=e.webkitCompassHeading;else if(e.alpha!=null&&e.absolute)h=360-e.alpha;if(h!=null){setHeading((h+360)%360);setCompassErr(null);}};oriHandlerRef.current=handler;window.addEventListener("deviceorientationabsolute",handler,true);window.addEventListener("deviceorientation",handler,true);};
+const startCompass=()=>{if(typeof DeviceOrientationEvent==="undefined"){setCompassErr("unsupported");return;}if(typeof DeviceOrientationEvent.requestPermission==="function"){DeviceOrientationEvent.requestPermission().then(s=>{s==="granted"?attachCompass():setCompassErr("perm");}).catch(()=>setCompassErr("perm"));}else attachCompass();};
+useEffect(()=>{ // auto-attach on platforms that need no permission (Android); iOS attaches on tap
+  if(typeof DeviceOrientationEvent==="undefined"){setCompassErr("unsupported");return;}
+  if(typeof DeviceOrientationEvent.requestPermission!=="function")attachCompass();
+  return()=>{if(oriHandlerRef.current){window.removeEventListener("deviceorientationabsolute",oriHandlerRef.current,true);window.removeEventListener("deviceorientation",oriHandlerRef.current,true);}};
+},[]);
 useEffect(()=>{const on=()=>setOnline(true),off=()=>setOnline(false);window.addEventListener("online",on);window.addEventListener("offline",off);return()=>{window.removeEventListener("online",on);window.removeEventListener("offline",off);};},[]);
 useEffect(()=>{const bip=(e)=>{e.preventDefault();setInstallEvt(e);};const inst=()=>{setInstallEvt(null);try{localStorage.setItem("ailvie_install_dismissed","1");}catch(e){}setInstallDismissed(true);};window.addEventListener("beforeinstallprompt",bip);window.addEventListener("appinstalled",inst);return()=>{window.removeEventListener("beforeinstallprompt",bip);window.removeEventListener("appinstalled",inst);};},[]);
 
@@ -2067,6 +2087,9 @@ const HField=({icon,label,field,unit})=>{
 
 // Analog Clock
 const Clock=()=>{const s=now.getSeconds(),m=now.getMinutes(),h=now.getHours()%12;return(<svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill={dark?"#151d2b":"#f8fafc"} stroke={ac} strokeWidth="2"/>{[...Array(12)].map((_,i)=>{const a=(i*30-90)*Math.PI/180;return <line key={i} x1={32+(i%3===0?22:24)*Math.cos(a)} y1={32+(i%3===0?22:24)*Math.sin(a)} x2={32+27*Math.cos(a)} y2={32+27*Math.sin(a)} stroke={tc} strokeWidth={i%3===0?"2":"1"} strokeLinecap="round"/>;})}<line x1="32" y1="32" x2={32+15*Math.cos(((h*30+m*.5)-90)*Math.PI/180)} y2={32+15*Math.sin(((h*30+m*.5)-90)*Math.PI/180)} stroke={tc} strokeWidth="2.5" strokeLinecap="round"/><line x1="32" y1="32" x2={32+20*Math.cos(((m*6+s*.1)-90)*Math.PI/180)} y2={32+20*Math.sin(((m*6+s*.1)-90)*Math.PI/180)} stroke={ac} strokeWidth="1.8" strokeLinecap="round"/><line x1="32" y1="32" x2={32+24*Math.cos((s*6-90)*Math.PI/180)} y2={32+24*Math.sin((s*6-90)*Math.PI/180)} stroke={dg} strokeWidth=".8" strokeLinecap="round"/><circle cx="32" cy="32" r="2.5" fill={ac}/></svg>);};
+const wxIcon=(c)=>{if(c==null)return"🌡️";if(c===0)return"☀️";if(c<=2)return"🌤️";if(c===3)return"☁️";if(c<=48)return"🌫️";if(c<=57)return"🌦️";if(c<=67)return"🌧️";if(c<=77)return"🌨️";if(c<=82)return"🌧️";if(c<=86)return"🌨️";return"⛈️";};
+const dirLabel=(d)=>{const dl=lang==="tr"?["K","KD","D","GD","G","GB","B","KB"]:["N","NE","E","SE","S","SW","W","NW"];return dl[Math.round(((d||0)%360)/45)%8];};
+const Compass=({heading})=>{const h=heading||0;return(<svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill={dark?"#151d2b":"#f8fafc"} stroke={ac} strokeWidth="1.5"/><g transform={`rotate(${-h} 20 20)`}><polygon points="20,4 16.5,20 20,16.5 23.5,20" fill={dg}/><polygon points="20,36 16.5,20 20,23.5 23.5,20" fill={mt}/><text x="20" y="12" textAnchor="middle" fontSize="6.5" fontWeight="700" fill={tc}>N</text></g><circle cx="20" cy="20" r="2" fill={ac}/></svg>);};
 
 // ══════ HOME — cleaned up, no duplicate cards ══════
 const renderHome=()=>{
@@ -2084,6 +2107,34 @@ const renderHome=()=>{
         <div style={{fontSize:fs-2,color:mt}}>{now.toLocaleDateString(lc,{weekday:"long",day:"numeric",month:"long"})}</div>
       </div>
     </div>
+    {/* Weather + Compass strip */}
+    <div style={{display:"flex",gap:8}}>
+      <div onClick={()=>setShowWx(true)} style={{...CS,flex:1,padding:"10px 12px",display:"flex",alignItems:"center",gap:9,cursor:"pointer"}}>
+        <span style={{fontSize:28,lineHeight:1}}>{weather&&weather.cur?wxIcon(weather.cur.weather_code):"🌡️"}</span>
+        <div style={{minWidth:0}}>
+          {weather&&weather.cur?<><div style={{fontSize:fs+5,fontWeight:800,color:tc,lineHeight:1}}>{Math.round(weather.cur.temperature_2m)}°</div><div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Hava · detay":"Weather · details"}</div></>:<div style={{fontSize:fs-2,color:mt}}>{weather&&weather.err?(lang==="tr"?"Konum gerekli":"Location needed"):(lang==="tr"?"Yükleniyor…":"Loading…")}</div>}
+        </div>
+      </div>
+      <div onClick={heading==null?startCompass:undefined} style={{...CS,flex:1,padding:"10px 12px",display:"flex",alignItems:"center",gap:9,cursor:heading==null?"pointer":"default"}}>
+        <Compass heading={heading}/>
+        <div style={{minWidth:0}}>
+          {heading!=null?<><div style={{fontSize:fs+2,fontWeight:800,color:tc,lineHeight:1}}>{Math.round(heading)}° {dirLabel(heading)}</div><div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Pusula":"Compass"}</div></>:<div style={{fontSize:fs-3,color:mt}}>{compassErr==="unsupported"?(lang==="tr"?"Pusula desteklenmiyor":"No compass"):(lang==="tr"?"Pusula · dokun":"Compass · tap")}</div>}
+        </div>
+      </div>
+    </div>
+    {showWx&&<div style={{position:"fixed",inset:0,zIndex:360,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowWx(false)}>
+      <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:520,maxHeight:"82vh",overflow:"auto",borderRadius:"16px 16px 0 0",padding:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><b style={{fontSize:fs+2,color:tc}}>{lang==="tr"?"Hava Durumu":"Weather"}</b><button onClick={()=>setShowWx(false)} style={{background:"none",border:"none",color:mt,fontSize:20,cursor:"pointer"}}>✕</button></div>
+        {weather&&weather.cur?<>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}><span style={{fontSize:46}}>{wxIcon(weather.cur.weather_code)}</span><div><div style={{fontSize:fs+18,fontWeight:800,color:tc,lineHeight:1}}>{Math.round(weather.cur.temperature_2m)}°</div><div style={{fontSize:fs-2,color:mt,marginTop:3}}>{lang==="tr"?"Şu an":"Now"}{weather.cur.wind_speed_10m!=null?` · 💨 ${Math.round(weather.cur.wind_speed_10m)} km/s`:""}</div></div></div>
+          <div style={{fontSize:fs-1,fontWeight:700,color:tc,margin:"6px 0 4px"}}>{lang==="tr"?"Saatlik (24 saat)":"Hourly (24h)"}</div>
+          <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6}}>{(()=>{const H=weather.hourly;const nk=new Date().toISOString().slice(0,13);let st=H.time.findIndex(x=>x.slice(0,13)>=nk);if(st<0)st=0;return H.time.slice(st,st+24).map((x,i)=>{const idx=st+i;return <div key={x} style={{flex:"0 0 auto",textAlign:"center",minWidth:44}}><div style={{fontSize:fs-3,color:mt}}>{x.slice(11,16)}</div><div style={{fontSize:20,margin:"2px 0"}}>{wxIcon(H.weather_code[idx])}</div><div style={{fontSize:fs-2,fontWeight:700,color:tc}}>{Math.round(H.temperature_2m[idx])}°</div></div>;});})()}</div>
+          <div style={{fontSize:fs-1,fontWeight:700,color:tc,margin:"12px 0 4px"}}>{lang==="tr"?"7 Günlük (haftalık)":"7-Day (weekly)"}</div>
+          <div>{weather.daily.time.map((x,i)=>{const d=new Date(x+"T00:00");const wd=d.toLocaleDateString(lc,{weekday:"long"});return <div key={x} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 0",borderBottom:`1px solid ${bd}`}}><span style={{fontSize:fs-1,color:tc,flex:1,textTransform:"capitalize"}}>{i===0?(lang==="tr"?"Bugün":"Today"):wd}</span><span style={{fontSize:20,width:36,textAlign:"center"}}>{wxIcon(weather.daily.weather_code[i])}</span><span style={{fontSize:fs-1,color:mt,width:88,textAlign:"right"}}>{Math.round(weather.daily.temperature_2m_min[i])}° / <b style={{color:tc}}>{Math.round(weather.daily.temperature_2m_max[i])}°</b></span></div>;})}</div>
+        </>:<div style={{color:mt,fontSize:fs-1,padding:"24px 0",textAlign:"center"}}>{weather&&weather.err==="loc"?(lang==="tr"?"Hava durumu için konum iznine izin verin.":"Allow location permission for weather."):(lang==="tr"?"Yükleniyor…":"Loading…")}</div>}
+        <div style={{fontSize:fs-4,color:mt,marginTop:12,textAlign:"center"}}>Open-Meteo · {lang==="tr"?"tarama amaçlıdır":"informational"}</div>
+      </div>
+    </div>}
     {/* Health + Med Progress strip */}
     {/* Comprehensive Health Score Card — matches Health page */}
     <div style={{...CS,padding:14,border:`1px solid ${ac}33`,cursor:"pointer"}} onClick={()=>goTo("health")}>
