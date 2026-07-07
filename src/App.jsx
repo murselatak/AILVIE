@@ -565,19 +565,20 @@ const loadWeather=useCallback((manual)=>{ // request location + fetch Open-Meteo
   navigator.geolocation.getCurrentPosition(p=>{
     const lat=p.coords.latitude.toFixed(3),lon=p.coords.longitude.toFixed(3);
     try{localStorage.setItem("ailvie_geo","1");}catch(e){} // remember grant -> auto-connect next launches
-    setPerms(pr=>({...pr,loc:true}));
     if(manual)notify(lang==="tr"?"✓ Konum açık — hava durumu yükleniyor":"✓ Location on — loading weather");
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=7`).then(r=>r.ok?r.json():null).then(j=>{setWeather(j?{cur:j.current,hourly:j.hourly,daily:j.daily}:{err:"net"});}).catch(()=>setWeather({err:"net"}));
-  },(err)=>{const denied=err&&err.code===1;if(denied){try{localStorage.removeItem("ailvie_geo");}catch(e){}setPerms(pr=>({...pr,loc:false}));}setWeather({err:"loc"});if(manual)notify(denied?(lang==="tr"?"⚠️ Konum tarayıcıda engelli. Tarayıcı ayarları > Site izinleri > Konum'u açın.":"⚠️ Location blocked in browser. Enable it in browser site settings."):(lang==="tr"?"Konum alınamadı, tekrar deneyin.":"Couldn't get location, try again."));},{timeout:9000,maximumAge:600000});
+  },(err)=>{const denied=err&&err.code===1;if(denied){try{localStorage.removeItem("ailvie_geo");}catch(e){}}setWeather({err:"loc"});if(manual)notify(denied?(lang==="tr"?"⚠️ Konum tarayıcıda engelli. Tarayıcı ayarları > Site izinleri > Konum'u açın.":"⚠️ Location blocked in browser. Enable it in browser site settings."):(lang==="tr"?"Konum alınamadı, tekrar deneyin.":"Couldn't get location, try again."));},{timeout:9000,maximumAge:600000});
 },[lang]);
 useEffect(()=>{ // auto-connect to weather whenever location is (or was) granted; no startup prompt otherwise
   if(!navigator.geolocation){setWeather({err:"unsupported"});return;}
+  let locPref=true;try{const sp=localStorage.getItem("ailvie_perms");if(sp)locPref=JSON.parse(sp).loc!==false;}catch(e){}
+  if(!locPref){setWeather({err:"off"});return;} // user disabled location -> no weather, no prompt
   let granted=false;try{granted=localStorage.getItem("ailvie_geo")==="1";}catch(e){}
   if(navigator.permissions&&navigator.permissions.query){
     navigator.permissions.query({name:"geolocation"}).then(ps=>{
-      if(ps.state==="granted"||granted){setPerms(pr=>({...pr,loc:true}));loadWeather();}
-      else{setPerms(pr=>({...pr,loc:false}));setWeather({err:"loc"});} // needs location -> chip shows tap-to-enable, no prompt
-      ps.onchange=()=>{if(ps.state==="granted"){setPerms(pr=>({...pr,loc:true}));loadWeather();}else setPerms(pr=>({...pr,loc:false}));};
+      if(ps.state==="granted"||granted){loadWeather();}
+      else{setWeather({err:"loc"});} // needs location -> chip shows tap-to-enable, no prompt
+      ps.onchange=()=>{if(ps.state==="granted")loadWeather();};
     }).catch(()=>{if(granted)loadWeather();else setWeather({err:"loc"});});
   }else{if(granted)loadWeather();else setWeather({err:"loc"});} // iOS Safari (no permissions.query): use remembered grant
 },[loadWeather]);
@@ -627,7 +628,8 @@ const imgFileRef=useRef(null),imgCamRef=useRef(null),imgBarRef=useRef(null);
 const patAge=pat.birthDate?Math.floor((Date.now()-new Date(pat.birthDate))/(365.25*86400000)):"";
 
 // Permissions
-const[perms,setPerms]=useState({notif:true,loc:true,mic:true,cam:false});
+const[perms,setPerms]=useState(function(){try{var s=localStorage.getItem("ailvie_perms");if(s)return JSON.parse(s);}catch(e){}return{notif:true,loc:true,mic:true,cam:false};});
+useEffect(()=>{try{localStorage.setItem("ailvie_perms",JSON.stringify(perms));}catch(e){}},[perms]);
 
 // Meds + Alarms
 const[meds,setMeds]=useState([]);
@@ -1250,6 +1252,7 @@ useEffect(()=>{ // open ALERTS window when app is opened/focused from a notifica
 },[]);
 const sendNotification=(title,body)=>{
   try{
+    if(perms&&perms.notif===false)return;
     if(!('Notification'in window)||Notification.permission!=='granted')return;
     const opts={body,icon:'/icon-192.png',badge:'/icon-192.png',tag:title,renotify:true,requireInteraction:true,vibrate:[300,150,300,150,300],data:{url:'/?alerts=1'},actions:[{action:'alerts',title:lang==='tr'?'UYARILAR':'ALERTS'},{action:'ok',title:'OK'}]};
     if(navigator.serviceWorker&&navigator.serviceWorker.ready)navigator.serviceWorker.ready.then(reg=>reg.showNotification(title,opts)).catch(()=>{try{new Notification(title,{body,icon:'/icon-192.png',tag:title,requireInteraction:true});}catch(e){}});
@@ -2150,7 +2153,7 @@ const renderHome=()=>{
     </div>
     {/* Weather + Compass strip */}
     <div style={{display:"flex",gap:8}}>
-      <div onClick={()=>{if(weather&&weather.cur)setShowWx(true);else loadWeather(true);}} style={{...CS,flex:1,padding:"10px 12px",display:"flex",alignItems:"center",gap:9,cursor:"pointer"}}>
+      <div onClick={()=>{if(weather&&weather.cur)setShowWx(true);else{setPerms(p=>({...p,loc:true}));loadWeather(true);}}} style={{...CS,flex:1,padding:"10px 12px",display:"flex",alignItems:"center",gap:9,cursor:"pointer"}}>
         <span style={{fontSize:28,lineHeight:1}}>{weather&&weather.cur?wxIcon(weather.cur.weather_code):"🌡️"}</span>
         <div style={{minWidth:0}}>
           {weather&&weather.cur?<><div style={{fontSize:fs+5,fontWeight:800,color:tc,lineHeight:1}}>{Math.round(weather.cur.temperature_2m)}°</div><div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Hava · detay":"Weather · details"}</div></>:<div style={{fontSize:fs-2,color:mt}}>{weather&&weather.err?(lang==="tr"?"Hava · konum için dokun":"Weather · tap for location"):(lang==="tr"?"Yükleniyor…":"Loading…")}</div>}
@@ -2715,7 +2718,7 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   <div style={CS}><div style={{marginBottom:6}}>🌍 {t.lang}</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4}}>{Object.entries(LL).map(([k,v])=>{const emj={tr:"🇹🇷",en:"🇬🇧",de:"🇩🇪",ru:"🇷🇺",zh:"🇨🇳",hi:"🇮🇳",nl:"🇳🇱",es:"🇪🇸",ar:"🇸🇦"};return<button key={k} onClick={()=>setLang(k)} style={pill(lang===k)}>{emj[k]||""} {v}</button>;})}</div></div>
   <div style={CS}><div style={{marginBottom:6}}>🤖 AI API Key <span style={{fontSize:fs-3,color:mt}}>(Anthropic)</span></div><div style={{display:"flex",gap:6}}><input type="password" value={apiKey} onChange={e=>{setApiKey(e.target.value);try{localStorage.setItem("ailvie_api_key",e.target.value);}catch(ex){}}} placeholder="sk-ant-..." style={{...IS,flex:1,fontFamily:"monospace",fontSize:fs-2}}/>{apiKey&&<button onClick={()=>{setApiKey("");try{localStorage.removeItem("ailvie_api_key");}catch(ex){}}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",color:dg,cursor:"pointer"}}>✕</button>}</div><div style={{fontSize:fs-3,color:apiKey?sc:mt,marginTop:4}}>{apiKey?(lang==="tr"?"✓ API anahtarı ayarlandı":"✓ API key set"):(lang==="tr"?"AI Sohbet, çeviri ve ilaç analizi için gerekli":"Required for AI Chat, translation & drug analysis")}</div></div>
   <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>setEmNums(p=>p.filter(x=>x.id!==en.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
-  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🛡️ {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button onClick={()=>{if(k==="loc"){notify(lang==="tr"?"📍 Konum kontrol ediliyor…":"📍 Checking location…");loadWeather(true);return;}if(k==="notif"){if(!('Notification'in window)){notify(lang==="tr"?"Bu cihaz bildirimi desteklemiyor.":"Notifications not supported.");return;}if(Notification.permission==="denied"){setPerms(p=>({...p,notif:false}));notify(lang==="tr"?"⚠️ Bildirim tarayıcıda engelli. Tarayıcı ayarları > Site izinleri > Bildirim'i açın.":"⚠️ Notifications blocked in browser settings.");return;}Notification.requestPermission().then(st=>{setPerms(p=>({...p,notif:st==="granted"}));notify(st==="granted"?(lang==="tr"?"✓ Bildirimler açık":"✓ Notifications on"):(lang==="tr"?"Bildirim izni verilmedi":"Notification permission not granted"));}).catch(()=>{});return;}setPerms(p=>({...p,[k]:!p[k]}));}} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
+  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🛡️ {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button onClick={()=>{const willOn=!perms[k];setPerms(p=>({...p,[k]:willOn}));if(k==="loc"){if(willOn){notify(lang==="tr"?"📍 Konum açılıyor…":"📍 Enabling location…");loadWeather(true);}else setWeather({err:"off"});return;}if(k==="notif"){if(willOn&&('Notification'in window)){if(Notification.permission==="denied")notify(lang==="tr"?"⚠️ Bildirim tarayıcıda engelli. Tarayıcı > Site izinleri > Bildirim'i açın.":"⚠️ Notifications blocked in browser settings.");else Notification.requestPermission().then(st=>{if(st!=="granted")notify(lang==="tr"?"Bildirim izni verilmedi — tarayıcı ayarlarından açabilirsiniz.":"Notification permission not granted.");}).catch(()=>{});}return;}}} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
   {(all||s==="subs")&&<div style={CS}>
     <div style={{fontWeight:700,marginBottom:6}}>{acctEmail.trim()?(lang==="tr"?"👤 Hesap":"👤 Account"):(lang==="tr"?"🔑 Giriş Yap / Abone Ol":"🔑 Sign in / Subscribe")}</div>
     {acctEmail.trim()
