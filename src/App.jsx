@@ -1387,7 +1387,24 @@ const[repMetric,setRepMetric]=useState("weight");
 const[repRange,setRepRange]=useState(30); // days; 0=all
 const[hba1cVal,setHba1cVal]=useState("");
 const[goals,setGoals]=useState({weight:""});
-const logMetric=useCallback((type,val,meta)=>{const v=Number(val);if(!v||v<=0)return;setHealthLog(l=>[...l,{id:Date.now()+"_"+Math.random().toString(36).slice(2,6),ts:Date.now(),type,val:v,meta:meta||null}]);},[]);
+const logMetric=useCallback((type,val,meta)=>{const v=Number(val);if(!v||v<=0)return;setHealthLog(l=>{const last=[...l].reverse().find(x=>x.type===type);if(last&&last.val===v&&(Date.now()-last.ts)<3600e3&&JSON.stringify(last.meta||null)===JSON.stringify(meta||null))return l;return[...l,{id:Date.now()+"_"+Math.random().toString(36).slice(2,6),ts:Date.now(),type,val:v,meta:meta||null}];});},[]);
+const exportCSV=()=>{
+  const tr=lang==="tr";
+  const nm=tr?{weight:"Kilo",pulse:"Nabız",bp:"Tansiyon",spo2:"SpO2",glucose:"Şeker",hba1c:"HbA1c"}:{weight:"Weight",pulse:"Pulse",bp:"BloodPressure",spo2:"SpO2",glucose:"Glucose",hba1c:"HbA1c"};
+  const un={weight:"kg",pulse:"bpm",bp:"mmHg",spo2:"%",glucose:"mg/dL",hba1c:"%"};
+  const rows=[];
+  (healthLog||[]).forEach(x=>rows.push({ts:x.ts,type:x.type,val:x.type==="bp"?(x.val+"/"+((x.meta&&x.meta.d)||"")):x.val,note:x.type==="glucose"?(x.meta||""):""}));
+  (glucose||[]).forEach(g=>rows.push({ts:g.ts,type:"glucose",val:g.val,note:g.type}));
+  rows.sort((a,b)=>a.ts-b.ts);
+  if(!rows.length){notify(tr?"Dışa aktarılacak veri yok.":"No data to export.");return;}
+  const esc=(v)=>{v=String(v==null?"":v);return /[";\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const head=tr?["Tarih","Saat","Ölçüm","Değer","Birim","Not"]:["Date","Time","Metric","Value","Unit","Note"];
+  let csv=head.join(";")+"\n";
+  rows.forEach(r=>{const d=new Date(r.ts);csv+=[d.toLocaleDateString(lc),d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),nm[r.type]||r.type,r.val,un[r.type]||"",r.note].map(esc).join(";")+"\n";});
+  const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="ailvie_saglik_"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+  notify(tr?"✓ CSV indirildi (Excel/Sheets'te açılır)":"✓ CSV downloaded");
+};
 const exportReportPDF=()=>{
   const tr=lang==="tr";
   const esc=(x)=>String(x==null?"":x).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
@@ -2222,6 +2239,22 @@ const renderHome=()=>{
         <div style={{fontSize:fs-4,color:mt,marginTop:12,textAlign:"center"}}>{weather&&weather.approx?(lang==="tr"?"📍 yaklaşık konum · ":"📍 approximate · "):""}Open-Meteo</div>
       </div>
     </div>}
+    {/* Live Health summary (auto, timestamped, instant sync) */}
+    {(()=>{
+      const mm=[["weight",lang==="tr"?"Kilo":"Weight","kg","⚖️"],["pulse",lang==="tr"?"Nabız":"Pulse","bpm","❤️"],["bp",lang==="tr"?"Tansiyon":"BP","mmHg","🩸"],["spo2","SpO₂","%","🫁"],["glucose",lang==="tr"?"Şeker":"Glucose","mg/dL","🍬"],["hba1c","HbA1c","%","🧪"]];
+      const rows=mm.map(([k,lbl,u,ic])=>{const ser=(k==="glucose"?(glucose||[]).map(r=>({ts:r.ts,val:r.val})):(healthLog||[]).filter(x=>x.type===k).map(x=>({ts:x.ts,val:x.val,meta:x.meta}))).slice().sort((a,b)=>a.ts-b.ts);if(!ser.length)return null;return {k,lbl,u,ic,last:ser[ser.length-1],spark:ser.slice(-8).map(x=>x.val)};}).filter(Boolean);
+      if(!rows.length)return null;
+      return <div style={{...CS}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}><b style={{fontSize:fs,color:tc}}>📈 {lang==="tr"?"Canlı Sağlık":"Live Health"}</b><button onClick={()=>goTo("health")} style={{background:"none",border:"none",color:ac,fontSize:fs-2,cursor:"pointer",fontWeight:700}}>{lang==="tr"?"Rapor →":"Report →"}</button></div>
+        {rows.map(r=>{const mn=Math.min(...r.spark),mx=Math.max(...r.spark);const vv=r.k==="bp"?`${r.last.val}/${(r.last.meta&&r.last.meta.d)||"?"}`:r.last.val;const dt=new Date(r.last.ts);
+          return <div key={r.k} style={{display:"flex",alignItems:"center",gap:9,padding:"6px 0",borderBottom:`1px solid ${bd}`}}>
+            <span style={{fontSize:17,width:20,flexShrink:0}}>{r.ic}</span>
+            <div style={{flex:"0 0 58px",minWidth:0}}><div style={{fontSize:fs-2,color:tc,fontWeight:600}}>{r.lbl}</div><div style={{fontSize:fs-4,color:mt}}>{dt.toLocaleDateString(lc,{day:"2-digit",month:"2-digit"})} {dt.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</div></div>
+            {r.spark.length>=2?<svg width="56" height="20" viewBox="0 0 56 20" preserveAspectRatio="none" style={{flex:1,maxWidth:80}}><polyline fill="none" stroke={ac} strokeWidth="1.6" points={r.spark.map((v,i,a)=>`${(i/(a.length-1))*56},${18-((v-mn)/((mx-mn)||1))*16}`).join(" ")}/></svg>:<div style={{flex:1}}/>}
+            <span style={{flexShrink:0,fontWeight:800,color:tc,fontSize:fs+1}}>{vv} <span style={{fontSize:fs-4,color:mt,fontWeight:400}}>{r.u}</span></span>
+          </div>;})}
+        <div style={{fontSize:fs-4,color:mt,marginTop:6,textAlign:"center"}}>{lang==="tr"?"Otomatik tarihlenir · anlık güncellenir":"Auto-timestamped · live"}</div>
+      </div>;})()}
     {/* Health + Med Progress strip */}
     {/* Comprehensive Health Score Card — matches Health page */}
     <div style={{...CS,padding:14,border:`1px solid ${ac}33`,cursor:"pointer"}} onClick={()=>goTo("health")}>
@@ -3120,7 +3153,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <b style={{fontSize:fs+1,color:tc}}>🩸 {lang==="tr"?"Şeker (Glikoz) Takibi":"Blood Glucose"}</b>
       <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{lang==="tr"?"Ölçüm cihazınızın değerini girin. Tarama amaçlıdır, tıbbi tanı değildir — doktorunuza danışın.":"Enter your meter reading. Screening only, not a diagnosis — consult your doctor."}</div>
       <div style={{display:"flex",gap:6}}>
-        <input type="number" inputMode="numeric" value={gluVal} onChange={e=>setGluVal(e.target.value)} placeholder="mg/dL" style={{...IS,flex:"0 0 32%"}}/>
+        <input type="number" inputMode="numeric" value={gluVal} onChange={e=>setGluVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric("glucose",v,gluType);if(v<54||v>=300)setActiveAlert({icon:"🩸",title:lang==="tr"?"KRİTİK ŞEKER":"CRITICAL GLUCOSE",msg:v+" mg/dL — "+(lang==="tr"?"acil kontrol edin / doktorunuza danışın":"seek medical attention")});setGluVal("");}}}} placeholder="mg/dL" style={{...IS,flex:"0 0 32%"}}/>
         <select value={gluType} onChange={e=>setGluType(e.target.value)} style={{...IS,flex:1}}><option value="fasting">{lang==="tr"?"Açlık":"Fasting"}</option><option value="postmeal">{lang==="tr"?"Tokluk (2 saat)":"Post-meal (2h)"}</option><option value="random">{lang==="tr"?"Rastgele":"Random"}</option></select>
       </div>
       <button onClick={()=>{const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric('glucose',v,gluType);if(v<54||v>=300)setActiveAlert({icon:"🩸",title:lang==="tr"?"KRİTİK ŞEKER":"CRITICAL GLUCOSE",msg:v+" mg/dL — "+(lang==="tr"?"acil kontrol edin / doktorunuza danışın":"seek medical attention")});setGluVal("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Ölçüm Ekle":"Add Reading"}</button>
@@ -3138,7 +3171,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       </div>;})}
       {readings.length===0&&<div style={{color:mt,fontSize:fs-2,marginTop:8}}>{lang==="tr"?"Henüz ölçüm yok.":"No readings yet."}</div>}
       <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{lang==="tr"?"Referans (yaklaşık): Açlık 70–99 normal, 100–125 sınırda, ≥126 yüksek · Tokluk <140 normal. Kişisel hedefler için doktorunuza danışın.":"Ref (approx): Fasting 70–99 normal, 100–125 borderline, ≥126 high · Post-meal <140 normal. Ask your doctor for personal targets."}</div>
-      <div style={{display:"flex",gap:6,alignItems:"center",marginTop:10,paddingTop:8,borderTop:`1px solid ${bd}`}}><span style={{fontSize:fs-1,color:tc,flex:1}}>🧪 HbA1c <span style={{fontSize:fs-3,color:mt}}>(%)</span></span><input type="number" step="0.1" inputMode="decimal" value={hba1cVal} onChange={e=>setHba1cVal(e.target.value)} placeholder="5.6" style={{...IS,width:74,textAlign:"center"}}/><button onClick={()=>{const v=parseFloat(hba1cVal);if(v>0){logMetric("hba1c",v);setHba1cVal("");notify(lang==="tr"?"✓ HbA1c kaydedildi":"✓ HbA1c logged");}}} style={{...BP,padding:"8px 14px"}}>+</button></div>
+      <div style={{display:"flex",gap:6,alignItems:"center",marginTop:10,paddingTop:8,borderTop:`1px solid ${bd}`}}><span style={{fontSize:fs-1,color:tc,flex:1}}>🧪 HbA1c <span style={{fontSize:fs-3,color:mt}}>(%)</span></span><input type="number" step="0.1" inputMode="decimal" value={hba1cVal} onChange={e=>setHba1cVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){const v=parseFloat(hba1cVal);if(v>0){logMetric("hba1c",v);setHba1cVal("");notify(lang==="tr"?"✓ HbA1c kaydedildi":"✓ HbA1c logged");}}}} placeholder="5.6" style={{...IS,width:74,textAlign:"center"}}/><button onClick={()=>{const v=parseFloat(hba1cVal);if(v>0){logMetric("hba1c",v);setHba1cVal("");notify(lang==="tr"?"✓ HbA1c kaydedildi":"✓ HbA1c logged");}}} style={{...BP,padding:"8px 14px"}}>+</button></div>
     </div>;})()}
   {/* Health Report & History */}
   {(()=>{
@@ -3171,7 +3204,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     return <div style={{...CS}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6}}>
         <b style={{fontSize:fs+1,color:tc}}>📊 {lang==="tr"?"Sağlık Raporu & Geçmiş":"Health Report & History"}</b>
-        <button onClick={()=>{const t=Date.now();const add=[];if(hd.weight>0)add.push({type:"weight",val:hd.weight});if(hd.pulse>0)add.push({type:"pulse",val:hd.pulse});if(hd.bpS>0)add.push({type:"bp",val:hd.bpS,meta:{d:hd.bpD||0}});if(hd.spo2>0)add.push({type:"spo2",val:hd.spo2});if(!add.length){notify(lang==="tr"?"Önce Yaşamsal Değerler'e değer girin.":"Enter vitals first.");return;}setHealthLog(l=>[...l,...add.map((a,i)=>({id:t+"_"+i,ts:t,...a,meta:a.meta||null}))]);notify(lang==="tr"?`✓ ${add.length} değer geçmişe kaydedildi`:`✓ ${add.length} values logged`);if(hd.bpS>=180||hd.bpD>=120)setActiveAlert({icon:"🩺",title:lang==="tr"?"YÜKSEK TANSİYON":"HIGH BLOOD PRESSURE",msg:hd.bpS+"/"+hd.bpD+" — "+(lang==="tr"?"doktorunuza danışın":"consult your doctor")});}} style={{...BP,padding:"6px 12px",fontSize:fs-2}}>📌 {lang==="tr"?"Bugünü Kaydet":"Log Today"}</button><button onClick={exportReportPDF} style={{...BP,background:sc,padding:"6px 12px",fontSize:fs-2}}>📄 PDF</button>
+        <button onClick={()=>{const t=Date.now();const add=[];if(hd.weight>0)add.push({type:"weight",val:hd.weight});if(hd.pulse>0)add.push({type:"pulse",val:hd.pulse});if(hd.bpS>0)add.push({type:"bp",val:hd.bpS,meta:{d:hd.bpD||0}});if(hd.spo2>0)add.push({type:"spo2",val:hd.spo2});if(!add.length){notify(lang==="tr"?"Önce Yaşamsal Değerler'e değer girin.":"Enter vitals first.");return;}setHealthLog(l=>[...l,...add.map((a,i)=>({id:t+"_"+i,ts:t,...a,meta:a.meta||null}))]);notify(lang==="tr"?`✓ ${add.length} değer geçmişe kaydedildi`:`✓ ${add.length} values logged`);if(hd.bpS>=180||hd.bpD>=120)setActiveAlert({icon:"🩺",title:lang==="tr"?"YÜKSEK TANSİYON":"HIGH BLOOD PRESSURE",msg:hd.bpS+"/"+hd.bpD+" — "+(lang==="tr"?"doktorunuza danışın":"consult your doctor")});}} style={{...BP,padding:"6px 12px",fontSize:fs-2}}>📌 {lang==="tr"?"Bugünü Kaydet":"Log Today"}</button><button onClick={exportReportPDF} style={{...BP,background:sc,padding:"6px 12px",fontSize:fs-2}}>📄 PDF</button><button onClick={exportCSV} style={{...BP,background:a2,padding:"6px 12px",fontSize:fs-2}}>📊 Excel/CSV</button>
       </div>
       <div style={{display:"flex",gap:6,overflowX:"auto",margin:"10px 0",paddingBottom:2}}>{M.map(m=><button key={m.k} onClick={()=>setRepMetric(m.k)} style={{flex:"0 0 auto",padding:"6px 12px",borderRadius:20,border:`1px solid ${sel===m.k?ac:bd}`,background:sel===m.k?ac:"transparent",color:sel===m.k?"#fff":mt,fontSize:fs-2,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{m.ic} {m.lbl}</button>)}</div>
       <div style={{display:"flex",gap:6,marginBottom:8}}>{[[7,lang==="tr"?"7 gün":"7d"],[30,lang==="tr"?"30 gün":"30d"],[90,lang==="tr"?"90 gün":"90d"],[0,lang==="tr"?"Tümü":"All"]].map(([d,l])=><button key={d} onClick={()=>setRepRange(d)} style={{flex:1,padding:"5px 0",borderRadius:8,border:`1px solid ${repRange===d?ac:bd}`,background:repRange===d?`${ac}22`:"transparent",color:repRange===d?ac:mt,fontSize:fs-3,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
@@ -3566,21 +3599,21 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
       </div>
       <div>
         <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>⚖️ {t.wt} ({t.kg})</div>
-        <input type="number" value={hd.weight||""} onChange={e=>setHd(p=>({...p,weight:Number(e.target.value)}))} placeholder={t.wt} style={{...IS,padding:"8px 10px"}}/>
+        <input type="number" value={hd.weight||""} onChange={e=>setHd(p=>({...p,weight:Number(e.target.value)}))} onBlur={e=>logMetric("weight",Number(e.target.value))} placeholder={t.wt} style={{...IS,padding:"8px 10px"}}/>
       </div>
     </div>
     {bmi>0&&<div style={{padding:"6px 10px",borderRadius:8,background:bmi>=18.5&&bmi<25?`${sc}15`:`${dg}15`,color:bmi>=18.5&&bmi<25?sc:dg,fontSize:fs-2,fontWeight:600,textAlign:"center",marginBottom:6}}>BMI: {bmi} — {bmi<18.5?(lang==="tr"?"Zayıf":"Underweight"):bmi<25?(lang==="tr"?"Normal":"Normal"):bmi<30?(lang==="tr"?"Fazla kilolu":"Overweight"):(lang==="tr"?"Obez":"Obese")}</div>}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
       <div>
         <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>❤️ {t.pulse} ({t.bpm})</div>
-        <input type="number" value={hd.pulse||""} onChange={e=>setHd(p=>({...p,pulse:Number(e.target.value)}))} placeholder={t.pulse} style={{...IS,padding:"8px 10px"}}/>
+        <input type="number" value={hd.pulse||""} onChange={e=>setHd(p=>({...p,pulse:Number(e.target.value)}))} onBlur={e=>logMetric("pulse",Number(e.target.value))} placeholder={t.pulse} style={{...IS,padding:"8px 10px"}}/>
       </div>
       <div>
         <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>🩺 {t.bp}</div>
         <div style={{display:"flex",gap:4,alignItems:"center"}}>
           <input type="number" value={hd.bpS||""} placeholder="SYS" onChange={e=>setHd({...hd,bpS:Number(e.target.value)})} style={{...IS,padding:"8px 4px",textAlign:"center",fontWeight:700}}/>
           <span style={{color:mt}}>/</span>
-          <input type="number" value={hd.bpD||""} placeholder="DIA" onChange={e=>setHd({...hd,bpD:Number(e.target.value)})} style={{...IS,padding:"8px 4px",textAlign:"center",fontWeight:700}}/>
+          <input type="number" value={hd.bpD||""} placeholder="DIA" onChange={e=>setHd({...hd,bpD:Number(e.target.value)})} onBlur={()=>{if(hd.bpS>0&&hd.bpD>0){logMetric("bp",hd.bpS,{d:hd.bpD});if(hd.bpS>=180||hd.bpD>=120)setActiveAlert({icon:"🩺",title:lang==="tr"?"YÜKSEK TANSİYON":"HIGH BLOOD PRESSURE",msg:hd.bpS+"/"+hd.bpD+" — "+(lang==="tr"?"doktorunuza danışın":"consult your doctor")});}}} style={{...IS,padding:"8px 4px",textAlign:"center",fontWeight:700}}/>
         </div>
       </div>
     </div>
