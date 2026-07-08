@@ -1614,12 +1614,15 @@ useEffect(()=>{if(!showAddC){cDraftIdRef.current=null;return;}const ok=(newC.nam
 const[msgs,setMsgs]=useState([{id:1,user:"Hasta_42",text:"Merhaba herkese! 👋",likes:3,time:"10:30"}]);
 const[msgIn,setMsgIn]=useState("");
 const[groups,setGroups]=useState([]);
+const[commSearch,setCommSearch]=useState("");
+const[commFilter,setCommFilter]=useState("all");
 const[showGroupModal,setShowGroupModal]=useState(false);
 const[newGroup,setNewGroup]=useState({name:"",emoji:"👥",members:[]});
 const[callModal,setCallModal]=useState(null); // {type,group,status:'requesting'|'ready'|'denied'}
 
 // Chat
 const[chatM,setChatM]=useState([]);
+const[chatSearch,setChatSearch]=useState("");
 const[chatIn,setChatIn]=useState("");
 const[chatL,setChatL]=useState(false);
 const[chatNudgeOff,setChatNudgeOff]=useState(false); // gentle overdue-med reminder dismissed for this session
@@ -3878,7 +3881,7 @@ const startCall=async(type,group)=>{
     setCallModal({type,group,status:"ready"});
   }catch(e){setCallModal({type,group,status:"denied"});}
 };
-const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}>
+const renderCommunity=()=>{const me=pat.name||"Ben";const q=commSearch.trim().toLowerCase();const fmsgs=msgs.filter(m=>{if(commFilter==="mine"&&m.user!==me)return false;if(commFilter==="liked"&&!(m.likedBy||[]).includes(me))return false;if(q&&!(((m.text||"")+" "+(m.user||"")).toLowerCase().includes(q)))return false;return true;});return(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}>
   <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
     <div style={{width:36,height:36,borderRadius:12,background:`linear-gradient(135deg,${ac},${a2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>👥</div>
     <div style={{flex:1,minWidth:0}}>
@@ -3905,9 +3908,15 @@ const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",ga
             </div>
           </div>)}</div>}
   </div>
+  <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
+    <input value={commSearch} onChange={e=>setCommSearch(e.target.value)} placeholder={lang==="tr"?"🔍 Mesajlarda ara…":"🔍 Search messages…"} style={{...IS,flex:1,padding:"7px 10px",fontSize:fs-1}}/>
+    {commSearch&&<button onClick={()=>setCommSearch("")} aria-label="clear" style={{background:"none",border:"none",color:mt,cursor:"pointer",fontSize:16}}>✕</button>}
+  </div>
+  <div style={{display:"flex",gap:6,flexShrink:0,overflowX:"auto",paddingBottom:2}}>{[["all",lang==="tr"?"Tümü":"All"],["mine",lang==="tr"?"Benim":"Mine"],["liked",lang==="tr"?"❤️ Beğendiklerim":"❤️ Liked"]].map(([k,l])=><button key={k} onClick={()=>setCommFilter(k)} style={{flexShrink:0,padding:"5px 12px",borderRadius:16,border:`1px solid ${commFilter===k?ac:bd}`,background:commFilter===k?ac:"transparent",color:commFilter===k?"#fff":mt,fontSize:fs-2,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{l}</button>)}</div>
   <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>
     {msgs.length===0&&<div style={{...CS,textAlign:"center",padding:20,color:mt}}>{lang==="tr"?"Henüz mesaj yok":"No messages yet"}</div>}
-    {msgs.map(m=>{
+    {msgs.length>0&&fmsgs.length===0&&<div style={{...CS,textAlign:"center",padding:20,color:mt}}>{lang==="tr"?"Eşleşen mesaj yok":"No matching messages"}</div>}
+    {fmsgs.map(m=>{
       const isMine=m.user===(pat.name||"Ben");
       return(<div key={m.id} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:isMine?"flex-end":"flex-start",background:isMine?`linear-gradient(135deg,${ac},${a2})`:cd,color:isMine?"#fff":tc,animation:"slideD .3s"}}>
         {!isMine&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><span style={{fontWeight:700,color:ac,fontSize:fs-2}}>{m.user}</span><span style={{fontSize:fs-3,color:mt}}>{m.time}</span></div>}
@@ -3968,10 +3977,11 @@ const renderCommunity=()=>(<div style={{display:"flex",flexDirection:"column",ga
       <button onClick={()=>setCallModal(null)} style={{...BP,width:"100%",marginTop:16}}>{lang==="tr"?"Kapat":"Close"}</button>
     </div>
   </div>}
-</div>);
+</div>);};
 
 const q1Dynamic=pat.name?`${pat.name.split(" ")[0]}, ${t.q1.toLowerCase()} ${lang==="tr"?"Umarım iyisindir 💙":"Hope you are well 💙"}`:t.q1;
 const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,flex:"1 1 0",minHeight:0,height:0,position:"relative"}}>
+  {chatM.length>2&&<div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}><input value={chatSearch} onChange={e=>setChatSearch(e.target.value)} placeholder={lang==="tr"?"🔍 Sohbette ara…":"🔍 Search chat…"} style={{...IS,flex:1,padding:"6px 10px",fontSize:fs-2}}/>{chatSearch&&<button onClick={()=>setChatSearch("")} aria-label="clear" style={{background:"none",border:"none",color:mt,cursor:"pointer",fontSize:15}}>✕</button>}</div>}
   <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0,alignItems:"center"}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}<button onClick={()=>sendChat(lang==="tr"?"Nabzımı ölçmek istiyorum":"I want to measure my pulse")} style={{...pill(false),whiteSpace:"nowrap"}}>❤️ {lang==="tr"?"Nabzımı ölç":"Measure pulse"}</button>{chatM.length>0&&<button onClick={()=>{if(confirm(lang==="tr"?"Tüm sohbet geçmişi silinsin mi?":"Clear all chat history?"))setChatM([]);}} style={{...pill(false),marginLeft:"auto",flexShrink:0,color:dg,borderColor:dg+"44",whiteSpace:"nowrap"}}>🗑️ {lang==="tr"?"Temizle":"Clear"}</button>}</div>
   {(()=>{
     if(chatNudgeOff)return null;
@@ -3988,7 +3998,8 @@ const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,f
   })()}
   <div className="chat-scroll" style={{flex:"1 1 0",minHeight:0,height:0,overflowY:"auto",overflowX:"hidden",display:"flex",flexDirection:"column",gap:8,WebkitOverflowScrolling:"touch",scrollbarWidth:"thin",scrollbarColor:`${ac}66 transparent`}}>
     {chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}
-    {chatM.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,padding:"8px 11px",borderRadius:12,flexShrink:0,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
+    {chatSearch.trim()&&!chatM.some(m=>(m.text||"").toLowerCase().includes(chatSearch.trim().toLowerCase()))&&<div style={{...CS,textAlign:"center",padding:16,color:mt}}>{lang==="tr"?"Eşleşen mesaj yok":"No matching messages"}</div>}
+    {(chatSearch.trim()?chatM.filter(m=>(m.text||"").toLowerCase().includes(chatSearch.trim().toLowerCase())):chatM).map((m,i)=>(<div key={i} className="msg-card" style={{...CS,padding:"8px 11px",borderRadius:12,flexShrink:0,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
       {m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}
       <div style={{wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.role==="assistant"?<MD text={m.text}/>:<span style={{whiteSpace:"pre-wrap"}}>{m.text}</span>}</div>
       <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
