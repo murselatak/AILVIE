@@ -1519,6 +1519,8 @@ useEffect(()=>{
 
 // Notes
 const[notes,setNotes]=useState([]);
+const[noteSearch,setNoteSearch]=useState("");
+const[noteFilter,setNoteFilter]=useState("all");
 const[editNote,setEditNote]=useState(null);
 useEffect(()=>{if(!editNote)return;const upd=()=>{try{setFmtState({b:document.queryCommandState("bold"),i:document.queryCommandState("italic"),u:document.queryCommandState("underline"),block:(document.queryCommandValue("formatBlock")||"").toLowerCase()});}catch(e){}};document.addEventListener("selectionchange",upd);upd();return()=>document.removeEventListener("selectionchange",upd);},[editNote]);
 const[nOpen,setNOpen]=useState(false);
@@ -3755,13 +3757,20 @@ const startNoteRec=async(nid)=>{
 const saveDrawing=(dataUrl)=>{const nid=editNote;if(nid&&dataUrl)addNoteMedia(nid,{type:"drawing",data:dataUrl});setNoteDraw(false);};
 const syncNoteBar=(el)=>{if(!el)return;if(el.scrollHeight>el.clientHeight+3){const h=Math.max(24,el.clientHeight*el.clientHeight/el.scrollHeight);const top=(el.scrollHeight-el.clientHeight)>0?el.scrollTop/(el.scrollHeight-el.clientHeight)*(el.clientHeight-h):0;setNoteBar(p=>(p.show&&Math.abs(p.h-h)<1&&Math.abs(p.top-top)<1)?p:{show:true,h,top});}else setNoteBar(p=>p.show?{show:false,h:0,top:0}:p);};
 const renderNotes=()=>{
-  const sorted=[...notes].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
+  const _nq=noteSearch.trim().toLowerCase();
+  const _nf=notes.filter(n=>{if(noteFilter==="pinned"&&!n.pinned)return false;if(_nq&&!(((n.title||"")+" "+(n.content||"")).toLowerCase().includes(_nq)))return false;return true;});
+  const sorted=[..._nf].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
   return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <span style={{fontWeight:700,fontSize:fs+2}}>📝 {t.notes}</span>
       <button onClick={()=>{const id=Date.now();setNotes(p=>[{id,title:"",content:"",color:"default",pinned:false},...p]);setEditNote(id);}} style={{...BP,padding:"7px 14px"}}>+ {t.nNote}</button>
     </div>
-    {sorted.length===0&&<div style={{textAlign:"center",color:mt,padding:24}}>{t.noN}</div>}
+    {notes.length>0&&<><div style={{display:"flex",gap:6,alignItems:"center"}}>
+      <input value={noteSearch} onChange={e=>setNoteSearch(e.target.value)} placeholder={lang==="tr"?"🔍 Notlarda ara…":"🔍 Search notes…"} style={{...IS,flex:1,padding:"7px 10px",fontSize:fs-1}}/>
+      {noteSearch&&<button onClick={()=>setNoteSearch("")} aria-label="clear" style={{background:"none",border:"none",color:mt,cursor:"pointer",fontSize:16}}>✕</button>}
+    </div>
+    <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>{[["all",lang==="tr"?"Tümü":"All"],["pinned",lang==="tr"?"📌 Sabitli":"📌 Pinned"]].map(([k,l])=><button key={k} onClick={()=>setNoteFilter(k)} style={{flexShrink:0,padding:"5px 12px",borderRadius:16,border:`1px solid ${noteFilter===k?ac:bd}`,background:noteFilter===k?ac:"transparent",color:noteFilter===k?"#fff":mt,fontSize:fs-2,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{l}</button>)}</div></>}
+    {sorted.length===0&&<div style={{textAlign:"center",color:mt,padding:24}}>{notes.length===0?t.noN:(lang==="tr"?"Eşleşen not yok":"No matching notes")}</div>}
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
       {sorted.map(n=>{
         const cbg=(n.bg&&noteBg(n.bg))?noteBg(n.bg):(noteColor(n.color)||(dark?"#12151c":"#ffffff"));
