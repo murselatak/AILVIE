@@ -1617,6 +1617,8 @@ useEffect(()=>{if(!showAddC){cDraftIdRef.current=null;return;}const ok=(newC.nam
 
 // Community
 const[msgs,setMsgs]=useState([{id:1,user:"Hasta_42",text:"Merhaba herkese! 👋",likes:3,time:"10:30"}]);
+const[reportedMsgs,setReportedMsgs]=useState([]);
+const[blockedUsers,setBlockedUsers]=useState([]);
 const[msgIn,setMsgIn]=useState("");
 const[groups,setGroups]=useState([]);
 const[commSearch,setCommSearch]=useState("");
@@ -1674,10 +1676,10 @@ riskPenalty
 // ═══ AUTO-SAVE/LOAD ═══
 useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
-if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(d.chatM?.length)setChatM(d.chatM);
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
 }catch{}},[]); // load once
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog,goals}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose,healthLog,goals]); // enhanced auto-save (incl. drafts + trash + diet/glucose/log/goals)
+useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers]); // enhanced auto-save (incl. drafts + trash + diet/glucose/log/goals)
 useEffect(()=>{try{const s=localStorage.getItem("ailvie_medimg");if(s){const a=JSON.parse(s);if(Array.isArray(a))setMedImages(a);}}catch(e){}},[]);
 useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_medimg",JSON.stringify(medImages));}catch(e){}},800);return()=>clearTimeout(tm);},[medImages]);
 // Auto-cleanup empty notes that are not being edited
@@ -3901,7 +3903,8 @@ const startCall=async(type,group)=>{
     setCallModal({type,group,status:"ready"});
   }catch(e){setCallModal({type,group,status:"denied"});}
 };
-const renderCommunity=()=>{const me=pat.name||"Ben";const q=fold(commSearch.trim());const fmsgs=msgs.filter(m=>{if(commFilter==="mine"&&m.user!==me)return false;if(commFilter==="liked"&&!(m.likedBy||[]).includes(me))return false;if(q&&!fold((m.text||"")+" "+(m.user||"")).includes(q))return false;return true;});return(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}>
+const postCommunityMsg=()=>{const txt=msgIn.trim();if(!txt)return;if(maskProfanity(txt)!==txt&&!window.confirm(lang==="tr"?"⚠️ Mesajınız uygunsuz ifade içeriyor.\nDiğer kullanıcılara maskelenerek gösterilecek. Yine de gönderilsin mi?":"⚠️ Your message contains inappropriate language and will be masked for others. Post anyway?"))return;setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:txt,likes:0,time:now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}]);setMsgIn("");};
+const renderCommunity=()=>{const me=pat.name||"Ben";const q=fold(commSearch.trim());const fmsgs=msgs.filter(m=>{if((reportedMsgs||[]).includes(m.id))return false;if((blockedUsers||[]).includes(m.user))return false;if(commFilter==="mine"&&m.user!==me)return false;if(commFilter==="liked"&&!(m.likedBy||[]).includes(me))return false;if(q&&!fold((m.text||"")+" "+(m.user||"")).includes(q))return false;return true;});return(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}>
   <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
     <div style={{width:36,height:36,borderRadius:12,background:`linear-gradient(135deg,${ac},${a2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>👥</div>
     <div style={{flex:1,minWidth:0}}>
@@ -3933,6 +3936,7 @@ const renderCommunity=()=>{const me=pat.name||"Ben";const q=fold(commSearch.trim
     {commSearch&&<button onClick={()=>setCommSearch("")} aria-label="clear" style={{background:"none",border:"none",color:mt,cursor:"pointer",fontSize:16}}>✕</button>}
   </div>
   <div style={{display:"flex",gap:6,flexShrink:0,overflowX:"auto",paddingBottom:2}}>{[["all",lang==="tr"?"Tümü":"All"],["mine",lang==="tr"?"Benim":"Mine"],["liked",lang==="tr"?"❤️ Beğendiklerim":"❤️ Liked"]].map(([k,l])=><button key={k} onClick={()=>setCommFilter(k)} style={{flexShrink:0,padding:"5px 12px",borderRadius:16,border:`1px solid ${commFilter===k?ac:bd}`,background:commFilter===k?ac:"transparent",color:commFilter===k?"#fff":mt,fontSize:fs-2,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{l}</button>)}</div>
+  {blockedUsers.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",flexShrink:0}}><span style={{fontSize:fs-3,color:mt}}>🚫 {lang==="tr"?"Engelli":"Blocked"}:</span>{blockedUsers.map(u=><button key={u} onClick={()=>setBlockedUsers(p=>p.filter(x=>x!==u))} title={lang==="tr"?"Engeli kaldır":"Unblock"} style={{fontSize:fs-3,padding:"3px 8px",borderRadius:12,border:`1px solid ${bd}`,background:"transparent",color:mt,cursor:"pointer"}}>{u} ✕</button>)}</div>}
   <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>
     {msgs.length===0&&<div style={{...CS,textAlign:"center",padding:20,color:mt}}>{lang==="tr"?"Henüz mesaj yok":"No messages yet"}</div>}
     {msgs.length>0&&fmsgs.length===0&&<div style={{...CS,textAlign:"center",padding:20,color:mt}}>{lang==="tr"?"Eşleşen mesaj yok":"No matching messages"}</div>}
@@ -3948,6 +3952,10 @@ const renderCommunity=()=>{const me=pat.name||"Ben";const q=fold(commSearch.trim
           }} style={{background:(m.likedBy||[]).includes(pat.name||"Ben")?(isMine?"rgba(255,255,255,.3)":`${dg}22`):(isMine?"rgba(255,255,255,.15)":"none"),border:`1px solid ${isMine?"rgba(255,255,255,.3)":bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:(m.likedBy||[]).includes(pat.name||"Ben")?(isMine?"#fff":dg):(isMine?"#fff":tc),fontWeight:(m.likedBy||[]).includes(pat.name||"Ben")?700:400}}>{(m.likedBy||[]).includes(pat.name||"Ben")?"❤️":"🤍"} {m.likes||0}</button>
           <button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${isMine?"rgba(255,255,255,.3)":bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:isMine?"#fff":tc}}>📋</button>
           {!isMine&&<SpeakBtn text={m.text}/>}
+          {!isMine&&<>
+            <button onClick={()=>{if(window.confirm(lang==="tr"?"Bu mesajı şikâyet et? Senin görünümünden gizlenecek.":"Report this message? It will be hidden from your view.")){setReportedMsgs(p=>p.includes(m.id)?p:[...p,m.id]);notify(lang==="tr"?"🚩 Mesaj şikâyet edildi ve gizlendi":"🚩 Reported and hidden");}}} title={lang==="tr"?"Şikâyet et":"Report"} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:mt}}>🚩</button>
+            <button onClick={()=>{if(window.confirm(lang==="tr"?("@"+m.user+" engellensin mi? Tüm mesajları gizlenecek."):("Block @"+m.user+"? All their messages will be hidden."))){setBlockedUsers(p=>p.includes(m.user)?p:[...p,m.user]);notify(lang==="tr"?("🚫 "+m.user+" engellendi"):("🚫 "+m.user+" blocked"));}}} title={lang==="tr"?"Engelle":"Block"} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:mt}}>🚫</button>
+          </>}
           {isMine&&<>
             <button onClick={()=>{const nv=prompt(lang==="tr"?"Mesajı düzenle:":"Edit message:",m.text);if(nv!==null&&nv.trim())setMsgs(p=>p.map(x=>x.id===m.id?{...x,text:nv,edited:true}:x));}} style={{background:"none",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>✏️</button>
             <button onClick={()=>setMsgs(p=>p.filter(x=>x.id!==m.id))} style={{background:"none",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>🗑️</button>
@@ -3960,8 +3968,8 @@ const renderCommunity=()=>{const me=pat.name||"Ben";const q=fold(commSearch.trim
   <div style={{display:"flex",gap:6,flexShrink:0,position:"relative",alignItems:"flex-end"}}>
     <MicBtn onResult={v=>setMsgIn(v)} currentValue={msgIn}/>
     <button onClick={()=>setShowEmoji(!showEmoji)} aria-label="Emoji" style={{...BP,padding:"8px 12px",fontSize:18,flexShrink:0}}>😊</button>
-    <textarea value={msgIn} onChange={e=>setMsgIn(e.target.value)} onInput={autoResize} placeholder={t.wr} style={{...IS,flex:1,minHeight:38,maxHeight:150,resize:"none",overflowY:"auto",wordBreak:"break-word",overflowWrap:"anywhere"}} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey&&msgIn.trim()){e.preventDefault();setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn.trim(),likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}}/>
-    <button onClick={()=>{if(msgIn.trim()){setMsgs(p=>[...p,{id:Date.now(),user:pat.name||"Ben",text:msgIn.trim(),likes:0,time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}]);setMsgIn("");}}} style={{...BP,flexShrink:0}}>{t.send}</button>
+    <textarea value={msgIn} onChange={e=>setMsgIn(e.target.value)} onInput={autoResize} placeholder={t.wr} style={{...IS,flex:1,minHeight:38,maxHeight:150,resize:"none",overflowY:"auto",wordBreak:"break-word",overflowWrap:"anywhere"}} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();postCommunityMsg();}}}/>
+    <button onClick={postCommunityMsg} style={{...BP,flexShrink:0}}>{t.send}</button>
     {showEmoji&&<EmojiPicker onPick={e=>setMsgIn(p=>p+e)} onClose={()=>setShowEmoji(false)}/>}
   </div>
   {showGroupModal&&<div style={{position:"fixed",inset:0,zIndex:350,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setShowGroupModal(false)}>
