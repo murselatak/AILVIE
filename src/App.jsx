@@ -3598,25 +3598,14 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
         <input type="number" value={hd.height||""} onChange={e=>setHd(p=>({...p,height:Number(e.target.value)}))} placeholder={t.ht} style={{...IS,padding:"8px 10px"}}/>
       </div>
       <div>
-        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>⚖️ {t.wt} ({t.kg})</div>
-        <input type="number" value={hd.weight||""} onChange={e=>setHd(p=>({...p,weight:Number(e.target.value)}))} onBlur={e=>logMetric("weight",Number(e.target.value))} placeholder={t.wt} style={{...IS,padding:"8px 10px"}}/>
+        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>📊 BMI</div>
+        <div style={{padding:"8px 10px",borderRadius:8,background:bmi>0?(bmi>=18.5&&bmi<25?`${sc}15`:`${dg}15`):"transparent",color:bmi>0?(bmi>=18.5&&bmi<25?sc:dg):mt,fontWeight:700,fontSize:fs-1,border:bmi>0?"none":`1px solid ${bd}`}}>{bmi>0?`${bmi} · ${bmi<18.5?(lang==="tr"?"Zayıf":"Under"):bmi<25?"Normal":bmi<30?(lang==="tr"?"Fazla":"Over"):(lang==="tr"?"Obez":"Obese")}`:"—"}</div>
       </div>
     </div>
-    {bmi>0&&<div style={{padding:"6px 10px",borderRadius:8,background:bmi>=18.5&&bmi<25?`${sc}15`:`${dg}15`,color:bmi>=18.5&&bmi<25?sc:dg,fontSize:fs-2,fontWeight:600,textAlign:"center",marginBottom:6}}>BMI: {bmi} — {bmi<18.5?(lang==="tr"?"Zayıf":"Underweight"):bmi<25?(lang==="tr"?"Normal":"Normal"):bmi<30?(lang==="tr"?"Fazla kilolu":"Overweight"):(lang==="tr"?"Obez":"Obese")}</div>}
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-      <div>
-        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>❤️ {t.pulse} ({t.bpm})</div>
-        <input type="number" value={hd.pulse||""} onChange={e=>setHd(p=>({...p,pulse:Number(e.target.value)}))} onBlur={e=>logMetric("pulse",Number(e.target.value))} placeholder={t.pulse} style={{...IS,padding:"8px 10px"}}/>
-      </div>
-      <div>
-        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>🩺 {t.bp}</div>
-        <div style={{display:"flex",gap:4,alignItems:"center"}}>
-          <input type="number" value={hd.bpS||""} placeholder="SYS" onChange={e=>setHd({...hd,bpS:Number(e.target.value)})} style={{...IS,padding:"8px 4px",textAlign:"center",fontWeight:700}}/>
-          <span style={{color:mt}}>/</span>
-          <input type="number" value={hd.bpD||""} placeholder="DIA" onChange={e=>setHd({...hd,bpD:Number(e.target.value)})} onBlur={()=>{if(hd.bpS>0&&hd.bpD>0){logMetric("bp",hd.bpS,{d:hd.bpD});if(hd.bpS>=180||hd.bpD>=120)setActiveAlert({icon:"🩺",title:lang==="tr"?"YÜKSEK TANSİYON":"HIGH BLOOD PRESSURE",msg:hd.bpS+"/"+hd.bpD+" — "+(lang==="tr"?"doktorunuza danışın":"consult your doctor")});}}} style={{...IS,padding:"8px 4px",textAlign:"center",fontWeight:700}}/>
-        </div>
-      </div>
+    <div style={{display:"flex",gap:8,marginBottom:8}}>
+      {[["❤️",t.pulse,hd.pulse>0?hd.pulse+" "+t.bpm:"—"],["🩺",t.bp,hd.bpS>0?hd.bpS+"/"+(hd.bpD||"?"):"—"],["⚖️",t.wt,hd.weight>0?hd.weight+" "+t.kg:"—"]].map(([ic,lb,vv],i)=><div key={i} style={{flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,background:dark?"#0e1620":"#f4f7fa"}}><div style={{fontSize:fs-4,color:mt}}>{ic} {lb}</div><div style={{fontSize:fs-1,fontWeight:700,color:tc,marginTop:2}}>{vv}</div></div>)}
     </div>
+    <button onClick={()=>goTo("health")} style={{...BP,width:"100%",padding:"9px",background:"transparent",color:ac,border:`1px solid ${ac}`}}>📊 {lang==="tr"?"Sağlık'ta Ölç / Güncelle":"Measure / Update in Health"} →</button>
   </div>
   {/* Sağlık Durumu */}
   <div style={{...CS,border:`1px solid ${dg}33`,background:`${dg}05`}}>
@@ -4303,8 +4292,8 @@ return (
             </div>
           </div>
           <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
-            <button onClick={goBack} aria-label="Geri" style={{background:"none",border:"none",padding:0,cursor:"pointer",display:"flex",alignItems:"center",filter:"drop-shadow(0 1px 2px rgba(0,0,0,0.4))"}}>
-              <svg width="32" height="32" viewBox="4.2 -3.3 23.8 23.8" fill="none" stroke={histIdx>0?"#e8a817":"#9c7e2c"} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><g transform="rotate(-55 15 15)"><path d="M19.1 4.8 A 11 11 0 0 1 19.1 25.2"/><path d="M16.3 3.3 L19.1 4.8"/><path d="M19.0 10.8 L16.3 3.3 L24.1 1.4"/></g></svg>
+            <button onClick={goBack} aria-label="Geri" style={{background:histIdx>0?"rgba(232,168,23,0.18)":"rgba(120,120,120,0.10)",border:histIdx>0?"1.5px solid rgba(232,168,23,0.55)":"1px solid rgba(120,120,120,0.25)",borderRadius:"50%",padding:5,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",filter:"drop-shadow(0 2px 5px rgba(0,0,0,0.55))"}}>
+              <svg width="30" height="30" viewBox="4.2 -3.3 23.8 23.8" fill="none" stroke={histIdx>0?"#ffc94d":"#9c7e2c"} strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><g transform="rotate(-55 15 15)"><path d="M19.1 4.8 A 11 11 0 0 1 19.1 25.2"/><path d="M16.3 3.3 L19.1 4.8"/><path d="M19.0 10.8 L16.3 3.3 L24.1 1.4"/></g></svg>
             </button>
             <button onClick={()=>{const newState=!voiceActive;setVoiceActive(newState);voiceActiveRef.current=newState;
             if(newState){
