@@ -604,6 +604,7 @@ useEffect(()=>{const bip=(e)=>{e.preventDefault();setInstallEvt(e);};const inst=
 // Notifications
 const[notifs,setNotifs]=useState([]);
 const unread=notifs.filter(n=>!n.read).length;
+const fold=(x)=>String(x==null?"":x).toLocaleLowerCase("tr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ı/g,"i");
 const getActiveWarnings=()=>{
   const out=[];const nowMin=now.getHours()*60+now.getMinutes();const tr=lang==='tr';
   meds.forEach(m=>{if(m.taken||!m.time)return;const[h,mm]=(m.time||'0:0').split(':').map(Number);const d=nowMin-(h*60+mm);
@@ -616,7 +617,7 @@ const getActiveWarnings=()=>{
   return out.sort((a,b)=>(b.high?1:0)-(a.high?1:0));
 };
 const PROFANITY_ROOTS=["amk","amq","amcık","amcik","amına","amina","orospu","oç","piç","pic.","kahpe","kaltak","pezevenk","gavat","ibne","ipne","yarrak","yarak","dalyarak","siktir","siktim","sikeyim","sikik","puşt","pust","kevaşe","sürtük","surtuk","yavşak","yavsak","şerefsiz","serefsiz","haysiyetsiz","götver","götoş","gotos","salak","aptal","gerizekalı","gerizekali","fuck","fuk","fck","shit","bitch","bastard","asshole","dick","cunt","pussy","whore","slut","motherf"];
-const maskProfanity=(txt)=>{if(!txt)return txt;try{return String(txt).replace(/[^\s]+/g,(tok)=>{const norm=tok.toLowerCase().replace(/[.,!?;:"'()\[\]{}]/g,"").replace(/i̇/g,"i");if(!norm)return tok;const hit=PROFANITY_ROOTS.some(r=>norm===r||norm.startsWith(r));return hit?tok[0]+"*".repeat(Math.max(1,tok.length-1)):tok;});}catch(e){return txt;}};
+const maskProfanity=(txt)=>{if(!txt)return txt;try{return String(txt).replace(/[^\s]+/g,(tok)=>{const norm=tok.toLocaleLowerCase("tr").replace(/[.,!?;:"'()\[\]{}]/g,"").replace(/i̇/g,"i");if(!norm)return tok;const hit=PROFANITY_ROOTS.some(r=>norm===r||norm.startsWith(r));return hit?tok[0]+"*".repeat(Math.max(1,tok.length-1)):tok;});}catch(e){return txt;}};
 const notify=useCallback((txt)=>{
   try{if(navigator.vibrate)navigator.vibrate(15);}catch(e){}
   setNotifs(p=>[{id:Date.now(),text:txt,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),read:false},...p]);
@@ -3767,8 +3768,8 @@ const startNoteRec=async(nid)=>{
 const saveDrawing=(dataUrl)=>{const nid=editNote;if(nid&&dataUrl)addNoteMedia(nid,{type:"drawing",data:dataUrl});setNoteDraw(false);};
 const syncNoteBar=(el)=>{if(!el)return;if(el.scrollHeight>el.clientHeight+3){const h=Math.max(24,el.clientHeight*el.clientHeight/el.scrollHeight);const top=(el.scrollHeight-el.clientHeight)>0?el.scrollTop/(el.scrollHeight-el.clientHeight)*(el.clientHeight-h):0;setNoteBar(p=>(p.show&&Math.abs(p.h-h)<1&&Math.abs(p.top-top)<1)?p:{show:true,h,top});}else setNoteBar(p=>p.show?{show:false,h:0,top:0}:p);};
 const renderNotes=()=>{
-  const _nq=noteSearch.trim().toLowerCase();
-  const _nf=notes.filter(n=>{if(noteFilter==="pinned"&&!n.pinned)return false;if(_nq&&!(((n.title||"")+" "+(n.content||"")).toLowerCase().includes(_nq)))return false;return true;});
+  const _nq=fold(noteSearch.trim());
+  const _nf=notes.filter(n=>{if(noteFilter==="pinned"&&!n.pinned)return false;if(_nq&&!fold((n.title||"")+" "+(n.content||"")).includes(_nq))return false;return true;});
   const sorted=[..._nf].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
   return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -3900,7 +3901,7 @@ const startCall=async(type,group)=>{
     setCallModal({type,group,status:"ready"});
   }catch(e){setCallModal({type,group,status:"denied"});}
 };
-const renderCommunity=()=>{const me=pat.name||"Ben";const q=commSearch.trim().toLowerCase();const fmsgs=msgs.filter(m=>{if(commFilter==="mine"&&m.user!==me)return false;if(commFilter==="liked"&&!(m.likedBy||[]).includes(me))return false;if(q&&!(((m.text||"")+" "+(m.user||"")).toLowerCase().includes(q)))return false;return true;});return(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}>
+const renderCommunity=()=>{const me=pat.name||"Ben";const q=fold(commSearch.trim());const fmsgs=msgs.filter(m=>{if(commFilter==="mine"&&m.user!==me)return false;if(commFilter==="liked"&&!(m.likedBy||[]).includes(me))return false;if(q&&!fold((m.text||"")+" "+(m.user||"")).includes(q))return false;return true;});return(<div style={{display:"flex",flexDirection:"column",gap:8,height:"100%"}}>
   <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
     <div style={{width:36,height:36,borderRadius:12,background:`linear-gradient(135deg,${ac},${a2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>👥</div>
     <div style={{flex:1,minWidth:0}}>
@@ -4017,8 +4018,8 @@ const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,f
   })()}
   <div className="chat-scroll" style={{flex:"1 1 0",minHeight:0,height:0,overflowY:"auto",overflowX:"hidden",display:"flex",flexDirection:"column",gap:8,WebkitOverflowScrolling:"touch",scrollbarWidth:"thin",scrollbarColor:`${ac}66 transparent`}}>
     {chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}
-    {chatSearch.trim()&&!chatM.some(m=>(m.text||"").toLowerCase().includes(chatSearch.trim().toLowerCase()))&&<div style={{...CS,textAlign:"center",padding:16,color:mt}}>{lang==="tr"?"Eşleşen mesaj yok":"No matching messages"}</div>}
-    {(chatSearch.trim()?chatM.filter(m=>(m.text||"").toLowerCase().includes(chatSearch.trim().toLowerCase())):chatM).map((m,i)=>(<div key={i} className="msg-card" style={{...CS,padding:"8px 11px",borderRadius:12,flexShrink:0,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
+    {chatSearch.trim()&&!chatM.some(m=>fold(m.text||"").includes(fold(chatSearch.trim())))&&<div style={{...CS,textAlign:"center",padding:16,color:mt}}>{lang==="tr"?"Eşleşen mesaj yok":"No matching messages"}</div>}
+    {(chatSearch.trim()?chatM.filter(m=>fold(m.text||"").includes(fold(chatSearch.trim()))):chatM).map((m,i)=>(<div key={i} className="msg-card" style={{...CS,padding:"8px 11px",borderRadius:12,flexShrink:0,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
       {m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}
       <div style={{wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.role==="assistant"?<MD text={m.text}/>:<span style={{whiteSpace:"pre-wrap"}}>{m.text}</span>}</div>
       <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
