@@ -604,7 +604,7 @@ useEffect(()=>{const bip=(e)=>{e.preventDefault();setInstallEvt(e);};const inst=
 // Notifications
 const[notifs,setNotifs]=useState([]);
 const unread=notifs.filter(n=>!n.read).length;
-const patCtx=()=>({band:ageBandOf(pat.birthDate),pregnant:!!pat.pregnant,sex:pat.sex||""});
+const patCtx=()=>({band:ageBandOf(pat.birthDate),ageYears:ageYearsFrom(pat.birthDate),pregnant:!!pat.pregnant,sex:pat.sex||""});
 const fold=(x)=>String(x==null?"":x).toLocaleLowerCase("tr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ı/g,"i");
 const getActiveWarnings=()=>{
   const out=[];const nowMin=now.getHours()*60+now.getMinutes();const tr=lang==='tr';
@@ -639,6 +639,12 @@ const UNIT_CONV={
   alt:{canon:"U/L",f:{"U/L":1,"IU/L":1}},ast:{canon:"U/L",f:{"U/L":1,"IU/L":1}},
   sodium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},potassium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},
   platelet:{canon:"x10^9/L",f:{"x10^9/L":1,"10^9/L":1,"K/uL":1}},
+  uricAcid:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":16.81}},
+  magnesium:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":2.43,"mEq/L":1.215}},
+  phosphorus:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":3.097}},
+  tibc:{canon:"ug/dL",f:{"ug/dL":1,"µg/dL":1,"umol/L":5.587}},
+  esr:{canon:"mm/h",f:{"mm/h":1,"mm/hr":1}},
+  insulin:{canon:"uIU/mL",f:{"uIU/mL":1,"µIU/mL":1,"mIU/L":1,"pmol/L":1/6.945}},
 };
 // Returns {ok, value, unit} in canonical unit, or {ok:false,reason:"unknown-unit"} -> caller must NOT score.
 const normalizeUnit=(test,value,unit)=>{
@@ -671,6 +677,12 @@ const REF_LIB={
   ldl:{unit:"mg/dL",adult:{any:[0,100]}},
   triglyceride:{unit:"mg/dL",adult:{any:[0,150]}},
   vitaminD:{unit:"ng/mL",adult:{any:[20,50]}},
+  uricAcid:{unit:"mg/dL",adult:{male:[3.5,7.2],female:[2.6,6.0]}},
+  magnesium:{unit:"mg/dL",adult:{any:[1.5,2.4]}},
+  phosphorus:{unit:"mg/dL",adult:{any:[2.5,4.5]}},
+  tibc:{unit:"ug/dL",adult:{any:[251,460]}},
+  // ESR: not a fixed interval - Westergren upper limit depends on age & sex (age/2 male; (age+10)/2 female)
+  esr:{unit:"mm/h",dynamic:(ctx)=>{const y=ctx&&ctx.ageYears;if(!y||!ctx.sex)return null;const hi=ctx.sex==="female"?Math.round((y+10)/2):Math.round(y/2);return[0,hi];}},
 };
 // Reference selector priority (doc): lab-reported > method-specific > internal library. Never guess for non-adult.
 const selectReference=(test,ctx,labReported)=>{
@@ -681,6 +693,7 @@ const selectReference=(test,ctx,labReported)=>{
   if(ctx.pregnant)return{ok:false,reason:"pregnancy"};
   if(band!=="adult"&&band!=="older")return{ok:false,reason:"age"};
   const e=REF_LIB[test];if(!e)return{ok:false,reason:"not-in-library"};
+  if(e.dynamic){const r=e.dynamic(ctx);if(!r)return{ok:false,reason:"needs-sex-age"};return{ok:true,low:r[0],high:r[1],unit:e.unit,source:"internal-library"};}
   const sex=(ctx.sex==="male"||ctx.sex==="female")?ctx.sex:null;
   const r=e.adult[sex]||e.adult.any;
   if(!r)return{ok:false,reason:"needs-sex"};
@@ -719,6 +732,12 @@ const TEST_EDU={
   crp:["Vücuttaki iltihabı gösteren bir belirteçtir.","Marker of inflammation."],
   vitaminD:["Kemik sağlığı ve bağışıklık için gereklidir.","Needed for bone health and immunity."],
   platelet:["Kanın pıhtılaşmasında görevli hücrelerdir.","Cells involved in clotting."],
+  uricAcid:["Pürin metabolizmasının son ürünüdür; yüksekliği gut ve böbrek taşı ile ilişkili olabilir.","End product of purine metabolism; high levels linked to gout."],
+  magnesium:["Kas, sinir ve kalp ritmi için gerekli mineraldir.","Mineral needed for muscle, nerve and heart rhythm."],
+  phosphorus:["Kemik sağlığı ve enerji metabolizmasında rol alır; böbrek işleviyle yakından ilişkilidir.","Bone health and energy metabolism; closely tied to kidney function."],
+  tibc:["Kanın demir taşıma kapasitesini gösterir; demir eksikliğinde yükselir.","Iron-binding capacity; rises in iron deficiency."],
+  esr:["İltihabın dolaylı göstergesidir; üst sınırı yaş ve cinsiyete göre değişir.","Indirect marker of inflammation; upper limit varies by age and sex."],
+  insulin:["Açlık insülini; glukozla birlikte insülin direnci (HOMA-IR) hesabında kullanılır.","Fasting insulin; used with glucose for HOMA-IR."],
 };
 const SYS_SPECIALTY={kidney:["Nefroloji / Dahiliye","Nephrology / Internal Medicine"],glycemic:["Endokrinoloji / Dahiliye","Endocrinology"],hematology:["Hematoloji / Dahiliye","Hematology"],liver:["Gastroenteroloji / Dahiliye","Gastroenterology"],lipid:["Kardiyoloji / Dahiliye","Cardiology"],thyroid:["Endokrinoloji","Endocrinology"],inflammation:["Dahiliye","Internal Medicine"],nutrition:["Dahiliye / Beslenme","Internal Medicine / Nutrition"]};
 const LIFESTYLE={
@@ -732,6 +751,9 @@ const LIFESTYLE={
   nutrition:[["Güneş ışığından yararlanmak","Dengeli beslenme"],["Sun exposure","Balanced diet"]],
 };
 // Follow-up interval suggestion by severity (educational, not prescriptive)
+// HOMA-IR = (fasting glucose mg/dL x fasting insulin uIU/mL) / 405  (screening only)
+const homaIR=(glucoseMgDl,insulinUiuMl)=>{const g=Number(glucoseMgDl),i=Number(insulinUiuMl);if(!(g>0&&i>0))return null;const v=Math.round((g*i/405)*100)/100;return{value:v,level:v<2.5?"normal":v<3.8?"borderline":"high"};};
+if(typeof window!=="undefined")window.__homaIR=homaIR;
 const followUp=(level)=>{
   if(level==="critical-low"||level==="critical-high")return{urgency:"urgent",weeks:0};
   if(level==="diabetes-range")return{urgency:"soon",weeks:2};
@@ -831,6 +853,12 @@ const LAB_TESTS=[
   {k:"tsh",tr:"TSH",en:"TSH",units:["mU/L","mIU/L","uIU/mL"],sys:"thyroid"},
   {k:"crp",tr:"CRP",en:"CRP",units:["mg/L","mg/dL"],sys:"inflammation"},
   {k:"vitaminD",tr:"D Vitamini (25-OH)",en:"Vitamin D (25-OH)",units:["ng/mL","nmol/L"],sys:"nutrition"},
+  {k:"uricAcid",tr:"Ürik Asit",en:"Uric Acid",units:["mg/dL","mmol/L"],sys:"kidney"},
+  {k:"magnesium",tr:"Magnezyum",en:"Magnesium",units:["mg/dL","mmol/L","mEq/L"],sys:"kidney"},
+  {k:"phosphorus",tr:"Fosfor",en:"Phosphorus",units:["mg/dL","mmol/L"],sys:"kidney"},
+  {k:"tibc",tr:"TIBC (Demir Bağlama)",en:"TIBC",units:["ug/dL","umol/L"],sys:"hematology"},
+  {k:"esr",tr:"Sedimentasyon (ESR)",en:"ESR",units:["mm/h"],sys:"inflammation"},
+  {k:"insulin",tr:"İnsülin (açlık)",en:"Insulin (fasting)",units:["uIU/mL","pmol/L"],sys:"glycemic"},
 ];
 // Full pipeline: normalize -> select reference -> classify. Returns {saved, classification}
 const evaluateLab=(testKey,rawValue,rawUnit,ctx,labReported)=>{
@@ -3629,6 +3657,24 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         </div>;})}
       </div>
       <div style={{fontSize:fs-4,color:mt,marginTop:6,lineHeight:1.4}}>{L?"Skor yalnızca sınıflandırılabilen tahlillerden hesaplanır; sınıflandırılamayanlar (çocuk/gebelik/bağlam eksik) hesaba katılmaz. Tarama amaçlıdır, tanı değildir.":"Score uses classifiable labs only. Screening, not diagnosis."}</div>
+    </div>;})()}
+  {/* HOMA-IR (auto) */}
+  {(()=>{
+    const L=lang==="tr",ctx=patCtx();
+    const last=(k)=>{const a=(labs||[]).filter(x=>x.test===k).sort((a,b)=>b.ts-a.ts);return a[0]||null;};
+    const g=last("glucose"),ins=last("insulin");
+    if(!g||!ins)return null;
+    if(ctx.pregnant||(ctx.band&&ctx.band!=="adult"&&ctx.band!=="older")||!ctx.band)
+      return <div style={{...CS,border:`1px solid ${bd}`}}><b style={{fontSize:fs,color:tc}}>🧮 HOMA-IR</b><div style={{fontSize:fs-3,color:mt,marginTop:4}}>{L?"Yaş/gebelik bağlamı nedeniyle hesaplanmıyor — doktorunuz değerlendirmelidir.":"Not computed due to age/pregnancy context."}</div></div>;
+    const h=homaIR(g.canonValue,ins.canonValue);
+    if(!h)return null;
+    const c=h.level==="normal"?sc:h.level==="borderline"?"#e9a23b":dg;
+    const lbl=h.level==="normal"?(L?"normal":"normal"):h.level==="borderline"?(L?"sınırda":"borderline"):(L?"insülin direnci lehine":"suggests insulin resistance");
+    return <div style={{...CS,border:`1px solid ${c}44`}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><b style={{fontSize:fs,color:tc}}>🧮 HOMA-IR</b><b style={{fontSize:fs+3,color:c}}>{h.value}</b></div>
+      <div style={{fontSize:fs-2,color:c,fontWeight:700,marginTop:2}}>{lbl}</div>
+      <div style={{fontSize:fs-3,color:mt,marginTop:4}}>{L?`Açlık glukozu ${g.canonValue} mg/dL × açlık insülini ${ins.canonValue} µIU/mL ÷ 405`:`Fasting glucose × insulin ÷ 405`}</div>
+      <div style={{fontSize:fs-4,color:mt,marginTop:5,lineHeight:1.4}}>{L?"Yalnızca AÇLIK örnekleri için geçerlidir. Eşikler popülasyona göre değişir; tarama amaçlıdır, tanı değildir.":"Valid for fasting samples only. Screening, not diagnosis."}</div>
     </div>;})()}
   {/* Recommendation engine: education -> lifestyle -> clinical follow-up */}
   {(()=>{
