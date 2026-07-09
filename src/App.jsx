@@ -695,6 +695,40 @@ const classifyAgainstRef=(value,ref)=>{
   if(v>ref.high)return{applicable:true,level:"high",source:ref.source};
   return{applicable:true,level:"normal",source:ref.source};
 };
+const LAB_TESTS=[
+  {k:"glucose",tr:"Glukoz",en:"Glucose",units:["mg/dL","mmol/L"],sys:"glycemic"},
+  {k:"hba1c",tr:"HbA1c",en:"HbA1c",units:["%"],sys:"glycemic"},
+  {k:"hemoglobin",tr:"Hemoglobin",en:"Hemoglobin",units:["g/dL","g/L"],sys:"hematology"},
+  {k:"platelet",tr:"Trombosit",en:"Platelet",units:["x10^9/L","K/uL"],sys:"hematology"},
+  {k:"ferritin",tr:"Ferritin",en:"Ferritin",units:["ug/L","ng/mL"],sys:"hematology"},
+  {k:"b12",tr:"B12",en:"B12",units:["ng/L","pg/mL","pmol/L"],sys:"hematology"},
+  {k:"creatinine",tr:"Kreatinin",en:"Creatinine",units:["mg/dL","umol/L"],sys:"kidney"},
+  {k:"sodium",tr:"Sodyum",en:"Sodium",units:["mmol/L","mEq/L"],sys:"kidney"},
+  {k:"potassium",tr:"Potasyum",en:"Potassium",units:["mmol/L","mEq/L"],sys:"kidney"},
+  {k:"calcium",tr:"Kalsiyum",en:"Calcium",units:["mg/dL","mmol/L"],sys:"kidney"},
+  {k:"alt",tr:"ALT",en:"ALT",units:["U/L","IU/L"],sys:"liver"},
+  {k:"ast",tr:"AST",en:"AST",units:["U/L","IU/L"],sys:"liver"},
+  {k:"albumin",tr:"Albümin",en:"Albumin",units:["g/dL","g/L"],sys:"liver"},
+  {k:"bilirubin",tr:"Bilirubin",en:"Bilirubin",units:["mg/dL","umol/L"],sys:"liver"},
+  {k:"cholesterol",tr:"Total Kolesterol",en:"Total Cholesterol",units:["mg/dL","mmol/L"],sys:"lipid"},
+  {k:"ldl",tr:"LDL",en:"LDL",units:["mg/dL","mmol/L"],sys:"lipid"},
+  {k:"hdl",tr:"HDL",en:"HDL",units:["mg/dL","mmol/L"],sys:"lipid"},
+  {k:"triglyceride",tr:"Trigliserid",en:"Triglyceride",units:["mg/dL","mmol/L"],sys:"lipid"},
+  {k:"tsh",tr:"TSH",en:"TSH",units:["mU/L","mIU/L","uIU/mL"],sys:"thyroid"},
+  {k:"crp",tr:"CRP",en:"CRP",units:["mg/L","mg/dL"],sys:"inflammation"},
+  {k:"vitaminD",tr:"D Vitamini (25-OH)",en:"Vitamin D (25-OH)",units:["ng/mL","nmol/L"],sys:"nutrition"},
+];
+// Full pipeline: normalize -> select reference -> classify. Returns {saved, classification}
+const evaluateLab=(testKey,rawValue,rawUnit,ctx,labReported)=>{
+  const norm=normalizeUnit(testKey,rawValue,rawUnit);
+  if(!norm.ok)return{ok:false,stage:"unit",reason:norm.reason};
+  if(testKey==="glucose"){const g=classifyGlucose(norm.value,"fasting",ctx);return{ok:true,norm,cls:g,kind:"threshold"};}
+  if(testKey==="hba1c"){const h=classifyHbA1c(norm.value,ctx);return{ok:true,norm,cls:h,kind:"threshold"};}
+  const ref=selectReference(testKey,ctx,labReported);
+  const cls=classifyAgainstRef(norm.value,ref);
+  return{ok:true,norm,ref,cls,kind:"reference"};
+};
+if(typeof window!=="undefined"){window.__evaluateLab=evaluateLab;window.__LAB_TESTS=LAB_TESTS;}
 if(typeof window!=="undefined"){window.__normalizeUnit=normalizeUnit;window.__selectReference=selectReference;window.__classifyAgainstRef=classifyAgainstRef;window.__REF_LIB=REF_LIB;}
 // ---------- Clinical reference engine (safety-first, context-aware) ----------
 // Doc principle: no single universal table. Age/sex/pregnancy partitions are MANDATORY.
@@ -1505,6 +1539,8 @@ const[dietText,setDietText]=useState("");
 const[gluVal,setGluVal]=useState("");
 const[gluType,setGluType]=useState("fasting");
 const[healthLog,setHealthLog]=useState([]); // timestamped vital history [{id,ts,type,val,meta}]
+const[labs,setLabs]=useState([]); // [{id,ts,test,value,unit,canonValue,canonUnit,level,source,labLow,labHigh}]
+const[labForm,setLabForm]=useState({test:"glucose",value:"",unit:"mg/dL",low:"",high:""});
 const[repMetric,setRepMetric]=useState("weight");
 const[repRange,setRepRange]=useState(30); // days; 0=all
 const[hba1cVal,setHba1cVal]=useState("");
@@ -1795,10 +1831,10 @@ riskPenalty
 // ═══ AUTO-SAVE/LOAD ═══
 useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
-if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(Array.isArray(d.labs))setLabs(d.labs);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
 }catch{}},[]); // load once
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers]); // enhanced auto-save (incl. drafts + trash + diet/glucose/log/goals)
+useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs]); // enhanced auto-save (incl. drafts + trash + diet/glucose/log/goals)
 useEffect(()=>{try{const s=localStorage.getItem("ailvie_medimg");if(s){const a=JSON.parse(s);if(Array.isArray(a))setMedImages(a);}}catch(e){}},[]);
 useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_medimg",JSON.stringify(medImages));}catch(e){}},800);return()=>clearTimeout(tm);},[medImages]);
 // Auto-cleanup empty notes that are not being edited
@@ -3434,6 +3470,54 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       </div>
     </div>
   </div>}
+  {/* Lab Results (context-aware reference engine) */}
+  {(()=>{
+    const L=lang==="tr",ctx=patCtx();
+    const tInfo=LAB_TESTS.find(x=>x.k===labForm.test)||LAB_TESTS[0];
+    const preview=labForm.value?evaluateLab(labForm.test,labForm.value,labForm.unit,ctx,(labForm.low&&labForm.high)?{low:labForm.low,high:labForm.high}:null):null;
+    const lvlColor=(lv)=>lv==="normal"?sc:(lv==="critical-low"||lv==="critical-high"||lv==="diabetes-range")?dg:(lv==="low"||lv==="high"||lv==="prediabetes")?"#e9a23b":mt;
+    const lvlLabel=(lv)=>({normal:L?"normal":"normal",low:L?"düşük":"low",high:L?"yüksek":"high","critical-low":L?"kritik düşük":"critical low","critical-high":L?"kritik yüksek":"critical high",prediabetes:L?"prediyabet eşiği":"prediabetes","diabetes-range":L?"diyabet eşiği":"diabetes range"}[lv]||lv);
+    const naMsg=(reason)=>({age:L?"Yaşa özgü referans gerekli — sınıflandırma yapılmadı":"Age-specific reference needed",pregnancy:L?"Gebelikte eşikler farklıdır — sınıflandırma yapılmadı":"Pregnancy thresholds differ","no-context":L?"Doğum tarihi/cinsiyet girin (Hasta Karnesi)":"Add birth date/sex in Patient Card","not-in-library":L?"Bu test için dahili referans yok — raporunuzun aralığını girin":"No internal reference — enter your report's range","needs-sex":L?"Cinsiyet gerekli":"Sex required"}[reason]||reason);
+    const save=()=>{
+      const r=evaluateLab(labForm.test,labForm.value,labForm.unit,ctx,(labForm.low&&labForm.high)?{low:labForm.low,high:labForm.high}:null);
+      if(!r.ok){notify(r.reason==="unknown-unit"||r.reason==="missing-unit"?(L?"⚠️ Birim tanınmadı — sonuç kaydedilmedi":"⚠️ Unknown unit"):(L?"Geçersiz değer":"Invalid value"));return;}
+      setLabs(p=>[...p,{id:Date.now()+"_"+Math.random().toString(36).slice(2,5),ts:Date.now(),test:labForm.test,value:Number(labForm.value),unit:labForm.unit,canonValue:r.norm.value,canonUnit:r.norm.unit,level:r.cls.applicable?r.cls.level:null,naReason:r.cls.applicable?null:r.cls.reason,source:(r.ref&&r.ref.source)||r.kind,labLow:labForm.low||null,labHigh:labForm.high||null}]);
+      if(r.cls.applicable&&(r.cls.level==="critical-low"||r.cls.level==="critical-high"))setActiveAlert({icon:"🧪",title:L?"KRİTİK TAHLİL DEĞERİ":"CRITICAL LAB VALUE",msg:(L?tInfo.tr:tInfo.en)+" "+labForm.value+" "+labForm.unit+" — "+(L?"acil değerlendirme gerekebilir, doktorunuza başvurun":"seek medical attention")});
+      setLabForm(f=>({...f,value:"",low:"",high:""}));notify(L?"✓ Tahlil kaydedildi":"✓ Lab saved");
+    };
+    return <div style={{...CS}}>
+      <b style={{fontSize:fs+1,color:tc}}>🧪 {L?"Tahlil Sonuçları":"Lab Results"}</b>
+      <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{L?"Raporunuzdaki değeri girin. Raporda referans aralığı varsa onu da girin — uygulama önce onu kullanır.":"Enter your report value. If your report shows a reference range, enter it — it takes priority."}</div>
+      <select value={labForm.test} onChange={e=>{const nt=LAB_TESTS.find(x=>x.k===e.target.value);setLabForm(f=>({...f,test:e.target.value,unit:nt.units[0],value:"",low:"",high:""}));}} style={{...IS,width:"100%",marginBottom:6}}>{LAB_TESTS.map(x=><option key={x.k} value={x.k}>{L?x.tr:x.en}</option>)}</select>
+      <div style={{display:"flex",gap:6,marginBottom:6}}>
+        <input type="number" step="0.01" inputMode="decimal" value={labForm.value} onChange={e=>setLabForm(f=>({...f,value:e.target.value}))} placeholder={L?"Değer":"Value"} style={{...IS,flex:1}}/>
+        <select value={labForm.unit} onChange={e=>setLabForm(f=>({...f,unit:e.target.value}))} style={{...IS,flex:"0 0 42%"}}>{tInfo.units.map(u=><option key={u} value={u}>{u}</option>)}</select>
+      </div>
+      <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
+        <span style={{fontSize:fs-3,color:mt,flex:"0 0 auto"}}>📄 {L?"Raporun aralığı":"Report range"}</span>
+        <input type="number" step="0.01" value={labForm.low} onChange={e=>setLabForm(f=>({...f,low:e.target.value}))} placeholder={L?"alt":"low"} style={{...IS,flex:1,padding:"6px 8px"}}/>
+        <span style={{color:mt}}>–</span>
+        <input type="number" step="0.01" value={labForm.high} onChange={e=>setLabForm(f=>({...f,high:e.target.value}))} placeholder={L?"üst":"high"} style={{...IS,flex:1,padding:"6px 8px"}}/>
+      </div>
+      {preview&&(!preview.ok
+        ? <div style={{background:`${dg}12`,border:`1px solid ${dg}44`,borderRadius:9,padding:"8px 10px",fontSize:fs-3,color:tc,marginBottom:6}}>⚠️ {L?"Birim tanınmadı — değerlendirme yapılamaz.":"Unknown unit — cannot evaluate."}</div>
+        : <div style={{background:dark?"#0e1620":"#f4f7fa",borderRadius:9,padding:"8px 10px",fontSize:fs-2,marginBottom:6}}>
+            <div style={{color:mt,fontSize:fs-3}}>{L?"Normalize":"Normalized"}: <b style={{color:tc}}>{preview.norm.value} {preview.norm.unit}</b></div>
+            {preview.cls.applicable
+              ? <div style={{marginTop:3}}><b style={{color:lvlColor(preview.cls.level)}}>{lvlLabel(preview.cls.level)}</b> <span style={{fontSize:fs-4,color:mt}}>· {preview.kind==="threshold"?(L?"tanısal karar eşiği":"diagnostic threshold"):(preview.ref&&preview.ref.source==="lab-reported"?(L?"raporun aralığı":"report range"):(L?"dahili referans":"internal reference"))}{preview.ref&&preview.ref.ok?` (${preview.ref.low}–${preview.ref.high})`:""}</span></div>
+              : <div style={{marginTop:3,color:"#e9a23b",fontSize:fs-3}}>⚠️ {naMsg(preview.cls.reason)}</div>}
+          </div>)}
+      <button onClick={save} disabled={!labForm.value} style={{...BP,width:"100%",padding:"9px",opacity:labForm.value?1:0.5}}>+ {L?"Tahlili Kaydet":"Save Lab"}</button>
+      {labs.length>0&&<div style={{marginTop:10}}>
+        <div style={{fontSize:fs-2,fontWeight:700,color:mt,marginBottom:4}}>{L?"Kayıtlar":"Records"}</div>
+        {[...labs].reverse().slice(0,8).map(x=>{const ti=LAB_TESTS.find(y=>y.k===x.test);const d=new Date(x.ts);return <div key={x.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:`1px solid ${bd}`,gap:8}}>
+          <div style={{minWidth:0,flex:1}}><div style={{fontSize:fs-1,color:tc,fontWeight:600}}>{ti?(L?ti.tr:ti.en):x.test}</div><div style={{fontSize:fs-4,color:mt}}>{d.toLocaleDateString(lc,{day:"2-digit",month:"2-digit",year:"numeric"})} {d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}{x.source==="lab-reported"?` · ${L?"raporun aralığı":"report range"}`:""}</div></div>
+          <div style={{textAlign:"right",flexShrink:0}}><b style={{fontSize:fs,color:x.level?lvlColor(x.level):tc}}>{x.value} <span style={{fontSize:fs-4,fontWeight:400,color:mt}}>{x.unit}</span></b><div style={{fontSize:fs-4,color:x.level?lvlColor(x.level):mt}}>{x.level?lvlLabel(x.level):(L?"sınıflandırılmadı":"not classified")}</div></div>
+          <button onClick={()=>setLabs(p=>p.filter(y=>y.id!==x.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:fs-1,flexShrink:0}}>✕</button>
+        </div>;})}
+      </div>}
+      <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Referans aralıkları laboratuvara/yönteme/yaşa göre değişir. Bu değerlendirme tarama amaçlıdır, tıbbi tanı değildir — raporunuzu doktorunuz yorumlamalıdır.":"Reference ranges vary by lab/method/age. Screening only, not a diagnosis."}</div>
+    </div>;})()}
   {/* Vital Signs */}
   <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🫀 {lang==="tr"?"Yaşamsal Değerler":"Vital Signs"}</div>
   <div style={{...CS,display:"flex",alignItems:"center",gap:10}}>
