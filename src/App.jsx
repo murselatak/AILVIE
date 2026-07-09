@@ -617,6 +617,85 @@ const getActiveWarnings=()=>{
   try{if(glucose&&glucose.length){const g=glucose[glucose.length-1];if(g&&(Date.now()-g.ts)<864e5&&(g.val<70||g.val>=250))out.push({id:'gluW',icon:'🩸',kind:'info',title:(tr?'Şeker':'Glucose')+' '+g.val+' mg/dL',sub:g.val<70?(tr?'düşük — dikkat':'low'):(tr?'yüksek — doktorunuza danışın':'high'),high:g.val<54||g.val>=300});}const bl=(healthLog||[]).filter(x=>x.type==='bp');if(bl.length){const bp=bl[bl.length-1];const sV=bp.val,dV=(bp.meta&&bp.meta.d)||0;if((Date.now()-bp.ts)<864e5&&(sV>=140||dV>=90||sV<90))out.push({id:'bpW',icon:'🩺',kind:'info',title:(tr?'Tansiyon':'BP')+' '+sV+'/'+dV,sub:(sV>=140||dV>=90)?(tr?'yüksek':'high'):(tr?'düşük':'low'),high:sV>=180||dV>=120});}}catch(e){}
   return out.sort((a,b)=>(b.high?1:0)-(a.high?1:0));
 };
+// ---------- Unit normalization + canonical reference library + reference selector ----------
+// Factors verified against standard clinical conversions. Unit mismatch => NO score (doc rule).
+const UNIT_CONV={
+  glucose:{canon:"mg/dL",f:{"mg/dl":1,"mg/dL":1,"mmol/l":18.0182,"mmol/L":18.0182}},
+  cholesterol:{canon:"mg/dL",f:{"mg/dL":1,"mg/dl":1,"mmol/L":38.67,"mmol/l":38.67}},
+  ldl:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":38.67}},
+  hdl:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":38.67}},
+  triglyceride:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":88.57}},
+  creatinine:{canon:"mg/dL",f:{"mg/dL":1,"umol/L":1/88.4,"µmol/L":1/88.4}},
+  hemoglobin:{canon:"g/L",f:{"g/L":1,"g/l":1,"g/dL":10,"g/dl":10}},
+  crp:{canon:"mg/L",f:{"mg/L":1,"mg/l":1,"mg/dL":10,"mg/dl":10}},
+  bilirubin:{canon:"mg/dL",f:{"mg/dL":1,"umol/L":1/17.1,"µmol/L":1/17.1}},
+  calcium:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":4.008}},
+  vitaminD:{canon:"ng/mL",f:{"ng/mL":1,"nmol/L":1/2.496}},
+  b12:{canon:"ng/L",f:{"ng/L":1,"pg/mL":1,"pmol/L":1/0.7378}},
+  ferritin:{canon:"ug/L",f:{"ug/L":1,"µg/L":1,"ng/mL":1}},
+  hba1c:{canon:"%",f:{"%":1}},
+  tsh:{canon:"mU/L",f:{"mU/L":1,"mIU/L":1,"uIU/mL":1,"µIU/mL":1}},
+  albumin:{canon:"g/dL",f:{"g/dL":1,"g/L":0.1}},
+  alt:{canon:"U/L",f:{"U/L":1,"IU/L":1}},ast:{canon:"U/L",f:{"U/L":1,"IU/L":1}},
+  sodium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},potassium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},
+  platelet:{canon:"x10^9/L",f:{"x10^9/L":1,"10^9/L":1,"K/uL":1}},
+};
+// Returns {ok, value, unit} in canonical unit, or {ok:false,reason:"unknown-unit"} -> caller must NOT score.
+const normalizeUnit=(test,value,unit)=>{
+  const v=Number(value);const c=UNIT_CONV[test];
+  if(!c)return{ok:false,reason:"unknown-test"};
+  if(!isFinite(v))return{ok:false,reason:"invalid-value"};
+  if(!unit)return{ok:false,reason:"missing-unit"};
+  const k=Object.keys(c.f).find(x=>x.toLowerCase()===String(unit).trim().toLowerCase());
+  if(!k)return{ok:false,reason:"unknown-unit"};
+  return{ok:true,value:Math.round(v*c.f[k]*1000)/1000,unit:c.canon};
+};
+// Canonical library: partitioned intervals (adult defaults; sex splits where clinically real).
+// NOTE: these are REFERENCE INTERVALS, not diagnostic thresholds. Pediatric = intentionally absent -> gated.
+const REF_LIB={
+  hemoglobin:{unit:"g/L",adult:{male:[130,180],female:[115,165]}},
+  platelet:{unit:"x10^9/L",adult:{any:[140,400]}},
+  sodium:{unit:"mmol/L",adult:{any:[135,145]}},
+  potassium:{unit:"mmol/L",adult:{any:[3.5,5.0]}},
+  calcium:{unit:"mg/dL",adult:{any:[8.4,10.2]}},
+  creatinine:{unit:"mg/dL",adult:{male:[0.70,1.30],female:[0.50,1.10]}},
+  albumin:{unit:"g/dL",adult:{any:[3.5,5.5]}},
+  alt:{unit:"U/L",adult:{any:[10,40]}},
+  ast:{unit:"U/L",adult:{any:[10,40]}},
+  bilirubin:{unit:"mg/dL",adult:{any:[0.3,1.0]}},
+  tsh:{unit:"mU/L",adult:{any:[0.5,4.0]}},
+  ferritin:{unit:"ug/L",adult:{any:[15,300]}},
+  b12:{unit:"ng/L",adult:{any:[180,914]}},
+  crp:{unit:"mg/L",adult:{any:[0,5]}},
+  cholesterol:{unit:"mg/dL",adult:{any:[0,200]}},
+  ldl:{unit:"mg/dL",adult:{any:[0,100]}},
+  triglyceride:{unit:"mg/dL",adult:{any:[0,150]}},
+  vitaminD:{unit:"ng/mL",adult:{any:[20,50]}},
+};
+// Reference selector priority (doc): lab-reported > method-specific > internal library. Never guess for non-adult.
+const selectReference=(test,ctx,labReported)=>{
+  if(labReported&&isFinite(Number(labReported.low))&&isFinite(Number(labReported.high)))
+    return{ok:true,low:Number(labReported.low),high:Number(labReported.high),source:"lab-reported"};
+  const band=ctx&&ctx.band;
+  if(!band)return{ok:false,reason:"no-context"};
+  if(ctx.pregnant)return{ok:false,reason:"pregnancy"};
+  if(band!=="adult"&&band!=="older")return{ok:false,reason:"age"};
+  const e=REF_LIB[test];if(!e)return{ok:false,reason:"not-in-library"};
+  const sex=(ctx.sex==="male"||ctx.sex==="female")?ctx.sex:null;
+  const r=e.adult[sex]||e.adult.any;
+  if(!r)return{ok:false,reason:"needs-sex"};
+  return{ok:true,low:r[0],high:r[1],unit:e.unit,source:"internal-library"};
+};
+// Classify a normalized value against a selected reference (reference-interval semantics, not diagnosis).
+const classifyAgainstRef=(value,ref)=>{
+  if(!ref||!ref.ok)return{applicable:false,reason:(ref&&ref.reason)||"no-ref"};
+  const v=Number(value);
+  if(!isFinite(v))return{applicable:false,reason:"invalid-value"};
+  if(v<ref.low)return{applicable:true,level:"low",source:ref.source};
+  if(v>ref.high)return{applicable:true,level:"high",source:ref.source};
+  return{applicable:true,level:"normal",source:ref.source};
+};
+if(typeof window!=="undefined"){window.__normalizeUnit=normalizeUnit;window.__selectReference=selectReference;window.__classifyAgainstRef=classifyAgainstRef;window.__REF_LIB=REF_LIB;}
 // ---------- Clinical reference engine (safety-first, context-aware) ----------
 // Doc principle: no single universal table. Age/sex/pregnancy partitions are MANDATORY.
 // "Reference interval" != "diagnostic decision threshold" -> kept separate.
