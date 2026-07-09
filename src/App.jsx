@@ -608,16 +608,34 @@ const patCtx=()=>({band:ageBandOf(pat.birthDate),ageYears:ageYearsFrom(pat.birth
 const parseLabDocument=async(file)=>{
   const L=lang==="tr";
   if(!file)return;
-  if(file.size>4.5*1024*1024){setLabParse({busy:false,rows:[],err:L?"Dosya çok büyük (max ~4.5 MB). Daha küçük/net bir fotoğraf deneyin.":"File too large (max ~4.5MB).",fileName:file.name});return;}
-  const isPdf=file.type==="application/pdf";
-  const isImg=/^image\/(jpeg|png|webp|gif)$/.test(file.type);
-  if(!isPdf&&!isImg){setLabParse({busy:false,rows:[],err:L?"Yalnızca JPG/PNG/WEBP veya PDF desteklenir.":"Only JPG/PNG/WEBP or PDF.",fileName:file.name});return;}
+  const isPdf=file.type==="application/pdf"||/\.pdf$/i.test(file.name);
+  if(isPdf&&file.size>4.5*1024*1024){setLabParse({busy:false,rows:[],err:L?"PDF çok büyük (max ~4.5 MB). Sayfaları ayrı yükleyin.":"PDF too large (max ~4.5MB).",fileName:file.name});return;}
   setLabParse({busy:true,rows:[],err:null,fileName:file.name});
   try{
-    const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=()=>rej(new Error("read"));r.readAsDataURL(file);});
+    let b64,mediaType;
+    if(isPdf){
+      mediaType="application/pdf";
+      b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=()=>rej(new Error("read"));r.readAsDataURL(file);});
+    }else{
+      // Decode ANY browser-supported image (incl. HEIC on iOS) and re-encode to JPEG.
+      // Fixes: (1) HEIC/unsupported types, (2) multi-MB phone photos exceeding request limits.
+      const bmp=await (async()=>{
+        try{if(window.createImageBitmap)return await createImageBitmap(file);}catch(e){}
+        return await new Promise((res,rej)=>{const u=URL.createObjectURL(file);const im=new Image();im.onload=()=>{URL.revokeObjectURL(u);res(im);};im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error("decode"));};im.src=u;});
+      })().catch(()=>null);
+      if(!bmp)throw new Error(L?"Bu görsel biçimi okunamadı. JPG/PNG olarak kaydedip tekrar deneyin.":"Unsupported image format.");
+      const maxSide=1800,w0=bmp.width||bmp.naturalWidth,h0=bmp.height||bmp.naturalHeight;
+      const sc=Math.min(1,maxSide/Math.max(w0,h0));
+      const cv=document.createElement("canvas");cv.width=Math.round(w0*sc);cv.height=Math.round(h0*sc);
+      cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
+      let q=0.85,dataUrl=cv.toDataURL("image/jpeg",q);
+      while(dataUrl.length>4.2*1024*1024&&q>0.4){q-=0.15;dataUrl=cv.toDataURL("image/jpeg",q);}
+      if(bmp.close)bmp.close();
+      mediaType="image/jpeg";b64=dataUrl.split(",")[1];
+    }
     const known=LAB_TESTS.map(x=>x.k).join(", ");
     const sys="You extract laboratory test results from a report image/PDF. Return ONLY valid JSON, no prose, no markdown fences. Schema: {\"rows\":[{\"test\":\"<one of: "+known+" | unknown>\",\"raw_name\":\"<name as printed>\",\"value\":<number>,\"unit\":\"<unit as printed>\",\"ref_low\":<number|null>,\"ref_high\":<number|null>,\"flag\":\"<H|L|critical|null>\",\"confidence\":<0..1>}],\"report_date\":\"<YYYY-MM-DD|null>\",\"lab_name\":\"<string|null>\",\"overall_confidence\":<0..1>}. Rules: never invent values; if a field is unreadable use null and lower confidence; map test names to the allowed keys only when certain, otherwise use \"unknown\" and keep raw_name; copy units exactly as printed; include the report's own reference range when printed.";
-    const content=[isPdf?{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}}:{type:"image",source:{type:"base64",media_type:file.type,data:b64}},{type:"text",text:"Extract all lab results as JSON per the schema."}];
+    const content=[isPdf?{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}}:{type:"image",source:{type:"base64",media_type:mediaType,data:b64}},{type:"text",text:"Extract all lab results as JSON per the schema."}];
     const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:4000,system:sys,messages:[{role:"user",content}]})});
     if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||("HTTP "+r.status));}
     const j=await r.json();
@@ -3753,7 +3771,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <button onClick={()=>imgCamRef.current&&imgCamRef.current.click()} style={{...BP,flex:"1 1 45%",padding:"8px",fontSize:fs-2}}>📷 {lang==="tr"?"Fotoğraf Çek":"Take photo"}</button>
       <button onClick={()=>imgBarRef.current&&imgBarRef.current.click()} style={{...BP,flex:"1 1 100%",padding:"8px",fontSize:fs-2,background:`linear-gradient(135deg,${a2},${ac})`}}>🔳 {lang==="tr"?"QR / Barkod ile Yükle":"Upload via QR / Barcode"}</button>
     </div>
-    <input ref={imgFileRef} type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{addMedFiles(e.target.files,imgType);e.target.value="";}}/>
+    <input ref={imgFileRef} type="file" accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.dcm" multiple style={{display:"none"}} onChange={e=>{addMedFiles(e.target.files,imgType);e.target.value="";}}/>
     <input ref={imgCamRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={e=>{addMedFiles(e.target.files,imgType);e.target.value="";}}/>
     <input ref={imgBarRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files&&e.target.files[0];if(f)scanCodeFromImage(f);e.target.value="";}}/>
     {medImages.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(92px,1fr))",gap:8,marginTop:10}}>
@@ -3769,7 +3787,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         </div>
       </div>)}
     </div>}
-    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.5}}>⚠️ {lang==="tr"?"AI yorumu bilgilendirme amaçlıdır, tıbbi tanı değildir. Kesin değerlendirme için radyolog/hekiminize danışın. (AI için sunucu anahtarı Cloudflare'de ayarlı olmalı.)":"AI interpretation is informational, not a diagnosis. Consult your radiologist/doctor. (Requires the server key set in Cloudflare.)"}</div>
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.5}}>⚠️ {lang==="tr"?"AI yorumu bilgilendirme amaçlıdır, tıbbi tanı değildir. Kesin değerlendirme için radyolog/hekiminize danışın.":"AI interpretation is informational, not a diagnosis. Consult your radiologist/doctor. (Requires the server key set in Cloudflare.)"}</div>
   </div>
   {imgView&&<div onClick={()=>setImgView(null)} style={{position:"fixed",inset:0,zIndex:360,background:"rgba(0,0,0,.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
     <img src={imgView.dataUrl} alt="" onClick={e=>e.stopPropagation()} style={{maxWidth:"100%",maxHeight:"52vh",objectFit:"contain",borderRadius:8}}/>
@@ -3922,10 +3940,18 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     return <div style={{...CS}}>
       <b style={{fontSize:fs+1,color:tc}}>🧪 {L?"Tahlil Sonuçları":"Lab Results"}</b>
       <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{L?"Raporunuzdaki değeri girin. Raporda referans aralığı varsa onu da girin — uygulama önce onu kullanır.":"Enter your report value. If your report shows a reference range, enter it — it takes priority."}</div>
-      <label style={{display:"block",marginBottom:8}}>
-        <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{display:"none"}} onChange={e=>{const f2=e.target.files&&e.target.files[0];e.target.value="";if(f2)parseLabDocument(f2);}}/>
-        <div style={{...BP,background:"transparent",color:ac,border:`1px dashed ${ac}`,textAlign:"center",padding:"10px",cursor:"pointer",opacity:labParse.busy?0.6:1}}>{labParse.busy?(L?"🔍 Belge okunuyor…":"🔍 Reading…"):(L?"📄 Tahlil fotoğrafı / PDF yükle (AI okur)":"📄 Upload lab photo / PDF")}</div>
-      </label>
+      <div style={{display:"flex",gap:6,marginBottom:8}}>
+        <label style={{flex:1}}>
+          <input type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={e=>{const f2=e.target.files&&e.target.files[0];e.target.value="";if(f2)parseLabDocument(f2);}}/>
+          <div style={{...BP,background:"transparent",color:ac,border:`1px dashed ${ac}`,textAlign:"center",padding:"10px 6px",cursor:"pointer",opacity:labParse.busy?0.6:1,fontSize:fs-2}}>{L?"📷 Fotoğraf çek":"📷 Take photo"}</div>
+        </label>
+        <label style={{flex:1.3}}>
+          <input type="file" accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.webp,.heic,.heif" style={{display:"none"}} onChange={e=>{const f2=e.target.files&&e.target.files[0];e.target.value="";if(f2)parseLabDocument(f2);}}/>
+          <div style={{...BP,background:"transparent",color:ac,border:`1px dashed ${ac}`,textAlign:"center",padding:"10px 6px",cursor:"pointer",opacity:labParse.busy?0.6:1,fontSize:fs-2}}>{L?"📁 Dosya / PDF seç":"📁 Choose file / PDF"}</div>
+        </label>
+      </div>
+      {labParse.busy&&<div style={{textAlign:"center",color:ac,fontSize:fs-2,marginBottom:8}}>🔍 {L?"Belge okunuyor…":"Reading…"}</div>}
+      <div style={{fontSize:fs-5,color:mt,marginBottom:8,textAlign:"center"}}>{L?"Dosya seç: galeri, Dosyalar, Drive, İndirilenler — hepsinden yükleyebilirsiniz":"Choose file: gallery, Files, Drive, Downloads"}</div>
       {labParse.err&&<div style={{background:`${dg}12`,border:`1px solid ${dg}44`,borderRadius:9,padding:"8px 10px",fontSize:fs-3,color:tc,marginBottom:8}}>⚠️ {labParse.err}</div>}
       {labParse.rows.length>0&&<div style={{background:dark?"#0e1620":"#f4f7fa",borderRadius:10,padding:"9px 10px",marginBottom:8}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
