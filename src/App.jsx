@@ -695,6 +695,55 @@ const classifyAgainstRef=(value,ref)=>{
   if(v>ref.high)return{applicable:true,level:"high",source:ref.source};
   return{applicable:true,level:"normal",source:ref.source};
 };
+// ---------- Multi-layer health score (doc: system scores + severity + critical override) ----------
+const SYS_WEIGHTS={kidney:18,glycemic:16,hematology:14,liver:12,lipid:12,thyroid:10,inflammation:10,nutrition:8};
+const SYS_LABELS={kidney:["Böbrek","Kidney"],glycemic:["Glisemik","Glycemic"],hematology:["Hematoloji","Hematology"],liver:["Karaciğer","Liver"],lipid:["Lipid","Lipid"],thyroid:["Tiroid","Thyroid"],inflammation:["İnflamasyon","Inflammation"],nutrition:["Beslenme","Nutrition"]};
+// Severity -> per-test penalty (0..100). Distance from reference bound scales the penalty.
+const testPenalty=(rec)=>{
+  if(!rec||!rec.level)return null; // not classified -> excluded (doc: don't guess)
+  const lv=rec.level;
+  if(lv==="normal")return 0;
+  if(lv==="critical-low"||lv==="critical-high")return 100;
+  if(lv==="diabetes-range")return 70;
+  if(lv==="prediabetes")return 35;
+  // reference-interval low/high: scale by distance if bounds known
+  const lo=rec.refLow,hi=rec.refHigh,v=rec.canonValue;
+  if(isFinite(lo)&&isFinite(hi)&&isFinite(v)&&hi>lo){
+    const span=hi-lo;
+    const dist=v<lo?(lo-v):(v-hi);
+    const frac=Math.min(1,dist/(span*0.5)); // 50% of span out => full penalty
+    return Math.round(20+frac*60); // mild 20 .. severe 80
+  }
+  return 40; // out-of-range, unknown magnitude
+};
+// labs: [{test,level,canonValue,refLow,refHigh,ts}] (latest per test used)
+const computeHealthScore=(labRecords)=>{
+  const latest={};
+  (labRecords||[]).forEach(r=>{if(!latest[r.test]||r.ts>latest[r.test].ts)latest[r.test]=r;});
+  const sysOf=(k)=>{const t=LAB_TESTS.find(x=>x.k===k);return t?t.sys:null;};
+  const bySys={},critical=[];
+  Object.values(latest).forEach(r=>{
+    const pen=testPenalty(r);if(pen==null)return; // unclassified excluded
+    const sys=sysOf(r.test);if(!sys||!SYS_WEIGHTS[sys])return;
+    (bySys[sys]=bySys[sys]||[]).push({test:r.test,pen});
+    if(r.level==="critical-low"||r.level==="critical-high")critical.push({test:r.test,level:r.level,value:r.canonValue});
+  });
+  const sysKeys=Object.keys(bySys);
+  if(!sysKeys.length)return{ok:false,reason:"no-data"};
+  const sysScores={};
+  sysKeys.forEach(k=>{const arr=bySys[k];const worst=Math.max(...arr.map(x=>x.pen));const avg=arr.reduce((a,b)=>a+b.pen,0)/arr.length;
+    sysScores[k]=Math.max(0,Math.round(100-(0.6*worst+0.4*avg)));}); // worst-dominant
+  const totalW=sysKeys.reduce((a,k)=>a+SYS_WEIGHTS[k],0);
+  let overall=Math.round(sysKeys.reduce((a,k)=>a+sysScores[k]*SYS_WEIGHTS[k],0)/totalW);
+  // Override layer (doc): criticals cap the score; multi-system involvement penalized
+  const badSystems=sysKeys.filter(k=>sysScores[k]<60).length;
+  if(critical.length)overall=Math.min(overall,35);
+  else if(badSystems>=3)overall=Math.min(overall,55);
+  else if(badSystems===2)overall=Math.min(overall,70);
+  const band=overall>=90?"stable":overall>=75?"attention":overall>=50?"clinical-review":"high-risk";
+  return{ok:true,overall,sysScores,critical,coverage:sysKeys.length,totalSystems:Object.keys(SYS_WEIGHTS).length,band};
+};
+if(typeof window!=="undefined"){window.__computeHealthScore=computeHealthScore;window.__testPenalty=testPenalty;}
 const LAB_TESTS=[
   {k:"glucose",tr:"Glukoz",en:"Glucose",units:["mg/dL","mmol/L"],sys:"glycemic"},
   {k:"hba1c",tr:"HbA1c",en:"HbA1c",units:["%"],sys:"glycemic"},
@@ -3470,6 +3519,38 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       </div>
     </div>
   </div>}
+  {/* Multi-layer clinical health score (lab-derived) */}
+  {(()=>{
+    const L=lang==="tr";
+    const recs=(labs||[]).map(x=>({test:x.test,level:x.level,canonValue:x.canonValue,refLow:x.refLow,refHigh:x.refHigh,ts:x.ts}));
+    const R=computeHealthScore(recs);
+    if(!R.ok)return null;
+    const bandTxt={stable:L?"Stabil":"Stable",attention:L?"Dikkat et":"Attention","clinical-review":L?"Klinik değerlendirme uygun":"Clinical review advised","high-risk":L?"Yüksek risk — hızlı doktor değerlendirmesi":"High risk — see a doctor promptly"}[R.band];
+    const bandColor=R.band==="stable"?sc:R.band==="attention"?"#e9a23b":dg;
+    return <div style={{...CS,border:`1px solid ${bandColor}44`}}>
+      {R.critical.length>0&&<div style={{background:`${dg}18`,border:`1.5px solid ${dg}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+        <b style={{color:dg,fontSize:fs}}>❗ {L?"KRİTİK DEĞER — önce tıbbi değerlendirme":"CRITICAL VALUE — seek medical review first"}</b>
+        <div style={{fontSize:fs-2,color:tc,marginTop:4}}>{R.critical.map(c=>{const ti=LAB_TESTS.find(y=>y.k===c.test);return (L?(ti?ti.tr:c.test):(ti?ti.en:c.test))+": "+c.value;}).join(" · ")}</div>
+        <div style={{fontSize:fs-3,color:mt,marginTop:4}}>{L?"Bu durumda yaşam tarzı önerisi verilmez. Lütfen doktorunuza/acile başvurun.":"No wellness tips shown. Contact your doctor."}</div>
+      </div>}
+      <div style={{display:"flex",alignItems:"center",gap:12}}>
+        <div style={{flexShrink:0,width:64,height:64,borderRadius:"50%",background:`conic-gradient(${bandColor} ${R.overall*3.6}deg, ${bd} 0deg)`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{width:52,height:52,borderRadius:"50%",background:cd,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:fs+3,color:tc}}>{R.overall}</div>
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <b style={{fontSize:fs+1,color:tc}}>🧬 {L?"Klinik Sağlık Skoru":"Clinical Health Score"}</b>
+          <div style={{fontSize:fs-2,color:bandColor,fontWeight:700,marginTop:2}}>{bandTxt}</div>
+          <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{L?`${R.coverage}/${R.totalSystems} sistem değerlendirildi (yalnızca girilen tahliller)`:`${R.coverage}/${R.totalSystems} systems evaluated`}</div>
+        </div>
+      </div>
+      <div style={{marginTop:10}}>
+        {Object.entries(R.sysScores).sort((a,b)=>a[1]-b[1]).map(([k,v])=>{const c=v>=90?sc:v>=60?"#e9a23b":dg;return <div key={k} style={{marginBottom:6}}>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-3,marginBottom:2}}><span style={{color:tc}}>{SYS_LABELS[k]?(L?SYS_LABELS[k][0]:SYS_LABELS[k][1]):k}</span><b style={{color:c}}>{v}</b></div>
+          <div style={{height:6,borderRadius:3,background:bd,overflow:"hidden"}}><div style={{width:v+"%",height:"100%",background:c,borderRadius:3}}/></div>
+        </div>;})}
+      </div>
+      <div style={{fontSize:fs-4,color:mt,marginTop:6,lineHeight:1.4}}>{L?"Skor yalnızca sınıflandırılabilen tahlillerden hesaplanır; sınıflandırılamayanlar (çocuk/gebelik/bağlam eksik) hesaba katılmaz. Tarama amaçlıdır, tanı değildir.":"Score uses classifiable labs only. Screening, not diagnosis."}</div>
+    </div>;})()}
   {/* Lab Results (context-aware reference engine) */}
   {(()=>{
     const L=lang==="tr",ctx=patCtx();
@@ -3481,7 +3562,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     const save=()=>{
       const r=evaluateLab(labForm.test,labForm.value,labForm.unit,ctx,(labForm.low&&labForm.high)?{low:labForm.low,high:labForm.high}:null);
       if(!r.ok){notify(r.reason==="unknown-unit"||r.reason==="missing-unit"?(L?"⚠️ Birim tanınmadı — sonuç kaydedilmedi":"⚠️ Unknown unit"):(L?"Geçersiz değer":"Invalid value"));return;}
-      setLabs(p=>[...p,{id:Date.now()+"_"+Math.random().toString(36).slice(2,5),ts:Date.now(),test:labForm.test,value:Number(labForm.value),unit:labForm.unit,canonValue:r.norm.value,canonUnit:r.norm.unit,level:r.cls.applicable?r.cls.level:null,naReason:r.cls.applicable?null:r.cls.reason,source:(r.ref&&r.ref.source)||r.kind,labLow:labForm.low||null,labHigh:labForm.high||null}]);
+      setLabs(p=>[...p,{id:Date.now()+"_"+Math.random().toString(36).slice(2,5),ts:Date.now(),test:labForm.test,value:Number(labForm.value),unit:labForm.unit,canonValue:r.norm.value,canonUnit:r.norm.unit,level:r.cls.applicable?r.cls.level:null,naReason:r.cls.applicable?null:r.cls.reason,refLow:(r.ref&&r.ref.ok)?r.ref.low:null,refHigh:(r.ref&&r.ref.ok)?r.ref.high:null,source:(r.ref&&r.ref.source)||r.kind,labLow:labForm.low||null,labHigh:labForm.high||null}]);
       if(r.cls.applicable&&(r.cls.level==="critical-low"||r.cls.level==="critical-high"))setActiveAlert({icon:"🧪",title:L?"KRİTİK TAHLİL DEĞERİ":"CRITICAL LAB VALUE",msg:(L?tInfo.tr:tInfo.en)+" "+labForm.value+" "+labForm.unit+" — "+(L?"acil değerlendirme gerekebilir, doktorunuza başvurun":"seek medical attention")});
       setLabForm(f=>({...f,value:"",low:"",high:""}));notify(L?"✓ Tahlil kaydedildi":"✓ Lab saved");
     };
