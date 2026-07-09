@@ -877,6 +877,45 @@ const buildRecommendations=(labRecords,lang)=>{
   return{ok:true,critical:false,items};
 };
 if(typeof window!=="undefined"){window.__buildRecommendations=buildRecommendations;window.__followUp=followUp;}
+// ---------- LOINC map + FHIR R4 Observation export (V3 interoperability, client-side) ----------
+// Codes verified against AHRQ/HHS "LOINC Codes for Laboratory Data" table. Tests without a verified
+// code intentionally omit `coding` and use FHIR's `code.text` instead (valid FHIR; never invent codes).
+const LOINC={
+  glucose:{code:"2345-7",display:"Glucose [Mass/volume] in Serum or Plasma",unit:"mg/dL"},
+  hemoglobin:{code:"718-7",display:"Hemoglobin [Mass/volume] in Blood",unit:"g/dL"},
+  creatinine:{code:"2160-0",display:"Creatinine [Mass/volume] in Serum or Plasma",unit:"mg/dL"},
+  albumin:{code:"1751-7",display:"Albumin [Mass/volume] in Serum or Plasma",unit:"g/dL"},
+  ast:{code:"1920-8",display:"AST [Enzymatic activity/volume] in Serum or Plasma",unit:"U/L"},
+  bilirubin:{code:"1975-2",display:"Bilirubin.total [Mass/volume] in Serum or Plasma",unit:"mg/dL"},
+  calcium:{code:"17861-6",display:"Calcium [Mass/volume] in Serum or Plasma",unit:"mg/dL"},
+  potassium:{code:"2823-3",display:"Potassium [Moles/volume] in Serum or Plasma",unit:"mmol/L"},
+  sodium:{code:"2951-2",display:"Sodium [Moles/volume] in Serum or Plasma",unit:"mmol/L"},
+  platelet:{code:"26515-7",display:"Platelets [#/volume] in Blood",unit:"10*9/L"},
+  inr:{code:"6301-6",display:"INR in Platelet poor plasma",unit:"{ratio}"},
+  pt:{code:"5902-2",display:"Prothrombin time (PT)",unit:"s"},
+  aptt:{code:"14979-9",display:"aPTT in Platelet poor plasma",unit:"s"},
+  hba1c:{code:"4548-4",display:"Hemoglobin A1c/Hemoglobin.total in Blood",unit:"%"},
+};
+const INTERP={normal:["N","Normal"],low:["L","Low"],high:["H","High"],"critical-low":["LL","Critical low"],"critical-high":["HH","Critical high"]};
+const toFHIRBundle=(labRecords,patient)=>{
+  const entries=(labRecords||[]).map(x=>{
+    const ti=LAB_TESTS.find(y=>y.k===x.test);
+    const li=LOINC[x.test];
+    const code=li?{coding:[{system:"http://loinc.org",code:li.code,display:li.display}],text:ti?ti.en:x.test}:{text:(ti?ti.en:x.test)};
+    const ob={resourceType:"Observation",status:"final",
+      category:[{coding:[{system:"http://terminology.hl7.org/CodeSystem/observation-category",code:"laboratory",display:"Laboratory"}]}],
+      code,effectiveDateTime:new Date(x.ts).toISOString(),
+      valueQuantity:{value:x.canonValue,unit:x.canonUnit||"",system:"http://unitsofmeasure.org"},
+    };
+    if(patient&&patient.name)ob.subject={display:patient.name};
+    if(x.refLow!=null||x.refHigh!=null){const rr={};if(x.refLow!=null)rr.low={value:x.refLow,unit:x.canonUnit||""};if(x.refHigh!=null)rr.high={value:x.refHigh,unit:x.canonUnit||""};rr.text=(x.source==="lab-reported")?"Reported by performing laboratory":"Internal reference library";ob.referenceRange=[rr];}
+    if(x.level&&INTERP[x.level])ob.interpretation=[{coding:[{system:"http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",code:INTERP[x.level][0],display:INTERP[x.level][1]}]}];
+    if(!x.level&&x.naReason)ob.note=[{text:"Not classified: "+x.naReason}];
+    return{resource:ob};
+  });
+  return{resourceType:"Bundle",type:"collection",timestamp:new Date().toISOString(),entry:entries};
+};
+if(typeof window!=="undefined"){window.__toFHIRBundle=toFHIRBundle;window.__LOINC=LOINC;}
 // ---------- Multi-layer health score (doc: system scores + severity + critical override) ----------
 const SYS_WEIGHTS={kidney:18,glycemic:16,hematology:14,liver:12,lipid:12,thyroid:10,inflammation:10,nutrition:8,coagulation:10,urine:8};
 const SYS_LABELS={kidney:["Böbrek","Kidney"],glycemic:["Glisemik","Glycemic"],hematology:["Hematoloji","Hematology"],liver:["Karaciğer","Liver"],lipid:["Lipid","Lipid"],thyroid:["Tiroid","Thyroid"],inflammation:["İnflamasyon","Inflammation"],nutrition:["Beslenme","Nutrition"],coagulation:["Pıhtılaşma","Coagulation"],urine:["İdrar","Urine"]};
@@ -1794,6 +1833,15 @@ const[repRange,setRepRange]=useState(30); // days; 0=all
 const[hba1cVal,setHba1cVal]=useState("");
 const[goals,setGoals]=useState({weight:""});
 const logMetric=useCallback((type,val,meta)=>{const v=Number(val);if(!v||v<=0)return;setHealthLog(l=>{const last=[...l].reverse().find(x=>x.type===type);if(last&&last.val===v&&(Date.now()-last.ts)<3600e3&&JSON.stringify(last.meta||null)===JSON.stringify(meta||null))return l;return[...l,{id:Date.now()+"_"+Math.random().toString(36).slice(2,6),ts:Date.now(),type,val:v,meta:meta||null}];});},[]);
+const exportFHIR=()=>{
+  const L=lang==="tr";
+  if(!(labs||[]).length){notify(L?"Dışa aktarılacak tahlil yok.":"No labs to export.");return;}
+  const bundle=toFHIRBundle(labs,pat);
+  const blob=new Blob([JSON.stringify(bundle,null,2)],{type:"application/fhir+json"});
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="ailvie_fhir_"+new Date().toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+  const coded=(labs||[]).filter(x=>LOINC[x.test]).length;
+  notify(L?`✓ FHIR (R4) dışa aktarıldı · ${coded}/${labs.length} LOINC kodlu`:`✓ FHIR exported · ${coded}/${labs.length} LOINC-coded`);
+};
 const exportCSV=()=>{
   const tr=lang==="tr";
   const nm=tr?{weight:"Kilo",pulse:"Nabız",bp:"Tansiyon",spo2:"SpO2",glucose:"Şeker",hba1c:"HbA1c"}:{weight:"Weight",pulse:"Pulse",bp:"BloodPressure",spo2:"SpO2",glucose:"Glucose",hba1c:"HbA1c"};
@@ -3655,7 +3703,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     return <div style={{...CS}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6}}>
         <b style={{fontSize:fs+1,color:tc}}>📊 {lang==="tr"?"Sağlık Raporu & Geçmiş":"Health Report & History"}</b>
-        <button onClick={()=>{const t=Date.now();const add=[];if(hd.weight>0)add.push({type:"weight",val:hd.weight});if(hd.pulse>0)add.push({type:"pulse",val:hd.pulse});if(hd.bpS>0)add.push({type:"bp",val:hd.bpS,meta:{d:hd.bpD||0}});if(hd.spo2>0)add.push({type:"spo2",val:hd.spo2});if(!add.length){notify(lang==="tr"?"Önce Yaşamsal Değerler'e değer girin.":"Enter vitals first.");return;}setHealthLog(l=>[...l,...add.map((a,i)=>({id:t+"_"+i,ts:t,...a,meta:a.meta||null}))]);notify(lang==="tr"?`✓ ${add.length} değer geçmişe kaydedildi`:`✓ ${add.length} values logged`);if(hd.bpS>=180||hd.bpD>=120)setActiveAlert({icon:"🩺",title:lang==="tr"?"YÜKSEK TANSİYON":"HIGH BLOOD PRESSURE",msg:hd.bpS+"/"+hd.bpD+" — "+(lang==="tr"?"doktorunuza danışın":"consult your doctor")});}} style={{...BP,padding:"6px 12px",fontSize:fs-2}}>📌 {lang==="tr"?"Bugünü Kaydet":"Log Today"}</button><button onClick={exportReportPDF} style={{...BP,background:sc,padding:"6px 12px",fontSize:fs-2}}>📄 PDF</button><button onClick={exportCSV} style={{...BP,background:a2,padding:"6px 12px",fontSize:fs-2}}>📊 Excel/CSV</button>
+        <button onClick={()=>{const t=Date.now();const add=[];if(hd.weight>0)add.push({type:"weight",val:hd.weight});if(hd.pulse>0)add.push({type:"pulse",val:hd.pulse});if(hd.bpS>0)add.push({type:"bp",val:hd.bpS,meta:{d:hd.bpD||0}});if(hd.spo2>0)add.push({type:"spo2",val:hd.spo2});if(!add.length){notify(lang==="tr"?"Önce Yaşamsal Değerler'e değer girin.":"Enter vitals first.");return;}setHealthLog(l=>[...l,...add.map((a,i)=>({id:t+"_"+i,ts:t,...a,meta:a.meta||null}))]);notify(lang==="tr"?`✓ ${add.length} değer geçmişe kaydedildi`:`✓ ${add.length} values logged`);if(hd.bpS>=180||hd.bpD>=120)setActiveAlert({icon:"🩺",title:lang==="tr"?"YÜKSEK TANSİYON":"HIGH BLOOD PRESSURE",msg:hd.bpS+"/"+hd.bpD+" — "+(lang==="tr"?"doktorunuza danışın":"consult your doctor")});}} style={{...BP,padding:"6px 12px",fontSize:fs-2}}>📌 {lang==="tr"?"Bugünü Kaydet":"Log Today"}</button><button onClick={exportReportPDF} style={{...BP,background:sc,padding:"6px 12px",fontSize:fs-2}}>📄 PDF</button><button onClick={exportCSV} style={{...BP,background:a2,padding:"6px 12px",fontSize:fs-2}}>📊 Excel/CSV</button><button onClick={exportFHIR} style={{...BP,background:mt,padding:"6px 12px",fontSize:fs-2}}>🔗 FHIR</button>
       </div>
       <div style={{display:"flex",gap:6,overflowX:"auto",margin:"10px 0",paddingBottom:2}}>{M2.map(m=><button key={m.k} onClick={()=>setRepMetric(m.k)} style={{flex:"0 0 auto",padding:"6px 12px",borderRadius:20,border:`1px solid ${sel===m.k?ac:bd}`,background:sel===m.k?ac:"transparent",color:sel===m.k?"#fff":mt,fontSize:fs-2,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{m.ic} {m.lbl}</button>)}</div>
       <div style={{display:"flex",gap:6,marginBottom:8}}>{[[7,lang==="tr"?"7 gün":"7d"],[30,lang==="tr"?"30 gün":"30d"],[90,lang==="tr"?"90 gün":"90d"],[0,lang==="tr"?"Tümü":"All"]].map(([d,l])=><button key={d} onClick={()=>setRepRange(d)} style={{flex:1,padding:"5px 0",borderRadius:8,border:`1px solid ${repRange===d?ac:bd}`,background:repRange===d?`${ac}22`:"transparent",color:repRange===d?ac:mt,fontSize:fs-3,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
