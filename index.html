@@ -27,7 +27,17 @@
   </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <!-- First paint before the JS bundle parses. React replaces this on mount. -->
+    <div id="boot" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0b1117;color:#e8a817;font-family:system-ui,-apple-system,sans-serif">
+      <div style="font:700 34px/1 Rajdhani,system-ui,sans-serif;letter-spacing:1px;-webkit-text-stroke:0.8px #e8a817">AILVIE</div>
+      <div style="width:34px;height:34px;border:3px solid rgba(232,168,23,.25);border-top-color:#e8a817;border-radius:50%;animation:bspin .8s linear infinite"></div>
+      <div style="color:#93a4b6;font-size:13px">Yükleniyor…</div>
+    </div>
+  </div>
+  <style>@keyframes bspin{to{transform:rotate(360deg)}}
+    @media (prefers-color-scheme: light){#boot{background:#f7fafc!important}}
+  </style>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
