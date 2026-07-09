@@ -630,6 +630,69 @@ const StorageHealth=()=>{
     <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Veriler yalnızca bu cihazda saklanır (IndexedDB) ve sunucuya gönderilmez; cihazlar arası senkron yoktur. Yedekleriniz AES-256 ile parolayla şifrelenebilir.":"Data stored on this device only (IndexedDB). No cloud sync. Backups can be AES-256 encrypted."}</div>
   </div>;
 };
+// --- E2E sync operations (opt-in; default OFF) ---
+const collectSyncPayload=async()=>{
+  let data=null,medimg=null;
+  try{data=await idbGet("ailvie_data");}catch(e){}
+  if(data==null)data=localStorage.getItem("ailvie_data")||"{}";
+  try{medimg=await idbGet("ailvie_medimg");}catch(e){}
+  return{ailvie_data:data,ailvie_medimg:medimg||null,ailvie_lang:localStorage.getItem("ailvie_lang")||"",clientAt:Date.now()};
+};
+const applySyncPayload=async(p)=>{
+  if(p&&typeof p.ailvie_data==="string"){try{await idbSet("ailvie_data",p.ailvie_data);}catch(e){}try{localStorage.setItem("ailvie_data",p.ailvie_data);}catch(e){}}
+  if(p&&typeof p.ailvie_medimg==="string"){try{await idbSet("ailvie_medimg",p.ailvie_medimg);}catch(e){}}
+  if(p&&p.ailvie_lang){try{localStorage.setItem("ailvie_lang",p.ailvie_lang);}catch(e){}}
+};
+const syncPush=async(force)=>{
+  const L=lang==="tr";
+  if(!syncCfg||!syncKeysRef.current){setSyncMsg(L?"Senkron kilidi açık değil — parolayı girin.":"Unlock sync first.");return;}
+  setSyncBusy(true);setSyncMsg("");
+  try{
+    const payload=await collectSyncPayload();
+    const blob=await syncEncrypt(payload,syncKeysRef.current.encKey);
+    const r=await fetch("/api/sync",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:syncCfg.syncId,authToken:syncKeysRef.current.authTok,blob,baseUpdatedAt:force?undefined:(syncCfg.updatedAt||0)})});
+    if(r.status===409){
+      const j=await r.json();
+      setSyncBusy(false);
+      const ok=window.confirm(L?"Başka bir cihaz bu hesabı daha yeni güncellemiş.\n\nTAMAM: Sunucudaki veriyi bu cihaza indir (bu cihazdaki değişiklikler kaybolabilir)\nİPTAL: Bu cihazdaki veriyi sunucuya yaz (sunucudaki kaybolur)":"Server copy is newer. OK=pull, Cancel=overwrite");
+      if(ok){await syncPull();}else{await syncPush(true);}
+      return;
+    }
+    if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||("HTTP "+r.status));}
+    const j=await r.json();
+    const cfg={...syncCfg,updatedAt:j.updatedAt,version:j.version,lastSync:Date.now()};
+    try{localStorage.setItem("ailvie_sync",JSON.stringify(cfg));}catch(e){}
+    setSyncCfg(cfg);setSyncMsg(L?"✓ Yüklendi (şifreli)":"✓ Uploaded (encrypted)");
+  }catch(e){
+    const m=String(e.message||e);
+    setSyncMsg(m==="sync-not-configured"?(L?"Sunucuda senkron deposu (KV) tanımlı değil.":"Sync store not configured."):(L?"Yükleme başarısız: "+m:"Upload failed: "+m));
+  }finally{setSyncBusy(false);}
+};
+const syncPull=async()=>{
+  const L=lang==="tr";
+  if(!syncCfg||!syncKeysRef.current){setSyncMsg(L?"Senkron kilidi açık değil — parolayı girin.":"Unlock sync first.");return;}
+  setSyncBusy(true);setSyncMsg("");
+  try{
+    const r=await fetch("/api/sync?id="+encodeURIComponent(syncCfg.syncId));
+    if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||("HTTP "+r.status));}
+    const j=await r.json();
+    if(!j.found){setSyncMsg(L?"Sunucuda henüz veri yok. Önce 'Yükle' deyin.":"No server copy yet.");return;}
+    let payload;
+    try{payload=await syncDecrypt(j.blob,syncKeysRef.current.encKey);}
+    catch(e){setSyncMsg(L?"❌ Çözülemedi — parola bu hesabın parolası değil. Veriler değiştirilmedi.":"❌ Wrong password. Nothing changed.");return;}
+    if(!window.confirm(L?"Sunucudaki veri bu cihaza yazılacak; mevcut veriler değiştirilecek. Devam?":"Server copy will replace local data. Continue?"))return;
+    await applySyncPayload(payload);
+    const cfg={...syncCfg,updatedAt:j.updatedAt,version:j.version,lastSync:Date.now()};
+    try{localStorage.setItem("ailvie_sync",JSON.stringify(cfg));}catch(e){}
+    setSyncCfg(cfg);
+    setSyncMsg(L?"✓ İndirildi, yenileniyor…":"✓ Pulled, reloading…");
+    setTimeout(()=>location.reload(),800);
+  }catch(e){
+    const m=String(e.message||e);
+    setSyncMsg(m==="sync-not-configured"?(L?"Sunucuda senkron deposu (KV) tanımlı değil.":"Sync store not configured."):(L?"İndirme başarısız: "+m:"Pull failed: "+m));
+  }finally{setSyncBusy(false);}
+};
 const patCtx=()=>({band:ageBandOf(pat.birthDate),ageYears:ageYearsFrom(pat.birthDate),pregnant:!!pat.pregnant,sex:pat.sex||"",onAnticoag:!!pat.onAnticoag});
 const parseLabDocument=async(file)=>{
   const L=lang==="tr";
@@ -716,6 +779,36 @@ const decryptJSON=async(env,password)=>{
   return JSON.parse(dec.decode(pt));
 };
 if(typeof window!=="undefined"){window.__encryptJSON=encryptJSON;window.__decryptJSON=decryptJSON;}
+// ---------- End-to-end encrypted sync (server can NEVER read user data) ----------
+// masterKey = PBKDF2(password, salt=syncId)   [never leaves device]
+//   encKey   = HKDF(masterKey,"ailvie-enc")   -> encrypts the payload
+//   authTok  = HKDF(masterKey,"ailvie-auth")  -> proves write permission; server stores SHA-256(authTok)
+// The server sees only: syncId, SHA-256(authTok), ciphertext, iv, updatedAt.
+const sha256b64=async(bytes)=>b64e(await crypto.subtle.digest("SHA-256",bytes));
+const deriveSyncKeys=async(password,syncId)=>{
+  const base=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveBits"]);
+  const master=await crypto.subtle.deriveBits({name:"PBKDF2",salt:enc.encode("ailvie:"+syncId),iterations:250000,hash:"SHA-256"},base,256);
+  const hk=await crypto.subtle.importKey("raw",master,"HKDF",false,["deriveBits"]);
+  const encBits=await crypto.subtle.deriveBits({name:"HKDF",hash:"SHA-256",salt:new Uint8Array(0),info:enc.encode("ailvie-enc")},hk,256);
+  const authBits=await crypto.subtle.deriveBits({name:"HKDF",hash:"SHA-256",salt:new Uint8Array(0),info:enc.encode("ailvie-auth")},hk,256);
+  const encKey=await crypto.subtle.importKey("raw",encBits,{name:"AES-GCM"},false,["encrypt","decrypt"]);
+  return{encKey,authTok:b64e(authBits),authHash:await sha256b64(new Uint8Array(authBits))};
+};
+const syncEncrypt=async(obj,encKey)=>{
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},encKey,enc.encode(JSON.stringify(obj)));
+  return{iv:b64e(iv),ciphertext:b64e(ct)};
+};
+const syncDecrypt=async(blob,encKey)=>{
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(blob.iv)},encKey,b64d(blob.ciphertext));
+  return JSON.parse(dec.decode(pt));
+};
+// syncId is derived from the account identifier so it is not the raw email on the server
+const makeSyncId=async(identifier)=>{
+  const h=await crypto.subtle.digest("SHA-256",enc.encode("ailvie-id:"+String(identifier).trim().toLowerCase()));
+  return b64e(h).replace(/[^A-Za-z0-9]/g,"").slice(0,32);
+};
+if(typeof window!=="undefined"){window.__deriveSyncKeys=deriveSyncKeys;window.__syncEncrypt=syncEncrypt;window.__syncDecrypt=syncDecrypt;window.__makeSyncId=makeSyncId;}
 // ---------- App lock: PIN (PBKDF2-hashed, never stored in clear) + optional biometric (WebAuthn) ----------
 const hashPIN=async(pin,saltB64)=>{
   const salt=saltB64?b64d(saltB64):crypto.getRandomValues(new Uint8Array(16));
@@ -1949,6 +2042,10 @@ const[labs,setLabs]=useState([]); // [{id,ts,test,value,unit,canonValue,canonUni
 const[labForm,setLabForm]=useState({test:"glucose",value:"",unit:"mg/dL",low:"",high:""});
 const[labParse,setLabParse]=useState({busy:false,rows:[],err:null,fileName:""});
 const[storageWarn,setStorageWarn]=useState(null);
+const[syncCfg,setSyncCfg]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_sync")||"null");}catch(e){return null;}});
+const[syncBusy,setSyncBusy]=useState(false);
+const[syncMsg,setSyncMsg]=useState("");
+const syncKeysRef=useRef(null);
 const[lockCfg,setLockCfg]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_lock")||"null");}catch(e){return null;}});
 const[locked,setLocked]=useState(()=>{try{return !!JSON.parse(localStorage.getItem("ailvie_lock")||"null");}catch(e){return false;}});
 const[pinIn,setPinIn]=useState("");
@@ -3471,6 +3568,67 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   <div style={CS}><div style={{marginBottom:6}}>🤖 AI API Key <span style={{fontSize:fs-3,color:mt}}>(Anthropic)</span></div><div style={{display:"flex",gap:6}}><input type="password" value={apiKey} onChange={e=>{setApiKey(e.target.value);try{localStorage.setItem("ailvie_api_key",e.target.value);}catch(ex){}}} placeholder="sk-ant-..." style={{...IS,flex:1,fontFamily:"monospace",fontSize:fs-2}}/>{apiKey&&<button onClick={()=>{setApiKey("");try{localStorage.removeItem("ailvie_api_key");}catch(ex){}}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",color:dg,cursor:"pointer"}}>✕</button>}</div><div style={{fontSize:fs-3,color:apiKey?sc:mt,marginTop:4}}>{apiKey?(lang==="tr"?"✓ API anahtarı ayarlandı":"✓ API key set"):(lang==="tr"?"AI Sohbet, çeviri ve ilaç analizi için gerekli":"Required for AI Chat, translation & drug analysis")}</div></div>
   <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>setEmNums(p=>p.filter(x=>x.id!==en.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🛡️ {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button onClick={()=>{const willOn=!perms[k];setPerms(p=>({...p,[k]:willOn}));if(k==="loc"){if(willOn){notify(lang==="tr"?"📍 Konum açılıyor…":"📍 Enabling location…");loadWeather(true);}else setWeather({err:"off"});return;}if(k==="notif"){if(willOn&&('Notification'in window)){if(Notification.permission==="denied")notify(lang==="tr"?"⚠️ Bildirim tarayıcıda engelli. Tarayıcı > Site izinleri > Bildirim'i açın.":"⚠️ Notifications blocked in browser settings.");else Notification.requestPermission().then(st=>{if(st!=="granted")notify(lang==="tr"?"Bildirim izni verilmedi — tarayıcı ayarlarından açabilirsiniz.":"Notification permission not granted.");}).catch(()=>{});}return;}}} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
+  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>☁️ {lang==="tr"?"Cihazlar Arası Senkron":"Cross-device Sync"}</div>
+    {!syncCfg
+      ? <>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.45}}>{lang==="tr"?"Varsayılan olarak KAPALIDIR. Açarsanız verileriniz CİHAZINIZDA AES-256 ile şifrelenir ve sunucuya yalnızca şifreli hâli gider. Parolanız cihazdan çıkmaz; sunucu (ve biz) verilerinizi okuyamaz.":"OFF by default. Data is encrypted on-device; the server cannot read it."}</div>
+        <div style={{background:`${dg}0d`,border:`1px solid ${dg}33`,borderRadius:9,padding:"8px 10px",fontSize:fs-4,color:tc,marginBottom:8,lineHeight:1.45}}>{lang==="tr"?"⚠️ Parolanızı kaybederseniz sunucudaki veriler ÇÖZÜLEMEZ (kurtarma yolu yoktur). Sağlık verisi buluta yüklenir — devam etmeden önce onaylamanız gerekir.":"⚠️ No recovery if you lose the password."}</div>
+        <button disabled={syncBusy} onClick={async()=>{
+          const L=lang==="tr";
+          if(!window.confirm(L?"Sağlık verilerinizin ŞİFRELENMİŞ hâlinin sunucuda saklanmasını onaylıyor musunuz?\n\n• Şifreleme cihazınızda yapılır (AES-256-GCM)\n• Parolanız hiçbir zaman gönderilmez\n• Sunucu içeriği okuyamaz\n• İstediğiniz zaman silebilirsiniz":"Consent to store an encrypted copy on the server?"))return;
+          const idf=window.prompt(L?"Senkron kimliği (e-posta veya kullanıcı adı):":"Sync identifier (email or username):",localStorage.getItem("ailvie_account_email")||"");
+          if(!idf||!idf.trim())return;
+          const pw=window.prompt(L?"Senkron parolası (en az 10 karakter).\nBu parola cihazdan ÇIKMAZ; kaybederseniz veriler açılamaz.":"Sync password (min 10 chars):","");
+          if(pw===null)return;
+          if(pw.trim().length<10){notify(L?"Parola en az 10 karakter olmalı":"Min 10 characters");return;}
+          const pw2=window.prompt(L?"Parolayı tekrar girin:":"Repeat password:","");
+          if(pw2!==pw){notify(L?"Parolalar eşleşmedi":"Passwords do not match");return;}
+          setSyncBusy(true);
+          try{
+            const syncId=await makeSyncId(idf);
+            const keys=await deriveSyncKeys(pw.trim(),syncId);
+            syncKeysRef.current=keys;
+            const cfg={syncId,identifier:idf.trim(),updatedAt:0,version:0,lastSync:0,enabledAt:Date.now()};
+            try{localStorage.setItem("ailvie_sync",JSON.stringify(cfg));}catch(e){}
+            setSyncCfg(cfg);
+            notify(L?"☁️ Senkron etkin — 'Yükle' ile başlayın":"☁️ Sync enabled");
+          }catch(e){notify(L?"Senkron kurulamadı":"Sync setup failed");}
+          finally{setSyncBusy(false);}
+        }} style={{...BP,width:"100%",padding:"9px",opacity:syncBusy?0.6:1}}>☁️ {lang==="tr"?"Senkronu Aç (isteğe bağlı)":"Enable sync (optional)"}</button>
+      </>
+      : <>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2,color:tc,marginBottom:4}}><span>{lang==="tr"?"Durum":"Status"}</span><b style={{color:sc}}>✓ {lang==="tr"?"Etkin":"Enabled"}</b></div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-3,color:mt,marginBottom:4}}><span>{lang==="tr"?"Kimlik":"Identifier"}</span><span>{syncCfg.identifier}</span></div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-3,color:mt,marginBottom:8}}><span>{lang==="tr"?"Son senkron":"Last sync"}</span><span>{syncCfg.lastSync?new Date(syncCfg.lastSync).toLocaleString(lc):(lang==="tr"?"hiç":"never")}</span></div>
+        {!syncKeysRef.current&&<button disabled={syncBusy} onClick={async()=>{
+          const L=lang==="tr";
+          const pw=window.prompt(L?"Senkron parolanızı girin (bu oturum için):":"Enter sync password:","");
+          if(pw===null)return;
+          setSyncBusy(true);
+          try{syncKeysRef.current=await deriveSyncKeys(pw.trim(),syncCfg.syncId);setSyncMsg(L?"🔓 Senkron kilidi açıldı":"🔓 Unlocked");}
+          catch(e){setSyncMsg(L?"Parola işlenemedi":"Failed");}
+          finally{setSyncBusy(false);}
+        }} style={{...BP,width:"100%",padding:"8px",marginBottom:6,background:"transparent",color:ac,border:`1px solid ${ac}`,opacity:syncBusy?0.6:1}}>🔓 {lang==="tr"?"Parolayı gir (senkron kilidini aç)":"Unlock sync"}</button>}
+        <div style={{display:"flex",gap:6,marginBottom:6}}>
+          <button disabled={syncBusy} onClick={()=>syncPush(false)} style={{...BP,flex:1,padding:"8px",fontSize:fs-2,opacity:syncBusy?0.6:1}}>⬆️ {lang==="tr"?"Yükle":"Push"}</button>
+          <button disabled={syncBusy} onClick={syncPull} style={{...BP,flex:1,padding:"8px",fontSize:fs-2,background:"transparent",color:ac,border:`1px solid ${ac}`,opacity:syncBusy?0.6:1}}>⬇️ {lang==="tr"?"İndir":"Pull"}</button>
+        </div>
+        {syncMsg&&<div style={{fontSize:fs-3,color:/❌|başarısız|failed|değil/i.test(syncMsg)?dg:sc,marginBottom:6}}>{syncMsg}</div>}
+        <button disabled={syncBusy} onClick={async()=>{
+          const L=lang==="tr";
+          if(!window.confirm(L?"Senkronu kapat ve sunucudaki şifreli kopyayı SİL?":"Disable sync and delete server copy?"))return;
+          setSyncBusy(true);
+          try{
+            if(syncKeysRef.current)await fetch("/api/sync",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:syncCfg.syncId,authToken:syncKeysRef.current.authTok})});
+            try{localStorage.removeItem("ailvie_sync");}catch(e){}
+            syncKeysRef.current=null;setSyncCfg(null);setSyncMsg("");
+            notify(L?"Senkron kapatıldı":"Sync disabled");
+          }catch(e){notify(L?"Sunucu kopyası silinemedi — yerelde kapatıldı":"Server copy not deleted");}
+          finally{setSyncBusy(false);}
+        }} style={{...BP,width:"100%",padding:"8px",background:dg,fontSize:fs-2,opacity:syncBusy?0.6:1}}>{lang==="tr"?"Senkronu Kapat ve Sunucudan Sil":"Disable & delete"}</button>
+        <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{lang==="tr"?"Sunucu yalnızca şifreli veriyi görür (kimlik özeti, şifreli blok, zaman damgası). Parolanız ve anahtarlarınız cihazınızdan çıkmaz.":"The server only sees ciphertext."}</div>
+      </>}
+  </div>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🔒 {lang==="tr"?"Uygulama Kilidi":"App Lock"}</div>
     {!lockCfg
       ? <>
