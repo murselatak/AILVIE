@@ -695,6 +695,71 @@ const classifyAgainstRef=(value,ref)=>{
   if(v>ref.high)return{applicable:true,level:"high",source:ref.source};
   return{applicable:true,level:"normal",source:ref.source};
 };
+// ---------- Recommendation engine (doc Dal 9): education -> lifestyle -> clinical follow-up ----------
+// SAFETY: never diagnoses, never starts/stops medication, uses hedged language, defers to clinician.
+const TEST_EDU={
+  glucose:["Kandaki şeker düzeyini ölçer; enerji dengesi ve diyabet taraması için kullanılır.","Measures blood sugar; used for diabetes screening."],
+  hba1c:["Son ~3 ayın ortalama kan şekerini yansıtır.","Reflects average blood sugar over ~3 months."],
+  hemoglobin:["Kanın oksijen taşıyan proteinidir; düşüklüğü kansızlık (anemi) düşündürebilir.","Oxygen-carrying protein; low levels may suggest anemia."],
+  ferritin:["Vücuttaki demir deposunu gösterir; enfeksiyon/iltihapta yükselebilir.","Iron stores; can rise with inflammation."],
+  b12:["Sinir sistemi ve kan yapımı için gerekli vitamindir.","Vitamin needed for nerves and blood formation."],
+  creatinine:["Böbrek fonksiyonu hakkında bilgi verir; kas kütlesinden etkilenir.","Reflects kidney function; affected by muscle mass."],
+  potassium:["Kalp ritmi ve kas işlevi için kritik elektrolittir.","Electrolyte critical for heart rhythm."],
+  sodium:["Vücut sıvı dengesini gösteren elektrolittir.","Electrolyte reflecting fluid balance."],
+  calcium:["Kemik sağlığı, kas ve sinir işlevinde rol oynar.","Bone, muscle and nerve function."],
+  alt:["Karaciğer hücrelerinde bulunan bir enzimdir.","Liver enzyme."],
+  ast:["Karaciğer ve kasta bulunan bir enzimdir.","Liver/muscle enzyme."],
+  albumin:["Karaciğerin ürettiği ana kan proteinidir; beslenme durumunu da yansıtır.","Main blood protein made by the liver."],
+  bilirubin:["Alyuvar yıkımının ürünüdür; yüksekliği sarılıkla ilişkili olabilir.","Breakdown product of red cells."],
+  cholesterol:["Toplam kolesterol; kalp-damar risk değerlendirmesinde kullanılır.","Total cholesterol; cardiovascular risk."],
+  ldl:["'Kötü' kolesterol olarak bilinir; damar plağı riskiyle ilişkilidir.","'Bad' cholesterol."],
+  hdl:["'İyi' kolesterol; yüksekliği koruyucu kabul edilir.","'Good' cholesterol; higher is protective."],
+  triglyceride:["Kandaki yağ türüdür; beslenme ve alkolden etkilenir.","Blood fat; affected by diet and alcohol."],
+  tsh:["Tiroid bezini uyaran hormondur; tiroid işlevinin ilk basamak testidir.","Thyroid-stimulating hormone."],
+  crp:["Vücuttaki iltihabı gösteren bir belirteçtir.","Marker of inflammation."],
+  vitaminD:["Kemik sağlığı ve bağışıklık için gereklidir.","Needed for bone health and immunity."],
+  platelet:["Kanın pıhtılaşmasında görevli hücrelerdir.","Cells involved in clotting."],
+};
+const SYS_SPECIALTY={kidney:["Nefroloji / Dahiliye","Nephrology / Internal Medicine"],glycemic:["Endokrinoloji / Dahiliye","Endocrinology"],hematology:["Hematoloji / Dahiliye","Hematology"],liver:["Gastroenteroloji / Dahiliye","Gastroenterology"],lipid:["Kardiyoloji / Dahiliye","Cardiology"],thyroid:["Endokrinoloji","Endocrinology"],inflammation:["Dahiliye","Internal Medicine"],nutrition:["Dahiliye / Beslenme","Internal Medicine / Nutrition"]};
+const LIFESTYLE={
+  glycemic:[["Rafine şeker ve beyaz un ürünlerini azaltmak","Haftada 150 dk tempolu yürüyüş","Uyku düzenini korumak (7-8 saat)"],["Reduce refined sugar","150 min/week brisk walking","Sleep 7-8h"]],
+  lipid:[["Doymuş yağ yerine zeytinyağı/balık tercih etmek","Lifli gıdaları artırmak","Haftada 150 dk egzersiz"],["Prefer olive oil/fish","More fiber","150 min/week exercise"]],
+  kidney:[["Yeterli su içmek (kısıtlama önerilmediyse)","Tuzu azaltmak","Ağrı kesici (NSAİİ) kullanımını doktora danışmadan uzatmamak"],["Adequate hydration","Lower salt","Avoid prolonged NSAIDs without advice"]],
+  liver:[["Alkolü azaltmak/bırakmak","Kilo yönetimi","Gereksiz takviyelerden kaçınmak"],["Reduce alcohol","Weight management","Avoid unnecessary supplements"]],
+  hematology:[["Demirden zengin besinler (kırmızı et, baklagil, koyu yeşil sebze)","C vitamini ile birlikte tüketmek emilimi artırabilir"],["Iron-rich foods","Vitamin C aids absorption"]],
+  thyroid:[["Düzenli uyku ve stres yönetimi","İyot içeren takviyeleri doktora danışmadan kullanmamak"],["Sleep and stress management","Do not self-supplement iodine"]],
+  inflammation:[["Sigarayı bırakmak","Diş/diş eti sağlığına dikkat","Düzenli hareket"],["Quit smoking","Dental health","Regular activity"]],
+  nutrition:[["Güneş ışığından yararlanmak","Dengeli beslenme"],["Sun exposure","Balanced diet"]],
+};
+// Follow-up interval suggestion by severity (educational, not prescriptive)
+const followUp=(level)=>{
+  if(level==="critical-low"||level==="critical-high")return{urgency:"urgent",weeks:0};
+  if(level==="diabetes-range")return{urgency:"soon",weeks:2};
+  if(level==="high"||level==="low")return{urgency:"soon",weeks:4};
+  if(level==="prediabetes")return{urgency:"routine",weeks:12};
+  return{urgency:"routine",weeks:26};
+};
+const buildRecommendations=(labRecords,lang)=>{
+  const L=lang==="tr",i=L?0:1;
+  const latest={};(labRecords||[]).forEach(r=>{if(r.level&&(!latest[r.test]||r.ts>latest[r.test].ts))latest[r.test]=r;});
+  const abnormal=Object.values(latest).filter(r=>r.level&&r.level!=="normal");
+  const critical=abnormal.filter(r=>r.level==="critical-low"||r.level==="critical-high");
+  if(critical.length)return{ok:true,critical:true,items:critical.map(r=>{const ti=LAB_TESTS.find(x=>x.k===r.test);return{test:r.test,name:ti?(L?ti.tr:ti.en):r.test,level:r.level,edu:(TEST_EDU[r.test]||["",""])[i],
+    action:L?"Bu değer kritik aralıkta. Yaşam tarzı önerisi verilmiyor — lütfen vakit kaybetmeden doktorunuza/acil servise başvurun.":"Critical value. Seek medical care promptly.",specialty:null,followUp:followUp(r.level)};})};
+  if(!abnormal.length)return{ok:true,critical:false,items:[],allNormal:Object.keys(latest).length>0};
+  const items=abnormal.map(r=>{
+    const ti=LAB_TESTS.find(x=>x.k===r.test);const sys=ti?ti.sys:null;
+    const ls=(sys&&LIFESTYLE[sys])?LIFESTYLE[sys][i]:[];
+    const fu=followUp(r.level);
+    return{test:r.test,name:ti?(L?ti.tr:ti.en):r.test,level:r.level,sys,
+      edu:(TEST_EDU[r.test]||["",""])[i],
+      lifestyle:ls,
+      specialty:(sys&&SYS_SPECIALTY[sys])?SYS_SPECIALTY[sys][i]:null,
+      followUp:fu};
+  });
+  return{ok:true,critical:false,items};
+};
+if(typeof window!=="undefined"){window.__buildRecommendations=buildRecommendations;window.__followUp=followUp;}
 // ---------- Multi-layer health score (doc: system scores + severity + critical override) ----------
 const SYS_WEIGHTS={kidney:18,glycemic:16,hematology:14,liver:12,lipid:12,thyroid:10,inflammation:10,nutrition:8};
 const SYS_LABELS={kidney:["Böbrek","Kidney"],glycemic:["Glisemik","Glycemic"],hematology:["Hematoloji","Hematology"],liver:["Karaciğer","Liver"],lipid:["Lipid","Lipid"],thyroid:["Tiroid","Thyroid"],inflammation:["İnflamasyon","Inflammation"],nutrition:["Beslenme","Nutrition"]};
@@ -3564,6 +3629,39 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         </div>;})}
       </div>
       <div style={{fontSize:fs-4,color:mt,marginTop:6,lineHeight:1.4}}>{L?"Skor yalnızca sınıflandırılabilen tahlillerden hesaplanır; sınıflandırılamayanlar (çocuk/gebelik/bağlam eksik) hesaba katılmaz. Tarama amaçlıdır, tanı değildir.":"Score uses classifiable labs only. Screening, not diagnosis."}</div>
+    </div>;})()}
+  {/* Recommendation engine: education -> lifestyle -> clinical follow-up */}
+  {(()=>{
+    const L=lang==="tr";
+    const recs=(labs||[]).map(x=>({test:x.test,level:x.level,ts:x.ts}));
+    const R=buildRecommendations(recs,lang);
+    if(!R.ok||(!R.items.length&&!R.allNormal))return null;
+    const fuTxt=(fu)=>fu.urgency==="urgent"?(L?"Acil değerlendirme":"Urgent review"):fu.urgency==="soon"?(L?`${fu.weeks} hafta içinde tekrar/kontrol önerilebilir`:`Recheck within ${fu.weeks} weeks`):(L?`~${fu.weeks} hafta sonra rutin kontrol`:`Routine recheck in ~${fu.weeks} weeks`);
+    const lvT=(lv)=>({low:L?"düşük":"low",high:L?"yüksek":"high","critical-low":L?"kritik düşük":"critical low","critical-high":L?"kritik yüksek":"critical high",prediabetes:L?"prediyabet eşiği":"prediabetes","diabetes-range":L?"diyabet eşiği":"diabetes range"}[lv]||lv);
+    if(R.allNormal)return <div style={{...CS,border:`1px solid ${sc}44`}}><b style={{fontSize:fs,color:sc}}>✅ {L?"Girilen tahlillerin tümü referans aralığında":"All entered labs within reference"}</b><div style={{fontSize:fs-3,color:mt,marginTop:4}}>{L?"Rutin takibinizi doktorunuzla planlayın. Bu bir tanı değildir.":"Plan routine follow-up with your doctor."}</div></div>;
+    return <div style={{...CS,border:`1px solid ${R.critical?dg:"#e9a23b"}44`}}>
+      <b style={{fontSize:fs+1,color:tc}}>💡 {L?"Öneriler":"Recommendations"}</b>
+      {R.critical
+        ? <div style={{background:`${dg}12`,border:`1px solid ${dg}55`,borderRadius:9,padding:"9px 11px",marginTop:8}}>
+            <b style={{color:dg,fontSize:fs-1}}>❗ {L?"Kritik değer saptandı":"Critical value detected"}</b>
+            {R.items.map(it=><div key={it.test} style={{marginTop:6}}>
+              <div style={{fontSize:fs-1,fontWeight:700,color:tc}}>{it.name} — <span style={{color:dg}}>{lvT(it.level)}</span></div>
+              <div style={{fontSize:fs-3,color:mt,marginTop:2}}>{it.edu}</div>
+              <div style={{fontSize:fs-2,color:dg,marginTop:4,fontWeight:600}}>{it.action}</div>
+            </div>)}
+          </div>
+        : <div style={{marginTop:6}}>
+            {R.items.map(it=><div key={it.test} style={{borderTop:`1px solid ${bd}`,paddingTop:8,marginTop:8}}>
+              <div style={{fontSize:fs,fontWeight:700,color:tc}}>{it.name} <span style={{color:"#e9a23b",fontSize:fs-2}}>· {lvT(it.level)}</span></div>
+              <div style={{fontSize:fs-3,color:mt,marginTop:3,lineHeight:1.4}}>📖 {it.edu}</div>
+              {it.lifestyle.length>0&&<div style={{marginTop:5}}>
+                <div style={{fontSize:fs-3,color:tc,fontWeight:600}}>🌿 {L?"Yaşam tarzı (genel bilgi)":"Lifestyle (general)"}</div>
+                <ul style={{margin:"3px 0 0",paddingLeft:18,color:mt,fontSize:fs-3,lineHeight:1.5}}>{it.lifestyle.map((x,i)=><li key={i}>{x}</li>)}</ul>
+              </div>}
+              <div style={{fontSize:fs-3,color:tc,marginTop:5}}>🏥 {L?"Klinik takip":"Follow-up"}: <span style={{color:mt}}>{fuTxt(it.followUp)}{it.specialty?` · ${L?"uygun olabilecek branş":"possible specialty"}: ${it.specialty}`:""}</span></div>
+            </div>)}
+          </div>}
+      <div style={{fontSize:fs-4,color:mt,marginTop:10,lineHeight:1.4}}>{L?"⚕️ Bu öneriler eğitim amaçlıdır; tanı koymaz, ilaç başlatmaz/durdurmaz. Tek bir referans dışı sonuç tek başına hastalık anlamına gelmez. Kararları doktorunuz verir.":"⚕️ Educational only; not a diagnosis. Never start/stop medication based on this."}</div>
     </div>;})()}
   {/* Lab Results (context-aware reference engine) */}
   {(()=>{
