@@ -501,8 +501,16 @@ const[vvh,setVvh]=useState(0);
 const[vvTop,setVvTop]=useState(0);
 const[fmtState,setFmtState]=useState({b:false,i:false,u:false,block:""});
 useEffect(()=>{const vv=window.visualViewport;if(!vv)return;const on=()=>{setVvh(Math.round(vv.height));setVvTop(Math.round(vv.offsetTop));};on();vv.addEventListener("resize",on);vv.addEventListener("scroll",on);return()=>{vv.removeEventListener("resize",on);vv.removeEventListener("scroll",on);};},[]);
-const[noteMedia,setNoteMedia]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_notemedia"))||{};}catch{return{};}});
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_notemedia",JSON.stringify(noteMedia));}catch(e){}},800);return()=>clearTimeout(tm);},[noteMedia]);
+const[noteMedia,setNoteMedia]=useState({});
+const noteMediaLoadedRef=useRef(false);
+useEffect(()=>{(async()=>{let raw=null;try{raw=await idbGet("ailvie_notemedia");}catch(e){}
+  if(raw==null){try{raw=localStorage.getItem("ailvie_notemedia");if(raw)await idbSet("ailvie_notemedia",raw);}catch(e){}}
+  try{if(raw){const o=JSON.parse(raw);if(o&&typeof o==="object")setNoteMedia(o);}}catch(e){}
+  noteMediaLoadedRef.current=true;})();},[]);
+useEffect(()=>{if(!noteMediaLoadedRef.current)return;const tm=setTimeout(()=>{const p=JSON.stringify(noteMedia);(async()=>{let ok=false;
+  try{await idbSet("ailvie_notemedia",p);ok=true;}catch(e){}
+  try{localStorage.setItem("ailvie_notemedia",p);}catch(e){if(!ok)setStorageWarn(lang==="tr"?"⚠️ Depolama dolu — çizim/fotoğraf kaydedilemiyor. Yedek alın veya eski medyaları silin.":"⚠️ Storage full — drawings not saved.");}
+})();},700);return()=>clearTimeout(tm);},[noteMedia,lang]);
 const editableRef=useRef(null);
 const noteHistRef=useRef({stack:[],idx:-1,nid:null});
 const noteRecRef=useRef(null);
@@ -636,11 +644,13 @@ const collectSyncPayload=async()=>{
   try{data=await idbGet("ailvie_data");}catch(e){}
   if(data==null)data=localStorage.getItem("ailvie_data")||"{}";
   try{medimg=await idbGet("ailvie_medimg");}catch(e){}
-  return{ailvie_data:data,ailvie_medimg:medimg||null,ailvie_lang:localStorage.getItem("ailvie_lang")||"",clientAt:Date.now()};
+  let notemedia=null;try{notemedia=await idbGet("ailvie_notemedia");}catch(e){}
+  return{ailvie_data:data,ailvie_medimg:medimg||null,ailvie_notemedia:notemedia||null,ailvie_lang:localStorage.getItem("ailvie_lang")||"",clientAt:Date.now()};
 };
 const applySyncPayload=async(p)=>{
   if(p&&typeof p.ailvie_data==="string"){try{await idbSet("ailvie_data",p.ailvie_data);}catch(e){}try{localStorage.setItem("ailvie_data",p.ailvie_data);}catch(e){}}
   if(p&&typeof p.ailvie_medimg==="string"){try{await idbSet("ailvie_medimg",p.ailvie_medimg);}catch(e){}}
+  if(p&&typeof p.ailvie_notemedia==="string"){try{await idbSet("ailvie_notemedia",p.ailvie_notemedia);}catch(e){}try{localStorage.setItem("ailvie_notemedia",p.ailvie_notemedia);}catch(e){}}
   if(p&&p.ailvie_lang){try{localStorage.setItem("ailvie_lang",p.ailvie_lang);}catch(e){}}
 };
 const syncPush=async(force)=>{
@@ -2416,19 +2426,37 @@ useEffect(()=>{(async()=>{let raw=null;try{raw=await idbGet("ailvie_medimg");}ca
 useEffect(()=>{const tm=setTimeout(()=>{const p=JSON.stringify(medImages);(async()=>{let ok=false;try{await idbSet("ailvie_medimg",p);ok=true;}catch(e){}
     try{localStorage.setItem("ailvie_medimg",p);}catch(e){if(!ok)setStorageWarn(lang==="tr"?"⚠️ Depolama dolu — görüntüler saklanamıyor. Yedek alın veya eski görüntüleri silin.":"⚠️ Storage full — images not saved.");}})();},800);return()=>clearTimeout(tm);},[medImages]);
 // Auto-cleanup empty notes that are not being edited
-useEffect(()=>{const tm=setTimeout(()=>{setNotes(p=>{const filtered=p.filter(n=>(n.title?.trim()||n.content?.trim()||editNote===n.id));return filtered.length===p.length?p:filtered;});},3000);return()=>clearTimeout(tm);},[notes,editNote]);
+useEffect(()=>{
+  // DATA-LOSS GUARD: never prune before noteMedia has loaded from IndexedDB,
+  // otherwise a drawing/photo/audio-only note looks "empty" and gets deleted.
+  if(!noteMediaLoadedRef.current)return;
+  const tm=setTimeout(()=>{setNotes(p=>{
+    const filtered=p.filter(n=>(
+      n.title?.trim()||
+      (n.content||"").replace(/<[^>]+>/g,"").trim()||
+      (n.checklist&&n.checklist.some(i=>(i.text||"").trim()))||
+      ((noteMedia[n.id]||[]).length>0)||
+      (n.labels&&n.labels.length>0)||
+      editNote===n.id
+    ));
+    return filtered.length===p.length?p:filtered;
+  });},3000);
+  return()=>clearTimeout(tm);
+},[notes,editNote,noteMedia]);
 
 // ═══ DATA BACKUP (export/import) — local file, no cloud needed ═══
 const exportData=async()=>{
   const L=lang==="tr";
   try{
     // Read from IndexedDB (primary store), fall back to localStorage
-    let data=null,medimg=null;
+    let data=null,medimg=null,notemedia=null;
     try{data=await idbGet("ailvie_data");}catch(e){}
     if(data==null)data=localStorage.getItem("ailvie_data")||"{}";
     try{medimg=await idbGet("ailvie_medimg");}catch(e){}
     if(medimg==null)medimg=localStorage.getItem("ailvie_medimg")||null;
-    const payload={ailvie_data:data,ailvie_medimg:medimg,
+    try{notemedia=await idbGet("ailvie_notemedia");}catch(e){}
+    if(notemedia==null)notemedia=localStorage.getItem("ailvie_notemedia")||null;
+    const payload={ailvie_data:data,ailvie_medimg:medimg,ailvie_notemedia:notemedia,
       ailvie_account_email:localStorage.getItem("ailvie_account_email")||"",
       ailvie_lang:localStorage.getItem("ailvie_lang")||"",
       ailvie_perms:localStorage.getItem("ailvie_perms")||""};
@@ -2471,6 +2499,7 @@ const importData=async(file)=>{
     if(!window.confirm(L?"Mevcut verileriniz bu yedekle DEĞİŞTİRİLECEK. Devam edilsin mi?":"Your current data will be REPLACED. Continue?"))return;
     if(typeof payload.ailvie_data==="string"){try{await idbSet("ailvie_data",payload.ailvie_data);}catch(e){}try{localStorage.setItem("ailvie_data",payload.ailvie_data);}catch(e){}}
     if(typeof payload.ailvie_medimg==="string"){try{await idbSet("ailvie_medimg",payload.ailvie_medimg);}catch(e){}}
+    if(typeof payload.ailvie_notemedia==="string"){try{await idbSet("ailvie_notemedia",payload.ailvie_notemedia);}catch(e){}try{localStorage.setItem("ailvie_notemedia",payload.ailvie_notemedia);}catch(e){}}
     if(payload.ailvie_account_email!=null)try{localStorage.setItem("ailvie_account_email",payload.ailvie_account_email);}catch(e){}
     if(payload.ailvie_lang)try{localStorage.setItem("ailvie_lang",payload.ailvie_lang);}catch(e){}
     if(payload.ailvie_perms)try{localStorage.setItem("ailvie_perms",payload.ailvie_perms);}catch(e){}
@@ -4894,7 +4923,17 @@ const startNoteRec=async(nid)=>{
   try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});const mr=new MediaRecorder(stream);const chunks=[];mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};mr.onstop=()=>{try{stream.getTracks().forEach(t=>t.stop());}catch(e){}const blob=new Blob(chunks,{type:mr.mimeType||"audio/webm"});const fr=new FileReader();fr.onload=()=>addNoteMedia(nid,{type:"audio",data:fr.result});fr.readAsDataURL(blob);};mr.start();noteRecRef.current={mr,nid,t0:Date.now(),timer:setInterval(()=>{const s=Math.floor((Date.now()-noteRecRef.current.t0)/1000);setNoteRec({id:nid,sec:s});if(s>=120)stopNoteRec();},250)};setNoteRec({id:nid,sec:0});}
   catch(e){notify(lang==="tr"?"Mikrofon izni gerekli":"Microphone permission needed");}
 };
-const saveDrawing=(dataUrl)=>{const nid=editNote;if(nid&&dataUrl)addNoteMedia(nid,{type:"drawing",data:dataUrl});setNoteDraw(false);};
+// Google Keep behaviour: a drawing opened on its own becomes its OWN note.
+// Opened from inside a note (editNote set), it is attached to that note instead.
+const saveDrawing=(dataUrl)=>{
+  if(!dataUrl){setNoteDraw(false);return;}
+  if(editNote){addNoteMedia(editNote,{type:"drawing",data:dataUrl});setNoteDraw(false);return;}
+  const nid=Date.now();
+  setNotes(p=>[{id:nid,title:"",content:"",color:"default",pinned:false},...p]);
+  addNoteMedia(nid,{type:"drawing",data:dataUrl});
+  setNoteDraw(false);
+  notify(lang==="tr"?"✓ Çizim yeni not olarak kaydedildi":"✓ Drawing saved as a new note");
+};
 const syncNoteBar=(el)=>{if(!el)return;if(el.scrollHeight>el.clientHeight+3){const h=Math.max(24,el.clientHeight*el.clientHeight/el.scrollHeight);const top=(el.scrollHeight-el.clientHeight)>0?el.scrollTop/(el.scrollHeight-el.clientHeight)*(el.clientHeight-h):0;setNoteBar(p=>(p.show&&Math.abs(p.h-h)<1&&Math.abs(p.top-top)<1)?p:{show:true,h,top});}else setNoteBar(p=>p.show?{show:false,h:0,top:0}:p);};
 const renderNotes=()=>{
   const _nq=fold(noteSearch.trim());
@@ -4903,7 +4942,10 @@ const renderNotes=()=>{
   return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <span style={{fontWeight:700,fontSize:fs+2}}>📝 {t.notes}</span>
-      <button onClick={()=>{const id=Date.now();setNotes(p=>[{id,title:"",content:"",color:"default",pinned:false},...p]);setEditNote(id);}} style={{...BP,padding:"7px 14px"}}>+ {t.nNote}</button>
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={()=>{setEditNote(null);setNoteDraw(true);}} aria-label={lang==="tr"?"Yeni çizim notu":"New drawing note"} title={lang==="tr"?"Çizim notu":"Drawing note"} style={{...BP,padding:"7px 12px",background:"transparent",color:ac,border:`1px solid ${ac}`}}>✏️</button>
+        <button onClick={()=>{const id=Date.now();setNotes(p=>[{id,title:"",content:"",color:"default",pinned:false},...p]);setEditNote(id);}} style={{...BP,padding:"7px 14px"}}>+ {t.nNote}</button>
+      </div>
     </div>
     {notes.length>0&&<><div style={{display:"flex",gap:6,alignItems:"center"}}>
       <input value={noteSearch} onChange={e=>setNoteSearch(e.target.value)} placeholder={lang==="tr"?"🔍 Notlarda ara…":"🔍 Search notes…"} style={{...IS,flex:1,padding:"7px 10px",fontSize:fs-1}}/>
