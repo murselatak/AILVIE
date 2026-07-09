@@ -604,7 +604,7 @@ useEffect(()=>{const bip=(e)=>{e.preventDefault();setInstallEvt(e);};const inst=
 // Notifications
 const[notifs,setNotifs]=useState([]);
 const unread=notifs.filter(n=>!n.read).length;
-const patCtx=()=>({band:ageBandOf(pat.birthDate),ageYears:ageYearsFrom(pat.birthDate),pregnant:!!pat.pregnant,sex:pat.sex||""});
+const patCtx=()=>({band:ageBandOf(pat.birthDate),ageYears:ageYearsFrom(pat.birthDate),pregnant:!!pat.pregnant,sex:pat.sex||"",onAnticoag:!!pat.onAnticoag});
 const fold=(x)=>String(x==null?"":x).toLocaleLowerCase("tr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ı/g,"i");
 const getActiveWarnings=()=>{
   const out=[];const nowMin=now.getHours()*60+now.getMinutes();const tr=lang==='tr';
@@ -646,6 +646,13 @@ const UNIT_CONV={
   esr:{canon:"mm/h",f:{"mm/h":1,"mm/hr":1}},
   insulin:{canon:"uIU/mL",f:{"uIU/mL":1,"µIU/mL":1,"mIU/L":1,"pmol/L":1/6.945}},
   uacr:{canon:"mg/g",f:{"mg/g":1,"mg/mmol":8.84}},
+  pt:{canon:"s",f:{"s":1,"sec":1,"saniye":1}},
+  aptt:{canon:"s",f:{"s":1,"sec":1,"saniye":1}},
+  inr:{canon:"ratio",f:{"ratio":1,"INR":1,"":1}},
+  fibrinogen:{canon:"mg/dL",f:{"mg/dL":1,"g/L":100}},
+  dDimer:{canon:"ug/mL FEU",f:{"ug/mL FEU":1,"mg/L FEU":1,"ng/mL FEU":0.001}},
+  urineSG:{canon:"",f:{"":1,"sg":1}},
+  urinePH:{canon:"pH",f:{"pH":1,"":1}},
 };
 // Returns {ok, value, unit} in canonical unit, or {ok:false,reason:"unknown-unit"} -> caller must NOT score.
 const normalizeUnit=(test,value,unit)=>{
@@ -683,6 +690,11 @@ const REF_LIB={
   phosphorus:{unit:"mg/dL",adult:{any:[2.5,4.5]}},
   tibc:{unit:"ug/dL",adult:{any:[251,460]}},
   uacr:{unit:"mg/g",adult:{any:[0,30]}},
+  pt:{unit:"s",adult:{any:[9,13]}},
+  aptt:{unit:"s",adult:{any:[22,36]}},
+  fibrinogen:{unit:"mg/dL",adult:{any:[200,400]}},
+  urineSG:{unit:"",adult:{any:[1.005,1.030]}},
+  urinePH:{unit:"pH",adult:{any:[4.5,8.0]}},
   // ESR: not a fixed interval - Westergren upper limit depends on age & sex (age/2 male; (age+10)/2 female)
   esr:{unit:"mm/h",dynamic:(ctx)=>{const y=ctx&&ctx.ageYears;if(!y||!ctx.sex)return null;const hi=ctx.sex==="female"?Math.round((y+10)/2):Math.round(y/2);return[0,hi];}},
 };
@@ -741,8 +753,15 @@ const TEST_EDU={
   esr:["İltihabın dolaylı göstergesidir; üst sınırı yaş ve cinsiyete göre değişir.","Indirect marker of inflammation; upper limit varies by age and sex."],
   insulin:["Açlık insülini; glukozla birlikte insülin direnci (HOMA-IR) hesabında kullanılır.","Fasting insulin; used with glucose for HOMA-IR."],
   uacr:["İdrarda albümin/kreatinin oranı; böbrek hasarının erken göstergesidir.","Urine albumin-to-creatinine ratio; early marker of kidney damage."],
+  pt:["Pıhtılaşmanın dış yolağını değerlendirir; karaciğer işlevi ve bazı ilaçlardan etkilenir.","Extrinsic clotting pathway."],
+  aptt:["Pıhtılaşmanın iç yolağını değerlendirir; heparin takibinde kullanılır.","Intrinsic clotting pathway."],
+  inr:["PT'nin standardize edilmiş halidir; kan sulandırıcı tedavide hedef aralık kişiye göre belirlenir.","Standardized PT; target range is therapy-specific."],
+  fibrinogen:["Pıhtı oluşumunda görevli proteindir; iltihapta yükselebilir.","Clotting protein; rises with inflammation."],
+  dDimer:["Pıhtı yıkım ürünüdür; DIŞLAMA testidir, yüksekliği tek başına pıhtı anlamına gelmez.","Clot breakdown product; an exclusion test."],
+  urineSG:["İdrarın yoğunluğunu gösterir; sıvı alımına göre değişir.","Urine concentration; varies with hydration."],
+  urinePH:["İdrarın asitlik derecesi; beslenme ve bazı hastalıklardan etkilenir.","Urine acidity."],
 };
-const SYS_SPECIALTY={kidney:["Nefroloji / Dahiliye","Nephrology / Internal Medicine"],glycemic:["Endokrinoloji / Dahiliye","Endocrinology"],hematology:["Hematoloji / Dahiliye","Hematology"],liver:["Gastroenteroloji / Dahiliye","Gastroenterology"],lipid:["Kardiyoloji / Dahiliye","Cardiology"],thyroid:["Endokrinoloji","Endocrinology"],inflammation:["Dahiliye","Internal Medicine"],nutrition:["Dahiliye / Beslenme","Internal Medicine / Nutrition"]};
+const SYS_SPECIALTY={kidney:["Nefroloji / Dahiliye","Nephrology / Internal Medicine"],glycemic:["Endokrinoloji / Dahiliye","Endocrinology"],hematology:["Hematoloji / Dahiliye","Hematology"],liver:["Gastroenteroloji / Dahiliye","Gastroenterology"],lipid:["Kardiyoloji / Dahiliye","Cardiology"],thyroid:["Endokrinoloji","Endocrinology"],inflammation:["Dahiliye","Internal Medicine"],nutrition:["Dahiliye / Beslenme","Internal Medicine / Nutrition"],coagulation:["Hematoloji","Hematology"],urine:["Nefroloji / Üroloji","Nephrology / Urology"]};
 const LIFESTYLE={
   glycemic:[["Rafine şeker ve beyaz un ürünlerini azaltmak","Haftada 150 dk tempolu yürüyüş","Uyku düzenini korumak (7-8 saat)"],["Reduce refined sugar","150 min/week brisk walking","Sleep 7-8h"]],
   lipid:[["Doymuş yağ yerine zeytinyağı/balık tercih etmek","Lifli gıdaları artırmak","Haftada 150 dk egzersiz"],["Prefer olive oil/fish","More fiber","150 min/week exercise"]],
@@ -752,8 +771,31 @@ const LIFESTYLE={
   thyroid:[["Düzenli uyku ve stres yönetimi","İyot içeren takviyeleri doktora danışmadan kullanmamak"],["Sleep and stress management","Do not self-supplement iodine"]],
   inflammation:[["Sigarayı bırakmak","Diş/diş eti sağlığına dikkat","Düzenli hareket"],["Quit smoking","Dental health","Regular activity"]],
   nutrition:[["Güneş ışığından yararlanmak","Dengeli beslenme"],["Sun exposure","Balanced diet"]],
+  coagulation:[["Kanama/morarma olursa doktora bildirmek","Kan sulandırıcı kullanıyorsanız doz değişikliğini asla kendiniz yapmamak"],["Report bleeding/bruising","Never self-adjust anticoagulants"]],
+  urine:[["Yeterli su içmek","Tuzu azaltmak","İdrar yaparken yanma/kanama olursa doktora başvurmak"],["Adequate hydration","Lower salt","See a doctor for burning/blood"]],
 };
 // Follow-up interval suggestion by severity (educational, not prescriptive)
+// D-dimer is an EXCLUSION THRESHOLD, not a reference interval. Age-adjusted cutoff (>50y): age x 0.01 ug/mL FEU.
+const classifyDDimer=(val,ctx)=>{
+  const v=Number(val);if(!(v>=0))return{applicable:false,reason:"invalid"};
+  const band=ctx&&ctx.band,age=ctx&&ctx.ageYears;
+  if(ctx&&ctx.pregnant)return{applicable:false,reason:"pregnancy",kind:"threshold"}; // rises physiologically
+  if(!band)return{applicable:false,reason:"no-context",kind:"threshold"};
+  if(band!=="adult"&&band!=="older")return{applicable:false,reason:"age",kind:"threshold"};
+  if(!age)return{applicable:false,reason:"no-context",kind:"threshold"};
+  const cutoff=age>50?Math.round(age*0.01*100)/100:0.5;
+  return{applicable:true,level:v<cutoff?"normal":"high",cutoff,kind:"threshold"};
+};
+// INR depends on therapeutic target (e.g. warfarin 2-3). Without knowing therapy, only flag extremes.
+const classifyINR=(val,onAnticoag)=>{
+  const v=Number(val);if(!(v>0))return{applicable:false,reason:"invalid"};
+  if(onAnticoag)return{applicable:false,reason:"therapy-target",kind:"threshold"};
+  if(v>=5)return{applicable:true,level:"critical-high",kind:"threshold"};
+  if(v>1.2)return{applicable:true,level:"high",kind:"threshold"};
+  if(v<0.8)return{applicable:true,level:"low",kind:"threshold"};
+  return{applicable:true,level:"normal",kind:"threshold"};
+};
+if(typeof window!=="undefined"){window.__classifyDDimer=classifyDDimer;window.__classifyINR=classifyINR;}
 // ---------- Kidney: eGFR (CKD-EPI 2021, race-free) + UACR + KDIGO staging ----------
 // Validated against published calculator values. ADULTS ONLY (pediatric uses Schwartz -> gated).
 const calcEGFR=(scrMgDl,ageYears,sex)=>{
@@ -804,8 +846,8 @@ const buildRecommendations=(labRecords,lang)=>{
 };
 if(typeof window!=="undefined"){window.__buildRecommendations=buildRecommendations;window.__followUp=followUp;}
 // ---------- Multi-layer health score (doc: system scores + severity + critical override) ----------
-const SYS_WEIGHTS={kidney:18,glycemic:16,hematology:14,liver:12,lipid:12,thyroid:10,inflammation:10,nutrition:8};
-const SYS_LABELS={kidney:["Böbrek","Kidney"],glycemic:["Glisemik","Glycemic"],hematology:["Hematoloji","Hematology"],liver:["Karaciğer","Liver"],lipid:["Lipid","Lipid"],thyroid:["Tiroid","Thyroid"],inflammation:["İnflamasyon","Inflammation"],nutrition:["Beslenme","Nutrition"]};
+const SYS_WEIGHTS={kidney:18,glycemic:16,hematology:14,liver:12,lipid:12,thyroid:10,inflammation:10,nutrition:8,coagulation:10,urine:8};
+const SYS_LABELS={kidney:["Böbrek","Kidney"],glycemic:["Glisemik","Glycemic"],hematology:["Hematoloji","Hematology"],liver:["Karaciğer","Liver"],lipid:["Lipid","Lipid"],thyroid:["Tiroid","Thyroid"],inflammation:["İnflamasyon","Inflammation"],nutrition:["Beslenme","Nutrition"],coagulation:["Pıhtılaşma","Coagulation"],urine:["İdrar","Urine"]};
 // Severity -> per-test penalty (0..100). Distance from reference bound scales the penalty.
 const testPenalty=(rec)=>{
   if(!rec||!rec.level)return null; // not classified -> excluded (doc: don't guess)
@@ -881,6 +923,13 @@ const LAB_TESTS=[
   {k:"esr",tr:"Sedimentasyon (ESR)",en:"ESR",units:["mm/h"],sys:"inflammation"},
   {k:"insulin",tr:"İnsülin (açlık)",en:"Insulin (fasting)",units:["uIU/mL","pmol/L"],sys:"glycemic"},
   {k:"uacr",tr:"İdrar Alb/Kreatinin (UACR)",en:"Urine ACR",units:["mg/g","mg/mmol"],sys:"kidney"},
+  {k:"pt",tr:"PT (Protrombin Zamanı)",en:"PT",units:["s"],sys:"coagulation"},
+  {k:"aptt",tr:"aPTT",en:"aPTT",units:["s"],sys:"coagulation"},
+  {k:"inr",tr:"INR",en:"INR",units:["ratio"],sys:"coagulation"},
+  {k:"fibrinogen",tr:"Fibrinojen",en:"Fibrinogen",units:["mg/dL","g/L"],sys:"coagulation"},
+  {k:"dDimer",tr:"D-dimer",en:"D-dimer",units:["ug/mL FEU","ng/mL FEU"],sys:"coagulation"},
+  {k:"urineSG",tr:"İdrar Dansitesi",en:"Urine Specific Gravity",units:[""],sys:"urine"},
+  {k:"urinePH",tr:"İdrar pH",en:"Urine pH",units:["pH"],sys:"urine"},
 ];
 // Full pipeline: normalize -> select reference -> classify. Returns {saved, classification}
 const evaluateLab=(testKey,rawValue,rawUnit,ctx,labReported)=>{
@@ -888,6 +937,8 @@ const evaluateLab=(testKey,rawValue,rawUnit,ctx,labReported)=>{
   if(!norm.ok)return{ok:false,stage:"unit",reason:norm.reason};
   if(testKey==="glucose"){const g=classifyGlucose(norm.value,"fasting",ctx);return{ok:true,norm,cls:g,kind:"threshold"};}
   if(testKey==="hba1c"){const h=classifyHbA1c(norm.value,ctx);return{ok:true,norm,cls:h,kind:"threshold"};}
+  if(testKey==="dDimer"){const d=classifyDDimer(norm.value,ctx);return{ok:true,norm,cls:d,kind:"threshold"};}
+  if(testKey==="inr"){const i2=classifyINR(norm.value,ctx&&ctx.onAnticoag);return{ok:true,norm,cls:i2,kind:"threshold"};}
   const ref=selectReference(testKey,ctx,labReported);
   const cls=classifyAgainstRef(norm.value,ref);
   return{ok:true,norm,ref,cls,kind:"reference"};
@@ -943,7 +994,7 @@ const notify=useCallback((txt)=>{
 },[]);
 
 // Patient
-const[pat,setPat]=useState({name:"",birthDate:"",bloodType:"",sex:"",pregnant:false,allergies:"",chronic:"",insu:"",emContact:"",emPhone:""});
+const[pat,setPat]=useState({name:"",birthDate:"",bloodType:"",sex:"",pregnant:false,onAnticoag:false,allergies:"",chronic:"",insu:"",emContact:"",emPhone:""});
 const[records,setRecords]=useState([]);
 const[showAddRec,setShowAddRec]=useState(false);
 const[newRec,setNewRec]=useState({type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""});
@@ -3775,7 +3826,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     const preview=labForm.value?evaluateLab(labForm.test,labForm.value,labForm.unit,ctx,(labForm.low&&labForm.high)?{low:labForm.low,high:labForm.high}:null):null;
     const lvlColor=(lv)=>lv==="normal"?sc:(lv==="critical-low"||lv==="critical-high"||lv==="diabetes-range")?dg:(lv==="low"||lv==="high"||lv==="prediabetes")?"#e9a23b":mt;
     const lvlLabel=(lv)=>({normal:L?"normal":"normal",low:L?"düşük":"low",high:L?"yüksek":"high","critical-low":L?"kritik düşük":"critical low","critical-high":L?"kritik yüksek":"critical high",prediabetes:L?"prediyabet eşiği":"prediabetes","diabetes-range":L?"diyabet eşiği":"diabetes range"}[lv]||lv);
-    const naMsg=(reason)=>({age:L?"Yaşa özgü referans gerekli — sınıflandırma yapılmadı":"Age-specific reference needed",pregnancy:L?"Gebelikte eşikler farklıdır — sınıflandırma yapılmadı":"Pregnancy thresholds differ","no-context":L?"Doğum tarihi/cinsiyet girin (Hasta Karnesi)":"Add birth date/sex in Patient Card","not-in-library":L?"Bu test için dahili referans yok — raporunuzun aralığını girin":"No internal reference — enter your report's range","needs-sex":L?"Cinsiyet gerekli":"Sex required"}[reason]||reason);
+    const naMsg=(reason)=>({age:L?"Yaşa özgü referans gerekli — sınıflandırma yapılmadı":"Age-specific reference needed",pregnancy:L?"Gebelikte eşikler farklıdır — sınıflandırma yapılmadı":"Pregnancy thresholds differ","no-context":L?"Doğum tarihi/cinsiyet girin (Hasta Karnesi)":"Add birth date/sex in Patient Card","not-in-library":L?"Bu test için dahili referans yok — raporunuzun aralığını girin":"No internal reference — enter your report's range","needs-sex":L?"Cinsiyet gerekli":"Sex required","needs-sex-age":L?"Yaş ve cinsiyet gerekli (Hasta Karnesi)":"Age and sex required","therapy-target":L?"Kan sulandırıcı tedavide INR hedefi kişiye özeldir — sınıflandırılmadı":"INR target is therapy-specific"}[reason]||reason);
     const save=()=>{
       const r=evaluateLab(labForm.test,labForm.value,labForm.unit,ctx,(labForm.low&&labForm.high)?{low:labForm.low,high:labForm.high}:null);
       if(!r.ok){notify(r.reason==="unknown-unit"||r.reason==="missing-unit"?(L?"⚠️ Birim tanınmadı — sonuç kaydedilmedi":"⚠️ Unknown unit"):(L?"Geçersiz değer":"Invalid value"));return;}
@@ -4199,6 +4250,10 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
     <div style={{marginBottom:8}}>
       <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>⚧ {lang==="tr"?"Biyolojik Cinsiyet":"Biological Sex"} <span style={{fontSize:fs-4}}>({lang==="tr"?"referans aralıkları için":"for reference ranges"})</span></div>
       <div style={{display:"flex",gap:6}}>{[["female",lang==="tr"?"Kadın":"Female"],["male",lang==="tr"?"Erkek":"Male"],["",lang==="tr"?"Belirtme":"Unset"]].map(([v,l])=><button key={v||"none"} onClick={()=>setPat(p=>({...p,sex:v,pregnant:v==="female"?p.pregnant:false}))} style={{flex:1,padding:"7px 4px",borderRadius:9,border:`1px solid ${pat.sex===v?ac:bd}`,background:pat.sex===v?`${ac}22`:"transparent",color:pat.sex===v?ac:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
+    </div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8}}>
+      <span style={{flex:1,fontSize:fs-1,color:tc}}>💊 {lang==="tr"?"Kan sulandırıcı kullanıyorum":"On anticoagulant"}<div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Açıkken INR hedefi kişiye özeldir; uygulama INR'yi sınıflandırmaz":"INR target is therapy-specific"}</div></span>
+      <button onClick={()=>setPat(p=>({...p,onAnticoag:!p.onAnticoag}))} aria-label="anticoag" style={{width:40,height:22,borderRadius:11,background:pat.onAnticoag?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:pat.onAnticoag?21:3,transition:"left .2s"}}/></button>
     </div>
     {pat.sex==="female"&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8}}>
       <span style={{flex:1,fontSize:fs-1,color:tc}}>🤰 {lang==="tr"?"Gebelik":"Pregnancy"}<div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Açıkken tahlil eşikleri uygulanmaz (farklıdır)":"Thresholds not applied when on"}</div></span>
