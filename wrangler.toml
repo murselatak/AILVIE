@@ -1,0 +1,22 @@
+# AILVIE — Cloudflare Pages configuration
+#
+# CROSS-DEVICE SYNC SETUP (one-time):
+#   1) Cloudflare Dashboard -> Storage & Databases -> KV -> "Create namespace"
+#      Name it e.g.  ailvie-sync
+#   2) Copy its Namespace ID and paste it below (replace PASTE_YOUR_KV_NAMESPACE_ID_HERE)
+#   3) Commit + push. Pages will bind it as SYNC_KV automatically.
+#
+#   Alternatively, do it from the dashboard with no file changes:
+#      Pages project -> Settings -> Functions -> KV namespace bindings -> Add
+#      Variable name: SYNC_KV     Namespace: ailvie-sync
+#
+# Until SYNC_KV exists, /api/sync returns HTTP 501 and the app shows
+# "Sunucuda senkron deposu (KV) tanımlı değil." Everything else keeps working.
+
+name = "ailvie"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-11-01"
+
+# [[kv_namespaces]]
+# binding = "SYNC_KV"
+# id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"

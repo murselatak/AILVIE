@@ -2921,7 +2921,9 @@ const NAV_PLACES=()=>{const n=NAV_NAMES[lang]||NAV_NAMES.en;return n.map((name,i
 const bg=dark?(hc?"#000":"#0a0e14"):(hc?"#fff":"#f2f5f9");
 const cd=dark?(hc?"#111":"#151d2b"):(hc?"#fff":"#fff");
 const tc=dark?(hc?"#fff":"#d5dde8"):(hc?"#000":"#1a2332");
-const ac="#00b4d8",a2="#0077b6",dg="#e63946",sc="#2a9d8f",mt=dark?"#93a4b6":"#5a6b7d",bd=dark?"#1e2d3d":"#dde3ea";
+// WCAG AA: success green must contrast >=4.5:1 with its background in BOTH themes.
+// measured: #35b3a3 on #18303a = 5.34 ; #1b665d on #ffffff = 6.76 (old #2a9d8f failed both: 4.15 / 3.32)
+const ac="#00b4d8",a2="#0077b6",dg="#e63946",sc=dark?"#35b3a3":"#1b665d",mt=dark?"#93a4b6":"#5a6b7d",bd=dark?"#1e2d3d":"#dde3ea";
 const CS={background:cd,borderRadius:14,padding:"12px 14px",boxShadow:dark?"0 2px 8px rgba(0,0,0,.3)":"0 1px 6px rgba(0,0,0,.06)",border:`1px solid ${bd}`,overflow:"hidden",minWidth:0};
 const BP={background:`linear-gradient(135deg,${ac},${a2})`,color:"#fff",border:"none",borderRadius:10,padding:"8px 16px",cursor:"pointer",fontWeight:600,fontSize:fs-1};
 const BD={...BP,background:`linear-gradient(135deg,${dg},#c1121f)`};
@@ -3129,7 +3131,7 @@ const renderHome=()=>{
       </div>
       <div style={{display:"flex",gap:6,alignItems:"center"}}>
         <span style={{fontSize:fs-2,color:mt}}>⏰</span>
-        <input type="time" value={calAlarmTime} onChange={e=>{setCalAlarmTime(e.target.value);if(e.target.value)setCalAlarms(p=>({...p,[selDate]:e.target.value}));else{const a={...calAlarms};delete a[selDate];setCalAlarms(a);}}} style={{...IS,width:100,padding:"4px 8px"}}/>
+        <input type="time" aria-label={lang==="tr"?"Saat":"Time"} value={calAlarmTime} onChange={e=>{setCalAlarmTime(e.target.value);if(e.target.value)setCalAlarms(p=>({...p,[selDate]:e.target.value}));else{const a={...calAlarms};delete a[selDate];setCalAlarms(a);}}} style={{...IS,width:100,padding:"4px 8px"}}/>
         {calAlarms[selDate]&&<span style={{fontSize:fs-3,color:sc}}>✓ {t.alarmSet||"Alarm"}</span>}
       </div>
       {appts.filter(a=>a.date===selDate).map(a=><div key={a.id} style={{marginTop:6,padding:"6px 8px",borderRadius:8,background:`${dg}11`,fontSize:fs-2}}>🏥 {a.doctor} — {a.time}</div>)}
@@ -3163,7 +3165,7 @@ const renderHome=()=>{
     {/* AI Translator — Google Translate Style 2-Panel */}
     <div style={{...CS,padding:10,position:"relative"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-        <div style={{fontWeight:700,fontSize:fs,display:"flex",alignItems:"center",gap:6}}><img src={GLOBE_IMG} style={{width:20,height:20,borderRadius:10}}/> {lang==="tr"?"Çeviri":lang==="en"?"Translator":lang==="de"?"Übersetzer":lang==="ru"?"Переводчик":lang==="zh"?"翻译":lang==="hi"?"अनुवादक":lang==="nl"?"Vertaler":lang==="es"?"Traductor":lang==="ar"?"مترجم":"Translator"}</div>
+        <div style={{fontWeight:700,fontSize:fs,display:"flex",alignItems:"center",gap:6}}><img src={GLOBE_IMG} alt="" aria-hidden="true" style={{width:20,height:20,borderRadius:10}}/> {lang==="tr"?"Çeviri":lang==="en"?"Translator":lang==="de"?"Übersetzer":lang==="ru"?"Переводчик":lang==="zh"?"翻译":lang==="hi"?"अनुवादक":lang==="nl"?"Vertaler":lang==="es"?"Traductor":lang==="ar"?"مترجم":"Translator"}</div>
         <span style={{fontSize:fs-3,color:ac,fontWeight:500}}>60+ {lang==="tr"?"Dil":"Lang"}</span>
       </div>
       {/* Language selector bar — src ↔ tgt */}
@@ -3298,7 +3300,7 @@ const renderAppts=()=>{
       <input placeholder={t.dr} value={newAppt.doctor} onChange={e=>setNewAppt({...newAppt,doctor:e.target.value})} style={{...IS,marginBottom:6}}/>
       <input placeholder={t.hosp} value={newAppt.hospital} onChange={e=>setNewAppt({...newAppt,hospital:e.target.value})} style={{...IS,marginBottom:6}}/>
       <input placeholder={t.clin} value={newAppt.clinic} onChange={e=>setNewAppt({...newAppt,clinic:e.target.value})} style={{...IS,marginBottom:6}}/>
-      <div style={{display:"flex",gap:6,marginBottom:6}}><input type="date" value={newAppt.date} onChange={e=>setNewAppt({...newAppt,date:e.target.value})} style={{...IS,flex:1}}/><input type="time" value={newAppt.time} onChange={e=>setNewAppt({...newAppt,time:e.target.value})} style={{...IS,flex:1}}/></div>
+      <div style={{display:"flex",gap:6,marginBottom:6}}><input type="date" value={newAppt.date} onChange={e=>setNewAppt({...newAppt,date:e.target.value})} style={{...IS,flex:1}}/><input type="time" aria-label={lang==="tr"?"Saat":"Time"} value={newAppt.time} onChange={e=>setNewAppt({...newAppt,time:e.target.value})} style={{...IS,flex:1}}/></div>
       <div style={{display:"flex",gap:6}}><button onClick={()=>{apptDraftIdRef.current=null;setNewAppt(EMPTY_APPT);setEditApptId(null);setShowAddAppt(false);}} style={BP}>{lang==="tr"?"Bitti":"Done"}</button><button onClick={()=>{if(!editApptId&&apptDraftIdRef.current!=null){const id=apptDraftIdRef.current;setAppts(p=>p.filter(x=>x.id!==id));}apptDraftIdRef.current=null;setNewAppt(EMPTY_APPT);setEditApptId(null);setShowAddAppt(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div>
     </div>}
     {/* 3. Upcoming / Past */}
@@ -3535,7 +3537,7 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
     <input placeholder={t.dose} value={newMed.dose} onChange={e=>setNewMed({...newMed,dose:e.target.value})} style={{...IS,marginBottom:6}}/>
     <div style={{display:"flex",gap:6,marginBottom:6}}>
       <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>📅 {lang==="tr"?"Başlangıç":"Start"}</div><input type="date" value={newMed.startDate} onChange={e=>setNewMed({...newMed,startDate:e.target.value})} style={IS}/></div>
-      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>⏰ {t.time}</div><input type="time" value={newMed.time} onChange={e=>setNewMed({...newMed,time:e.target.value})} style={IS}/></div>
+      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>⏰ {t.time}</div><input type="time" aria-label={lang==="tr"?"Saat":"Time"} value={newMed.time} onChange={e=>setNewMed({...newMed,time:e.target.value})} style={IS}/></div>
     </div>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,padding:"8px 10px",borderRadius:8,background:newMed.recurring?`${sc}12`:`${mt}08`,border:`1px solid ${newMed.recurring?sc:bd}`,cursor:"pointer"}} onClick={()=>setNewMed({...newMed,recurring:!newMed.recurring})}>
       <button style={{width:36,height:20,borderRadius:10,background:newMed.recurring?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:14,height:14,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:newMed.recurring?19:3,transition:"left .2s"}}/></button>
@@ -4017,7 +4019,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     </div>;})}
     {meals.length===0&&<div style={{color:mt,fontSize:fs-2,padding:"6px 0"}}>{lang==="tr"?"Henüz öğün eklenmedi.":"No meals added yet."}</div>}
     <div style={{display:"flex",gap:6,marginTop:8}}>
-      <select value={dietSlot} onChange={e=>setDietSlot(e.target.value)} style={{...IS,flex:"0 0 36%",padding:"9px 6px"}}>{(lang==="tr"?["Kahvaltı","Ara Öğün","Öğle","İkindi","Akşam","Gece"]:["Breakfast","Snack","Lunch","Afternoon","Dinner","Night"]).map(x=><option key={x} value={x}>{x}</option>)}</select>
+      <select aria-label={lang==="tr"?"Öğün seçin":"Select meal"} value={dietSlot} onChange={e=>setDietSlot(e.target.value)} style={{...IS,flex:"0 0 36%",padding:"9px 6px"}}>{(lang==="tr"?["Kahvaltı","Ara Öğün","Öğle","İkindi","Akşam","Gece"]:["Breakfast","Snack","Lunch","Afternoon","Dinner","Night"]).map(x=><option key={x} value={x}>{x}</option>)}</select>
       <input value={dietText} onChange={e=>setDietText(e.target.value)} placeholder={lang==="tr"?"Ne yenecek…":"What to eat…"} style={{...IS,flex:1}}/>
     </div>
     <button onClick={()=>{if(dietText.trim()){setDiet(d=>({...d,meals:[...(d.meals||[]),{id:Date.now(),slot:dietSlot,text:dietText.trim()}]}));setDietText("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Öğün Ekle":"Add Meal"}</button>
@@ -4056,7 +4058,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{lang==="tr"?"Ölçüm cihazınızın değerini girin. Tarama amaçlıdır, tıbbi tanı değildir — doktorunuza danışın.":"Enter your meter reading. Screening only, not a diagnosis — consult your doctor."}</div>
       <div style={{display:"flex",gap:6}}>
         <input type="number" inputMode="numeric" value={gluVal} onChange={e=>setGluVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric("glucose",v,gluType);if(v<54||v>=300)setActiveAlert({icon:"🩸",title:lang==="tr"?"KRİTİK ŞEKER":"CRITICAL GLUCOSE",msg:v+" mg/dL — "+(lang==="tr"?"acil kontrol edin / doktorunuza danışın":"seek medical attention")});setGluVal("");}}}} placeholder="mg/dL" style={{...IS,flex:"0 0 32%"}}/>
-        <select value={gluType} onChange={e=>setGluType(e.target.value)} style={{...IS,flex:1}}><option value="fasting">{lang==="tr"?"Açlık":"Fasting"}</option><option value="postmeal">{lang==="tr"?"Tokluk (2 saat)":"Post-meal (2h)"}</option><option value="random">{lang==="tr"?"Rastgele":"Random"}</option></select>
+        <select aria-label={lang==="tr"?"Ölçüm zamanı (açlık/tokluk)":"Measurement timing"} value={gluType} onChange={e=>setGluType(e.target.value)} style={{...IS,flex:1}}><option value="fasting">{lang==="tr"?"Açlık":"Fasting"}</option><option value="postmeal">{lang==="tr"?"Tokluk (2 saat)":"Post-meal (2h)"}</option><option value="random">{lang==="tr"?"Rastgele":"Random"}</option></select>
       </div>
       <button onClick={()=>{const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric('glucose',v,gluType);if(v<54||v>=300)setActiveAlert({icon:"🩸",title:lang==="tr"?"KRİTİK ŞEKER":"CRITICAL GLUCOSE",msg:v+" mg/dL — "+(lang==="tr"?"acil kontrol edin / doktorunuza danışın":"seek medical attention")});setGluVal("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Ölçüm Ekle":"Add Reading"}</button>
       {recent.length>=2&&<div style={{marginTop:12}}>
@@ -4146,7 +4148,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <div style={{...CS}}>
     <div style={{fontWeight:700,marginBottom:4,color:ac}}>🩻 {lang==="tr"?"Tıbbi Görüntüleme & Belgeler":"Medical Imaging & Documents"}</div>
     <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"Röntgen, tomografi, MR, ultrason, tahlil… Pencereden seç, sürükle-bırak, fotoğraf çek ya da QR/barkod ile yükle. AILVIE görüntüyü okuyup genel yorum yapar.":"X-ray, CT, MRI, ultrasound, labs… Pick, drag & drop, take a photo, or upload via QR/barcode. AILVIE reads and gives a general interpretation."}</div>
-    <select value={imgType} onChange={e=>setImgType(e.target.value)} style={{...IS,marginBottom:8}}>{[["xray","Röntgen"],["ct","Tomografi (BT)"],["mri","MR"],["ultra","Ultrason"],["lab","Tahlil/Rapor"],["other","Diğer"]].map(([v,l])=><option key={v} value={v}>{t[v]||l}</option>)}</select>
+    <select aria-label={lang==="tr"?"Görüntüleme türü":"Imaging type"} value={imgType} onChange={e=>setImgType(e.target.value)} style={{...IS,marginBottom:8}}>{[["xray","Röntgen"],["ct","Tomografi (BT)"],["mri","MR"],["ultra","Ultrason"],["lab","Tahlil/Rapor"],["other","Diğer"]].map(([v,l])=><option key={v} value={v}>{t[v]||l}</option>)}</select>
     <div onDragOver={e=>{e.preventDefault();setImgDrag(true);}} onDragLeave={()=>setImgDrag(false)} onDrop={e=>{e.preventDefault();setImgDrag(false);addMedFiles(e.dataTransfer.files,imgType);}} style={{border:`2px dashed ${imgDrag?ac:bd}`,borderRadius:12,padding:"14px 10px",textAlign:"center",background:imgDrag?`${ac}12`:"transparent",marginBottom:8,transition:"all .15s"}}>
       <div style={{fontSize:26,marginBottom:2}}>📥</div>
       <div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Dosyaları buraya sürükleyip bırakın":"Drag & drop files here"}</div>
@@ -4351,8 +4353,8 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
           const ti2=LAB_TESTS.find(x=>x.k===row.test);
           return <div key={row.id} style={{borderTop:`1px solid ${bd}`,paddingTop:6,marginTop:6}}>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <input type="checkbox" checked={row.include} onChange={e=>upd("include",e.target.checked)} style={{width:16,height:16,flexShrink:0}}/>
-              <select value={row.test} onChange={e=>{const nt=LAB_TESTS.find(x=>x.k===e.target.value);upd("test",e.target.value);if(nt&&!nt.units.includes(row.unit))upd("unit",nt.units[0]);}} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}>
+              <input aria-label={lang==="tr"?"Bu satırı kaydet":"Include this row"} type="checkbox" checked={row.include} onChange={e=>upd("include",e.target.checked)} style={{width:16,height:16,flexShrink:0}}/>
+              <select aria-label={lang==="tr"?"Okunan test":"Parsed test"} value={row.test} onChange={e=>{const nt=LAB_TESTS.find(x=>x.k===e.target.value);upd("test",e.target.value);if(nt&&!nt.units.includes(row.unit))upd("unit",nt.units[0]);}} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}>
                 <option value="">{L?"— eşleşmedi —":"— unmatched —"}</option>
                 {LAB_TESTS.map(x=><option key={x.k} value={x.k}>{L?x.tr:x.en}</option>)}
               </select>
@@ -4360,10 +4362,10 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
             </div>
             {row.rawName&&<div style={{fontSize:fs-5,color:mt,marginLeft:22}}>{L?"raporda":"as printed"}: {row.rawName}{row.flag?` · ${row.flag}`:""}</div>}
             <div style={{display:"flex",gap:5,marginTop:4,marginLeft:22}}>
-              <input value={row.value} onChange={e=>upd("value",e.target.value)} placeholder={L?"değer":"value"} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}/>
-              <select value={row.unit} onChange={e=>upd("unit",e.target.value)} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}>{(ti2?ti2.units:[row.unit]).map(u=><option key={u} value={u}>{u||"—"}</option>)}</select>
-              <input value={row.low} onChange={e=>upd("low",e.target.value)} placeholder={L?"alt":"low"} style={{...IS,width:52,padding:"5px 4px",fontSize:fs-3}}/>
-              <input value={row.high} onChange={e=>upd("high",e.target.value)} placeholder={L?"üst":"high"} style={{...IS,width:52,padding:"5px 4px",fontSize:fs-3}}/>
+              <input aria-label={lang==="tr"?"Değer":"Value"} value={row.value} onChange={e=>upd("value",e.target.value)} placeholder={L?"değer":"value"} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}/>
+              <select aria-label={lang==="tr"?"Okunan birim":"Parsed unit"} value={row.unit} onChange={e=>upd("unit",e.target.value)} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}>{(ti2?ti2.units:[row.unit]).map(u=><option key={u} value={u}>{u||"—"}</option>)}</select>
+              <input aria-label={lang==="tr"?"Alt sınır":"Lower bound"} value={row.low} onChange={e=>upd("low",e.target.value)} placeholder={L?"alt":"low"} style={{...IS,width:52,padding:"5px 4px",fontSize:fs-3}}/>
+              <input aria-label={lang==="tr"?"Üst sınır":"Upper bound"} value={row.high} onChange={e=>upd("high",e.target.value)} placeholder={L?"üst":"high"} style={{...IS,width:52,padding:"5px 4px",fontSize:fs-3}}/>
             </div>
           </div>;})}
         <button onClick={()=>{
@@ -4378,16 +4380,16 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
           notify(L?`✓ ${n} tahlil kaydedildi${skipped?` · ${skipped} atlandı (birim tanınmadı)`:""}`:`✓ ${n} labs saved`);
         }} style={{...BP,width:"100%",marginTop:8,padding:"8px"}}>✓ {L?"Seçilenleri Kaydet":"Save selected"}</button>
       </div>}
-      <select value={labForm.test} onChange={e=>{const nt=LAB_TESTS.find(x=>x.k===e.target.value);setLabForm(f=>({...f,test:e.target.value,unit:nt.units[0],value:"",low:"",high:""}));}} style={{...IS,width:"100%",marginBottom:6}}>{LAB_TESTS.map(x=><option key={x.k} value={x.k}>{L?x.tr:x.en}</option>)}</select>
+      <select aria-label={lang==="tr"?"Tahlil testi seçin":"Select lab test"} value={labForm.test} onChange={e=>{const nt=LAB_TESTS.find(x=>x.k===e.target.value);setLabForm(f=>({...f,test:e.target.value,unit:nt.units[0],value:"",low:"",high:""}));}} style={{...IS,width:"100%",marginBottom:6}}>{LAB_TESTS.map(x=><option key={x.k} value={x.k}>{L?x.tr:x.en}</option>)}</select>
       <div style={{display:"flex",gap:6,marginBottom:6}}>
-        <input type="number" step="0.01" inputMode="decimal" value={labForm.value} onChange={e=>setLabForm(f=>({...f,value:e.target.value}))} placeholder={L?"Değer":"Value"} style={{...IS,flex:1}}/>
-        <select value={labForm.unit} onChange={e=>setLabForm(f=>({...f,unit:e.target.value}))} style={{...IS,flex:"0 0 42%"}}>{tInfo.units.map(u=><option key={u} value={u}>{u}</option>)}</select>
+        <input aria-label={lang==="tr"?"Tahlil değeri":"Lab value"} type="number" step="0.01" inputMode="decimal" value={labForm.value} onChange={e=>setLabForm(f=>({...f,value:e.target.value}))} placeholder={L?"Değer":"Value"} style={{...IS,flex:1}}/>
+        <select aria-label={lang==="tr"?"Birim seçin":"Select unit"} value={labForm.unit} onChange={e=>setLabForm(f=>({...f,unit:e.target.value}))} style={{...IS,flex:"0 0 42%"}}>{tInfo.units.map(u=><option key={u} value={u}>{u}</option>)}</select>
       </div>
       <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
         <span style={{fontSize:fs-3,color:mt,flex:"0 0 auto"}}>📄 {L?"Raporun aralığı":"Report range"}</span>
-        <input type="number" step="0.01" value={labForm.low} onChange={e=>setLabForm(f=>({...f,low:e.target.value}))} placeholder={L?"alt":"low"} style={{...IS,flex:1,padding:"6px 8px"}}/>
+        <input aria-label={lang==="tr"?"Raporun alt sınırı":"Report lower bound"} type="number" step="0.01" value={labForm.low} onChange={e=>setLabForm(f=>({...f,low:e.target.value}))} placeholder={L?"alt":"low"} style={{...IS,flex:1,padding:"6px 8px"}}/>
         <span style={{color:mt}}>–</span>
-        <input type="number" step="0.01" value={labForm.high} onChange={e=>setLabForm(f=>({...f,high:e.target.value}))} placeholder={L?"üst":"high"} style={{...IS,flex:1,padding:"6px 8px"}}/>
+        <input aria-label={lang==="tr"?"Raporun üst sınırı":"Report upper bound"} type="number" step="0.01" value={labForm.high} onChange={e=>setLabForm(f=>({...f,high:e.target.value}))} placeholder={L?"üst":"high"} style={{...IS,flex:1,padding:"6px 8px"}}/>
       </div>
       {preview&&(!preview.ok
         ? <div style={{background:`${dg}12`,border:`1px solid ${dg}44`,borderRadius:9,padding:"8px 10px",fontSize:fs-3,color:tc,marginBottom:6}}>⚠️ {L?"Birim tanınmadı — değerlendirme yapılamaz.":"Unknown unit — cannot evaluate."}</div>
@@ -4531,12 +4533,12 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div style={{height:"100%",width:`${sleepPct}%`,background:`linear-gradient(90deg,#8b5cf6,#6366f1)`,borderRadius:5,transition:"width .3s"}}/>
     </div>
     <div style={{display:"flex",gap:8,marginBottom:8}}>
-      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>🛏️ {lang==="tr"?"Yatış":"Bedtime"}</div><input type="time" value={sleepTimes.bed} onChange={e=>setSleepTime("bed",e.target.value)} style={{...IS,padding:"6px 8px",width:"100%"}}/></div>
-      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>☀️ {lang==="tr"?"Kalkış":"Wake"}</div><input type="time" value={sleepTimes.wake} onChange={e=>setSleepTime("wake",e.target.value)} style={{...IS,padding:"6px 8px",width:"100%"}}/></div>
+      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>🛏️ {lang==="tr"?"Yatış":"Bedtime"}</div><input type="time" aria-label={lang==="tr"?"Saat":"Time"} value={sleepTimes.bed} onChange={e=>setSleepTime("bed",e.target.value)} style={{...IS,padding:"6px 8px",width:"100%"}}/></div>
+      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>☀️ {lang==="tr"?"Kalkış":"Wake"}</div><input type="time" aria-label={lang==="tr"?"Saat":"Time"} value={sleepTimes.wake} onChange={e=>setSleepTime("wake",e.target.value)} style={{...IS,padding:"6px 8px",width:"100%"}}/></div>
     </div>
     {sleepTimes.bed&&sleepTimes.wake&&<div style={{fontSize:fs-2,color:ac,textAlign:"center",marginBottom:6,fontWeight:600}}>{lang==="tr"?"Tahmini süre":"Estimated"}: {computeSleepDur(sleepTimes.bed,sleepTimes.wake)} {lang==="tr"?"saat":"h"} <span style={{color:mt,fontWeight:400}}>({sleepTimes.bed} → {sleepTimes.wake})</span></div>}
     <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginBottom:4}}>{lang==="tr"?"veya süreyi elle ayarla":"or set duration manually"}</div>
-    <input type="range" min="0" max="12" step="0.5" value={wellness.sleep} onChange={e=>setWellness(w=>({...w,sleep:Number(e.target.value)}))} style={{width:"100%"}}/>
+    <input type="range" aria-label={lang==="tr"?"Değer kaydırıcı":"Value slider"} min="0" max="12" step="0.5" value={wellness.sleep} onChange={e=>setWellness(w=>({...w,sleep:Number(e.target.value)}))} style={{width:"100%"}}/>
     <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:2}}>{wellness.sleep>=7&&wellness.sleep<=9?(lang==="tr"?"✓ İdeal":"✓ Ideal"):wellness.sleep<6?(lang==="tr"?"⚠️ Yetersiz":"⚠️ Insufficient"):wellness.sleep>10?(lang==="tr"?"⚠️ Çok fazla":"⚠️ Too much"):(lang==="tr"?"Orta":"Average")}</div>
     <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:6,lineHeight:1.4}}>ℹ️ {lang==="tr"?"Yatış/kalkış saatinden hesaplanan tahmini süredir; gerçek uyku evreleri (derin/REM) için giyilebilir cihaz gerekir.":"Estimated from bed/wake times; real sleep stages (deep/REM) need a wearable."}</div>
   </div>
