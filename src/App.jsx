@@ -604,6 +604,26 @@ useEffect(()=>{const bip=(e)=>{e.preventDefault();setInstallEvt(e);};const inst=
 // Notifications
 const[notifs,setNotifs]=useState([]);
 const unread=notifs.filter(n=>!n.read).length;
+const StorageHealth=()=>{
+  const[st,setSt]=useState(null);
+  useEffect(()=>{let m=true;(async()=>{const e=await storageEstimate();let p=false;try{p=!!(navigator.storage&&navigator.storage.persisted&&await navigator.storage.persisted());}catch(x){}if(m)setSt({e,p});})();return()=>{m=false;};},[]);
+  const L=lang==="tr";
+  if(!st)return <div style={{fontSize:fs-2,color:mt}}>…</div>;
+  const mb=(n)=>(n/1048576).toFixed(1);
+  const pct=st.e&&st.e.quota?Math.min(100,Math.round(st.e.usage/st.e.quota*100)):null;
+  return <div>
+    <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2,color:tc}}>
+      <span>{L?"Kalıcı depolama":"Persistent storage"}</span>
+      <b style={{color:st.p?sc:"#e9a23b"}}>{st.p?(L?"✓ Açık":"✓ On"):(L?"Kapalı":"Off")}</b>
+    </div>
+    <div style={{fontSize:fs-4,color:mt,marginTop:2,lineHeight:1.4}}>{st.p?(L?"Tarayıcı verilerinizi kendiliğinden silmez.":"Browser won't auto-evict your data."):(L?"Tarayıcı yer açmak için verileri silebilir. Uygulamayı ana ekrana ekleyip birkaç kez kullanınca genelde otomatik açılır.":"Browser may evict data.")}</div>
+    {pct!=null&&<div style={{marginTop:8}}>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-3,color:mt}}><span>{L?"Kullanım":"Usage"}</span><span>{mb(st.e.usage)} / {mb(st.e.quota)} MB ({pct}%)</span></div>
+      <div style={{height:6,borderRadius:3,background:bd,overflow:"hidden",marginTop:3}}><div style={{width:pct+"%",height:"100%",background:pct>85?dg:pct>60?"#e9a23b":sc}}/></div>
+    </div>}
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Veriler yalnızca bu cihazda saklanır (IndexedDB). Sunucuya gönderilmez, cihazlar arası senkron yoktur. Düzenli olarak yedek alın.":"Data is stored on this device only (IndexedDB). No cloud sync."}</div>
+  </div>;
+};
 const patCtx=()=>({band:ageBandOf(pat.birthDate),ageYears:ageYearsFrom(pat.birthDate),pregnant:!!pat.pregnant,sex:pat.sex||"",onAnticoag:!!pat.onAnticoag});
 const parseLabDocument=async(file)=>{
   const L=lang==="tr";
@@ -669,6 +689,22 @@ const getActiveWarnings=()=>{
   try{if(glucose&&glucose.length){const g=glucose[glucose.length-1];if(g&&(Date.now()-g.ts)<864e5&&(g.val<70||g.val>=250))out.push({id:'gluW',icon:'🩸',kind:'info',title:(tr?'Şeker':'Glucose')+' '+g.val+' mg/dL',sub:g.val<70?(tr?'düşük — dikkat':'low'):(tr?'yüksek — doktorunuza danışın':'high'),high:g.val<54||g.val>=300});}const bl=(healthLog||[]).filter(x=>x.type==='bp');if(bl.length){const bp=bl[bl.length-1];const sV=bp.val,dV=(bp.meta&&bp.meta.d)||0;if((Date.now()-bp.ts)<864e5&&(sV>=140||dV>=90||sV<90))out.push({id:'bpW',icon:'🩺',kind:'info',title:(tr?'Tansiyon':'BP')+' '+sV+'/'+dV,sub:(sV>=140||dV>=90)?(tr?'yüksek':'high'):(tr?'düşük':'low'),high:sV>=180||dV>=120});}}catch(e){}
   return out.sort((a,b)=>(b.high?1:0)-(a.high?1:0));
 };
+// ---------- Durable storage: IndexedDB primary, localStorage fallback/migration ----------
+// Why: localStorage is ~5MB, throws QuotaExceededError when full (previously swallowed silently),
+// and browsers evict it under storage pressure. IndexedDB is orders of magnitude larger.
+const IDB_NAME="ailvie",IDB_STORE="kv";
+const idbOpen=()=>new Promise((res,rej)=>{
+  try{const r=indexedDB.open(IDB_NAME,1);
+    r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains(IDB_STORE))db.createObjectStore(IDB_STORE);};
+    r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);
+  }catch(e){rej(e);}
+});
+const idbGet=async(k)=>{try{const db=await idbOpen();return await new Promise((res,rej)=>{const t=db.transaction(IDB_STORE,"readonly").objectStore(IDB_STORE).get(k);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error);});}catch(e){return undefined;}};
+const idbSet=async(k,v)=>{const db=await idbOpen();return await new Promise((res,rej)=>{const tx=db.transaction(IDB_STORE,"readwrite");tx.objectStore(IDB_STORE).put(v,k);tx.oncomplete=()=>res(true);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||new Error("abort"));});};
+// Ask the browser to make storage persistent (won't be auto-evicted). Best-effort.
+const requestPersistentStorage=async()=>{try{if(navigator.storage&&navigator.storage.persist){if(await navigator.storage.persisted())return true;return await navigator.storage.persist();}}catch(e){}return false;};
+const storageEstimate=async()=>{try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();return{usage:e.usage||0,quota:e.quota||0};}}catch(e){}return null;};
+if(typeof window!=="undefined"){window.__idbGet=idbGet;window.__idbSet=idbSet;}
 // ---------- Unit normalization + canonical reference library + reference selector ----------
 // Factors verified against standard clinical conversions. Unit mismatch => NO score (doc rule).
 const UNIT_CONV={
@@ -1850,6 +1886,9 @@ const[healthLog,setHealthLog]=useState([]); // timestamped vital history [{id,ts
 const[labs,setLabs]=useState([]); // [{id,ts,test,value,unit,canonValue,canonUnit,level,source,labLow,labHigh}]
 const[labForm,setLabForm]=useState({test:"glucose",value:"",unit:"mg/dL",low:"",high:""});
 const[labParse,setLabParse]=useState({busy:false,rows:[],err:null,fileName:""});
+const[storageWarn,setStorageWarn]=useState(null);
+const[persisted,setPersisted]=useState(false);
+const dataLoadedRef=useRef(false);
 const[repMetric,setRepMetric]=useState("weight");
 const[repRange,setRepRange]=useState(30); // days; 0=all
 const[hba1cVal,setHba1cVal]=useState("");
@@ -2157,14 +2196,32 @@ riskPenalty
 )));
 
 // ═══ AUTO-SAVE/LOAD ═══
-useEffect(()=>{try{const d=JSON.parse(localStorage.getItem("ailvie_data")||"{}");
+useEffect(()=>{(async()=>{
+  let raw=null;
+  try{raw=await idbGet("ailvie_data");}catch(e){}
+  if(raw==null){try{raw=localStorage.getItem("ailvie_data");if(raw)await idbSet("ailvie_data",raw);}catch(e){}} // one-time migration
+  requestPersistentStorage().then(ok=>setPersisted(!!ok));
+  try{const d=JSON.parse(raw||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
 if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(Array.isArray(d.labs))setLabs(d.labs);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
-}catch{}},[]); // load once
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_data",JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs}));}catch{}},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs]); // enhanced auto-save (incl. drafts + trash + diet/glucose/log/goals)
-useEffect(()=>{try{const s=localStorage.getItem("ailvie_medimg");if(s){const a=JSON.parse(s);if(Array.isArray(a))setMedImages(a);}}catch(e){}},[]);
-useEffect(()=>{const tm=setTimeout(()=>{try{localStorage.setItem("ailvie_medimg",JSON.stringify(medImages));}catch(e){}},800);return()=>clearTimeout(tm);},[medImages]);
+  }catch(e){}
+  dataLoadedRef.current=true;
+})();},[]); // load once (IndexedDB primary)
+useEffect(()=>{if(!dataLoadedRef.current)return;const tm=setTimeout(()=>{const payload=JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs});
+  (async()=>{
+    let idbOk=false;
+    try{await idbSet("ailvie_data",payload);idbOk=true;setStorageWarn(null);}catch(e){idbOk=false;}
+    try{localStorage.setItem("ailvie_data",payload);}catch(e){ if(!idbOk){ setStorageWarn(lang==="tr"?"⚠️ Cihaz depolaması dolu — yeni kayıtlar SAKLANAMIYOR. Ayarlar > Yedekle ile verilerinizi dışa aktarın.":"⚠️ Device storage full — new data is NOT being saved. Export a backup."); } }
+    if(!idbOk){
+      try{localStorage.getItem("ailvie_data");}catch(e){}
+    }
+  })();},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs,lang]); // enhanced auto-save (IndexedDB primary) (incl. drafts + trash + diet/glucose/log/goals)
+useEffect(()=>{(async()=>{let raw=null;try{raw=await idbGet("ailvie_medimg");}catch(e){}
+  if(raw==null){try{raw=localStorage.getItem("ailvie_medimg");if(raw)await idbSet("ailvie_medimg",raw);}catch(e){}}
+  try{if(raw){const a=JSON.parse(raw);if(Array.isArray(a))setMedImages(a);}}catch(e){}})();},[]);
+useEffect(()=>{const tm=setTimeout(()=>{const p=JSON.stringify(medImages);(async()=>{let ok=false;try{await idbSet("ailvie_medimg",p);ok=true;}catch(e){}
+    try{localStorage.setItem("ailvie_medimg",p);}catch(e){if(!ok)setStorageWarn(lang==="tr"?"⚠️ Depolama dolu — görüntüler saklanamıyor. Yedek alın veya eski görüntüleri silin.":"⚠️ Storage full — images not saved.");}})();},800);return()=>clearTimeout(tm);},[medImages]);
 // Auto-cleanup empty notes that are not being edited
 useEffect(()=>{const tm=setTimeout(()=>{setNotes(p=>{const filtered=p.filter(n=>(n.title?.trim()||n.content?.trim()||editNote===n.id));return filtered.length===p.length?p:filtered;});},3000);return()=>clearTimeout(tm);},[notes,editNote]);
 
@@ -3290,6 +3347,9 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   <div style={CS}><div style={{marginBottom:6}}>🤖 AI API Key <span style={{fontSize:fs-3,color:mt}}>(Anthropic)</span></div><div style={{display:"flex",gap:6}}><input type="password" value={apiKey} onChange={e=>{setApiKey(e.target.value);try{localStorage.setItem("ailvie_api_key",e.target.value);}catch(ex){}}} placeholder="sk-ant-..." style={{...IS,flex:1,fontFamily:"monospace",fontSize:fs-2}}/>{apiKey&&<button onClick={()=>{setApiKey("");try{localStorage.removeItem("ailvie_api_key");}catch(ex){}}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",color:dg,cursor:"pointer"}}>✕</button>}</div><div style={{fontSize:fs-3,color:apiKey?sc:mt,marginTop:4}}>{apiKey?(lang==="tr"?"✓ API anahtarı ayarlandı":"✓ API key set"):(lang==="tr"?"AI Sohbet, çeviri ve ilaç analizi için gerekli":"Required for AI Chat, translation & drug analysis")}</div></div>
   <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>setEmNums(p=>p.filter(x=>x.id!==en.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🛡️ {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button onClick={()=>{const willOn=!perms[k];setPerms(p=>({...p,[k]:willOn}));if(k==="loc"){if(willOn){notify(lang==="tr"?"📍 Konum açılıyor…":"📍 Enabling location…");loadWeather(true);}else setWeather({err:"off"});return;}if(k==="notif"){if(willOn&&('Notification'in window)){if(Notification.permission==="denied")notify(lang==="tr"?"⚠️ Bildirim tarayıcıda engelli. Tarayıcı > Site izinleri > Bildirim'i açın.":"⚠️ Notifications blocked in browser settings.");else Notification.requestPermission().then(st=>{if(st!=="granted")notify(lang==="tr"?"Bildirim izni verilmedi — tarayıcı ayarlarından açabilirsiniz.":"Notification permission not granted.");}).catch(()=>{});}return;}}} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
+  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>💾 {lang==="tr"?"Depolama":"Storage"}</div>
+    <StorageHealth/>
+  </div>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🧹 {lang==="tr"?"İçerik Filtresi":"Content Filter"}</div>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",gap:8}}>
       <span style={{flex:1}}>🚫 {lang==="tr"?"Küfür / argo maskeleme":"Profanity masking"}<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Toplulukta uygunsuz kelimeler *** ile gizlenir":"Hides inappropriate words with *** in Community"}</div></span>
@@ -5170,6 +5230,7 @@ return (
         {/* Toast */}
         {toast&&<div role="status" aria-live="polite" style={{position:"absolute",top:100,left:"50%",transform:"translateX(-50%)",background:cd,color:tc,padding:"10px 20px",borderRadius:12,boxShadow:"0 6px 24px rgba(0,0,0,.3)",zIndex:300,maxWidth:300,border:`1px solid ${ac}`,fontSize:fs,animation:"slideD .3s ease-out",textAlign:"center"}}>{toast}</div>}
 
+        {storageWarn&&<div style={{flexShrink:0,background:"#b45309",color:"#fff",fontSize:fs-2,textAlign:"center",padding:"5px 8px"}}>{storageWarn}</div>}
         {/* Offline banner */}
         {!online&&<div style={{flexShrink:0,background:"#b91c1c",color:"#fff",fontSize:fs-2,textAlign:"center",padding:"4px 8px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>📡 {lang==="tr"?"Çevrimdışısınız — bazı özellikler sınırlı olabilir":"You're offline — some features may be limited"}</div>}
 
