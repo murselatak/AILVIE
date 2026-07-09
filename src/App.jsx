@@ -645,6 +645,7 @@ const UNIT_CONV={
   tibc:{canon:"ug/dL",f:{"ug/dL":1,"µg/dL":1,"umol/L":5.587}},
   esr:{canon:"mm/h",f:{"mm/h":1,"mm/hr":1}},
   insulin:{canon:"uIU/mL",f:{"uIU/mL":1,"µIU/mL":1,"mIU/L":1,"pmol/L":1/6.945}},
+  uacr:{canon:"mg/g",f:{"mg/g":1,"mg/mmol":8.84}},
 };
 // Returns {ok, value, unit} in canonical unit, or {ok:false,reason:"unknown-unit"} -> caller must NOT score.
 const normalizeUnit=(test,value,unit)=>{
@@ -681,6 +682,7 @@ const REF_LIB={
   magnesium:{unit:"mg/dL",adult:{any:[1.5,2.4]}},
   phosphorus:{unit:"mg/dL",adult:{any:[2.5,4.5]}},
   tibc:{unit:"ug/dL",adult:{any:[251,460]}},
+  uacr:{unit:"mg/g",adult:{any:[0,30]}},
   // ESR: not a fixed interval - Westergren upper limit depends on age & sex (age/2 male; (age+10)/2 female)
   esr:{unit:"mm/h",dynamic:(ctx)=>{const y=ctx&&ctx.ageYears;if(!y||!ctx.sex)return null;const hi=ctx.sex==="female"?Math.round((y+10)/2):Math.round(y/2);return[0,hi];}},
 };
@@ -738,6 +740,7 @@ const TEST_EDU={
   tibc:["Kanın demir taşıma kapasitesini gösterir; demir eksikliğinde yükselir.","Iron-binding capacity; rises in iron deficiency."],
   esr:["İltihabın dolaylı göstergesidir; üst sınırı yaş ve cinsiyete göre değişir.","Indirect marker of inflammation; upper limit varies by age and sex."],
   insulin:["Açlık insülini; glukozla birlikte insülin direnci (HOMA-IR) hesabında kullanılır.","Fasting insulin; used with glucose for HOMA-IR."],
+  uacr:["İdrarda albümin/kreatinin oranı; böbrek hasarının erken göstergesidir.","Urine albumin-to-creatinine ratio; early marker of kidney damage."],
 };
 const SYS_SPECIALTY={kidney:["Nefroloji / Dahiliye","Nephrology / Internal Medicine"],glycemic:["Endokrinoloji / Dahiliye","Endocrinology"],hematology:["Hematoloji / Dahiliye","Hematology"],liver:["Gastroenteroloji / Dahiliye","Gastroenterology"],lipid:["Kardiyoloji / Dahiliye","Cardiology"],thyroid:["Endokrinoloji","Endocrinology"],inflammation:["Dahiliye","Internal Medicine"],nutrition:["Dahiliye / Beslenme","Internal Medicine / Nutrition"]};
 const LIFESTYLE={
@@ -751,6 +754,24 @@ const LIFESTYLE={
   nutrition:[["Güneş ışığından yararlanmak","Dengeli beslenme"],["Sun exposure","Balanced diet"]],
 };
 // Follow-up interval suggestion by severity (educational, not prescriptive)
+// ---------- Kidney: eGFR (CKD-EPI 2021, race-free) + UACR + KDIGO staging ----------
+// Validated against published calculator values. ADULTS ONLY (pediatric uses Schwartz -> gated).
+const calcEGFR=(scrMgDl,ageYears,sex)=>{
+  const scr=Number(scrMgDl),age=Number(ageYears);
+  if(!(scr>0)||!(age>0))return{ok:false,reason:"invalid"};
+  if(age<18)return{ok:false,reason:"age"}; // pediatric requires Schwartz equation + height
+  if(sex!=="male"&&sex!=="female")return{ok:false,reason:"needs-sex"};
+  const female=sex==="female",k=female?0.7:0.9,a=female?-0.241:-0.302,r=scr/k;
+  let v=142*Math.pow(Math.min(r,1),a)*Math.pow(Math.max(r,1),-1.200)*Math.pow(0.9938,age);
+  if(female)v*=1.012;
+  const g=Math.round(v);
+  const stage=g>=90?"G1":g>=60?"G2":g>=45?"G3a":g>=30?"G3b":g>=15?"G4":"G5";
+  return{ok:true,value:g,stage,unit:"mL/min/1.73m²"};
+};
+const uacrStage=(mgPerG)=>{const u=Number(mgPerG);if(!(u>=0))return null;return u<30?"A1":u<=300?"A2":"A3";};
+const KDIGO_TEXT={G1:["Normal veya yüksek GFR","Normal or high GFR"],G2:["Hafif azalmış GFR","Mildly decreased"],G3a:["Hafif-orta azalmış","Mild-moderate"],G3b:["Orta-ileri azalmış","Moderate-severe"],G4:["İleri azalmış","Severely decreased"],G5:["Böbrek yetmezliği düzeyi","Kidney failure range"]};
+const UACR_TEXT={A1:["Normal / hafif artmış (<30 mg/g)","Normal (<30)"],A2:["Orta derecede artmış (30–300 mg/g)","Moderately increased"],A3:["Ağır artmış (>300 mg/g)","Severely increased"]};
+if(typeof window!=="undefined"){window.__calcEGFR=calcEGFR;window.__uacrStage=uacrStage;}
 // HOMA-IR = (fasting glucose mg/dL x fasting insulin uIU/mL) / 405  (screening only)
 const homaIR=(glucoseMgDl,insulinUiuMl)=>{const g=Number(glucoseMgDl),i=Number(insulinUiuMl);if(!(g>0&&i>0))return null;const v=Math.round((g*i/405)*100)/100;return{value:v,level:v<2.5?"normal":v<3.8?"borderline":"high"};};
 if(typeof window!=="undefined")window.__homaIR=homaIR;
@@ -859,6 +880,7 @@ const LAB_TESTS=[
   {k:"tibc",tr:"TIBC (Demir Bağlama)",en:"TIBC",units:["ug/dL","umol/L"],sys:"hematology"},
   {k:"esr",tr:"Sedimentasyon (ESR)",en:"ESR",units:["mm/h"],sys:"inflammation"},
   {k:"insulin",tr:"İnsülin (açlık)",en:"Insulin (fasting)",units:["uIU/mL","pmol/L"],sys:"glycemic"},
+  {k:"uacr",tr:"İdrar Alb/Kreatinin (UACR)",en:"Urine ACR",units:["mg/g","mg/mmol"],sys:"kidney"},
 ];
 // Full pipeline: normalize -> select reference -> classify. Returns {saved, classification}
 const evaluateLab=(testKey,rawValue,rawUnit,ctx,labReported)=>{
@@ -3657,6 +3679,43 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         </div>;})}
       </div>
       <div style={{fontSize:fs-4,color:mt,marginTop:6,lineHeight:1.4}}>{L?"Skor yalnızca sınıflandırılabilen tahlillerden hesaplanır; sınıflandırılamayanlar (çocuk/gebelik/bağlam eksik) hesaba katılmaz. Tarama amaçlıdır, tanı değildir.":"Score uses classifiable labs only. Screening, not diagnosis."}</div>
+    </div>;})()}
+  {/* Kidney: eGFR (CKD-EPI 2021) + UACR + KDIGO */}
+  {(()=>{
+    const L=lang==="tr",ctx=patCtx();
+    const last=(k)=>{const a=(labs||[]).filter(x=>x.test===k).sort((a,b)=>b.ts-a.ts);return a[0]||null;};
+    const cr=last("creatinine"),ua=last("uacr");
+    if(!cr&&!ua)return null;
+    const eg=cr?calcEGFR(cr.canonValue,ctx.ageYears,ctx.sex):null;
+    const uStage=ua?uacrStage(ua.canonValue):null;
+    const gated=ctx.pregnant||(ctx.band&&ctx.band!=="adult"&&ctx.band!=="older");
+    if(gated||(eg&&!eg.ok&&(eg.reason==="age"||eg.reason==="needs-sex")))
+      return <div style={{...CS,border:`1px solid ${bd}`}}><b style={{fontSize:fs,color:tc}}>🫘 {L?"Böbrek Değerlendirmesi":"Kidney Assessment"}</b><div style={{fontSize:fs-3,color:mt,marginTop:4}}>{ctx.pregnant?(L?"Gebelikte eGFR formülleri geçerli değildir — doktorunuz değerlendirmelidir.":"eGFR formulas not valid in pregnancy."):(eg&&eg.reason==="needs-sex")?(L?"eGFR için biyolojik cinsiyet gerekli (Hasta Karnesi).":"Sex required for eGFR."):(L?"Çocuklarda eGFR farklı formül (Schwartz) ve boy gerektirir — hesaplanmadı.":"Pediatric eGFR requires Schwartz equation.")}</div></div>;
+    const gColor=(st)=>st==="G1"||st==="G2"?sc:st==="G3a"||st==="G3b"?"#e9a23b":dg;
+    const uColor=(st)=>st==="A1"?sc:st==="A2"?"#e9a23b":dg;
+    const highRisk=(eg&&eg.ok&&eg.value<60)||(uStage&&uStage!=="A1");
+    return <div style={{...CS,border:`1px solid ${highRisk?"#e9a23b":sc}44`}}>
+      <b style={{fontSize:fs+1,color:tc}}>🫘 {L?"Böbrek Değerlendirmesi":"Kidney Assessment"}</b>
+      <div style={{display:"flex",gap:8,marginTop:8}}>
+        {eg&&eg.ok&&<div style={{flex:1,background:dark?"#0e1620":"#f4f7fa",borderRadius:10,padding:"9px 10px"}}>
+          <div style={{fontSize:fs-4,color:mt}}>eGFR <span style={{fontSize:fs-5}}>(CKD-EPI 2021)</span></div>
+          <div style={{fontSize:fs+4,fontWeight:800,color:gColor(eg.stage)}}>{eg.value}</div>
+          <div style={{fontSize:fs-4,color:mt}}>{eg.unit}</div>
+          <div style={{fontSize:fs-2,fontWeight:700,color:gColor(eg.stage),marginTop:3}}>{eg.stage} · {KDIGO_TEXT[eg.stage]?(L?KDIGO_TEXT[eg.stage][0]:KDIGO_TEXT[eg.stage][1]):""}</div>
+        </div>}
+        {uStage&&<div style={{flex:1,background:dark?"#0e1620":"#f4f7fa",borderRadius:10,padding:"9px 10px"}}>
+          <div style={{fontSize:fs-4,color:mt}}>UACR</div>
+          <div style={{fontSize:fs+4,fontWeight:800,color:uColor(uStage)}}>{ua.canonValue}</div>
+          <div style={{fontSize:fs-4,color:mt}}>mg/g</div>
+          <div style={{fontSize:fs-2,fontWeight:700,color:uColor(uStage),marginTop:3}}>{uStage} · {UACR_TEXT[uStage]?(L?UACR_TEXT[uStage][0]:UACR_TEXT[uStage][1]):""}</div>
+        </div>}
+      </div>
+      <div style={{background:`${highRisk?"#e9a23b":sc}12`,border:`1px solid ${(highRisk?"#e9a23b":sc)}44`,borderRadius:9,padding:"8px 10px",fontSize:fs-2,color:tc,marginTop:8,lineHeight:1.4}}>
+        🧭 {eg&&eg.ok&&eg.value<15?(L?"eGFR böbrek yetmezliği düzeyinde — vakit kaybetmeden doktorunuza başvurun.":"Kidney failure range — seek care promptly."):
+            highRisk?(L?"Böbrek fonksiyonu ve/veya idrar albümini beklenenin dışında. Kreatinin, eGFR ve UACR birlikte yorumlanmalıdır; tek bir sonuç tanı koydurmaz. Nefroloji/dahiliye değerlendirmesi uygun olabilir.":"Kidney markers outside expected range; interpret together, not diagnostic."):
+            (L?"eGFR ve idrar albümini beklenen aralıkta görünüyor. Rutin takibinizi doktorunuzla planlayın.":"Kidney markers appear within expected range.")}
+      </div>
+      <div style={{fontSize:fs-4,color:mt,marginTop:6,lineHeight:1.4}}>{L?"eGFR yalnızca 18 yaş üstü, gebe olmayan bireylerde geçerlidir; kas kütlesi, akut hastalık ve bazı ilaçlar sonucu etkiler. Tarama amaçlıdır, tanı değildir.":"eGFR valid for non-pregnant adults only. Screening, not diagnosis."}</div>
     </div>;})()}
   {/* HOMA-IR (auto) */}
   {(()=>{
