@@ -5253,6 +5253,28 @@ const renderAdmin=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,
   </div>
 </div>);
 
+// Keyboard: Escape closes the top-most open overlay (WCAG 2.1.2 no keyboard trap).
+// The lock screen is intentionally NOT closable this way.
+useEffect(()=>{
+  const onKey=(e)=>{
+    if(e.key!=="Escape")return;
+    if(locked)return; // never dismiss the lock with a keystroke
+    const closers=[
+      [imgView,()=>setImgView(null)],
+      [callModal,()=>setCallModal(null)],
+      [showGroupModal,()=>setShowGroupModal(false)],
+      [recog,()=>setRecog(null)],
+      [showAddChooser,()=>setShowAddChooser(false)],
+      [showWx,()=>setShowWx(false)],
+      [showCountryPicker,()=>setShowCountryPicker(false)],
+    ];
+    const open=closers.find(([isOpen])=>isOpen);
+    if(open){e.preventDefault();open[1]();}
+  };
+  window.addEventListener("keydown",onKey);
+  return()=>window.removeEventListener("keydown",onKey);
+},[locked,imgView,callModal,showGroupModal,recog,showAddChooser,showWx,showCountryPicker]);
+
 const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:renderMeds,appts:renderAppts,health:renderHealth,pCard:renderPCard,notes:renderNotes,contacts:renderContacts,community:renderCommunity,chat:renderChat,settings:renderSettings,privacy:renderPrivacy,terms:renderTerms,about:renderAbout};
   // SECURITY: when locked, render ONLY the lock screen. The app tree (health data) is never mounted.
   if(locked&&lockCfg)return(<div style={{fontFamily:"system-ui,-apple-system,sans-serif",background:dark?"#0b1117":"#f7fafc",minHeight:"100vh"}}>
