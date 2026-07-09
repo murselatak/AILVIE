@@ -716,6 +716,41 @@ const decryptJSON=async(env,password)=>{
   return JSON.parse(dec.decode(pt));
 };
 if(typeof window!=="undefined"){window.__encryptJSON=encryptJSON;window.__decryptJSON=decryptJSON;}
+// ---------- App lock: PIN (PBKDF2-hashed, never stored in clear) + optional biometric (WebAuthn) ----------
+const hashPIN=async(pin,saltB64)=>{
+  const salt=saltB64?b64d(saltB64):crypto.getRandomValues(new Uint8Array(16));
+  const base=await crypto.subtle.importKey("raw",enc.encode(pin),"PBKDF2",false,["deriveBits"]);
+  const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:250000,hash:"SHA-256"},base,256);
+  return{salt:b64e(salt),hash:b64e(bits)};
+};
+const verifyPIN=async(pin,rec)=>{
+  if(!rec||!rec.salt||!rec.hash)return false;
+  const h=await hashPIN(pin,rec.salt);
+  // constant-time-ish compare
+  if(h.hash.length!==rec.hash.length)return false;
+  let diff=0;for(let i=0;i<h.hash.length;i++)diff|=h.hash.charCodeAt(i)^rec.hash.charCodeAt(i);
+  return diff===0;
+};
+const biometricAvailable=async()=>{try{return !!(window.PublicKeyCredential&&await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());}catch(e){return false;}};
+const biometricRegister=async(userName)=>{
+  const challenge=crypto.getRandomValues(new Uint8Array(32));
+  const userId=crypto.getRandomValues(new Uint8Array(16));
+  const cred=await navigator.credentials.create({publicKey:{
+    challenge,rp:{name:"AILVIE"},user:{id:userId,name:userName||"ailvie-user",displayName:userName||"AILVIE"},
+    pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
+    authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"preferred"},
+    timeout:60000,attestation:"none"}});
+  if(!cred)throw new Error("no-credential");
+  return b64e(cred.rawId);
+};
+const biometricVerify=async(credIdB64)=>{
+  const challenge=crypto.getRandomValues(new Uint8Array(32));
+  const pk={challenge,timeout:60000,userVerification:"required"};
+  if(credIdB64)pk.allowCredentials=[{type:"public-key",id:b64d(credIdB64)}];
+  const assertion=await navigator.credentials.get({publicKey:pk});
+  return !!assertion;
+};
+if(typeof window!=="undefined"){window.__hashPIN=hashPIN;window.__verifyPIN=verifyPIN;}
 // ---------- Durable storage: IndexedDB primary, localStorage fallback/migration ----------
 // Why: localStorage is ~5MB, throws QuotaExceededError when full (previously swallowed silently),
 // and browsers evict it under storage pressure. IndexedDB is orders of magnitude larger.
@@ -1914,7 +1949,40 @@ const[labs,setLabs]=useState([]); // [{id,ts,test,value,unit,canonValue,canonUni
 const[labForm,setLabForm]=useState({test:"glucose",value:"",unit:"mg/dL",low:"",high:""});
 const[labParse,setLabParse]=useState({busy:false,rows:[],err:null,fileName:""});
 const[storageWarn,setStorageWarn]=useState(null);
+const[lockCfg,setLockCfg]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_lock")||"null");}catch(e){return null;}});
+const[locked,setLocked]=useState(()=>{try{return !!JSON.parse(localStorage.getItem("ailvie_lock")||"null");}catch(e){return false;}});
+const[pinIn,setPinIn]=useState("");
+const[lockErr,setLockErr]=useState("");
+const[lockTries,setLockTries]=useState(0);
+const[bioAvail,setBioAvail]=useState(false);
+const lastActiveRef=useRef(Date.now());
 const[lastBackup,setLastBackup]=useState(()=>{try{const v=localStorage.getItem("ailvie_last_backup");return v?Number(v):0;}catch(e){return 0;}});
+useEffect(()=>{biometricAvailable().then(setBioAvail);},[]);
+useEffect(()=>{
+  if(!lockCfg)return;
+  const onHide=()=>{if(document.visibilityState==="hidden")lastActiveRef.current=Date.now();};
+  const onShow=()=>{
+    if(document.visibilityState!=="visible")return;
+    const idle=Date.now()-lastActiveRef.current;
+    const graceMs=(lockCfg.graceSec||60)*1000;
+    if(idle>graceMs)setLocked(true);
+  };
+  document.addEventListener("visibilitychange",onHide);
+  document.addEventListener("visibilitychange",onShow);
+  return()=>{document.removeEventListener("visibilitychange",onHide);document.removeEventListener("visibilitychange",onShow);};
+},[lockCfg]);
+const tryUnlockPIN=async()=>{
+  if(!lockCfg)return;
+  const ok=await verifyPIN(pinIn,lockCfg.pin);
+  if(ok){setLocked(false);setPinIn("");setLockErr("");setLockTries(0);lastActiveRef.current=Date.now();}
+  else{const n=lockTries+1;setLockTries(n);setPinIn("");setLockErr(lang==="tr"?`Yanlış PIN (${n})`:`Wrong PIN (${n})`);}
+};
+const tryUnlockBio=async()=>{
+  if(!lockCfg||!lockCfg.credId)return;
+  try{const ok=await biometricVerify(lockCfg.credId);if(ok){setLocked(false);setLockErr("");setLockTries(0);lastActiveRef.current=Date.now();}}
+  catch(e){setLockErr(lang==="tr"?"Biyometrik doğrulama başarısız — PIN girin":"Biometric failed — enter PIN");}
+};
+
 const[persisted,setPersisted]=useState(false);
 const dataLoadedRef=useRef(false);
 const[repMetric,setRepMetric]=useState("weight");
@@ -3403,6 +3471,49 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   <div style={CS}><div style={{marginBottom:6}}>🤖 AI API Key <span style={{fontSize:fs-3,color:mt}}>(Anthropic)</span></div><div style={{display:"flex",gap:6}}><input type="password" value={apiKey} onChange={e=>{setApiKey(e.target.value);try{localStorage.setItem("ailvie_api_key",e.target.value);}catch(ex){}}} placeholder="sk-ant-..." style={{...IS,flex:1,fontFamily:"monospace",fontSize:fs-2}}/>{apiKey&&<button onClick={()=>{setApiKey("");try{localStorage.removeItem("ailvie_api_key");}catch(ex){}}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",color:dg,cursor:"pointer"}}>✕</button>}</div><div style={{fontSize:fs-3,color:apiKey?sc:mt,marginTop:4}}>{apiKey?(lang==="tr"?"✓ API anahtarı ayarlandı":"✓ API key set"):(lang==="tr"?"AI Sohbet, çeviri ve ilaç analizi için gerekli":"Required for AI Chat, translation & drug analysis")}</div></div>
   <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>setEmNums(p=>p.filter(x=>x.id!==en.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🛡️ {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button onClick={()=>{const willOn=!perms[k];setPerms(p=>({...p,[k]:willOn}));if(k==="loc"){if(willOn){notify(lang==="tr"?"📍 Konum açılıyor…":"📍 Enabling location…");loadWeather(true);}else setWeather({err:"off"});return;}if(k==="notif"){if(willOn&&('Notification'in window)){if(Notification.permission==="denied")notify(lang==="tr"?"⚠️ Bildirim tarayıcıda engelli. Tarayıcı > Site izinleri > Bildirim'i açın.":"⚠️ Notifications blocked in browser settings.");else Notification.requestPermission().then(st=>{if(st!=="granted")notify(lang==="tr"?"Bildirim izni verilmedi — tarayıcı ayarlarından açabilirsiniz.":"Notification permission not granted.");}).catch(()=>{});}return;}}} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
+  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🔒 {lang==="tr"?"Uygulama Kilidi":"App Lock"}</div>
+    {!lockCfg
+      ? <>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonunuz başkasının eline geçerse sağlık verileriniz görünmesin. PIN, cihazınızda şifrelenmiş özet (PBKDF2) olarak saklanır — düz metin tutulmaz.":"Protect your health data with a PIN. Stored as a PBKDF2 hash."}</div>
+        <button onClick={async()=>{
+          const L=lang==="tr";
+          const p1=window.prompt(L?"Yeni PIN (en az 4 rakam):":"New PIN (min 4 digits):","");
+          if(p1===null)return;
+          if(!/^\d{4,12}$/.test(p1)){notify(L?"PIN 4-12 rakam olmalı":"PIN must be 4-12 digits");return;}
+          const p2=window.prompt(L?"PIN'i tekrar girin:":"Repeat PIN:","");
+          if(p2!==p1){notify(L?"PIN'ler eşleşmedi":"PINs do not match");return;}
+          if(!window.confirm(L?"⚠️ PIN'inizi unutursanız verilerinize erişemezsiniz (kurtarma yolu yoktur). Önce şifreli yedek almanız önerilir. Devam edilsin mi?":"⚠️ No recovery if you forget it. Continue?"))return;
+          const rec=await hashPIN(p1);
+          let credId=null;
+          if(bioAvail&&window.confirm(L?"Biyometrik (parmak izi / yüz) ile de açmak ister misiniz?":"Also enable biometrics?")){
+            try{credId=await biometricRegister(pat.name||"AILVIE");}catch(e){notify(L?"Biyometrik kurulamadı — yalnızca PIN etkin":"Biometric setup failed — PIN only");}
+          }
+          const cfg={pin:rec,credId,graceSec:60,createdAt:Date.now()};
+          try{localStorage.setItem("ailvie_lock",JSON.stringify(cfg));}catch(e){}
+          setLockCfg(cfg);lastActiveRef.current=Date.now();
+          notify(L?"🔒 Uygulama kilidi etkin":"🔒 App lock enabled");
+        }} style={{...BP,width:"100%",padding:"9px"}}>🔒 {lang==="tr"?"PIN Belirle":"Set PIN"}</button>
+      </>
+      : <>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2,color:tc,marginBottom:6}}><span>{lang==="tr"?"Durum":"Status"}</span><b style={{color:sc}}>✓ {lang==="tr"?"Etkin":"Enabled"}</b></div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2,color:tc,marginBottom:6}}><span>{lang==="tr"?"Biyometrik":"Biometrics"}</span><b style={{color:lockCfg.credId?sc:mt}}>{lockCfg.credId?(lang==="tr"?"Açık":"On"):(lang==="tr"?"Kapalı":"Off")}</b></div>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:6}}>{lang==="tr"?"Kilitlenme süresi (arka planda)":"Auto-lock delay"}</div>
+        <div style={{display:"flex",gap:6,marginBottom:8}}>{[[0,lang==="tr"?"Hemen":"Instant"],[60,"1 dk"],[300,"5 dk"],[900,"15 dk"]].map(([v,l])=>
+          <button key={v} onClick={()=>{const c={...lockCfg,graceSec:v};try{localStorage.setItem("ailvie_lock",JSON.stringify(c));}catch(e){}setLockCfg(c);}}
+            style={{flex:1,padding:"6px 2px",borderRadius:8,border:`1px solid ${lockCfg.graceSec===v?ac:bd}`,background:lockCfg.graceSec===v?`${ac}22`:"transparent",color:lockCfg.graceSec===v?ac:mt,fontSize:fs-3,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
+        <div style={{display:"flex",gap:6}}>
+          <button onClick={()=>setLocked(true)} style={{...BP,flex:1,padding:"8px",background:"transparent",color:ac,border:`1px solid ${ac}`,fontSize:fs-2}}>{lang==="tr"?"Şimdi Kilitle":"Lock now"}</button>
+          <button onClick={async()=>{
+            const L=lang==="tr";
+            const p=window.prompt(L?"Kilidi kaldırmak için mevcut PIN:":"Enter current PIN to remove lock:","");
+            if(p===null)return;
+            if(!await verifyPIN(p,lockCfg.pin)){notify(L?"PIN yanlış":"Wrong PIN");return;}
+            try{localStorage.removeItem("ailvie_lock");}catch(e){}
+            setLockCfg(null);setLocked(false);notify(L?"Kilit kaldırıldı":"Lock removed");
+          }} style={{...BP,flex:1,padding:"8px",background:dg,fontSize:fs-2}}>{lang==="tr"?"Kilidi Kaldır":"Remove lock"}</button>
+        </div>
+      </>}
+  </div>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>💾 {lang==="tr"?"Depolama":"Storage"}</div>
     <StorageHealth/>
   </div>}
@@ -4979,6 +5090,24 @@ const renderAdmin=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,
 </div>);
 
 const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:renderMeds,appts:renderAppts,health:renderHealth,pCard:renderPCard,notes:renderNotes,contacts:renderContacts,community:renderCommunity,chat:renderChat,settings:renderSettings,privacy:renderPrivacy,terms:renderTerms,about:renderAbout};
+  // SECURITY: when locked, render ONLY the lock screen. The app tree (health data) is never mounted.
+  if(locked&&lockCfg)return(<div style={{fontFamily:"system-ui,-apple-system,sans-serif",background:dark?"#0b1117":"#f7fafc",minHeight:"100vh"}}>
+    <div style={{position:"fixed",inset:0,zIndex:5000,background:dark?"#0b1117":"#f7fafc",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,gap:14}}>
+          <Avatar s={64}/>
+          <div style={{fontWeight:800,fontSize:fs+6,color:"#e8a817",WebkitTextStroke:"0.8px #e8a817",fontFamily:"Rajdhani,sans-serif"}}>AILVIE</div>
+          <div style={{color:mt,fontSize:fs-1,textAlign:"center"}}>{lang==="tr"?"Sağlık verileriniz kilitli":"Your health data is locked"}</div>
+          <input type="password" inputMode="numeric" autoComplete="off" value={pinIn} maxLength={12}
+            onChange={e=>{setPinIn(e.target.value.replace(/\D/g,""));setLockErr("");}}
+            onKeyDown={e=>{if(e.key==="Enter")tryUnlockPIN();}}
+            placeholder={lang==="tr"?"PIN":"PIN"} autoFocus
+            style={{...IS,width:"100%",maxWidth:260,textAlign:"center",letterSpacing:6,fontSize:fs+4,padding:"12px"}}/>
+          {lockErr&&<div style={{color:dg,fontSize:fs-2}}>{lockErr}</div>}
+          <button onClick={tryUnlockPIN} disabled={pinIn.length<4} style={{...BP,width:"100%",maxWidth:260,padding:"11px",opacity:pinIn.length<4?0.5:1}}>{lang==="tr"?"Kilidi Aç":"Unlock"}</button>
+          {lockCfg.credId&&<button onClick={tryUnlockBio} style={{...BP,width:"100%",maxWidth:260,padding:"11px",background:"transparent",color:ac,border:`1px solid ${ac}`}}>🔐 {lang==="tr"?"Biyometrik ile aç":"Use biometrics"}</button>}
+          <div style={{color:mt,fontSize:fs-4,textAlign:"center",maxWidth:280,lineHeight:1.4,marginTop:6}}>{lang==="tr"?"PIN'inizi unuttuysanız verileri açmanın bir yolu yoktur; uygulamayı sıfırlayıp şifreli yedeğinizden geri yükleyin.":"If you forget the PIN, restore from your encrypted backup."}</div>
+        </div>
+  </div>);
+
 
 // ═══ RESTRUCTURED NAV — 2 rows only ═══
 const nav1=[{key:"contacts",icon:"📞",label:t.contacts},{key:"pCard",icon:"🪪",label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:"📊",label:t.health}];
@@ -5062,7 +5191,8 @@ return (
           const noP=e=>e.preventDefault();
           const hh=noteHistRef.current;const canU=hh.nid===n.id&&hh.idx>0;const canR=hh.nid===n.id&&hh.idx<hh.stack.length-1;const blk=fmtState.block;
           const saveClose=()=>{const empty=!n.title?.trim()&&!(n.content||"").replace(/<[^>]+>/g,"").trim()&&!(n.checklist&&n.checklist.some(i=>i.text.trim()))&&!media.length;if(empty){setNotes(p=>p.filter(x=>x.id!==n.id));setNoteMedia(p=>{const q={...p};delete q[n.id];return q;});}setEditNote(null);setNoteSheet(null);};
-          return(<><div style={{position:"fixed",inset:0,zIndex:9990,background:cbg}}/><div style={{position:"fixed",top:vvTop||0,left:0,right:0,height:vvh>0?vvh+"px":"100dvh",zIndex:9991,background:cbg,display:"flex",flexDirection:"column"}}>
+        
+  return(<><div style={{position:"fixed",inset:0,zIndex:9990,background:cbg}}/><div style={{position:"fixed",top:vvTop||0,left:0,right:0,height:vvh>0?vvh+"px":"100dvh",zIndex:9991,background:cbg,display:"flex",flexDirection:"column"}}>
             <div style={{display:"flex",alignItems:"center",gap:6,padding:"10px 8px 6px",flexShrink:0}}>
               <button onClick={saveClose} aria-label={lang==="tr"?"Geri":"Back"} style={{...tbBtn}}>{svgIco(ICO.back,26)}</button>
               <div style={{flex:1}}/>
