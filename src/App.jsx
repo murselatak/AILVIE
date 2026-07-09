@@ -605,6 +605,38 @@ useEffect(()=>{const bip=(e)=>{e.preventDefault();setInstallEvt(e);};const inst=
 const[notifs,setNotifs]=useState([]);
 const unread=notifs.filter(n=>!n.read).length;
 const patCtx=()=>({band:ageBandOf(pat.birthDate),ageYears:ageYearsFrom(pat.birthDate),pregnant:!!pat.pregnant,sex:pat.sex||"",onAnticoag:!!pat.onAnticoag});
+const parseLabDocument=async(file)=>{
+  const L=lang==="tr";
+  if(!file)return;
+  if(file.size>4.5*1024*1024){setLabParse({busy:false,rows:[],err:L?"Dosya çok büyük (max ~4.5 MB). Daha küçük/net bir fotoğraf deneyin.":"File too large (max ~4.5MB).",fileName:file.name});return;}
+  const isPdf=file.type==="application/pdf";
+  const isImg=/^image\/(jpeg|png|webp|gif)$/.test(file.type);
+  if(!isPdf&&!isImg){setLabParse({busy:false,rows:[],err:L?"Yalnızca JPG/PNG/WEBP veya PDF desteklenir.":"Only JPG/PNG/WEBP or PDF.",fileName:file.name});return;}
+  setLabParse({busy:true,rows:[],err:null,fileName:file.name});
+  try{
+    const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=()=>rej(new Error("read"));r.readAsDataURL(file);});
+    const known=LAB_TESTS.map(x=>x.k).join(", ");
+    const sys="You extract laboratory test results from a report image/PDF. Return ONLY valid JSON, no prose, no markdown fences. Schema: {\"rows\":[{\"test\":\"<one of: "+known+" | unknown>\",\"raw_name\":\"<name as printed>\",\"value\":<number>,\"unit\":\"<unit as printed>\",\"ref_low\":<number|null>,\"ref_high\":<number|null>,\"flag\":\"<H|L|critical|null>\",\"confidence\":<0..1>}],\"report_date\":\"<YYYY-MM-DD|null>\",\"lab_name\":\"<string|null>\",\"overall_confidence\":<0..1>}. Rules: never invent values; if a field is unreadable use null and lower confidence; map test names to the allowed keys only when certain, otherwise use \"unknown\" and keep raw_name; copy units exactly as printed; include the report's own reference range when printed.";
+    const content=[isPdf?{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}}:{type:"image",source:{type:"base64",media_type:file.type,data:b64}},{type:"text",text:"Extract all lab results as JSON per the schema."}];
+    const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,system:sys,messages:[{role:"user",content}]})});
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||("HTTP "+r.status));}
+    const j=await r.json();
+    const txt=(j.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("").replace(/```json|```/g,"").trim();
+    const parsed=JSON.parse(txt);
+    const rows=(parsed.rows||[]).map((x,i)=>{
+      const known2=LAB_TESTS.find(t=>t.k===x.test);
+      const conf=Number(x.confidence);
+      return{id:"p"+i,test:known2?x.test:"",rawName:x.raw_name||"",value:x.value==null?"":String(x.value),unit:x.unit||"",low:x.ref_low==null?"":String(x.ref_low),high:x.ref_high==null?"":String(x.ref_high),flag:x.flag||null,confidence:isFinite(conf)?conf:0,include:!!known2&&x.value!=null};
+    });
+    if(!rows.length)setLabParse({busy:false,rows:[],err:L?"Belgede tanınabilir tahlil bulunamadı. Değerleri elle girebilirsiniz.":"No recognizable labs found.",fileName:file.name});
+    else setLabParse({busy:false,rows,err:null,fileName:file.name,overall:Number(parsed.overall_confidence)||0,labName:parsed.lab_name||null,reportDate:parsed.report_date||null});
+  }catch(err){
+    const msg=String(err&&err.message||err);
+    setLabParse({busy:false,rows:[],err:/API key/i.test(msg)
+      ?(L?"Sunucuda AI anahtarı tanımlı değil — belge okuma şu an kullanılamıyor. Değerleri elle girebilirsiniz.":"AI key not configured on server.")
+      :(L?("Belge okunamadı: "+msg+". Değerleri elle girebilirsiniz."):("Could not read document: "+msg)),fileName:file.name});
+  }
+};
 const fold=(x)=>String(x==null?"":x).toLocaleLowerCase("tr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ı/g,"i");
 const getActiveWarnings=()=>{
   const out=[];const nowMin=now.getHours()*60+now.getMinutes();const tr=lang==='tr';
@@ -1756,6 +1788,7 @@ const[gluType,setGluType]=useState("fasting");
 const[healthLog,setHealthLog]=useState([]); // timestamped vital history [{id,ts,type,val,meta}]
 const[labs,setLabs]=useState([]); // [{id,ts,test,value,unit,canonValue,canonUnit,level,source,labLow,labHigh}]
 const[labForm,setLabForm]=useState({test:"glucose",value:"",unit:"mg/dL",low:"",high:""});
+const[labParse,setLabParse]=useState({busy:false,rows:[],err:null,fileName:""});
 const[repMetric,setRepMetric]=useState("weight");
 const[repRange,setRepRange]=useState(30); // days; 0=all
 const[hba1cVal,setHba1cVal]=useState("");
@@ -3837,6 +3870,51 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     return <div style={{...CS}}>
       <b style={{fontSize:fs+1,color:tc}}>🧪 {L?"Tahlil Sonuçları":"Lab Results"}</b>
       <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{L?"Raporunuzdaki değeri girin. Raporda referans aralığı varsa onu da girin — uygulama önce onu kullanır.":"Enter your report value. If your report shows a reference range, enter it — it takes priority."}</div>
+      <label style={{display:"block",marginBottom:8}}>
+        <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{display:"none"}} onChange={e=>{const f2=e.target.files&&e.target.files[0];e.target.value="";if(f2)parseLabDocument(f2);}}/>
+        <div style={{...BP,background:"transparent",color:ac,border:`1px dashed ${ac}`,textAlign:"center",padding:"10px",cursor:"pointer",opacity:labParse.busy?0.6:1}}>{labParse.busy?(L?"🔍 Belge okunuyor…":"🔍 Reading…"):(L?"📄 Tahlil fotoğrafı / PDF yükle (AI okur)":"📄 Upload lab photo / PDF")}</div>
+      </label>
+      {labParse.err&&<div style={{background:`${dg}12`,border:`1px solid ${dg}44`,borderRadius:9,padding:"8px 10px",fontSize:fs-3,color:tc,marginBottom:8}}>⚠️ {labParse.err}</div>}
+      {labParse.rows.length>0&&<div style={{background:dark?"#0e1620":"#f4f7fa",borderRadius:10,padding:"9px 10px",marginBottom:8}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <b style={{fontSize:fs-1,color:tc}}>{L?"Okunan değerler":"Parsed values"}</b>
+          <button onClick={()=>setLabParse({busy:false,rows:[],err:null,fileName:""})} style={{background:"none",border:"none",color:mt,cursor:"pointer",fontSize:fs-2}}>✕</button>
+        </div>
+        {labParse.overall!=null&&labParse.overall<0.7&&<div style={{background:`#e9a23b18`,border:`1px solid #e9a23b55`,borderRadius:8,padding:"6px 9px",fontSize:fs-4,color:tc,margin:"6px 0"}}>⚠️ {L?"Düşük güvenle ayrıştırıldı — lütfen her değeri raporunuzla karşılaştırıp düzeltin.":"Parsed with low confidence — please verify each value."}</div>}
+        <div style={{fontSize:fs-4,color:mt,marginBottom:6}}>{L?"Kaydetmeden önce kontrol edin. AI hata yapabilir; sorumluluk size aittir.":"Verify before saving."}{labParse.labName?` · ${labParse.labName}`:""}</div>
+        {labParse.rows.map((row,ri)=>{
+          const upd=(k,v)=>setLabParse(p=>({...p,rows:p.rows.map((x,i)=>i===ri?{...x,[k]:v}:x)}));
+          const lowConf=row.confidence<0.7;
+          const ti2=LAB_TESTS.find(x=>x.k===row.test);
+          return <div key={row.id} style={{borderTop:`1px solid ${bd}`,paddingTop:6,marginTop:6}}>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <input type="checkbox" checked={row.include} onChange={e=>upd("include",e.target.checked)} style={{width:16,height:16,flexShrink:0}}/>
+              <select value={row.test} onChange={e=>{const nt=LAB_TESTS.find(x=>x.k===e.target.value);upd("test",e.target.value);if(nt&&!nt.units.includes(row.unit))upd("unit",nt.units[0]);}} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}>
+                <option value="">{L?"— eşleşmedi —":"— unmatched —"}</option>
+                {LAB_TESTS.map(x=><option key={x.k} value={x.k}>{L?x.tr:x.en}</option>)}
+              </select>
+              {lowConf&&<span title={L?"düşük güven":"low confidence"} style={{fontSize:fs-4,color:"#e9a23b",flexShrink:0}}>⚠️</span>}
+            </div>
+            {row.rawName&&<div style={{fontSize:fs-5,color:mt,marginLeft:22}}>{L?"raporda":"as printed"}: {row.rawName}{row.flag?` · ${row.flag}`:""}</div>}
+            <div style={{display:"flex",gap:5,marginTop:4,marginLeft:22}}>
+              <input value={row.value} onChange={e=>upd("value",e.target.value)} placeholder={L?"değer":"value"} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}/>
+              <select value={row.unit} onChange={e=>upd("unit",e.target.value)} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}>{(ti2?ti2.units:[row.unit]).map(u=><option key={u} value={u}>{u||"—"}</option>)}</select>
+              <input value={row.low} onChange={e=>upd("low",e.target.value)} placeholder={L?"alt":"low"} style={{...IS,width:52,padding:"5px 4px",fontSize:fs-3}}/>
+              <input value={row.high} onChange={e=>upd("high",e.target.value)} placeholder={L?"üst":"high"} style={{...IS,width:52,padding:"5px 4px",fontSize:fs-3}}/>
+            </div>
+          </div>;})}
+        <button onClick={()=>{
+          const ctx2=patCtx();let n=0,skipped=0;const add=[];
+          labParse.rows.filter(r=>r.include&&r.test&&r.value!=="").forEach(r=>{
+            const ev=evaluateLab(r.test,r.value,r.unit,ctx2,(r.low&&r.high)?{low:r.low,high:r.high}:null);
+            if(!ev.ok){skipped++;return;}
+            add.push({id:Date.now()+"_"+Math.random().toString(36).slice(2,5),ts:Date.now(),test:r.test,value:Number(r.value),unit:r.unit,canonValue:ev.norm.value,canonUnit:ev.norm.unit,level:ev.cls.applicable?ev.cls.level:null,naReason:ev.cls.applicable?null:ev.cls.reason,refLow:(ev.ref&&ev.ref.ok)?ev.ref.low:null,refHigh:(ev.ref&&ev.ref.ok)?ev.ref.high:null,source:(ev.ref&&ev.ref.source)||ev.kind,labLow:r.low||null,labHigh:r.high||null,parsed:true});n++;
+          });
+          if(!n){notify(L?"Kaydedilecek geçerli satır yok (birim/test eşleşmedi).":"No valid rows.");return;}
+          setLabs(p=>[...p,...add]);setLabParse({busy:false,rows:[],err:null,fileName:""});
+          notify(L?`✓ ${n} tahlil kaydedildi${skipped?` · ${skipped} atlandı (birim tanınmadı)`:""}`:`✓ ${n} labs saved`);
+        }} style={{...BP,width:"100%",marginTop:8,padding:"8px"}}>✓ {L?"Seçilenleri Kaydet":"Save selected"}</button>
+      </div>}
       <select value={labForm.test} onChange={e=>{const nt=LAB_TESTS.find(x=>x.k===e.target.value);setLabForm(f=>({...f,test:e.target.value,unit:nt.units[0],value:"",low:"",high:""}));}} style={{...IS,width:"100%",marginBottom:6}}>{LAB_TESTS.map(x=><option key={x.k} value={x.k}>{L?x.tr:x.en}</option>)}</select>
       <div style={{display:"flex",gap:6,marginBottom:6}}>
         <input type="number" step="0.01" inputMode="decimal" value={labForm.value} onChange={e=>setLabForm(f=>({...f,value:e.target.value}))} placeholder={L?"Değer":"Value"} style={{...IS,flex:1}}/>
