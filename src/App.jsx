@@ -604,6 +604,7 @@ useEffect(()=>{const bip=(e)=>{e.preventDefault();setInstallEvt(e);};const inst=
 // Notifications
 const[notifs,setNotifs]=useState([]);
 const unread=notifs.filter(n=>!n.read).length;
+const patCtx=()=>({band:ageBandOf(pat.birthDate),pregnant:!!pat.pregnant,sex:pat.sex||""});
 const fold=(x)=>String(x==null?"":x).toLocaleLowerCase("tr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ı/g,"i");
 const getActiveWarnings=()=>{
   const out=[];const nowMin=now.getHours()*60+now.getMinutes();const tr=lang==='tr';
@@ -616,6 +617,45 @@ const getActiveWarnings=()=>{
   try{if(glucose&&glucose.length){const g=glucose[glucose.length-1];if(g&&(Date.now()-g.ts)<864e5&&(g.val<70||g.val>=250))out.push({id:'gluW',icon:'🩸',kind:'info',title:(tr?'Şeker':'Glucose')+' '+g.val+' mg/dL',sub:g.val<70?(tr?'düşük — dikkat':'low'):(tr?'yüksek — doktorunuza danışın':'high'),high:g.val<54||g.val>=300});}const bl=(healthLog||[]).filter(x=>x.type==='bp');if(bl.length){const bp=bl[bl.length-1];const sV=bp.val,dV=(bp.meta&&bp.meta.d)||0;if((Date.now()-bp.ts)<864e5&&(sV>=140||dV>=90||sV<90))out.push({id:'bpW',icon:'🩺',kind:'info',title:(tr?'Tansiyon':'BP')+' '+sV+'/'+dV,sub:(sV>=140||dV>=90)?(tr?'yüksek':'high'):(tr?'düşük':'low'),high:sV>=180||dV>=120});}}catch(e){}
   return out.sort((a,b)=>(b.high?1:0)-(a.high?1:0));
 };
+// ---------- Clinical reference engine (safety-first, context-aware) ----------
+// Doc principle: no single universal table. Age/sex/pregnancy partitions are MANDATORY.
+// "Reference interval" != "diagnostic decision threshold" -> kept separate.
+const AGE_BANDS=[{k:"neonate",maxD:14},{k:"infant",maxD:730},{k:"child",maxD:4748},{k:"adolescent",maxD:7305},{k:"adult",maxD:21915},{k:"older",maxD:1e9}];
+const ageDaysFrom=(birthDate)=>{if(!birthDate)return null;const b=new Date(birthDate);if(isNaN(b))return null;const d=Math.floor((Date.now()-b.getTime())/864e5);return d>=0?d:null;};
+const ageBandOf=(birthDate)=>{const d=ageDaysFrom(birthDate);if(d==null)return null;return (AGE_BANDS.find(x=>d<=x.maxD)||{k:"older"}).k;};
+const ageYearsFrom=(birthDate)=>{const d=ageDaysFrom(birthDate);return d==null?null:Math.floor(d/365.25);};
+// Adult ADA diagnostic thresholds ONLY. Pediatric/pregnancy intentionally NOT auto-classified.
+const classifyGlucose=(val,type,ctx)=>{
+  const v=Number(val);if(!v||v<=0)return{applicable:false,reason:"invalid"};
+  const band=(ctx&&ctx.band)||null,preg=!!(ctx&&ctx.pregnant);
+  if(preg)return{applicable:false,reason:"pregnancy",kind:"threshold"};
+  if(band&&band!=="adult"&&band!=="older")return{applicable:false,reason:"age",band,kind:"threshold"};
+  if(!band)return{applicable:false,reason:"no-context",kind:"threshold"};
+  if(v<54)return{applicable:true,level:"critical-low",kind:"threshold"};
+  if(type==="fasting"){
+    if(v<70)return{applicable:true,level:"low",kind:"threshold"};
+    if(v<=99)return{applicable:true,level:"normal",kind:"threshold"};
+    if(v<=125)return{applicable:true,level:"prediabetes",kind:"threshold"};
+    if(v>=300)return{applicable:true,level:"critical-high",kind:"threshold"};
+    return{applicable:true,level:"diabetes-range",kind:"threshold"};
+  }
+  if(v>=300)return{applicable:true,level:"critical-high",kind:"threshold"};
+  if(v<70)return{applicable:true,level:"low",kind:"threshold"};
+  if(v<140)return{applicable:true,level:"normal",kind:"threshold"};
+  if(v<200)return{applicable:true,level:"prediabetes",kind:"threshold"};
+  return{applicable:true,level:"diabetes-range",kind:"threshold"};
+};
+const classifyHbA1c=(val,ctx)=>{
+  const v=Number(val);if(!v||v<=0)return{applicable:false,reason:"invalid"};
+  const band=(ctx&&ctx.band)||null,preg=!!(ctx&&ctx.pregnant);
+  if(preg)return{applicable:false,reason:"pregnancy",kind:"threshold"};
+  if(band&&band!=="adult"&&band!=="older")return{applicable:false,reason:"age",band,kind:"threshold"};
+  if(!band)return{applicable:false,reason:"no-context",kind:"threshold"};
+  if(v<5.7)return{applicable:true,level:"normal",eag:Math.round(28.7*v-46.7),kind:"threshold"};
+  if(v<6.5)return{applicable:true,level:"prediabetes",eag:Math.round(28.7*v-46.7),kind:"threshold"};
+  return{applicable:true,level:"diabetes-range",eag:Math.round(28.7*v-46.7),kind:"threshold"};
+};
+if(typeof window!=="undefined"){window.__ageBandOf=ageBandOf;window.__classifyGlucose=classifyGlucose;window.__classifyHbA1c=classifyHbA1c;window.__ageYearsFrom=ageYearsFrom;}
 const PROFANITY_ROOTS=["amk","amq","amcık","amcik","amına","amina","orospu","oç","piç","pic.","kahpe","kaltak","pezevenk","gavat","ibne","ipne","yarrak","yarak","dalyarak","siktir","siktim","sikeyim","sikik","puşt","pust","kevaşe","sürtük","surtuk","yavşak","yavsak","şerefsiz","serefsiz","haysiyetsiz","götver","götoş","gotos","salak","aptal","gerizekalı","gerizekali","fuck","fuk","fck","shit","bitch","bastard","asshole","dick","cunt","pussy","whore","slut","motherf"];
 const maskProfanity=(txt)=>{if(!txt)return txt;try{return String(txt).replace(/[^\s]+/g,(tok)=>{const norm=tok.toLocaleLowerCase("tr").replace(/[.,!?;:"'()\[\]{}]/g,"").replace(/i̇/g,"i");if(!norm)return tok;const hit=PROFANITY_ROOTS.some(r=>norm===r||norm.startsWith(r));return hit?tok[0]+"*".repeat(Math.max(1,tok.length-1)):tok;});}catch(e){return txt;}};
 const notify=useCallback((txt)=>{
@@ -626,7 +666,7 @@ const notify=useCallback((txt)=>{
 },[]);
 
 // Patient
-const[pat,setPat]=useState({name:"",birthDate:"",bloodType:"",allergies:"",chronic:"",insu:"",emContact:"",emPhone:""});
+const[pat,setPat]=useState({name:"",birthDate:"",bloodType:"",sex:"",pregnant:false,allergies:"",chronic:"",insu:"",emContact:"",emPhone:""});
 const[records,setRecords]=useState([]);
 const[showAddRec,setShowAddRec]=useState(false);
 const[newRec,setNewRec]=useState({type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""});
@@ -3163,12 +3203,28 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   </div>;})()}
   {/* Blood Glucose tracking */}
   {(()=>{
-    const gluClass=(val,type)=>{val=+val;if(!val)return{c:mt,l:""};if(type==="fasting"){if(val<70)return{c:"#e9a23b",l:lang==="tr"?"düşük":"low"};if(val<=99)return{c:sc,l:lang==="tr"?"normal":"normal"};if(val<=125)return{c:"#e9a23b",l:lang==="tr"?"sınırda":"borderline"};return{c:dg,l:lang==="tr"?"yüksek":"high"};}if(val<140)return{c:sc,l:lang==="tr"?"normal":"normal"};if(val<200)return{c:"#e9a23b",l:lang==="tr"?"sınırda":"borderline"};return{c:dg,l:lang==="tr"?"yüksek":"high"};};
+    const ctx=patCtx();
+    const gluClass=(val,type)=>{
+      const r=classifyGlucose(val,type,ctx);
+      if(!r.applicable)return{c:mt,l:"",na:true,reason:r.reason};
+      const L=lang==="tr";
+      if(r.level==="critical-low")return{c:dg,l:L?"kritik düşük":"critical low"};
+      if(r.level==="critical-high")return{c:dg,l:L?"kritik yüksek":"critical high"};
+      if(r.level==="low")return{c:"#e9a23b",l:L?"düşük":"low"};
+      if(r.level==="normal")return{c:sc,l:L?"normal":"normal"};
+      if(r.level==="prediabetes")return{c:"#e9a23b",l:L?"prediyabet eşiği":"prediabetes range"};
+      return{c:dg,l:L?"diyabet eşiği":"diabetes range"};
+    };
     const readings=[...glucose].sort((a,b)=>a.ts-b.ts);const recent=readings.slice(-8);
     const typeLbl=(t)=>t==="fasting"?(lang==="tr"?"Açlık":"Fasting"):t==="postmeal"?(lang==="tr"?"Tokluk":"Post-meal"):(lang==="tr"?"Rastgele":"Random");
     const vals=recent.map(r=>r.val);const mn=Math.min(70,...vals),mx=Math.max(200,...vals);const yy=v=>78-((v-mn)/(mx-mn||1))*74-2;
     return <div style={{...CS}}>
       <b style={{fontSize:fs+1,color:tc}}>🩸 {lang==="tr"?"Şeker (Glikoz) Takibi":"Blood Glucose"}</b>
+      {(()=>{const c=patCtx();const L=lang==="tr";let msg=null;
+        if(!c.band)msg=L?"⚠️ Doğum tarihi girilmemiş — değerler sınıflandırılmıyor. Hasta Karnesi'nden yaş/cinsiyet ekleyin.":"⚠️ No birth date — values are not classified. Add age/sex in Patient Card.";
+        else if(c.pregnant)msg=L?"⚠️ Gebelikte şeker eşikleri farklıdır (ör. gestasyonel diyabet). Uygulama sınıflandırma yapmaz; değerleriniz yalnızca kaydedilir. Doktorunuz/kadın doğum uzmanınız değerlendirmelidir.":"⚠️ Pregnancy thresholds differ. Values are recorded but not classified.";
+        else if(c.band!=="adult"&&c.band!=="older")msg=L?"⚠️ Çocuk/adölesan referansları yetişkinden farklıdır ve yaşa/yönteme göre değişir. Uygulama sınıflandırma yapmaz; değerler yalnızca kaydedilir.":"⚠️ Pediatric references differ. Values are recorded but not classified.";
+        return msg?<div style={{background:`${dg}12`,border:`1px solid ${dg}44`,borderRadius:9,padding:"8px 10px",fontSize:fs-3,color:tc,lineHeight:1.4,marginTop:6}}>{msg}</div>:null;})()}
       <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{lang==="tr"?"Ölçüm cihazınızın değerini girin. Tarama amaçlıdır, tıbbi tanı değildir — doktorunuza danışın.":"Enter your meter reading. Screening only, not a diagnosis — consult your doctor."}</div>
       <div style={{display:"flex",gap:6}}>
         <input type="number" inputMode="numeric" value={gluVal} onChange={e=>setGluVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric("glucose",v,gluType);if(v<54||v>=300)setActiveAlert({icon:"🩸",title:lang==="tr"?"KRİTİK ŞEKER":"CRITICAL GLUCOSE",msg:v+" mg/dL — "+(lang==="tr"?"acil kontrol edin / doktorunuza danışın":"seek medical attention")});setGluVal("");}}}} placeholder="mg/dL" style={{...IS,flex:"0 0 32%"}}/>
@@ -3215,7 +3271,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       else if(sel==="pulse"){const ok=cur.val>=60&&cur.val<=100;concl=tr?`Son nabız ${cur.val} bpm — ${ok?"normal aralıkta (60–100)":"aralık dışı, dikkat"}. Ortalama ${avg} bpm.`:`Latest ${cur.val} bpm — ${ok?"normal (60–100)":"out of range"}. Avg ${avg}.`;}
       else if(sel==="bp"){const sV=cur.val,dV=(cur.meta&&cur.meta.d)||0;const ok=sV<120&&dV<80;const hi=sV>=140||dV>=90;concl=tr?`Son tansiyon ${sV}/${dV} — ${ok?"ideal":hi?"yüksek, doktorunuza danışın":"sınırda"}. Ortalama sistolik ${avg}.`:`Latest ${sV}/${dV} — ${ok?"ideal":hi?"high, consult doctor":"borderline"}.`;}
       else if(sel==="spo2"){const ok=cur.val>=95;concl=tr?`Son SpO₂ %${cur.val} — ${ok?"normal (≥95)":cur.val>=90?"hafif düşük":"düşük, dikkat"}.`:`Latest ${cur.val}% — ${ok?"normal":"low"}.`;}
-      else if(sel==="hba1c"){const c=cur.val;const cat=c<5.7?(tr?"normal":"normal"):c<6.5?(tr?"prediyabet":"prediabetes"):(tr?"diyabet aralığı":"diabetes range");const eag=Math.round(28.7*c-46.7);concl=tr?`Son HbA1c %${c} — ${cat}. Tahmini ortalama glikoz ~${eag} mg/dL. Doktorunuza danışın.`:`Latest ${c}% — ${cat}. eAG ~${eag} mg/dL.`;}
+      else if(sel==="hba1c"){const r=classifyHbA1c(cur.val,patCtx());if(!r.applicable){concl=tr?`Son HbA1c %${cur.val} kaydedildi. Yaş/gebelik bağlamı nedeniyle uygulama sınıflandırma yapmıyor — doktorunuz değerlendirmelidir.`:`HbA1c ${cur.val}% recorded. Not classified due to age/pregnancy context.`;}else{const cat=r.level==="normal"?(tr?"normal":"normal"):r.level==="prediabetes"?(tr?"prediyabet karar eşiği":"prediabetes threshold"):(tr?"diyabet karar eşiği":"diabetes threshold");concl=tr?`Son HbA1c %${cur.val} — ${cat} (tanısal eşik; laboratuvar referans aralığından farklı olabilir). Tahmini ortalama glikoz ~${r.eag} mg/dL. Doktorunuza danışın.`:`Latest ${cur.val}% — ${cat}. eAG ~${r.eag} mg/dL.`;}}
       else if(sel==="glucose"){concl=tr?`${n} ölçüm, ortalama ${avg} mg/dL (en düşük ${mn}, en yüksek ${mx}). Kişisel hedef için doktorunuza danışın.`:`${n} readings, avg ${avg} mg/dL (min ${mn}, max ${mx}).`;}
     }
     const yy=v=>78-((v-mn)/((mx-mn)||1))*72-3;
@@ -3679,6 +3735,14 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
         <input type={type} value={pat[field]||""} onChange={e=>setPat(p=>({...p,[field]:e.target.value}))} placeholder={t[label]||field} style={{...IS,padding:"8px 10px"}}/>
       </div>
     ))}
+    <div style={{marginBottom:8}}>
+      <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>⚧ {lang==="tr"?"Biyolojik Cinsiyet":"Biological Sex"} <span style={{fontSize:fs-4}}>({lang==="tr"?"referans aralıkları için":"for reference ranges"})</span></div>
+      <div style={{display:"flex",gap:6}}>{[["female",lang==="tr"?"Kadın":"Female"],["male",lang==="tr"?"Erkek":"Male"],["",lang==="tr"?"Belirtme":"Unset"]].map(([v,l])=><button key={v||"none"} onClick={()=>setPat(p=>({...p,sex:v,pregnant:v==="female"?p.pregnant:false}))} style={{flex:1,padding:"7px 4px",borderRadius:9,border:`1px solid ${pat.sex===v?ac:bd}`,background:pat.sex===v?`${ac}22`:"transparent",color:pat.sex===v?ac:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
+    </div>
+    {pat.sex==="female"&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8}}>
+      <span style={{flex:1,fontSize:fs-1,color:tc}}>🤰 {lang==="tr"?"Gebelik":"Pregnancy"}<div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Açıkken tahlil eşikleri uygulanmaz (farklıdır)":"Thresholds not applied when on"}</div></span>
+      <button onClick={()=>setPat(p=>({...p,pregnant:!p.pregnant}))} aria-label="pregnancy" style={{width:40,height:22,borderRadius:11,background:pat.pregnant?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:pat.pregnant?21:3,transition:"left .2s"}}/></button>
+    </div>}
   </div>
   {/* Vücut Ölçüleri — Sağlık ile senkronize */}
   <div style={{...CS,border:`1px solid ${sc}33`,background:`${sc}05`}}>
