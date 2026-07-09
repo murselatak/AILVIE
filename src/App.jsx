@@ -621,7 +621,13 @@ const StorageHealth=()=>{
       <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-3,color:mt}}><span>{L?"Kullanım":"Usage"}</span><span>{mb(st.e.usage)} / {mb(st.e.quota)} MB ({pct}%)</span></div>
       <div style={{height:6,borderRadius:3,background:bd,overflow:"hidden",marginTop:3}}><div style={{width:pct+"%",height:"100%",background:pct>85?dg:pct>60?"#e9a23b":sc}}/></div>
     </div>}
-    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Veriler yalnızca bu cihazda saklanır (IndexedDB). Sunucuya gönderilmez, cihazlar arası senkron yoktur. Düzenli olarak yedek alın.":"Data is stored on this device only (IndexedDB). No cloud sync."}</div>
+    {(()=>{const days=lastBackup?Math.floor((Date.now()-lastBackup)/864e5):null;
+      const stale=days===null||days>=30;
+      return <div style={{marginTop:10,background:stale?`${dg}12`:`${sc}10`,border:`1px solid ${stale?dg:sc}44`,borderRadius:9,padding:"8px 10px"}}>
+        <div style={{fontSize:fs-2,color:tc,fontWeight:600}}>{stale?"⚠️ ":"✓ "}{L?"Son yedek":"Last backup"}: <span style={{color:stale?dg:sc}}>{days===null?(L?"hiç alınmadı":"never"):(days===0?(L?"bugün":"today"):`${days} ${L?"gün önce":"days ago"}`)}</span></div>
+        {stale&&<div style={{fontSize:fs-4,color:mt,marginTop:3,lineHeight:1.4}}>{L?"Cihazınızı kaybederseniz veriler geri gelmez. Ayarlar > Yedekle ile şifreli yedek alın.":"Take an encrypted backup."}</div>}
+      </div>;})()}
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Veriler yalnızca bu cihazda saklanır (IndexedDB) ve sunucuya gönderilmez; cihazlar arası senkron yoktur. Yedekleriniz AES-256 ile parolayla şifrelenebilir.":"Data stored on this device only (IndexedDB). No cloud sync. Backups can be AES-256 encrypted."}</div>
   </div>;
 };
 const patCtx=()=>({band:ageBandOf(pat.birthDate),ageYears:ageYearsFrom(pat.birthDate),pregnant:!!pat.pregnant,sex:pat.sex||"",onAnticoag:!!pat.onAnticoag});
@@ -689,6 +695,27 @@ const getActiveWarnings=()=>{
   try{if(glucose&&glucose.length){const g=glucose[glucose.length-1];if(g&&(Date.now()-g.ts)<864e5&&(g.val<70||g.val>=250))out.push({id:'gluW',icon:'🩸',kind:'info',title:(tr?'Şeker':'Glucose')+' '+g.val+' mg/dL',sub:g.val<70?(tr?'düşük — dikkat':'low'):(tr?'yüksek — doktorunuza danışın':'high'),high:g.val<54||g.val>=300});}const bl=(healthLog||[]).filter(x=>x.type==='bp');if(bl.length){const bp=bl[bl.length-1];const sV=bp.val,dV=(bp.meta&&bp.meta.d)||0;if((Date.now()-bp.ts)<864e5&&(sV>=140||dV>=90||sV<90))out.push({id:'bpW',icon:'🩺',kind:'info',title:(tr?'Tansiyon':'BP')+' '+sV+'/'+dV,sub:(sV>=140||dV>=90)?(tr?'yüksek':'high'):(tr?'düşük':'low'),high:sV>=180||dV>=120});}}catch(e){}
   return out.sort((a,b)=>(b.high?1:0)-(a.high?1:0));
 };
+// ---------- Encrypted backup (Web Crypto: AES-256-GCM + PBKDF2) ----------
+const enc=new TextEncoder(),dec=new TextDecoder();
+const b64e=(buf)=>btoa(String.fromCharCode(...new Uint8Array(buf)));
+const b64d=(str)=>Uint8Array.from(atob(str),c=>c.charCodeAt(0));
+const deriveKey=async(password,salt)=>{
+  const base=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:250000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+};
+const encryptJSON=async(obj,password)=>{
+  const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await deriveKey(password,salt);
+  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(JSON.stringify(obj)));
+  return{app:"AILVIE",format:"ailvie-encrypted-backup",version:2,kdf:{name:"PBKDF2",hash:"SHA-256",iterations:250000},cipher:"AES-256-GCM",
+    exportedAt:new Date().toISOString(),salt:b64e(salt),iv:b64e(iv),ciphertext:b64e(ct)};
+};
+const decryptJSON=async(env,password)=>{
+  const key=await deriveKey(password,b64d(env.salt));
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(env.iv)},key,b64d(env.ciphertext));
+  return JSON.parse(dec.decode(pt));
+};
+if(typeof window!=="undefined"){window.__encryptJSON=encryptJSON;window.__decryptJSON=decryptJSON;}
 // ---------- Durable storage: IndexedDB primary, localStorage fallback/migration ----------
 // Why: localStorage is ~5MB, throws QuotaExceededError when full (previously swallowed silently),
 // and browsers evict it under storage pressure. IndexedDB is orders of magnitude larger.
@@ -1887,6 +1914,7 @@ const[labs,setLabs]=useState([]); // [{id,ts,test,value,unit,canonValue,canonUni
 const[labForm,setLabForm]=useState({test:"glucose",value:"",unit:"mg/dL",low:"",high:""});
 const[labParse,setLabParse]=useState({busy:false,rows:[],err:null,fileName:""});
 const[storageWarn,setStorageWarn]=useState(null);
+const[lastBackup,setLastBackup]=useState(()=>{try{const v=localStorage.getItem("ailvie_last_backup");return v?Number(v):0;}catch(e){return 0;}});
 const[persisted,setPersisted]=useState(false);
 const dataLoadedRef=useRef(false);
 const[repMetric,setRepMetric]=useState("weight");
@@ -2226,36 +2254,64 @@ useEffect(()=>{const tm=setTimeout(()=>{const p=JSON.stringify(medImages);(async
 useEffect(()=>{const tm=setTimeout(()=>{setNotes(p=>{const filtered=p.filter(n=>(n.title?.trim()||n.content?.trim()||editNote===n.id));return filtered.length===p.length?p:filtered;});},3000);return()=>clearTimeout(tm);},[notes,editNote]);
 
 // ═══ DATA BACKUP (export/import) — local file, no cloud needed ═══
-const exportData=()=>{
+const exportData=async()=>{
+  const L=lang==="tr";
   try{
-    const env={app:"AILVIE",version:1,exportedAt:new Date().toISOString(),data:{
-      ailvie_data:localStorage.getItem("ailvie_data")||"{}",
+    // Read from IndexedDB (primary store), fall back to localStorage
+    let data=null,medimg=null;
+    try{data=await idbGet("ailvie_data");}catch(e){}
+    if(data==null)data=localStorage.getItem("ailvie_data")||"{}";
+    try{medimg=await idbGet("ailvie_medimg");}catch(e){}
+    if(medimg==null)medimg=localStorage.getItem("ailvie_medimg")||null;
+    const payload={ailvie_data:data,ailvie_medimg:medimg,
       ailvie_account_email:localStorage.getItem("ailvie_account_email")||"",
-      ailvie_lang:localStorage.getItem("ailvie_lang")||""
-    }};
+      ailvie_lang:localStorage.getItem("ailvie_lang")||"",
+      ailvie_perms:localStorage.getItem("ailvie_perms")||""};
+    const pw=window.prompt(L?"Yedeğinizi şifrelemek için bir parola girin.\n\nSağlık verileriniz bu parolayla AES-256 ile şifrelenir. Parolayı kaybederseniz yedek AÇILAMAZ.\n\n(Boş bırakırsanız ŞİFRESİZ yedek alınır — önerilmez)":"Enter a password to encrypt your backup (AES-256). If you lose it, the backup cannot be opened.\n\n(Leave empty for an UNENCRYPTED backup — not recommended)","");
+    if(pw===null)return; // cancelled
+    let env,fname;
+    if(pw.trim().length>0){
+      if(pw.trim().length<8){notify(L?"Parola en az 8 karakter olmalı.":"Password must be at least 8 characters.");return;}
+      env=await encryptJSON(payload,pw.trim());
+      fname="ailvie-yedek-sifreli-"+new Date().toISOString().slice(0,10)+".json";
+    }else{
+      if(!window.confirm(L?"⚠️ ŞİFRESİZ yedek: sağlık verileriniz dosyada düz metin olarak durur. Devam edilsin mi?":"⚠️ Unencrypted backup: your health data will be plain text. Continue?"))return;
+      env={app:"AILVIE",format:"ailvie-plain-backup",version:2,exportedAt:new Date().toISOString(),data:payload};
+      fname="ailvie-yedek-"+new Date().toISOString().slice(0,10)+".json";
+    }
     const blob=new Blob([JSON.stringify(env,null,2)],{type:"application/json"});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");a.href=url;a.download="ailvie-yedek-"+new Date().toISOString().slice(0,10)+".json";
+    const a=document.createElement("a");a.href=url;a.download=fname;
     document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
-    notify(lang==="tr"?"✅ Yedek indirildi":"✅ Backup downloaded");
-  }catch(e){notify(lang==="tr"?"Yedekleme başarısız":"Backup failed");}
+    try{localStorage.setItem("ailvie_last_backup",String(Date.now()));}catch(e){}
+    setLastBackup(Date.now());
+    notify(pw.trim()?(L?"✅ Şifreli yedek indirildi":"✅ Encrypted backup downloaded"):(L?"✅ Yedek indirildi (şifresiz)":"✅ Backup downloaded (unencrypted)"));
+  }catch(e){notify(L?"Yedekleme başarısız":"Backup failed");}
 };
 const importData=async(file)=>{
+  const L=lang==="tr";
   if(!file)return;
   try{
-    const txt=await file.text();
-    const env=JSON.parse(txt);
-    if(!env||env.app!=="AILVIE"||!env.data){notify(lang==="tr"?"Geçersiz yedek dosyası":"Invalid backup file");return;}
-    const ok=window.confirm(lang==="tr"?"Mevcut verileriniz bu yedekle DEĞİŞTİRİLECEK. Devam edilsin mi?":"Your current data will be REPLACED by this backup. Continue?");
-    if(!ok)return;
-    const d=env.data;
-    if(typeof d.ailvie_data==="string")localStorage.setItem("ailvie_data",d.ailvie_data);
-    if(d.ailvie_account_email!=null)localStorage.setItem("ailvie_account_email",d.ailvie_account_email);
-    if(d.ailvie_lang)localStorage.setItem("ailvie_lang",d.ailvie_lang);
-    notify(lang==="tr"?"✅ Geri yüklendi, yenileniyor...":"✅ Restored, reloading...");
+    const env=JSON.parse(await file.text());
+    if(!env||env.app!=="AILVIE"){notify(L?"Geçersiz yedek dosyası":"Invalid backup file");return;}
+    let payload=null;
+    if(env.format==="ailvie-encrypted-backup"||env.ciphertext){
+      const pw=window.prompt(L?"Bu yedek şifreli. Parolayı girin:":"This backup is encrypted. Enter the password:","");
+      if(pw===null)return;
+      try{payload=await decryptJSON(env,pw);}
+      catch(e){notify(L?"❌ Parola yanlış veya dosya bozuk — geri yükleme yapılmadı.":"❌ Wrong password or corrupt file.");return;}
+    }else if(env.data){payload=env.data;}
+    else{notify(L?"Geçersiz yedek dosyası":"Invalid backup file");return;}
+    if(!window.confirm(L?"Mevcut verileriniz bu yedekle DEĞİŞTİRİLECEK. Devam edilsin mi?":"Your current data will be REPLACED. Continue?"))return;
+    if(typeof payload.ailvie_data==="string"){try{await idbSet("ailvie_data",payload.ailvie_data);}catch(e){}try{localStorage.setItem("ailvie_data",payload.ailvie_data);}catch(e){}}
+    if(typeof payload.ailvie_medimg==="string"){try{await idbSet("ailvie_medimg",payload.ailvie_medimg);}catch(e){}}
+    if(payload.ailvie_account_email!=null)try{localStorage.setItem("ailvie_account_email",payload.ailvie_account_email);}catch(e){}
+    if(payload.ailvie_lang)try{localStorage.setItem("ailvie_lang",payload.ailvie_lang);}catch(e){}
+    if(payload.ailvie_perms)try{localStorage.setItem("ailvie_perms",payload.ailvie_perms);}catch(e){}
+    notify(L?"✅ Geri yüklendi, yenileniyor...":"✅ Restored, reloading...");
     setTimeout(()=>location.reload(),800);
-  }catch(e){notify(lang==="tr"?"Geri yükleme başarısız (dosya bozuk olabilir)":"Restore failed (file may be corrupt)");}
+  }catch(e){notify(L?"Geri yükleme başarısız (dosya bozuk olabilir)":"Restore failed");}
 };
 
 // ═══ SIGN-IN (email local; Google/Apple via Firebase when configured) ═══
