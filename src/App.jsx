@@ -5199,7 +5199,7 @@ const renderTerms=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
 const renderAbout=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>ℹ️ {t.about}</span></div>
   <div style={{...CS,textAlign:"center",padding:20}}>
-    <img src="/avatar2.svg" alt="" style={{height:80,objectFit:"contain",marginTop:8}} />
+    <img src="/avatar2-256.webp" alt="" style={{height:80,objectFit:"contain",marginTop:8}} />
     <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:32,color:"#e8a817",letterSpacing:4,WebkitTextStroke:"0.8px #e8a817",marginTop:10}}>AILVIE</div>
     <div style={{fontSize:fs-1,color:mt,marginTop:2}}>{t.sl}</div>
     <div style={{fontSize:fs-1,color:mt,marginTop:8}}>{t.version}: 9.0.0</div>
@@ -5283,7 +5283,7 @@ return (
             </div>
             <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"0 28px",gap:16,overflowY:"auto"}}>
               {obStep===0&&<>
-                <img src="/avatar2.svg" alt="" style={{width:120,height:120,borderRadius:20,objectFit:"cover",boxShadow:"0 8px 30px rgba(0,0,0,.3)"}}/>
+                <img src="/avatar2-256.webp" alt="" style={{width:120,height:120,borderRadius:20,objectFit:"cover",boxShadow:"0 8px 30px rgba(0,0,0,.3)"}}/>
                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:42,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"1px #e8a817"}}>AILVIE</div>
                 <div style={{fontSize:fs+6,fontWeight:700}}>{ob.welcome}</div>
                 <div style={{fontSize:fs+1,opacity:.92,maxWidth:340,lineHeight:1.5}}>{ob.intro}</div>
@@ -5479,7 +5479,7 @@ return (
         <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"2px 10px",paddingTop:"max(env(safe-area-inset-top),2px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"flex-end",gap:6,flex:1,minWidth:0}}>
             <button onClick={()=>setShowMenu(true)} aria-label={lang==="tr"?"Menü":"Menu"} style={{background:"none",border:"none",color:"#fff",fontSize:22,cursor:"pointer",padding:0,flexShrink:0,alignSelf:"center"}}>☰</button>
-            <img src="/avatar2.svg" alt="" style={{height:54,width:54,objectFit:"cover",flexShrink:0,borderRadius:6}} />
+            <img src="/avatar2-256.webp" alt="" style={{height:54,width:54,objectFit:"cover",flexShrink:0,borderRadius:6}} />
             <div onClick={()=>goTo("home")} title={t.home} role="button" style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",lineHeight:1,minWidth:0,cursor:"pointer"}}>
               <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:35,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"1px #e8a817",textShadow:"0 2px 6px rgba(0,0,0,0.5)",textAlign:"center"}}>AILVIE</div>
               <div style={{fontSize:10.5,color:"rgba(255,255,255,0.92)",letterSpacing:0,fontWeight:500,marginTop:1,whiteSpace:"nowrap",textAlign:"center"}}>{t.sl}</div>
@@ -5529,7 +5529,7 @@ return (
           <div style={{position:"absolute",top:0,left:0,width:"60%",maxWidth:240,maxHeight:"85%",background:cd,zIndex:450,padding:"0",display:"flex",flexDirection:"column",boxShadow:"4px 0 24px rgba(0,0,0,.4)",animation:"slideRight .25s ease-out",borderRadius:"0 0 12px 0",overflow:"hidden"}}>
             {/* Header */}
             <div style={{padding:"10px 14px 8px",background:`linear-gradient(135deg,${ac},${a2})`,display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-              <img src="/avatar2.svg" alt="" style={{width:36,height:36,objectFit:"cover",borderRadius:6,flexShrink:0}} />
+              <img src="/avatar2-256.webp" alt="" style={{width:36,height:36,objectFit:"cover",borderRadius:6,flexShrink:0}} />
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:16,color:"#e8a817",letterSpacing:2,lineHeight:1}}>AILVIE</div>
                 <div style={{fontSize:11,color:"rgba(255,255,255,.8)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{pat.name||t.profile}</div>
