@@ -29,7 +29,7 @@ export async function onRequestPost(context) {
     // Validate and sanitize — only allow messages endpoint params
     const allowed = {
       model: requestedModel,
-      max_tokens: Math.min(body.max_tokens || 1000, 2000),
+      max_tokens: Math.min(body.max_tokens || 1000, 4000),
       messages: body.messages || [],
     };
     if (body.system) allowed.system = body.system;

@@ -618,11 +618,13 @@ const parseLabDocument=async(file)=>{
     const known=LAB_TESTS.map(x=>x.k).join(", ");
     const sys="You extract laboratory test results from a report image/PDF. Return ONLY valid JSON, no prose, no markdown fences. Schema: {\"rows\":[{\"test\":\"<one of: "+known+" | unknown>\",\"raw_name\":\"<name as printed>\",\"value\":<number>,\"unit\":\"<unit as printed>\",\"ref_low\":<number|null>,\"ref_high\":<number|null>,\"flag\":\"<H|L|critical|null>\",\"confidence\":<0..1>}],\"report_date\":\"<YYYY-MM-DD|null>\",\"lab_name\":\"<string|null>\",\"overall_confidence\":<0..1>}. Rules: never invent values; if a field is unreadable use null and lower confidence; map test names to the allowed keys only when certain, otherwise use \"unknown\" and keep raw_name; copy units exactly as printed; include the report's own reference range when printed.";
     const content=[isPdf?{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}}:{type:"image",source:{type:"base64",media_type:file.type,data:b64}},{type:"text",text:"Extract all lab results as JSON per the schema."}];
-    const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,system:sys,messages:[{role:"user",content}]})});
+    const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:4000,system:sys,messages:[{role:"user",content}]})});
     if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||("HTTP "+r.status));}
     const j=await r.json();
     const txt=(j.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("").replace(/```json|```/g,"").trim();
-    const parsed=JSON.parse(txt);
+    let parsed;
+    try{parsed=JSON.parse(txt);}
+    catch(pe){throw new Error(L?"Rapor çok uzun veya okunamadı; daha net/bölünmüş bir fotoğraf deneyin.":"Report too long or unreadable.");}
     const rows=(parsed.rows||[]).map((x,i)=>{
       const known2=LAB_TESTS.find(t=>t.k===x.test);
       const conf=Number(x.confidence);
@@ -658,19 +660,19 @@ const UNIT_CONV={
   hdl:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":38.67}},
   triglyceride:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":88.57}},
   creatinine:{canon:"mg/dL",f:{"mg/dL":1,"umol/L":1/88.4,"µmol/L":1/88.4}},
-  hemoglobin:{canon:"g/L",f:{"g/L":1,"g/l":1,"g/dL":10,"g/dl":10}},
-  crp:{canon:"mg/L",f:{"mg/L":1,"mg/l":1,"mg/dL":10,"mg/dl":10}},
+  hemoglobin:{canon:"g/L",f:{"g/L":1,"g/l":1,"g/dL":10,"g/dl":10,"gr/dL":10,"g%":10}},
+  crp:{canon:"mg/L",f:{"mg/L":1,"mg/l":1,"mg/dL":10,"mg/dl":10,"nmol/L":1/9.524}},
   bilirubin:{canon:"mg/dL",f:{"mg/dL":1,"umol/L":1/17.1,"µmol/L":1/17.1}},
   calcium:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":4.008}},
-  vitaminD:{canon:"ng/mL",f:{"ng/mL":1,"nmol/L":1/2.496}},
-  b12:{canon:"ng/L",f:{"ng/L":1,"pg/mL":1,"pmol/L":1/0.7378}},
-  ferritin:{canon:"ug/L",f:{"ug/L":1,"µg/L":1,"ng/mL":1}},
+  vitaminD:{canon:"ng/mL",f:{"ng/mL":1,"ug/L":1,"µg/L":1,"nmol/L":1/2.496}},
+  b12:{canon:"ng/L",f:{"ng/L":1,"pg/mL":1,"ng/mL":1000,"pmol/L":1/0.7378}},
+  ferritin:{canon:"ug/L",f:{"ug/L":1,"µg/L":1,"ng/mL":1,"ug/mL":1000,"pmol/L":1/2.247}},
   hba1c:{canon:"%",f:{"%":1}},
-  tsh:{canon:"mU/L",f:{"mU/L":1,"mIU/L":1,"uIU/mL":1,"µIU/mL":1}},
+  tsh:{canon:"mU/L",f:{"mU/L":1,"mIU/L":1,"uIU/mL":1,"µIU/mL":1,"mIU/mL":1000,"uU/mL":1}},
   albumin:{canon:"g/dL",f:{"g/dL":1,"g/L":0.1}},
-  alt:{canon:"U/L",f:{"U/L":1,"IU/L":1}},ast:{canon:"U/L",f:{"U/L":1,"IU/L":1}},
+  alt:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},ast:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},
   sodium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},potassium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},
-  platelet:{canon:"x10^9/L",f:{"x10^9/L":1,"10^9/L":1,"K/uL":1}},
+  platelet:{canon:"x10^9/L",f:{"x10^9/L":1,"10^9/L":1,"10*9/L":1,"K/uL":1,"K/µL":1,"10^3/uL":1,"10^3/µL":1,"10*3/uL":1,"x10^3/uL":1,"thousand/uL":1,"/uL":0.001,"/µL":0.001}},
   uricAcid:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":16.81}},
   magnesium:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":2.43,"mEq/L":1.215}},
   phosphorus:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":3.097}},
@@ -692,7 +694,9 @@ const normalizeUnit=(test,value,unit)=>{
   if(!c)return{ok:false,reason:"unknown-test"};
   if(!isFinite(v))return{ok:false,reason:"invalid-value"};
   if(!unit)return{ok:false,reason:"missing-unit"};
-  const k=Object.keys(c.f).find(x=>x.toLowerCase()===String(unit).trim().toLowerCase());
+  const clean=(u)=>String(u).trim().toLowerCase().replace(/\s+/g,"").replace(/µ/g,"u").replace(/×/g,"x");
+  const target=clean(unit);
+  const k=Object.keys(c.f).find(x=>clean(x)===target);
   if(!k)return{ok:false,reason:"unknown-unit"};
   return{ok:true,value:Math.round(v*c.f[k]*1000)/1000,unit:c.canon};
 };
