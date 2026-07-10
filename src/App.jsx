@@ -2923,9 +2923,17 @@ const fallbackSpeak=(text,overrideLang,onEnd)=>{
     
     // Cache the chosen voice per language. getVoices() can return a different order on later
     // calls, which made AILVIE switch voices mid-session ("a different, amateur voice").
+    // NOTE on matching: FEM_PAT contains "olga", which also matches the MALE name "Tolga".
+    // A male match therefore always wins, otherwise a male voice can be treated as female.
+    const isMale=(n)=>MALE_PAT.test(n);
+    const isFemale=(n)=>FEM_PAT.test(n)&&!MALE_PAT.test(n);
+    // Same prosody rule for the cached and the fresh path, otherwise the first sentence and
+    // every later sentence would be spoken at a different pitch.
+    const prosody=(v)=>({pitch:isMale(v.name)?1.45:1.05,rate:0.95});
     const cached=voiceCacheRef.current[base];
     if(cached&&voices.some(v=>v.voiceURI===cached.voiceURI)){
-      u.voice=cached;u.lang=cached.lang;u.pitch=1.05;u.rate=0.95;u.volume=1.0;
+      const pr=prosody(cached);
+      u.voice=cached;u.lang=cached.lang;u.pitch=pr.pitch;u.rate=pr.rate;u.volume=1.0;
       setTtsInfo({engine:"browser",voice:cached.name});
       u.onend=()=>{setIsSpeak(false);if(onEnd)onEnd();};
       u.onerror=()=>{setIsSpeak(false);if(onEnd)onEnd();};
@@ -2933,50 +2941,35 @@ const fallbackSpeak=(text,overrideLang,onEnd)=>{
     }
     const langVoices=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
     let pick=null;
-    
-    // FEMALE-ONLY CHAIN (strict — never a male or ambiguous voice):
-    // 1. Premium/Neural female in target language (best quality)
-    pick=langVoices.find(v=>FEM_PAT.test(v.name)&&/premium|neural|enhanced|natural|online/i.test(v.name));
-    
-    // 2. Any explicitly-female voice in target language
-    if(!pick)pick=langVoices.find(v=>FEM_PAT.test(v.name));
-    
-    // 3. Target language has NO explicit female → jump to guaranteed female in another language
-    // (We do NOT use ambiguous "Google X" voices here — they're often male-toned)
-    if(!pick){
-      const anyFemale=voices.filter(v=>FEM_PAT.test(v.name)&&!MALE_PAT.test(v.name));
-      // Prefer premium/neural female
-      pick=anyFemale.find(v=>/premium|neural|enhanced|natural|online/i.test(v.name));
-      // Then English female (clear, widely available)
-      if(!pick)pick=anyFemale.find(v=>v.lang.startsWith("en"));
-      // Then ANY explicit female
-      if(!pick)pick=anyFemale[0];
-    }
-    
-    // 4. Absolute last resort: any non-male voice
-    if(!pick)pick=voices.find(v=>!MALE_PAT.test(v.name));
-    
+
+    // LANGUAGE FIRST, gender second.
+    // Reading Turkish text with an English voice is unintelligible, so a same-language voice
+    // always beats a female voice from another language. Note that the most common Turkish
+    // voice on Android is called "Google Türkçe" - it matches neither the female nor the male
+    // pattern, so a female-only chain used to skip it and jump to English "Jenny".
+    // 1. Same language, explicitly female, premium/neural
+    pick=langVoices.find(v=>isFemale(v.name)&&/premium|neural|enhanced|natural|online/i.test(v.name));
+    // 2. Same language, explicitly female
+    if(!pick)pick=langVoices.find(v=>isFemale(v.name));
+    // 3. Same language, not explicitly male (covers "Google Türkçe", "Microsoft Server Speech ...")
+    if(!pick)pick=langVoices.find(v=>!isMale(v.name));
+    // 4. Same language, anything at all - intelligibility beats voice gender
+    if(!pick)pick=langVoices[0];
+
     if(pick){
-      voiceCacheRef.current[base]=pick;      // keep the same voice for the whole session
+      voiceCacheRef.current[base]=pick;
       setTtsInfo({engine:"browser",voice:pick.name});
       u.voice=pick;
       u.lang=pick.lang;
-      // Check if picked voice still looks male (shouldn't happen but defensive)
-      const looksMale=MALE_PAT.test(pick.name)&&!FEM_PAT.test(pick.name);
-      if(looksMale){
-        // Aggressive feminize
-        u.pitch=1.6;
-        u.rate=0.92;
-      }else{
-        // Natural female range
-        u.pitch=1.05;
-        u.rate=0.95;
-      }
+      const pr=prosody(pick);           // nudge a male voice up rather than switch language
+      u.pitch=pr.pitch;u.rate=pr.rate;
     }else{
-      // Absolutely no voice found — use system default with high pitch
+      // No voice for this language at all. Do NOT borrow a voice from another language:
+      // set the language and let the platform pick, otherwise the words come out garbled.
+      setTtsInfo({engine:"browser",voice:(lang==="tr"?"sistem varsayılanı":"system default")});
       u.lang=useLc;
-      u.pitch=1.5;
-      u.rate=0.9;
+      u.pitch=1.15;
+      u.rate=0.95;
     }
     u.volume=1.0;
     u.onend=()=>{setIsSpeak(false);if(onEnd)onEnd();};
