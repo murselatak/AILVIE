@@ -5444,7 +5444,7 @@ const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:render
 
 
 // ═══ RESTRUCTURED NAV — 2 rows only ═══
-const nav1=[{key:"contacts",icon:"📞",label:t.contacts},{key:"pCard",icon:"🪪",label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:"📊",label:t.health}];
+const nav1=[{key:"contacts",icon:"📇",label:t.contacts},{key:"pCard",icon:"🪪",label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:"📊",label:t.health}];
 const nav2=[{key:"notes",icon:"📝",label:t.notes},{key:"community",icon:"👥",label:t.community},{key:"chat",icon:"🤖",label:t.chat},{key:"admin",icon:"💬",label:t.adminCh||"Destek"},{key:"settings",icon:"⚙️",label:t.settings,onNav:()=>setSettingsTab("all")}];
 
 return (
@@ -5952,10 +5952,10 @@ return (
         {/* BOTTOM NAV — compact 2 rows */}
         <div style={{flexShrink:0,background:cd,borderTop:`1px solid ${bd}`,paddingBottom:"max(env(safe-area-inset-bottom),0px)"}}>
           <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)"}}>
-            {nav1.map(n=>(<button key={n.key} onClick={()=>page===n.key?goTo("home"):goTo(n.key)} style={{background:"none",border:"none",padding:"9px 1px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:(dark?"#aab7c4":"#465563"),position:"relative",minWidth:0}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"25%",right:"25%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:20,filter:page===n.key?"none":"none",opacity:1}}>{n.icon}</span><span style={{fontSize:10.5,fontWeight:page===n.key?700:500,lineHeight:1.05,textAlign:"center",wordBreak:"break-word"}}>{n.label}</span></button>))}
+            {nav1.map(n=>(<button key={n.key} onClick={()=>page===n.key?goTo("home"):goTo(n.key)} style={{background:"none",border:"none",padding:"9px 1px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:(dark?"#c5cfd9":"#3c4a57"),position:"relative",minWidth:0}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"25%",right:"25%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:21,opacity:1,lineHeight:1}}>{n.icon}</span><span style={{fontSize:11.5,fontWeight:page===n.key?700:600,lineHeight:1.1,textAlign:"center",wordBreak:"break-word",letterSpacing:"-0.01em"}}>{n.label}</span></button>))}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",borderTop:`1px solid ${bd}`}}>
-            {nav2.map(n=>(<button key={n.key} onClick={()=>{if(n.onNav)n.onNav();if(n.key==="settings"){if(page==="settings"&&settingsTab==="all")goTo("home");else{setSettingsTab("all");goTo("settings");}}else if(page===n.key)goTo("home");else goTo(n.key);}} style={{background:"none",border:"none",padding:"8px 0 6px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:(dark?"#aab7c4":"#465563"),position:"relative"}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:20,opacity:1}}>{n.icon}</span><span style={{fontSize:10.5,fontWeight:page===n.key?700:500}}>{n.label}</span></button>))}
+            {nav2.map(n=>(<button key={n.key} onClick={()=>{if(n.onNav)n.onNav();if(n.key==="settings"){if(page==="settings"&&settingsTab==="all")goTo("home");else{setSettingsTab("all");goTo("settings");}}else if(page===n.key)goTo("home");else goTo(n.key);}} style={{background:"none",border:"none",padding:"8px 0 6px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:(dark?"#c5cfd9":"#3c4a57"),position:"relative"}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:21,opacity:1,lineHeight:1}}>{n.icon}</span><span style={{fontSize:11.5,fontWeight:page===n.key?700:600,letterSpacing:"-0.01em"}}>{n.label}</span></button>))}
           </div>
         </div>
 
