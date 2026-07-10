@@ -615,6 +615,8 @@ const[appLockEnabled,setAppLockEnabled]=useState(()=>{try{return localStorage.ge
 const[isLocked,setIsLocked]=useState(()=>{try{return localStorage.getItem("ailvie_lock")==="1";}catch(e){return false;}});
 const toastTm=useRef(null);
 const recRef=useRef(null);
+const voiceCacheRef=useRef({});
+const[ttsInfo,setTtsInfo]=useState({engine:null,voice:null});   // diagnostics for Settings
 const audioRef=useRef(null); // Azure TTS audio element
 const chatEndRef=useRef(null); // auto-scroll anchor for chat
 const[isListen,setIsListen]=useState(false);
@@ -2894,6 +2896,7 @@ const startSpeech=(text,overrideLang,onEnd)=>{
     const url=URL.createObjectURL(blob);
     const audio=new Audio(url);
     audioRef.current=audio;
+    setTtsInfo({engine:"azure",voice:"AILVIE Neural"});
     audio.onended=()=>{setIsSpeak(false);URL.revokeObjectURL(url);audioRef.current=null;if(onEnd)onEnd();};
     audio.onerror=()=>{setIsSpeak(false);URL.revokeObjectURL(url);audioRef.current=null;fallbackSpeak(text,overrideLang,onEnd);};
     audio.play().catch(()=>{
@@ -2918,6 +2921,16 @@ const fallbackSpeak=(text,overrideLang,onEnd)=>{
     const FEM_PAT=/female|kadın|woman|girl|yelda|filiz|emel|seda|ayşe|zira|samantha|helena|anna|eva|hazel|jenny|aria|karen|moira|tessa|fiona|veena|lekha|ting|meijia|yuna|paulina|monica|luciana|zosia|nora|sara|alva|ellen|amélie|virginie|cécile|céline|petra|katja|milena|weiblich|femme|женский|femenino|vrouwelijk|carmen|lucia|marisa|claudia|nathalie|bianca|francesca|giorgia|isabella|maria|sofia|chiara|julia|christina|marta|alicia|beatriz|cristina|elena|gabriela|valentina|natasha|olga|marina|tatiana|irina|gülsüm|zeynep|melike|selin|esra|özlem|gamze|lale|pinar|aylin|naz|büşra|buse|deniz|ipek|priya|kavita|meera|asha|geeta|chen|ling|wei|li|yuki|sakura|hana|mei|jihye|soyeon|minji|salwa|amina|layla|fatima|nour|maryam|aisha|yasmin/i;
     const MALE_PAT=/\bmale\b|\berkek\b|\bman\b|homme|männlich|мужской|tolga|onur|kerem|ahmet|david|mark|thomas|james|daniel|george|richard|guy|rishi|fred|paul|sergio|jorge|carlos|alex|takumi|ryo|kenji/i;
     
+    // Cache the chosen voice per language. getVoices() can return a different order on later
+    // calls, which made AILVIE switch voices mid-session ("a different, amateur voice").
+    const cached=voiceCacheRef.current[base];
+    if(cached&&voices.some(v=>v.voiceURI===cached.voiceURI)){
+      u.voice=cached;u.lang=cached.lang;u.pitch=1.05;u.rate=0.95;u.volume=1.0;
+      setTtsInfo({engine:"browser",voice:cached.name});
+      u.onend=()=>{setIsSpeak(false);if(onEnd)onEnd();};
+      u.onerror=()=>{setIsSpeak(false);if(onEnd)onEnd();};
+      speechSynthesis.speak(u);return;
+    }
     const langVoices=voices.filter(v=>v.lang.toLowerCase().startsWith(base));
     let pick=null;
     
@@ -2944,6 +2957,8 @@ const fallbackSpeak=(text,overrideLang,onEnd)=>{
     if(!pick)pick=voices.find(v=>!MALE_PAT.test(v.name));
     
     if(pick){
+      voiceCacheRef.current[base]=pick;      // keep the same voice for the whole session
+      setTtsInfo({engine:"browser",voice:pick.name});
       u.voice=pick;
       u.lang=pick.lang;
       // Check if picked voice still looks male (shouldn't happen but defensive)
@@ -3882,6 +3897,13 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
       <span style={{flex:1}}>🔊 {lang==="tr"?"Sesli yönlendirme":"Voice guidance"}<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Ölçüm ve ilaç tekniklerinde adım adım sesli anlatım":"Step-by-step spoken coaching for measurements and drug technique"}</div></span>
       <button onClick={()=>setVoiceGuide(v=>!v)} aria-label={lang==="tr"?"Sesli yönlendirme":"Voice guidance"} style={{width:40,height:22,borderRadius:11,background:voiceGuide?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:voiceGuide?21:3,transition:"left .2s"}}/></button>
     </div>
+    {voiceGuide&&<div style={{fontSize:fs-4,color:mt,padding:"2px 0 4px",lineHeight:1.5}}>
+      {ttsInfo.engine==="azure"
+        ? <span style={{color:sc}}>🎙️ {lang==="tr"?"AILVIE doğal sesi (Azure Neural)":"AILVIE natural voice (Azure Neural)"}</span>
+        : ttsInfo.engine==="browser"
+          ? <span>⚠️ {lang==="tr"?`Cihaz sesi kullanılıyor: ${ttsInfo.voice}. Doğal AILVIE sesi için sunucuda Azure anahtarı gerekir.`:`Using device voice: ${ttsInfo.voice}.`}</span>
+          : <span>{lang==="tr"?"Ses motoru ilk konuşmada belirlenir.":"Voice engine is detected on first speech."}</span>}
+    </div>}
     {voiceGuide&&<div style={{display:"flex",gap:6,flexWrap:"wrap",padding:"6px 0 2px"}}>
       {Object.keys(GUIDES).map(k=>(
         <button key={k} onClick={()=>startGuide(k)} style={{...pill(false),fontSize:fs-3,display:"flex",alignItems:"center",gap:5}}>
