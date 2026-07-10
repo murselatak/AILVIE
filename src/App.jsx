@@ -494,6 +494,10 @@ const[showFirstAid,setShowFirstAid]=useState(false);
 const[showNav,setShowNav]=useState(false);
 const[navQuery,setNavQuery]=useState("");
 const[noteSheet,setNoteSheet]=useState(null); // 'add'|'color'|'format'|'more'
+const[voiceGuide,setVoiceGuide]=useState(()=>{try{return localStorage.getItem("ailvie_voiceguide")==="1";}catch(e){return false;}});
+useEffect(()=>{try{localStorage.setItem("ailvie_voiceguide",voiceGuide?"1":"0");}catch(e){}},[voiceGuide]);
+const[guide,setGuide]=useState(null);      // {key,i,left,paused}
+const guideTickRef=useRef(null);
 const[noteDraw,setNoteDraw]=useState(false);
 const[noteRec,setNoteRec]=useState(null); // {id,sec} while recording
 const[noteBar,setNoteBar]=useState({show:false,h:0,top:0});
@@ -3525,6 +3529,13 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
 </div>);};
 
 
+// Maps a medicine name to a technique guide, if one applies.
+const guideForMed=(name)=>{
+  const n=fold(name||"");
+  if(/inhaler|inhalasyon|sprey|ventolin|salbutamol|seretide|symbicort|pulmicort|foster|flixotide/.test(n))return "inhaler";
+  if(/insulin|insülin|lantus|levemir|humalog|novorapid|apidra|tresiba|toujeo|glargine|aspart|lispro/.test(n))return "insulin";
+  return null;
+};
 const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   {/* İlaç Zamanı Alert */}
   {meds.some(m=>!m.taken)&&<div style={{...CS,background:`${dg}12`,border:`1px solid ${dg}33`,display:"flex",alignItems:"center",gap:10,padding:"10px 12px"}}>
@@ -3629,7 +3640,11 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
   </div>}
   {meds.length===0&&!showScanner&&<div style={{textAlign:"center",color:mt,padding:24}}>{t.noM}</div>}
   {meds.map(m=>(<div key={m.id} style={{...CS,display:"flex",alignItems:"center",gap:10,opacity:m.taken?0.5:1}}>
-    <div style={{textAlign:"center"}}><span style={{fontSize:22}}>{m.taken?"✅":"💊"}</span>{m.count>0&&!m.taken&&<div style={{fontSize:fs-4,color:m.count<=5?dg:sc,fontWeight:700,marginTop:1}}>{m.count}</div>}</div>
+    <div style={{textAlign:"center"}}><span style={{fontSize:22}}>{m.taken?"✅":"💊"}</span>{m.count>0&&!m.taken&&<div style={{fontSize:fs-4,color:m.count<=5?dg:sc,fontWeight:700,marginTop:1}}>{m.count}</div>}
+      {guideForMed(m.name)&&<button onClick={(e)=>{e.stopPropagation();startGuide(guideForMed(m.name));}}
+        aria-label={lang==="tr"?`${m.name} kullanım rehberi`:`${m.name} technique guide`}
+        title={lang==="tr"?"Nasıl kullanılır?":"How to use"}
+        style={{marginTop:4,background:"transparent",border:`1px solid ${ac}`,color:ac,borderRadius:7,padding:"1px 5px",fontSize:fs-4,cursor:"pointer",lineHeight:1.4}}>🔊</button>}</div>
     <div style={{flex:1,minWidth:0}}><div style={{fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</div><div style={{fontSize:fs-2,color:mt}}>{m.dose} — ⏰ {m.time}</div><div style={{fontSize:fs-3,color:sc}}>{m.alarmType==="ring"?"🔔":m.alarmType==="vibrate"?"📳":"🔔📳"} {m.count>0&&<span style={{color:m.count<=5?dg:mt}}>({lang==="tr"?"Kalan":"Left"}: {m.count})</span>}</div></div>
     {!m.taken&&<button onClick={()=>{
       const nm=m.name?.trim().toLowerCase();
@@ -3793,6 +3808,16 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
     <StorageHealth/>
   </div>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🧹 {lang==="tr"?"İçerik Filtresi":"Content Filter"}</div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",gap:8}}>
+      <span style={{flex:1}}>🔊 {lang==="tr"?"Sesli yönlendirme":"Voice guidance"}<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Ölçüm ve ilaç tekniklerinde adım adım sesli anlatım":"Step-by-step spoken coaching for measurements and drug technique"}</div></span>
+      <button onClick={()=>setVoiceGuide(v=>!v)} aria-label={lang==="tr"?"Sesli yönlendirme":"Voice guidance"} style={{width:40,height:22,borderRadius:11,background:voiceGuide?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:voiceGuide?21:3,transition:"left .2s"}}/></button>
+    </div>
+    {voiceGuide&&<div style={{display:"flex",gap:6,flexWrap:"wrap",padding:"6px 0 2px"}}>
+      {Object.keys(GUIDES).map(k=>(
+        <button key={k} onClick={()=>startGuide(k)} style={{...pill(false),fontSize:fs-3,display:"flex",alignItems:"center",gap:5}}>
+          <span>{GUIDES[k].icon}</span><span>{lang==="tr"?GUIDES[k].tr:GUIDES[k].en}</span>
+        </button>))}
+    </div>}
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",gap:8}}>
       <span style={{flex:1}}>🚫 {lang==="tr"?"Küfür / argo maskeleme":"Profanity masking"}<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Toplulukta uygunsuz kelimeler *** ile gizlenir":"Hides inappropriate words with *** in Community"}</div></span>
       <button onClick={()=>setProfanityFilter(v=>!v)} aria-label="profanity" style={{width:40,height:22,borderRadius:11,background:profanityFilter?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:profanityFilter?21:3,transition:"left .2s"}}/></button>
@@ -4537,7 +4562,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{flex:1}}>
       <div style={{fontSize:fs-2,color:mt}}>{t.pulse}</div>
       {editH==="pulse"?<div style={{display:"flex",gap:6,alignItems:"center",marginTop:3}}><input type="number" autoFocus value={tmpH} onChange={e=>setTmpH(e.target.value)} style={{...IS,width:80,padding:"6px 8px",fontWeight:700}} onKeyDown={e=>{if(e.key==="Enter"){setHd(p=>({...p,pulse:Number(tmpH)}));logMetric("pulse",Number(tmpH));setEditH(null);}}}/><span style={{fontSize:fs-2,color:mt}}>{t.bpm}</span><button onClick={()=>{setHd(p=>({...p,pulse:Number(tmpH)}));logMetric("pulse",Number(tmpH));setEditH(null);}} style={{...BP,padding:"5px 10px"}}>✓</button></div>
-      :<div onClick={()=>{setEditH("pulse");setTmpH(hd.pulse>0?String(hd.pulse):"");}} style={{cursor:"pointer",fontWeight:700,fontSize:fs+2,color:hd.pulse>0?tc:mt,marginTop:2}}>{hd.pulse>0?`${hd.pulse} ${t.bpm}`:t.tap}</div>}
+      :<div onClick={()=>{setEditH("pulse");setTmpH(hd.pulse>0?String(hd.pulse):"");if(voiceGuide)startGuide("pulse");}} style={{cursor:"pointer",fontWeight:700,fontSize:fs+2,color:hd.pulse>0?tc:mt,marginTop:2}}>{hd.pulse>0?`${hd.pulse} ${t.bpm}`:t.tap}</div>}
       {hd.pulse>0&&<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Referans":"Ref"}: {pulseRef.label} bpm {patAge?`(${patAge} ${t.age})`:""}</div>}
       {hd.hrvRmssd>0&&<div style={{fontSize:fs-3,color:ac,marginTop:2}}>HRV · RMSSD {hd.hrvRmssd} ms · SDNN {hd.hrvSdnn} ms</div>}
       {hd.resp>0&&<div style={{fontSize:fs-3,color:ac,marginTop:2}}>{lang==="tr"?"Solunum":"Resp"}: {hd.resp} {lang==="tr"?"/dk (tahmini)":"/min (est.)"}</div>}
@@ -4562,9 +4587,10 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       :<button onClick={connectBleHr} style={{...BP,padding:"5px 10px",fontSize:fs-3,background:`linear-gradient(135deg,${ac},${a2})`}}>🔗 {lang==="tr"?"Bağlan":"Connect"}</button>}
   </div>
   <div style={CS}>
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:22}}>🩺</span><span style={{fontWeight:700,fontSize:fs+1}}>{t.bp} (SYS / DIA)</span></div>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:22}}>🩺</span><span style={{fontWeight:700,fontSize:fs+1}}>{t.bp} (SYS / DIA)</span>
+      <button onClick={()=>startGuide("bp")} aria-label={lang==="tr"?"Tansiyon ölçüm rehberi":"BP measurement guide"} title={lang==="tr"?"Nasıl ölçülür?":"How to measure"} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${bd}`,color:ac,borderRadius:8,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,flexShrink:0}}>🔊 {lang==="tr"?"Rehber":"Guide"}</button></div>
     <div style={{display:"flex",gap:10,alignItems:"center"}}>
-      <input type="number" value={hd.bpS||""} placeholder="SYS" onChange={e=>setHd({...hd,bpS:Number(e.target.value)})} style={{...IS,width:70,textAlign:"center",fontWeight:700}}/>
+      <input type="number" value={hd.bpS||""} placeholder="SYS" onFocus={()=>{if(voiceGuide&&!guide)startGuide("bp");}} onChange={e=>setHd({...hd,bpS:Number(e.target.value)})} style={{...IS,width:70,textAlign:"center",fontWeight:700}}/>
       <span style={{fontSize:20,color:mt}}>/</span>
       <input type="number" value={hd.bpD||""} placeholder="DIA" onChange={e=>setHd({...hd,bpD:Number(e.target.value)})} style={{...IS,width:70,textAlign:"center",fontWeight:700}}/>
       {hd.bpS>0&&<span style={{padding:"4px 10px",borderRadius:8,fontSize:fs-2,fontWeight:600,background:hd.bpS>=90&&hd.bpS<=140?`${sc}22`:`${dg}22`,color:hd.bpS>=90&&hd.bpS<=140?sc:dg}}>{hd.bpS>=90&&hd.bpS<=140?t.norm:t.caut}</span>}
@@ -5408,6 +5434,7 @@ useEffect(()=>{
     if(e.key!=="Escape")return;
     if(locked)return; // never dismiss the lock with a keystroke
     const closers=[
+      [guide,closeGuide],
       [imgView,()=>setImgView(null)],
       [callModal,()=>setCallModal(null)],
       [showGroupModal,()=>setShowGroupModal(false)],
@@ -5421,8 +5448,100 @@ useEffect(()=>{
   };
   window.addEventListener("keydown",onKey);
   return()=>window.removeEventListener("keydown",onKey);
-},[locked,imgView,callModal,showGroupModal,recog,showAddChooser,showWx,showCountryPicker]);
+},[locked,guide,imgView,callModal,showGroupModal,recog,showAddChooser,showWx,showCountryPicker]);
 
+// --- Guided flow engine -----------------------------------------------------
+const stopGuideTimer=()=>{if(guideTickRef.current){clearInterval(guideTickRef.current);guideTickRef.current=null;}};
+const closeGuide=()=>{stopGuideTimer();try{speechSynthesis.cancel();}catch(e){}
+  try{if(audioRef.current){audioRef.current.pause();audioRef.current.currentTime=0;}}catch(e){}
+  setIsSpeak(false);setGuide(null);};
+const sayStep=(key,i)=>{
+  if(!voiceGuide)return;                                   // silent mode: text only
+  const st=GUIDES[key]&&GUIDES[key].steps[i];
+  if(!st)return;
+  const txt=lang==="tr"?st.tr:(st.en||st.tr);
+  try{speak(txt);}catch(e){}
+};
+const startGuide=(key)=>{
+  if(!GUIDES[key])return;
+  stopGuideTimer();
+  const st=GUIDES[key].steps[0];
+  setGuide({key,i:0,left:st.sec||0,paused:false});
+  sayStep(key,0);
+};
+const gotoStep=(key,i)=>{
+  const g=GUIDES[key];
+  if(!g)return;
+  stopGuideTimer();
+  if(i>=g.steps.length){
+    if(voiceGuide){try{speak(lang==="tr"?"Yönlendirme tamamlandı.":"Guidance complete.");}catch(e){}}
+    setGuide(null);
+    notify(lang==="tr"?"✓ Yönlendirme tamamlandı":"✓ Guidance complete");
+    return;
+  }
+  if(i<0)i=0;
+  setGuide({key,i,left:g.steps[i].sec||0,paused:false});
+  sayStep(key,i);
+};
+// countdown for timed steps
+useEffect(()=>{
+  stopGuideTimer();
+  if(!guide||guide.paused||!guide.left)return;
+  guideTickRef.current=setInterval(()=>{
+    setGuide(p=>{
+      if(!p||p.paused||!p.left)return p;
+      const left=p.left-1;
+      if(left<=0){stopGuideTimer();
+        try{if(voiceGuide)speak(lang==="tr"?"Süre doldu.":"Time is up.");}catch(e){}
+        return{...p,left:0};}
+      return{...p,left};
+    });
+  },1000);
+  return stopGuideTimer;
+},[guide&&guide.key,guide&&guide.i,guide&&guide.paused,guide&&guide.left>0,voiceGuide,lang]);
+
+const renderGuide=()=>{
+  if(!guide)return null;
+  const g=GUIDES[guide.key];
+  const st=g.steps[guide.i];
+  const L=lang==="tr";
+  const txt=L?st.tr:(st.en||st.tr);
+  const pct=Math.round(100*(guide.i)/g.steps.length);
+  const mm=String(Math.floor(guide.left/60)).padStart(2,"0"),ss=String(guide.left%60).padStart(2,"0");
+  return(<div role="dialog" aria-modal="true" aria-label={L?g.tr:g.en}
+    style={{position:"fixed",inset:0,zIndex:9996,background:"rgba(0,0,0,.72)",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+    <div style={{width:"100%",maxWidth:520,background:cd,borderRadius:"18px 18px 0 0",padding:"14px 16px calc(16px + env(safe-area-inset-bottom))",boxShadow:"0 -8px 30px rgba(0,0,0,.5)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+        <span style={{fontSize:20}}>{g.icon}</span>
+        <span style={{fontWeight:700,fontSize:fs}}>{L?g.tr:g.en}</span>
+        <span style={{marginLeft:"auto",fontSize:fs-3,color:mt}}>{guide.i+1} / {g.steps.length}</span>
+        <button onClick={closeGuide} aria-label={L?"Kapat":"Close"} style={{background:"none",border:"none",color:tc,fontSize:20,cursor:"pointer",padding:"0 2px"}}>✕</button>
+      </div>
+      <div style={{height:4,background:bd,borderRadius:2,overflow:"hidden",marginBottom:12}}>
+        <div style={{width:`${pct}%`,height:"100%",background:ac,transition:"width .25s"}}/>
+      </div>
+      {st.warn&&<div style={{fontSize:fs-2,color:dg,fontWeight:700,marginBottom:6}}>⚠️ {L?"Önemli":"Important"}</div>}
+      <div style={{fontSize:fs+3,lineHeight:1.45,minHeight:74}}>{txt}</div>
+      {!!st.sec&&<div style={{textAlign:"center",margin:"10px 0"}}>
+        <div style={{fontSize:34,fontWeight:800,fontVariantNumeric:"tabular-nums",color:guide.left?ac:sc}}>{guide.left?`${mm}:${ss}`:(L?"Tamam":"Done")}</div>
+        {!!guide.left&&<button onClick={()=>setGuide(p=>({...p,paused:!p.paused}))} style={{...BP,background:"transparent",color:ac,border:`1px solid ${ac}`,padding:"4px 12px",marginTop:6,fontSize:fs-3}}>
+          {guide.paused?(L?"▶ Devam":"▶ Resume"):(L?"⏸ Duraklat":"⏸ Pause")}</button>}
+      </div>}
+      <div style={{display:"flex",gap:8,marginTop:10}}>
+        <button onClick={()=>gotoStep(guide.key,guide.i-1)} disabled={guide.i===0}
+          style={{...BP,flex:"0 0 auto",padding:"10px 14px",background:"transparent",color:guide.i===0?mt:tc,border:`1px solid ${bd}`}}>←</button>
+        <button onClick={()=>sayStep(guide.key,guide.i)} aria-label={L?"Tekrar oku":"Repeat"}
+          style={{...BP,flex:"0 0 auto",padding:"10px 14px",background:"transparent",color:voiceGuide?ac:mt,border:`1px solid ${bd}`}}>🔊</button>
+        <button onClick={()=>gotoStep(guide.key,guide.i+1)}
+          style={{...BP,flex:1,padding:"10px",fontWeight:700}}>
+          {guide.i===g.steps.length-1?(L?"Bitir":"Finish"):(L?"Sonraki":"Next")}
+        </button>
+      </div>
+      {!voiceGuide&&<div style={{fontSize:fs-4,color:mt,marginTop:8,textAlign:"center"}}>
+        {L?"Sesli yönlendirme kapalı — Ayarlar'dan açabilirsiniz.":"Voice guidance is off — enable it in Settings."}</div>}
+    </div>
+  </div>);
+};
 const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:renderMeds,appts:renderAppts,health:renderHealth,pCard:renderPCard,notes:renderNotes,contacts:renderContacts,community:renderCommunity,chat:renderChat,settings:renderSettings,privacy:renderPrivacy,terms:renderTerms,about:renderAbout};
   // SECURITY: when locked, render ONLY the lock screen. The app tree (health data) is never mounted.
   if(locked&&lockCfg)return(<div style={{fontFamily:"system-ui,-apple-system,sans-serif",background:dark?"#0b1117":"#f7fafc",minHeight:"100vh"}}>
@@ -5505,6 +5624,59 @@ const IcoAilvieSupport=({size=25})=>(
     <circle cx="14.1" cy="21.8" r="2.05" fill="#e8a817"/>
   </svg>
 );
+// ---------------------------------------------------------------------------
+// GUIDED FLOW ENGINE
+// A step is {tr, en, sec?, warn?}. `sec` turns the step into a countdown.
+// Flows are DATA, not code: adding a new one is just another entry here.
+// Sources: technique steps follow standard patient-instruction sheets
+// (inhaler: prime, exhale, seal, slow deep breath, 10s hold;
+//  BP: 5 min rest, back supported, cuff at heart level, no talking).
+// ---------------------------------------------------------------------------
+const GUIDES={
+  bp:{icon:"🩺",tr:"Tansiyon ölçümü",en:"Blood pressure",steps:[
+    {tr:"Ölçümden önce 5 dakika sessizce oturun. Sigara, kahve ve egzersizden en az 30 dakika kaçının.",en:"Sit quietly for 5 minutes before measuring.",sec:300},
+    {tr:"Sırtınızı dayayın, ayaklarınız yere düz bassın. Bacak bacak üstüne atmayın.",en:"Back supported, feet flat on the floor, legs uncrossed."},
+    {tr:"Kolunuzu bir masaya koyun. Manşon kalbinizle aynı hizada olmalı.",en:"Rest your arm on a table so the cuff is at heart level."},
+    {tr:"Manşonu çıplak kolunuza, dirseğin iki parmak üstüne sarın. İki parmak girecek kadar sıkı olsun.",en:"Wrap the cuff on your bare arm, two fingers above the elbow."},
+    {tr:"Cihazı başlatın. Ölçüm boyunca konuşmayın ve hareket etmeyin.",en:"Start the device. Do not talk or move during the measurement."},
+    {tr:"Bir dakika bekleyin, sonra ikinci bir ölçüm yapın. İki ölçümün ortalamasını kaydedin.",en:"Wait one minute, then take a second reading and average them.",sec:60},
+  ]},
+  pulse:{icon:"❤️",tr:"Nabız ölçümü",en:"Pulse",steps:[
+    {tr:"Oturun ve bir dakika dinlenin.",en:"Sit down and rest for a minute.",sec:60},
+    {tr:"İşaret ve orta parmağınızı bileğinizin baş parmak tarafına koyun. Baş parmağınızı kullanmayın.",en:"Place index and middle finger on the thumb side of your wrist."},
+    {tr:"Nabzı hissedene kadar hafifçe bastırın.",en:"Press gently until you feel the beat."},
+    {tr:"Otuz saniye boyunca atışları sayın. Şimdi başlayın.",en:"Count the beats for thirty seconds. Start now.",sec:30},
+    {tr:"Saydığınız sayıyı ikiyle çarpın. Bu dakikadaki nabzınızdır.",en:"Multiply by two. That is your beats per minute."},
+  ]},
+  glucose:{icon:"🩸",tr:"Kan şekeri ölçümü",en:"Blood glucose",steps:[
+    {tr:"Ellerinizi sabunlu ılık suyla yıkayın ve iyice kurulayın. Alkollü mendil kullandıysanız tamamen kurumasını bekleyin.",en:"Wash hands with warm soapy water and dry them fully."},
+    {tr:"Yeni bir strip takın ve cihazın hazır olmasını bekleyin.",en:"Insert a fresh strip and wait for the meter to be ready."},
+    {tr:"Parmak ucunun yan tarafını delin. Orta kısmı daha çok acır.",en:"Lance the side of the fingertip, not the centre."},
+    {tr:"İlk damlayı temiz bir mendille silin. İkinci damlayı kullanın.",en:"Wipe away the first drop; use the second drop."},
+    {tr:"Damlayı stribin ucuna değdirin ve sonucu bekleyin.",en:"Touch the drop to the strip and wait for the result.",sec:10},
+    {tr:"Parmağınıza temiz bir pamukla bastırın. Sonucu uygulamaya kaydedin.",en:"Press with clean cotton, then record the result."},
+  ]},
+  inhaler:{icon:"💨",tr:"İnhaler (sprey) kullanımı",en:"Inhaler technique",steps:[
+    {tr:"İnhaleri dik tutun, kapağını çıkarın ve beş kez çalkalayın.",en:"Hold upright, remove the cap and shake five times."},
+    {tr:"Ayakta veya dik oturun. Çenenizi hafifçe yukarı kaldırın.",en:"Stand or sit upright, chin slightly up."},
+    {tr:"Rahatça nefes verin. Ciğerlerinizi boşaltın.",en:"Breathe out gently and empty your lungs."},
+    {tr:"Ağızlığı dişlerinizin arasına alın, dudaklarınızla sıkıca kavrayın.",en:"Seal your lips around the mouthpiece."},
+    {tr:"Yavaş derin nefes almaya başlayın ve tam o anda spreye bir kez basın. Nefesi yavaşça sürdürün.",en:"Start a slow deep breath and press once as you begin."},
+    {tr:"İnhaleri çıkarın. Nefesinizi on saniye tutun.",en:"Remove the inhaler and hold your breath for ten seconds.",sec:10},
+    {tr:"Yavaşça nefes verin. İkinci doz gerekiyorsa otuz saniye bekleyin.",en:"Breathe out slowly. Wait thirty seconds if a second dose is needed.",sec:30},
+    {tr:"Kortizonlu inhaler kullandıysanız ağzınızı suyla çalkalayın ve suyu tükürün.",en:"If it is a steroid inhaler, rinse your mouth and spit.",warn:true},
+  ]},
+  insulin:{icon:"💉",tr:"İnsülin enjeksiyonu",en:"Insulin injection",steps:[
+    {tr:"Ellerinizi yıkayın. İnsülinin türünü ve son kullanma tarihini kontrol edin.",en:"Wash hands. Check the insulin type and expiry date."},
+    {tr:"Bulanık insülin ise avuçlarınız arasında yavaşça yuvarlayın. Çalkalamayın.",en:"If cloudy, roll gently between your palms. Do not shake."},
+    {tr:"Yeni bir iğne takın. İki ünite havaya sıkarak iğnenin aktığını doğrulayın.",en:"Attach a new needle and prime with two units."},
+    {tr:"Dozunuzu ayarlayın ve iki kez kontrol edin.",en:"Dial your dose and check it twice."},
+    {tr:"Bölgeyi seçin: karın, uyluk veya kol. Her seferinde en az iki santim kaydırın. Aynı noktaya tekrar tekrar yapmayın.",en:"Rotate the site by at least two centimetres each time.",warn:true},
+    {tr:"Cildi hafifçe tutun, iğneyi doksan derece batırın ve pistonu sonuna kadar itin.",en:"Pinch the skin, insert at ninety degrees and press fully."},
+    {tr:"On saniye bekleyin, sonra iğneyi çıkarın. Ovalamayın.",en:"Hold for ten seconds, then withdraw. Do not rub.",sec:10},
+    {tr:"İğneyi güvenli bir kutuya atın.",en:"Dispose of the needle in a sharps container."},
+  ]},
+};
 const nav1=[{key:"contacts",icon:<IcoPhone/>,label:t.contacts},{key:"pCard",icon:<IcoIdCard/>,label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:<IcoHeartBeat/>,label:t.health}];
 const nav2=[{key:"notes",icon:"📝",label:t.notes},{key:"community",icon:<IcoPeople/>,label:t.community},{key:"chat",icon:<IcoAilvie/>,label:t.chat},{key:"admin",icon:<IcoAilvieSupport/>,label:t.adminCh||"Destek"},{key:"settings",icon:"⚙️",label:t.settings,onNav:()=>setSettingsTab("all")}];
 
@@ -5757,6 +5929,7 @@ return (
               {tool("highlighter",lang==="tr"?"Fosforlu kalem":"Highlighter","🖌️",()=>pickTool("highlighter",22,true),!D.erase&&D.tool==="highlighter")}
             </div>
           </div>;})()}
+        {renderGuide()}
         {showFirstAid&&<div style={{position:"fixed",inset:0,zIndex:9997,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowFirstAid(false)}>
           <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:520,maxHeight:"92vh",borderRadius:"18px 18px 0 0",display:"flex",flexDirection:"column",overflow:"hidden"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
