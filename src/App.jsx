@@ -515,7 +515,7 @@ const editableRef=useRef(null);
 const noteHistRef=useRef({stack:[],idx:-1,nid:null});
 const noteRecRef=useRef(null);
 const drawCanvasRef=useRef(null);
-const drawStateRef=useRef({strokes:[],redo:[],color:null,size:4,tool:"pen",current:null});
+const drawStateRef=useRef({strokes:[],redo:[],color:null,size:6,tool:"pen",erase:false,highlight:false,showColors:false,showMenu:false,current:null});
 const[drawTick,setDrawTick]=useState(0);
 const[faOpen,setFaOpen]=useState(null);
 const[voiceFirst,setVoiceFirst]=useState(()=>{try{return localStorage.getItem("ailvie_vf")==="1";}catch{return false;}});
@@ -5500,45 +5500,67 @@ return (
         })()}
         {noteDraw&&(()=>{
           const D=drawStateRef.current;
-          const bg=dark?"#0a0e14":"#ffffff";
-          const inkDefault=dark?"#ffffff":"#111111";
-          const palette=[inkDefault,"#e63946","#f4a261","#2a9d8f","#4895ef","#b5179e"];
+          const PAPER="#ffffff";                 // Keep: canvas is always white, chrome is dark
+          const CHROME="#202124", ONCHROME="#e8eaed", DIM="#7a7f87";
+          const inkDefault="#202124";
+          const palette=["#202124","#1a73e8","#e63946","#f4a261","#2a9d8f","#b5179e"];
           const redraw=(el)=>{
             if(!el||!el._ctx)return;
             const c=el._ctx;
-            c.fillStyle=bg;c.fillRect(0,0,el.width,el.height);
+            c.fillStyle=PAPER;c.fillRect(0,0,el.width,el.height);
             for(const st of D.strokes){
               if(st.points.length<2)continue;
-              c.strokeStyle=st.erase?bg:st.color;
+              c.globalAlpha=st.highlight?0.35:1;
+              c.strokeStyle=st.erase?PAPER:st.color;
               c.lineWidth=st.size;c.lineCap="round";c.lineJoin="round";
               c.beginPath();c.moveTo(st.points[0][0],st.points[0][1]);
               for(let i=1;i<st.points.length;i++)c.lineTo(st.points[i][0],st.points[i][1]);
               c.stroke();
             }
+            c.globalAlpha=1;
           };
           const bump=()=>setDrawTick(t=>t+1);
-          const toolBtn=(active,onClick,label,child,extra)=>(
-            <button onClick={onClick} aria-label={label} title={label} style={{background:active?`${ac}26`:"transparent",border:active?`1px solid ${ac}`:"1px solid transparent",color:active?ac:tc,borderRadius:12,width:44,height:44,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,cursor:"pointer",...(extra||{})}}>{child}</button>
+          const pickTool=(name,size,highlight)=>{
+            // tapping the already-selected tool toggles the colour strip (Keep behaviour)
+            if(D.tool===name&&!D.erase){D.showColors=!D.showColors;}
+            else {D.tool=name;D.size=size;D.highlight=!!highlight;D.erase=false;D.showColors=false;}
+            bump();
+          };
+          const tool=(name,label,icon,onClick,active)=>(
+            <button onClick={onClick} aria-label={label} title={label}
+              style={{background:"none",border:"none",cursor:"pointer",color:active?"#8ab4f8":DIM,fontSize:21,
+                width:56,height:52,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5,padding:0}}>
+              <span>{icon}</span>
+              <span style={{width:26,height:3,borderRadius:2,background:active?"#8ab4f8":"transparent"}}/>
+            </button>
           );
-          return <div style={{position:"fixed",inset:0,zIndex:9995,background:bg,display:"flex",flexDirection:"column"}}>
+          const penActive=(sz)=>!D.erase&&D.tool==="pen"&&(D.size||6)===sz;
+          return <div style={{position:"fixed",inset:0,zIndex:9995,background:CHROME,display:"flex",flexDirection:"column"}}>
             {/* top bar */}
-            <div style={{display:"flex",alignItems:"center",gap:4,padding:"8px 10px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
+            <div style={{display:"flex",alignItems:"center",padding:"6px 8px",flexShrink:0,background:CHROME}}>
               <button onClick={()=>{const el=drawCanvasRef.current;
                   if(el&&D.strokes.length)saveDrawing(el.toDataURL("image/png"));
                   else setNoteDraw(false);
-                  D.strokes=[];D.redo=[];}}
-                aria-label={lang==="tr"?"Kaydet ve geri dön":"Save and go back"} style={{background:"none",border:"none",color:tc,cursor:"pointer",width:44,height:44,fontSize:22}}>←</button>
+                  D.strokes=[];D.redo=[];D.showColors=false;}}
+                aria-label={lang==="tr"?"Kaydet ve geri dön":"Save and go back"}
+                style={{background:"none",border:"none",color:ONCHROME,cursor:"pointer",width:46,height:46,fontSize:23}}>←</button>
               <div style={{flex:1}}/>
               <button disabled={!D.strokes.length} onClick={()=>{if(!D.strokes.length)return;D.redo.push(D.strokes.pop());redraw(drawCanvasRef.current);bump();}}
-                aria-label={lang==="tr"?"Geri al":"Undo"} style={{background:"none",border:"none",color:D.strokes.length?tc:mt,cursor:"pointer",width:44,height:44,fontSize:20}}>↶</button>
+                aria-label={lang==="tr"?"Geri al":"Undo"}
+                style={{background:"none",border:"none",color:D.strokes.length?ONCHROME:DIM,cursor:"pointer",width:46,height:46,fontSize:21}}>↺</button>
               <button disabled={!D.redo.length} onClick={()=>{if(!D.redo.length)return;D.strokes.push(D.redo.pop());redraw(drawCanvasRef.current);bump();}}
-                aria-label={lang==="tr"?"İleri al":"Redo"} style={{background:"none",border:"none",color:D.redo.length?tc:mt,cursor:"pointer",width:44,height:44,fontSize:20}}>↷</button>
-              <button onClick={()=>{D.strokes=[];D.redo=[];redraw(drawCanvasRef.current);bump();}}
-                aria-label={lang==="tr"?"Tümünü sil":"Clear all"} style={{background:"none",border:"none",color:tc,cursor:"pointer",width:44,height:44,fontSize:19}}>🗑️</button>
-              <button onClick={()=>{D.strokes=[];D.redo=[];setNoteDraw(false);}}
-                aria-label={lang==="tr"?"Vazgeç":"Discard"} style={{background:"none",border:"none",color:tc,cursor:"pointer",width:44,height:44,fontSize:20}}>✕</button>
+                aria-label={lang==="tr"?"İleri al":"Redo"}
+                style={{background:"none",border:"none",color:D.redo.length?ONCHROME:DIM,cursor:"pointer",width:46,height:46,fontSize:21}}>↻</button>
+              <button onClick={()=>{D.showMenu=!D.showMenu;bump();}} aria-label={lang==="tr"?"Diğer":"More"}
+                style={{background:"none",border:"none",color:ONCHROME,cursor:"pointer",width:46,height:46,fontSize:20,position:"relative"}}>⋮</button>
             </div>
-            {/* canvas fills remaining space */}
+            {D.showMenu&&<div style={{position:"absolute",top:52,right:10,zIndex:2,background:"#2b2d31",borderRadius:10,padding:6,boxShadow:"0 6px 22px rgba(0,0,0,.5)"}}>
+              <button onClick={()=>{D.strokes=[];D.redo=[];D.showMenu=false;redraw(drawCanvasRef.current);bump();}}
+                style={{background:"none",border:"none",color:ONCHROME,padding:"10px 16px",cursor:"pointer",display:"block",width:"100%",textAlign:"left",fontSize:fs-1}}>{lang==="tr"?"Tümünü sil":"Clear all"}</button>
+              <button onClick={()=>{D.strokes=[];D.redo=[];D.showMenu=false;setNoteDraw(false);}}
+                style={{background:"none",border:"none",color:ONCHROME,padding:"10px 16px",cursor:"pointer",display:"block",width:"100%",textAlign:"left",fontSize:fs-1}}>{lang==="tr"?"Vazgeç":"Discard"}</button>
+            </div>}
+            {/* white paper */}
             <canvas ref={el=>{
                 drawCanvasRef.current=el;
                 if(el&&!el._init){
@@ -5547,44 +5569,46 @@ return (
                   const dpr=Math.min(window.devicePixelRatio||1,2);
                   el.width=Math.max(1,Math.round(r.width*dpr));
                   el.height=Math.max(1,Math.round(r.height*dpr));
-                  el._scale=dpr;
-                  el._ctx=el.getContext("2d");
+                  el._scale=dpr;el._ctx=el.getContext("2d");
                   redraw(el);
                 }
               }}
               onPointerDown={e=>{const el=e.currentTarget;try{el.setPointerCapture(e.pointerId);}catch(x){}
+                if(D.showColors||D.showMenu){D.showColors=false;D.showMenu=false;bump();}
                 const r=el.getBoundingClientRect();
                 const x=(e.clientX-r.left)*(el.width/r.width),y=(e.clientY-r.top)*(el.height/r.height);
-                D.current={color:D.color||inkDefault,size:(D.size||4)*(el._scale||1),erase:D.tool==="eraser",points:[[x,y]]};
+                D.current={color:D.color||inkDefault,size:(D.erase?22:(D.size||6))*(el._scale||1),erase:!!D.erase,highlight:!!D.highlight,points:[[x,y]]};
                 el._drawing=true;}}
               onPointerMove={e=>{const el=e.currentTarget;if(!el._drawing||!D.current)return;
                 const r=el.getBoundingClientRect();
                 const x=(e.clientX-r.left)*(el.width/r.width),y=(e.clientY-r.top)*(el.height/r.height);
                 const pts=D.current.points;const last=pts[pts.length-1];
                 pts.push([x,y]);
-                const c=el._ctx;c.strokeStyle=D.current.erase?bg:D.current.color;c.lineWidth=D.current.size;c.lineCap="round";c.lineJoin="round";
-                c.beginPath();c.moveTo(last[0],last[1]);c.lineTo(x,y);c.stroke();}}
+                const c=el._ctx;
+                c.globalAlpha=D.current.highlight?0.35:1;
+                c.strokeStyle=D.current.erase?PAPER:D.current.color;
+                c.lineWidth=D.current.size;c.lineCap="round";c.lineJoin="round";
+                c.beginPath();c.moveTo(last[0],last[1]);c.lineTo(x,y);c.stroke();c.globalAlpha=1;}}
               onPointerUp={e=>{const el=e.currentTarget;el._drawing=false;
                 if(D.current&&D.current.points.length>1){D.strokes.push(D.current);D.redo=[];bump();}
                 D.current=null;}}
               onPointerLeave={e=>{e.currentTarget._drawing=false;}}
-              style={{flex:"1 1 0",height:0,width:"100%",background:bg,touchAction:"none",display:"block",cursor:"crosshair"}}/>
-            {/* bottom toolbar */}
-            <div style={{flexShrink:0,borderTop:`1px solid ${bd}`,padding:"8px 10px",display:"flex",flexDirection:"column",gap:8}}>
-              <div style={{display:"flex",alignItems:"center",gap:6,justifyContent:"center"}}>
-                {toolBtn(D.tool!=="eraser"&&(D.size||4)<=4,()=>{D.tool="pen";D.size=3;bump();},lang==="tr"?"İnce kalem":"Thin pen","✒️")}
-                {toolBtn(D.tool!=="eraser"&&(D.size||4)>4&&(D.size||4)<12,()=>{D.tool="pen";D.size=8;bump();},lang==="tr"?"Kalem":"Pen","🖊️")}
-                {toolBtn(D.tool!=="eraser"&&(D.size||4)>=12,()=>{D.tool="pen";D.size=18;bump();},lang==="tr"?"Marker":"Marker","🖍️")}
-                {toolBtn(D.tool==="eraser",()=>{D.tool="eraser";bump();},lang==="tr"?"Silgi":"Eraser","🧽")}
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:8,justifyContent:"center"}}>
-                {palette.map(col=>(
-                  <button key={col} onClick={()=>{D.color=col;D.tool="pen";bump();}}
-                    aria-label={lang==="tr"?"Renk":"Color"}
-                    style={{width:30,height:30,borderRadius:"50%",background:col,cursor:"pointer",
-                      border:(D.color||inkDefault)===col&&D.tool!=="eraser"?`3px solid ${ac}`:`1px solid ${bd}`}}/>
-                ))}
-              </div>
+              style={{flex:"1 1 0",height:0,width:"100%",background:PAPER,touchAction:"none",display:"block",cursor:"crosshair"}}/>
+            {/* colour strip (opens when tapping the active tool) */}
+            {D.showColors&&<div style={{flexShrink:0,background:CHROME,display:"flex",gap:14,justifyContent:"center",padding:"10px 8px 2px"}}>
+              {palette.map(col=>(
+                <button key={col} onClick={()=>{D.color=col;D.showColors=false;bump();}} aria-label={lang==="tr"?"Renk":"Color"}
+                  style={{width:30,height:30,borderRadius:"50%",background:col,cursor:"pointer",
+                    border:(D.color||inkDefault)===col?"3px solid #8ab4f8":"1px solid #5f6368"}}/>
+              ))}
+            </div>}
+            {/* bottom tool bar */}
+            <div style={{flexShrink:0,background:CHROME,display:"flex",alignItems:"center",justifyContent:"space-around",padding:"4px 2px 6px"}}>
+              {tool("eraser",lang==="tr"?"Silgi":"Eraser","🧽",()=>{D.erase=true;D.showColors=false;bump();},!!D.erase)}
+              {tool("marker",lang==="tr"?"Marker":"Marker","🖍️",()=>pickTool("marker",18,false),!D.erase&&D.tool==="marker")}
+              {tool("pen",lang==="tr"?"Kalem":"Pen","🖊️",()=>pickTool("pen",6,false),penActive(6))}
+              {tool("thin",lang==="tr"?"İnce kalem":"Thin pen","✒️",()=>pickTool("pen",3,false),penActive(3))}
+              {tool("highlighter",lang==="tr"?"Fosforlu kalem":"Highlighter","🖌️",()=>pickTool("highlighter",22,true),!D.erase&&D.tool==="highlighter")}
             </div>
           </div>;})()}
         {showFirstAid&&<div style={{position:"fixed",inset:0,zIndex:9997,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowFirstAid(false)}>
