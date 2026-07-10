@@ -5483,29 +5483,26 @@ const IcoIdCard=({size=24})=>(
     <rect x="14" y="14.9" width="5.4" height="1.9" rx="0.95" fill="#64748b"/>
   </svg>
 );
-// AILVIE face. avatar.png is a 200x200 square portrait; face centre measured at x46% y27%.
-// zoom = how tightly we crop (higher = closer). left/top place that centre in the middle.
-const AilvieFace=({size=24,zoom=250,left=-65,top=-18,ring="#e8a817",ringW=1.6})=>(
-  <span style={{display:"block",width:size,height:size,borderRadius:"50%",overflow:"hidden",
-    position:"relative",background:"#0b3d5c",boxShadow:`0 0 0 ${ringW}px ${ring}`}}>
-    <img src="/avatar.png" alt="" style={{width:`${zoom}%`,height:`${zoom}%`,position:"absolute",left:`${left}%`,top:`${top}%`,display:"block"}}/>
-  </span>
+// Chat + Support: same visual language as the other nav icons - flat, two brand colours,
+// no photo. A photo cannot hold detail at 25px and clashes with the vector icons beside it.
+// Chat: speech bubble (blue) with an AI spark (gold)
+const IcoAilvie=({size=25})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
+    <path fill="#00b4d8" d="M12 1.8C6.1 1.8 1.3 5.7 1.3 10.6c0 2.8 1.6 5.3 4.1 6.9-.2 1.5-.9 3-2 4.2 2.2-.3 4.3-1.2 6-2.5.8.1 1.7.2 2.6.2 5.9 0 10.7-3.9 10.7-8.8S17.9 1.8 12 1.8z"/>
+    <path fill="#e8a817" d="M11.8 4.4l2.2 4.7 4.7 2.2-4.7 2.2-2.2 4.7-2.2-4.7-4.7-2.2 4.7-2.2z"/>
+  </svg>
 );
-// Chat: tight, bright portrait
-const IcoAilvie=({size=25})=><AilvieFace size={size} zoom={265} left={-70} top={-20} ringW={1.8}/>;
-// Support: flat TWO-COLOUR icon (no photo underneath -> nothing looks busy).
-// Brand blue silhouette + gold headset. Reads cleanly at 25px.
+// Support: a headset on its own. No head silhouette -> far fewer parts, reads at 25px.
 const IcoAilvieSupport=({size=25})=>(
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
-    {/* head + shoulders, brand blue */}
-    <circle cx="12" cy="8.6" r="4.1" fill="#00b4d8"/>
-    <path fill="#00b4d8" d="M12 13.6c-3.7 0-6.6 2.4-6.6 5.6V21h13.2v-1.8c0-3.2-2.9-5.6-6.6-5.6z"/>
-    {/* gold headset: band + ear cups + boom mic */}
-    <path d="M4.6 12.2v-1.6a7.4 7.4 0 0 1 14.8 0v1.6" fill="none" stroke="#e8a817" strokeWidth="2"/>
-    <rect x="2.2" y="10.8" width="3.6" height="6" rx="1.8" fill="#e8a817"/>
-    <rect x="18.2" y="10.8" width="3.6" height="6" rx="1.8" fill="#e8a817"/>
-    <path d="M19.9 17c0 2.6-2.1 4.5-4.6 4.5" fill="none" stroke="#e8a817" strokeWidth="1.7" strokeLinecap="round"/>
-    <circle cx="14.6" cy="21.5" r="1.9" fill="#e8a817"/>
+    {/* headband */}
+    <path d="M3.9 12.6V10.2a8.1 8.1 0 0 1 16.2 0v2.4" fill="none" stroke="#00b4d8" strokeWidth="2.6" strokeLinecap="round"/>
+    {/* ear cups */}
+    <rect x="1.5" y="11.2" width="4.9" height="7.4" rx="2.45" fill="#00b4d8"/>
+    <rect x="17.6" y="11.2" width="4.9" height="7.4" rx="2.45" fill="#00b4d8"/>
+    {/* boom mic + mouthpiece, gold */}
+    <path d="M20 18.9v.3a2.6 2.6 0 0 1-2.6 2.6h-1.7" fill="none" stroke="#e8a817" strokeWidth="1.9" strokeLinecap="round"/>
+    <circle cx="14.1" cy="21.8" r="2.05" fill="#e8a817"/>
   </svg>
 );
 const nav1=[{key:"contacts",icon:<IcoPhone/>,label:t.contacts},{key:"pCard",icon:<IcoIdCard/>,label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:<IcoHeartBeat/>,label:t.health}];
