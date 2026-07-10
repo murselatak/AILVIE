@@ -573,7 +573,18 @@ const rtl=lang==="ar";
 const lc=LC[lang]||"en-US";
 
 const[now,setNow]=useState(new Date());
-useEffect(()=>{const i=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(i)},[]);
+// The digital clock, greeting, date and calendar only need MINUTE precision. Ticking every
+// second re-rendered the entire app ~16 DOM mutations/sec while idle. Align to the minute.
+useEffect(()=>{
+  let t;
+  const schedule=()=>{
+    const d=new Date();
+    const msToNextMinute=(60-d.getSeconds())*1000-d.getMilliseconds();
+    t=setTimeout(()=>{setNow(new Date());schedule();},Math.max(250,msToNextMinute));
+  };
+  schedule();
+  return()=>clearTimeout(t);
+},[]);
 // ---- Weather (Open-Meteo, keyless) + Compass (DeviceOrientation) ----
 const[weather,setWeather]=useState(null);
 const[showWx,setShowWx]=useState(false);
@@ -1965,7 +1976,10 @@ const sendNotification=(title,body)=>{
   }catch(e){}
 };
 useEffect(()=>{
-const _n=now;
+// Runs on its own 1s ticker. It must NOT depend on the `now` state: re-rendering the whole
+// app every second to check alarms made the UI visibly flicker on low-end phones.
+const check=()=>{
+const _n=new Date();
 const hhmm=String(_n.getHours()).padStart(2,'0')+':'+String(_n.getMinutes()).padStart(2,'0');
 const minKey=hhmm;
 // Reset fired set each new minute
@@ -2037,7 +2051,11 @@ appts.forEach(a=>{
   }
 });
 }
-},[now,meds,lang,calAlarms,calNotes,appts]);
+};
+check();
+const iv=setInterval(check,1000);
+return()=>clearInterval(iv);
+},[meds,lang,calAlarms,calNotes,appts]);
 
 // Health
 const[hd,setHd]=useState({pulse:0,weight:0,height:0,bpS:0,bpD:0,steps:0,sleep:0,spo2:0,calories:0,restPulse:0,hrvRmssd:0,hrvSdnn:0,resp:0});
@@ -3090,7 +3108,12 @@ const HField=({icon,label,field,unit})=>{
 };
 
 // Analog Clock
-const Clock=()=>{const s=now.getSeconds(),m=now.getMinutes(),h=now.getHours()%12;return(<svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill={dark?"#151d2b":"#f8fafc"} stroke={ac} strokeWidth="2"/>{[...Array(12)].map((_,i)=>{const a=(i*30-90)*Math.PI/180;return <line key={i} x1={32+(i%3===0?22:24)*Math.cos(a)} y1={32+(i%3===0?22:24)*Math.sin(a)} x2={32+27*Math.cos(a)} y2={32+27*Math.sin(a)} stroke={tc} strokeWidth={i%3===0?"2":"1"} strokeLinecap="round"/>;})}<line x1="32" y1="32" x2={32+15*Math.cos(((h*30+m*.5)-90)*Math.PI/180)} y2={32+15*Math.sin(((h*30+m*.5)-90)*Math.PI/180)} stroke={tc} strokeWidth="2.5" strokeLinecap="round"/><line x1="32" y1="32" x2={32+20*Math.cos(((m*6+s*.1)-90)*Math.PI/180)} y2={32+20*Math.sin(((m*6+s*.1)-90)*Math.PI/180)} stroke={ac} strokeWidth="1.8" strokeLinecap="round"/><line x1="32" y1="32" x2={32+24*Math.cos((s*6-90)*Math.PI/180)} y2={32+24*Math.sin((s*6-90)*Math.PI/180)} stroke={dg} strokeWidth=".8" strokeLinecap="round"/><circle cx="32" cy="32" r="2.5" fill={ac}/></svg>);};
+// The analog clock is the ONLY thing that needs second precision. It keeps its own state so
+// the second hand ticks without re-rendering the rest of the app.
+const Clock=()=>{
+  const[t,setT]=useState(()=>new Date());
+  useEffect(()=>{const iv=setInterval(()=>setT(new Date()),1000);return()=>clearInterval(iv);},[]);
+  const s=t.getSeconds(),m=t.getMinutes(),h=t.getHours()%12;return(<svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill={dark?"#151d2b":"#f8fafc"} stroke={ac} strokeWidth="2"/>{[...Array(12)].map((_,i)=>{const a=(i*30-90)*Math.PI/180;return <line key={i} x1={32+(i%3===0?22:24)*Math.cos(a)} y1={32+(i%3===0?22:24)*Math.sin(a)} x2={32+27*Math.cos(a)} y2={32+27*Math.sin(a)} stroke={tc} strokeWidth={i%3===0?"2":"1"} strokeLinecap="round"/>;})}<line x1="32" y1="32" x2={32+15*Math.cos(((h*30+m*.5)-90)*Math.PI/180)} y2={32+15*Math.sin(((h*30+m*.5)-90)*Math.PI/180)} stroke={tc} strokeWidth="2.5" strokeLinecap="round"/><line x1="32" y1="32" x2={32+20*Math.cos(((m*6+s*.1)-90)*Math.PI/180)} y2={32+20*Math.sin(((m*6+s*.1)-90)*Math.PI/180)} stroke={ac} strokeWidth="1.8" strokeLinecap="round"/><line x1="32" y1="32" x2={32+24*Math.cos((s*6-90)*Math.PI/180)} y2={32+24*Math.sin((s*6-90)*Math.PI/180)} stroke={dg} strokeWidth=".8" strokeLinecap="round"/><circle cx="32" cy="32" r="2.5" fill={ac}/></svg>);};
 const wxIcon=(c)=>{if(c==null)return"🌡️";if(c===0)return"☀️";if(c<=2)return"🌤️";if(c===3)return"☁️";if(c<=48)return"🌫️";if(c<=57)return"🌦️";if(c<=67)return"🌧️";if(c<=77)return"🌨️";if(c<=82)return"🌧️";if(c<=86)return"🌨️";return"⛈️";};
 const dirLabel=(d)=>{const dl=lang==="tr"?["K","KD","D","GD","G","GB","B","KB"]:["N","NE","E","SE","S","SW","W","NW"];return dl[Math.round(((d||0)%360)/45)%8];};
 const Compass=({heading})=>{const h=heading||0;return(<svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill={dark?"#151d2b":"#f8fafc"} stroke={ac} strokeWidth="1.5"/><g transform={`rotate(${-h} 20 20)`}><polygon points="20,4 16.5,20 20,16.5 23.5,20" fill={dg}/><polygon points="20,36 16.5,20 20,23.5 23.5,20" fill={mt}/><text x="20" y="12" textAnchor="middle" fontSize="6.5" fontWeight="700" fill={tc}>N</text></g><circle cx="20" cy="20" r="2" fill={ac}/></svg>);};
