@@ -5809,7 +5809,10 @@ return (
             </div>
             <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"0 28px",gap:16,overflowY:"auto"}}>
               {obStep===0&&<>
-                <img src="/avatar2-256.webp" alt="" style={{width:120,height:120,borderRadius:20,objectFit:"cover",boxShadow:"0 8px 30px rgba(0,0,0,.3)"}}/>
+                {/* The source image is 217x256 (portrait). A 120x120 square box with objectFit:cover
+                    cropped the top and bottom of the doctor. Keep the real aspect ratio and show it whole. */}
+                <img src="/avatar2-256.webp" alt="AILVIE" width="129" height="152"
+                  style={{width:129,height:152,borderRadius:20,objectFit:"contain",boxShadow:"0 8px 30px rgba(0,0,0,.3)"}}/>
                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:42,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"1px #e8a817"}}>AILVIE</div>
                 <div style={{fontSize:fs+6,fontWeight:700}}>{ob.welcome}</div>
                 <div style={{fontSize:fs+1,opacity:.92,maxWidth:340,lineHeight:1.5}}>{ob.intro}</div>
@@ -6115,7 +6118,7 @@ return (
         <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"2px 10px",paddingTop:"max(env(safe-area-inset-top),2px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"flex-end",gap:6,flex:1,minWidth:0}}>
             <button onClick={()=>setShowMenu(true)} aria-label={lang==="tr"?"Menü":"Menu"} style={{background:"none",border:"none",color:"#fff",fontSize:22,cursor:"pointer",padding:0,flexShrink:0,alignSelf:"center"}}>☰</button>
-            <img src="/avatar2-256.webp" alt="" style={{height:54,width:54,objectFit:"cover",flexShrink:0,borderRadius:6}} />
+            <img src="/avatar2-256.webp" alt="AILVIE" style={{height:60,width:51,objectFit:"contain",flexShrink:0,borderRadius:6}} />
             <div onClick={()=>goTo("home")} title={t.home} role="button" style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",lineHeight:1,minWidth:0,cursor:"pointer"}}>
               <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:35,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"1px #e8a817",textShadow:"0 2px 6px rgba(0,0,0,0.5)",textAlign:"center"}}>AILVIE</div>
               <div style={{fontSize:10.5,color:"rgba(255,255,255,0.92)",letterSpacing:0,fontWeight:500,marginTop:1,whiteSpace:"nowrap",textAlign:"center"}}>{t.sl}</div>
