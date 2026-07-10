@@ -2759,8 +2759,34 @@ SESLİ KOMUTLAR / GEZİNME (kullanıcı özellikle bir yere gitmek/okumak isters
   setChatL(false);
 };
 
-const toTrash=(type,item)=>{setTrashItems(p=>[...p,{...item,_t:type,_d:Date.now()}]);if(type==="med")setMeds(p=>p.filter(x=>x.id!==item.id));if(type==="appt")setAppts(p=>p.filter(x=>x.id!==item.id));if(type==="note")setNotes(p=>p.filter(x=>x.id!==item.id));if(type==="contact")setContacts(p=>p.filter(x=>x.id!==item.id));if(type==="record")setRecords(p=>p.filter(x=>x.id!==item.id));};
-const restoreItem=(item)=>{const {_t,_d,...c}=item;if(_t==="med")setMeds(p=>[...p,c]);if(_t==="appt")setAppts(p=>[...p,c]);if(_t==="note")setNotes(p=>[...p,c]);if(_t==="contact")setContacts(p=>[...p,c]);if(_t==="record")setRecords(p=>[...p,c]);setTrashItems(p=>p.filter(x=>x!==item));};
+// Everything the user deletes goes to Trash first. Nothing disappears without consent.
+const toTrash=(type,item)=>{
+  setTrashItems(p=>[...p,{...item,_t:type,_d:Date.now()}]);
+  if(type==="med")setMeds(p=>p.filter(x=>x.id!==item.id));
+  if(type==="appt")setAppts(p=>p.filter(x=>x.id!==item.id));
+  if(type==="note"){setNotes(p=>p.filter(x=>x.id!==item.id));}
+  if(type==="contact")setContacts(p=>p.filter(x=>x.id!==item.id));
+  if(type==="record")setRecords(p=>p.filter(x=>x.id!==item.id));
+  if(type==="lab")setLabs(p=>p.filter(x=>x.id!==item.id));
+  if(type==="image")setMedImages(p=>p.filter(x=>x.id!==item.id));
+  if(type==="message")setMsgs(p=>p.filter(x=>x.id!==item.id));
+  if(type==="group")setGroups(p=>p.filter(x=>x.id!==item.id));
+  if(type==="emergency")setEmNums(p=>p.filter(x=>x.id!==item.id));
+};
+const restoreItem=(item)=>{
+  const {_t,_d,...c}=item;
+  if(_t==="med")setMeds(p=>[...p,c]);
+  if(_t==="appt")setAppts(p=>[...p,c]);
+  if(_t==="note")setNotes(p=>[...p,c]);
+  if(_t==="contact")setContacts(p=>[...p,c]);
+  if(_t==="record")setRecords(p=>[...p,c]);
+  if(_t==="lab")setLabs(p=>[...p,c]);
+  if(_t==="image")setMedImages(p=>[...p,c]);
+  if(_t==="message")setMsgs(p=>[...p,c]);
+  if(_t==="group")setGroups(p=>[...p,c]);
+  if(_t==="emergency")setEmNums(p=>[...p,c]);
+  setTrashItems(p=>p.filter(x=>x!==item));
+};
 // Auto-purge trash items older than the retention window (trashDays)
 useEffect(()=>{
   const purge=()=>{const ms=trashDays*864e5,now=Date.now();setTrashItems(p=>{const k=p.filter(x=>!x._d||(now-x._d)<ms);return k.length===p.length?p:k;});};
@@ -3657,7 +3683,7 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   <div style={CS}><div style={{marginBottom:6}}>📝 {t.fSize}: {fs}</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[12,13,14,16,18,20,22].map(sz=><button key={sz} onClick={()=>setFs(sz)} aria-label={`${t.fSize} ${sz}`} style={pill(fs===sz)}>{sz}</button>)}</div></div>
   <div style={CS}><div style={{marginBottom:6}}>🌍 {t.lang}</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4}}>{Object.entries(LL).map(([k,v])=>{const emj={tr:"🇹🇷",en:"🇬🇧",de:"🇩🇪",ru:"🇷🇺",zh:"🇨🇳",hi:"🇮🇳",nl:"🇳🇱",es:"🇪🇸",ar:"🇸🇦"};return<button key={k} onClick={()=>setLang(k)} style={pill(lang===k)}>{emj[k]||""} {v}</button>;})}</div></div>
   <div style={CS}><div style={{marginBottom:6}}>🤖 AI API Key <span style={{fontSize:fs-3,color:mt}}>(Anthropic)</span></div><div style={{display:"flex",gap:6}}><input type="password" value={apiKey} onChange={e=>{setApiKey(e.target.value);try{localStorage.setItem("ailvie_api_key",e.target.value);}catch(ex){}}} placeholder="sk-ant-..." style={{...IS,flex:1,fontFamily:"monospace",fontSize:fs-2}}/>{apiKey&&<button onClick={()=>{setApiKey("");try{localStorage.removeItem("ailvie_api_key");}catch(ex){}}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",color:dg,cursor:"pointer"}}>✕</button>}</div><div style={{fontSize:fs-3,color:apiKey?sc:mt,marginTop:4}}>{apiKey?(lang==="tr"?"✓ API anahtarı ayarlandı":"✓ API key set"):(lang==="tr"?"AI Sohbet, çeviri ve ilaç analizi için gerekli":"Required for AI Chat, translation & drug analysis")}</div></div>
-  <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>setEmNums(p=>p.filter(x=>x.id!==en.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
+  <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>{toTrash("emergency",en);notify(lang==="tr"?"Çöp kutusuna taşındı":"Moved to Trash");}} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🛡️ {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button aria-label={lang==="tr"?"Aç/Kapat":"Toggle"} onClick={()=>{const willOn=!perms[k];setPerms(p=>({...p,[k]:willOn}));if(k==="loc"){if(willOn){notify(lang==="tr"?"📍 Konum açılıyor…":"📍 Enabling location…");loadWeather(true);}else setWeather({err:"off"});return;}if(k==="notif"){if(willOn&&('Notification'in window)){if(Notification.permission==="denied")notify(lang==="tr"?"⚠️ Bildirim tarayıcıda engelli. Tarayıcı > Site izinleri > Bildirim'i açın.":"⚠️ Notifications blocked in browser settings.");else Notification.requestPermission().then(st=>{if(st!=="granted")notify(lang==="tr"?"Bildirim izni verilmedi — tarayıcı ayarlarından açabilirsiniz.":"Notification permission not granted.");}).catch(()=>{});}return;}}} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>☁️ {lang==="tr"?"Cihazlar Arası Senkron":"Cross-device Sync"}</div>
     {!syncCfg
@@ -3885,7 +3911,12 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
     </div>
     <input ref={backupInputRef} type="file" accept="application/json,.json" style={{display:"none"}} onChange={e=>{const f=e.target.files&&e.target.files[0];importData(f);e.target.value="";}}/>
   </div>}
-  {(all||s==="trash")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🗑️ {t.trash}</div><div style={{display:"flex",gap:8,marginBottom:8}}>{[30,60,90].map(d=><button key={d} onClick={()=>setTrashDays(d)} style={pill(trashDays===d)}>{d} {t.trD}</button>)}</div>{trashItems.length===0&&<div style={{color:mt,textAlign:"center",padding:12}}>🗑️ {t.trE}</div>}{trashItems.map((item,ix)=>{const days=Math.max(0,trashDays-Math.floor((Date.now()-(item._d||Date.now()))/864e5));const tl=lang==="tr"?{med:"İlaç",appt:"Randevu",note:"Not",contact:"Kişi",record:"Kayıt"}:{med:"Med",appt:"Appt",note:"Note",contact:"Contact",record:"Record"};return (<div key={item._d+"_"+ix} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${bd}`}}><div style={{minWidth:0,flex:1}}><div style={{fontSize:fs-1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.name||item.title||item.doctor||(item.content?item.content.substring(0,24):"")||"—"}</div><div style={{fontSize:fs-3,color:mt}}>{tl[item._t]||"—"} · {days} {lang==="tr"?"gün sonra silinir":"days left"}</div></div><div style={{display:"flex",gap:6,flexShrink:0}}><button onClick={()=>restoreItem(item)} style={{...BP,padding:"4px 10px",fontSize:fs-2}}>{t.rest}</button><button onClick={()=>setTrashItems(p=>p.filter(x=>x!==item))} aria-label={lang==="tr"?"Kalıcı sil":"Delete forever"} style={{background:"none",border:`1px solid ${dg}33`,color:dg,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:fs-2}}>✕</button></div></div>);})}{trashItems.length>0&&<button onClick={()=>setTrashItems([])} style={{...BD,width:"100%",marginTop:8}}>{t.empT}</button>}</div>}
+  {(all||s==="trash")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🗑️ {t.trash}</div><div style={{display:"flex",gap:8,marginBottom:8}}>{[30,60,90].map(d=><button key={d} onClick={()=>setTrashDays(d)} style={pill(trashDays===d)}>{d} {t.trD}</button>)}</div>{trashItems.length===0&&<div style={{color:mt,textAlign:"center",padding:12}}>🗑️ {t.trE}</div>}{trashItems.map((item,ix)=>{const days=Math.max(0,trashDays-Math.floor((Date.now()-(item._d||Date.now()))/864e5));const tl=lang==="tr"?{med:"İlaç",appt:"Randevu",note:"Not",contact:"Kişi",record:"Kayıt",lab:"Tahlil",image:"Görüntü",message:"Mesaj",group:"Grup",emergency:"Acil No"}:{med:"Med",appt:"Appt",note:"Note",contact:"Contact",record:"Record",lab:"Lab",image:"Image",message:"Message",group:"Group",emergency:"Emergency"};return (<div key={item._d+"_"+ix} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${bd}`}}><div style={{minWidth:0,flex:1}}><div style={{fontSize:fs-1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{(()=>{
+                if(item._t==="lab"){const ti=LAB_TESTS.find(x=>x.k===item.test);return `${ti?(lang==="tr"?ti.tr:ti.en):item.test}: ${item.value} ${item.unit||""}`;}
+                if(item._t==="image")return (item.label||item.kind||(lang==="tr"?"Tıbbi görüntü":"Medical image"))+(item.date?` · ${item.date}`:"");
+                if(item._t==="message")return (item.text||"").substring(0,30)||(lang==="tr"?"Mesaj":"Message");
+                return item.name||item.title||item.doctor||(item.content?item.content.replace(/<[^>]+>/g,"").substring(0,24):"")||"—";
+              })()}</div><div style={{fontSize:fs-3,color:mt}}>{tl[item._t]||"—"} · {days} {lang==="tr"?"gün sonra silinir":"days left"}</div></div><div style={{display:"flex",gap:6,flexShrink:0}}><button onClick={()=>restoreItem(item)} style={{...BP,padding:"4px 10px",fontSize:fs-2}}>{t.rest}</button><button onClick={()=>setTrashItems(p=>p.filter(x=>x!==item))} aria-label={lang==="tr"?"Kalıcı sil":"Delete forever"} style={{background:"none",border:`1px solid ${dg}33`,color:dg,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:fs-2}}>✕</button></div></div>);})}{trashItems.length>0&&<button onClick={()=>setTrashItems([])} style={{...BD,width:"100%",marginTop:8}}>{t.empT}</button>}</div>}
   {(all||s==="legal")&&<div style={CS}><div style={{fontWeight:700,marginBottom:6}}>⚖️ {t.legal}</div><div style={{fontSize:fs-2,color:mt,lineHeight:1.4}}>{t.legalText}</div></div>}
   {all&&<div style={CS}><div style={{fontWeight:700,marginBottom:4}}>ℹ️ {t.about}</div><div style={{fontSize:fs-2,color:mt}}>{t.version}: 9.0.0</div><div style={{fontSize:fs-2,color:mt}}>© 2025-2026 AILVIE Health Technologies</div></div>}
 </div>);};
@@ -4258,7 +4289,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
           <div style={{display:"flex",gap:4,marginTop:3}}>
             <button onClick={()=>interpretImage(im)} disabled={imgBusy===im.id} title={lang==="tr"?"AI Yorumla":"AI interpret"} style={{flex:1,background:imgBusy===im.id?mt:`linear-gradient(135deg,${ac},${a2})`,border:"none",color:"#fff",borderRadius:6,padding:"3px 0",fontSize:fs-4,cursor:"pointer"}}>{imgBusy===im.id?"…":"🤖"}</button>
             <button onClick={()=>setImgView(im)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 6px",fontSize:fs-4,cursor:"pointer",color:tc}}>👁️</button>
-            <button onClick={()=>{if(confirm(lang==="tr"?"Silinsin mi?":"Delete?"))setMedImages(p=>p.filter(x=>x.id!==im.id));}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:6,padding:"3px 6px",fontSize:fs-4,cursor:"pointer",color:dg}}>🗑️</button>
+            <button onClick={()=>{toTrash("image",im);notify(lang==="tr"?"Çöp kutusuna taşındı":"Moved to Trash");}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:6,padding:"3px 6px",fontSize:fs-4,cursor:"pointer",color:dg}}>🗑️</button>
           </div>
         </div>
       </div>)}
@@ -4494,7 +4525,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         {[...labs].reverse().slice(0,8).map(x=>{const ti=LAB_TESTS.find(y=>y.k===x.test);const d=new Date(x.ts);return <div key={x.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:`1px solid ${bd}`,gap:8}}>
           <div style={{minWidth:0,flex:1}}><div style={{fontSize:fs-1,color:tc,fontWeight:600}}>{ti?(L?ti.tr:ti.en):x.test}</div><div style={{fontSize:fs-4,color:mt}}>{d.toLocaleDateString(lc,{day:"2-digit",month:"2-digit",year:"numeric"})} {d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}{x.source==="lab-reported"?` · ${L?"raporun aralığı":"report range"}`:""}</div></div>
           <div style={{textAlign:"right",flexShrink:0}}><b style={{fontSize:fs,color:x.level?lvlColor(x.level):tc}}>{x.value} <span style={{fontSize:fs-4,fontWeight:400,color:mt}}>{x.unit}</span></b><div style={{fontSize:fs-4,color:x.level?lvlColor(x.level):mt}}>{x.level?lvlLabel(x.level):(L?"sınıflandırılmadı":"not classified")}</div></div>
-          <button onClick={()=>setLabs(p=>p.filter(y=>y.id!==x.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:fs-1,flexShrink:0}}>✕</button>
+          <button onClick={()=>{toTrash("lab",x);notify(lang==="tr"?"Çöp kutusuna taşındı":"Moved to Trash");}} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:fs-1,flexShrink:0}}>✕</button>
         </div>;})}
       </div>}
       <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Referans aralıkları laboratuvara/yönteme/yaşa göre değişir. Bu değerlendirme tarama amaçlıdır, tıbbi tanı değildir — raporunuzu doktorunuz yorumlamalıdır.":"Reference ranges vary by lab/method/age. Screening only, not a diagnosis."}</div>
@@ -5137,7 +5168,7 @@ const createGroup=()=>{
   setShowGroupModal(false);setNewGroup({name:"",emoji:"👥",members:[]});
   notify(lang==="tr"?"✅ Grup oluşturuldu":"✅ Group created");
 };
-const deleteGroup=(g)=>{if(confirm(lang==="tr"?`"${g.name}" grubu silinsin mi?`:`Delete group "${g.name}"?`))setGroups(p=>p.filter(x=>x.id!==g.id));};
+const deleteGroup=(g)=>{toTrash("group",g);notify(lang==="tr"?"Çöp kutusuna taşındı":"Moved to Trash");};
 const startCall=async(type,group)=>{
   setCallModal({type,group,status:"requesting"});
   try{
@@ -5202,7 +5233,7 @@ const renderCommunity=()=>{const me=pat.name||"Ben";const q=fold(commSearch.trim
           </>}
           {isMine&&<>
             <button onClick={()=>{const nv=prompt(lang==="tr"?"Mesajı düzenle:":"Edit message:",m.text);if(nv!==null&&nv.trim())setMsgs(p=>p.map(x=>x.id===m.id?{...x,text:nv,edited:true}:x));}} style={{background:"none",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>✏️</button>
-            <button onClick={()=>setMsgs(p=>p.filter(x=>x.id!==m.id))} style={{background:"none",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>🗑️</button>
+            <button onClick={()=>{toTrash("message",m);notify(lang==="tr"?"Çöp kutusuna taşındı":"Moved to Trash");}} style={{background:"none",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>🗑️</button>
           </>}
         </div>
         {isMine&&<div style={{fontSize:fs-3,color:"rgba(255,255,255,.7)",marginTop:3,textAlign:"right"}}>{m.time}</div>}
