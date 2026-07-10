@@ -23,6 +23,7 @@
     *{margin:0;padding:0;box-sizing:border-box}
     html,body,#root{height:100%;height:100dvh}
     body{overflow:hidden;font-family:-apple-system,system-ui,sans-serif;background:#0a0e14}
+    /* background is corrected synchronously by the inline script below, before first paint */
     input,textarea,select{-webkit-user-select:auto;user-select:auto;font-family:inherit}
     /* Visible focus indicator (WCAG 2.4.7). Only for keyboard users, not mouse clicks. */
     :focus-visible{outline:3px solid #00b4d8;outline-offset:2px;border-radius:6px}
@@ -30,16 +31,35 @@
   </style>
 </head>
 <body>
+  <script>
+    // Runs BEFORE first paint. Without this the boot screen used the *system* theme while the
+    // app uses the *saved* theme, so a light-mode phone flashed white then jumped to dark.
+    (function(){
+      var dark = true;
+      try{ var v = localStorage.getItem("ailvie_theme"); if(v) dark = (v === "dark"); }catch(e){}
+      var bg = dark ? "#0b1117" : "#f7fafc";
+      var doc = document.documentElement;
+      doc.style.background = bg;
+      doc.style.colorScheme = dark ? "dark" : "light";
+      doc.setAttribute("data-theme", dark ? "dark" : "light");
+      var m = document.querySelector('meta[name="theme-color"]');
+      if(m) m.setAttribute("content", dark ? "#0a0e14" : "#00b4d8");
+      document.addEventListener("DOMContentLoaded", function(){
+        document.body.style.background = bg;
+        var b = document.getElementById("boot");
+        if(b){ b.style.background = bg; b.style.color = dark ? "#d5dde8" : "#1a2332"; }
+      });
+    })();
+  </script>
   <div id="root">
     <!-- First paint before the JS bundle parses. React replaces this on mount. -->
-    <div id="boot" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0b1117;color:#e8a817;font-family:system-ui,-apple-system,sans-serif">
+    <div id="boot" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:transparent;color:#e8a817;font-family:system-ui,-apple-system,sans-serif">
       <div style="font:700 34px/1 Rajdhani,system-ui,sans-serif;letter-spacing:1px;-webkit-text-stroke:0.8px #e8a817">AILVIE</div>
       <div style="width:34px;height:34px;border:3px solid rgba(232,168,23,.25);border-top-color:#e8a817;border-radius:50%;animation:bspin .8s linear infinite"></div>
       <div style="color:#93a4b6;font-size:13px">Yükleniyor…</div>
     </div>
   </div>
   <style>@keyframes bspin{to{transform:rotate(360deg)}}
-    @media (prefers-color-scheme: light){#boot{background:#f7fafc!important}}
   </style>
   <script type="module" src="/src/main.jsx"></script>
 </body>

@@ -460,7 +460,7 @@ const FIRST_AID=[
 const FB_VER="10.12.0";
 export default function AILVIE_App(){
 const[lang,setLang]=useState(function(){try{var s=localStorage.getItem("ailvie_lang");if(s)return s;}catch(e){}var b=(navigator.language||"tr").split("-")[0].toLowerCase();return["tr","en","de","ru","zh","hi","nl","es","ar"].indexOf(b)>=0?b:"en";});
-const[dark,setDark]=useState(true);
+const[dark,setDark]=useState(()=>{try{const v=localStorage.getItem("ailvie_theme");return v?v==="dark":true;}catch(e){return true;}});
 const[hc,setHc]=useState(false);
 const[fs,setFs]=useState(()=>{try{const v=parseInt(localStorage.getItem("ailvie_fs"));return v>=12&&v<=24?v:15;}catch{return 15;}});
 useEffect(()=>{try{localStorage.setItem("ailvie_fs",String(fs));}catch{}},[fs]);
@@ -494,6 +494,12 @@ const[showFirstAid,setShowFirstAid]=useState(false);
 const[showNav,setShowNav]=useState(false);
 const[navQuery,setNavQuery]=useState("");
 const[noteSheet,setNoteSheet]=useState(null); // 'add'|'color'|'format'|'more'
+useEffect(()=>{
+  try{localStorage.setItem("ailvie_theme",dark?"dark":"light");}catch(e){}
+  const bg=dark?"#0a0e14":"#f7fafc";
+  try{document.documentElement.style.background=bg;document.body.style.background=bg;}catch(e){}
+  try{const m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",dark?"#0a0e14":"#00b4d8");}catch(e){}
+},[dark]);
 const[voiceGuide,setVoiceGuide]=useState(()=>{try{return localStorage.getItem("ailvie_voiceguide")==="1";}catch(e){return false;}});
 useEffect(()=>{try{localStorage.setItem("ailvie_voiceguide",voiceGuide?"1":"0");}catch(e){}},[voiceGuide]);
 const[guide,setGuide]=useState(null);      // {key,i,left,paused}
