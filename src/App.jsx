@@ -1974,6 +1974,37 @@ const speakAlarm=(text)=>{
   }).catch(()=>{fallbackSpeak(text);});
 };
 
+// -----------------------------------------------------------------------------
+// Unified health alert. Every reminder (med due/late, appointment, calendar, glucose)
+// goes through here so the big red screen, the alarm bell, the spoken announcement, the
+// system notification and the vibration ALWAYS fire together and stay in sync.
+//
+// HONEST LIMITATION: a web app (PWA) cannot wake a locked/off screen and paint fullscreen
+// over it - only a native app can. What we can do from the web is fire a SYSTEM NOTIFICATION
+// (it appears on the lock screen, makes sound and vibrates); tapping it opens the app, which
+// then shows the big red alert. The fullscreen red overlay below is shown whenever the app is
+// actually open/foreground.
+// -----------------------------------------------------------------------------
+const lastAlertRef=useRef({});
+const fireAlert=({icon,title,msg,speak,tag,notifyBody,minGapMs=60000})=>{
+  const key=tag||title;
+  const t=Date.now();
+  if(lastAlertRef.current[key]&&t-lastAlertRef.current[key]<minGapMs)return; // de-dupe
+  lastAlertRef.current[key]=t;
+  // 1) big red half-screen overlay (only visible when the app is in the foreground)
+  setActiveAlert({icon,title,msg});
+  // 2) alarm bell
+  try{playAlarmBell();}catch(e){}
+  // 3) spoken announcement, right after the bell
+  if(speak)setTimeout(()=>{try{speakAlarm(speak);}catch(e){}},900);
+  // 4) vibration (where supported)
+  try{if(navigator.vibrate)navigator.vibrate([300,150,300,150,300]);}catch(e){}
+  // 5) system notification — this is the part that reaches a locked screen
+  try{sendNotification(icon+' '+title, notifyBody||msg||"");}catch(e){}
+  // 6) log it into the in-app bell/notification list
+  try{notify(icon+' '+title+(msg?' — '+msg:""));}catch(e){}
+};
+
 // Calendar
 const[calM,setCalM]=useState(now.getMonth());
 const[calNotes,setCalNotes]=useState({});
@@ -2027,11 +2058,10 @@ meds.forEach(m=>{
     firedAlarms.current.add('med-'+m.id);
     const cnt=typeof m.count==='number'?m.count:30;
     if(cnt>0){
-      playAlarmBell();
-      speakAlarm((lang==='tr'?'İlaç zamanı: ':'Med time: ')+m.name+' '+m.dose);
-      notify('💊 '+m.name+' - '+m.dose);
-      sendNotification('💊 '+(lang==='tr'?'İlaç Zamanı':'Med Time'),m.name+' '+m.dose+' — '+m.time);
-      setActiveAlert({icon:'💊',title:(lang==='tr'?'İLAÇ ZAMANI':'MED TIME'),msg:m.name+(m.dose?' '+m.dose:'')+' — '+m.time});
+      fireAlert({icon:'💊',tag:'med-'+m.id,
+        title:(lang==='tr'?'İLAÇ ZAMANI':'MED TIME'),
+        msg:m.name+(m.dose?' '+m.dose:'')+' — '+m.time,
+        speak:(lang==='tr'?'İlaç zamanı: ':'Med time: ')+m.name+(m.dose?' '+m.dose:'')});
     }
   }
   // Late med warning — every 15 min for unmissed meds past their time
@@ -2046,10 +2076,8 @@ meds.forEach(m=>{
       const msg=lang==='tr'
         ?`İlaç saatin ${timeStr} geçti. ${m.name} ilacını kullandıysan onay ver.`
         :`Medication time passed by ${timeStr}. If you took ${m.name}, please confirm.`;
-      notify('⚠️ '+msg);
-      sendNotification('⚠️ '+(lang==='tr'?'İlaç Gecikmesi':'Medication Late'),msg);
-      setActiveAlert({icon:'⚠️',title:(lang==='tr'?'İLAÇ GECİKTİ':'MED OVERDUE'),msg});
-      speakAlarm(msg);
+      fireAlert({icon:'⚠️',tag:'medlate-'+m.id,
+        title:(lang==='tr'?'İLAÇ GECİKTİ':'MED OVERDUE'),msg,speak:msg,minGapMs:15*60000});
     }
   }
   // Pre-alarm: 10 min before
@@ -2067,11 +2095,9 @@ meds.forEach(m=>{
 const isoD=_n.toISOString().split('T')[0];
 if(calAlarms[isoD]&&calAlarms[isoD]===hhmm&&!firedAlarms.current.has('cal-'+isoD)){
   firedAlarms.current.add('cal-'+isoD);
-  playAlarmBell();
-  speakAlarm(lang==='tr'?'Takvim hatırlatması: ':'Calendar reminder: '+(calNotes[isoD]||''));
-  notify('📅 '+(calNotes[isoD]||'Alarm'));
-  sendNotification('📅 '+(lang==='tr'?'Takvim':'Calendar'),calNotes[isoD]||'Alarm');
-  setActiveAlert({icon:'📅',title:(lang==='tr'?'TAKVİM HATIRLATMA':'CALENDAR'),msg:calNotes[isoD]||'Alarm'});
+  fireAlert({icon:'📅',tag:'cal-'+isoD,
+    title:(lang==='tr'?'TAKVİM HATIRLATMA':'CALENDAR'),msg:calNotes[isoD]||'Alarm',
+    speak:(lang==='tr'?'Takvim hatırlatması: ':'Calendar reminder: ')+(calNotes[isoD]||'')});
 }
 // Appointment alarms (1 day + 6 hours before, and 1 hour before)
 appts.forEach(a=>{
@@ -2825,10 +2851,16 @@ SESLİ KOMUTLAR / GEZİNME (kullanıcı özellikle bir yere gitmek/okumak isters
 
 // Everything the user deletes goes to Trash first. Nothing disappears without consent.
 const toTrash=(type,item)=>{
-  setTrashItems(p=>[...p,{...item,_t:type,_d:Date.now()}]);
+  // For notes, the drawing/photo/audio lives in noteMedia[id], NOT on the note object.
+  // Carry it into the trash entry as _media so the preview shows and restore is lossless.
+  const media=type==="note"?(noteMedia[item.id]||[]):null;
+  setTrashItems(p=>[...p,{...item,_t:type,_d:Date.now(),...(media&&media.length?{_media:media}:{})}]);
   if(type==="med")setMeds(p=>p.filter(x=>x.id!==item.id));
   if(type==="appt")setAppts(p=>p.filter(x=>x.id!==item.id));
-  if(type==="note"){setNotes(p=>p.filter(x=>x.id!==item.id));}
+  if(type==="note"){
+    setNotes(p=>p.filter(x=>x.id!==item.id));
+    if(media&&media.length)setNoteMedia(p=>{const n={...p};delete n[item.id];return n;});
+  }
   if(type==="contact")setContacts(p=>p.filter(x=>x.id!==item.id));
   if(type==="record")setRecords(p=>p.filter(x=>x.id!==item.id));
   if(type==="lab")setLabs(p=>p.filter(x=>x.id!==item.id));
@@ -2841,7 +2873,8 @@ const restoreItem=(item)=>{
   const {_t,_d,...c}=item;
   if(_t==="med")setMeds(p=>[...p,c]);
   if(_t==="appt")setAppts(p=>[...p,c]);
-  if(_t==="note")setNotes(p=>[...p,c]);
+  if(_t==="note"){const {_media,...noteC}=c;setNotes(p=>[...p,noteC]);
+    if(_media&&_media.length)setNoteMedia(p=>({...p,[noteC.id]:_media}));}
   if(_t==="contact")setContacts(p=>[...p,c]);
   if(_t==="record")setRecords(p=>[...p,c]);
   if(_t==="lab")setLabs(p=>[...p,c]);
@@ -4024,10 +4057,21 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
     </div>
     <input ref={backupInputRef} type="file" accept="application/json,.json" style={{display:"none"}} onChange={e=>{const f=e.target.files&&e.target.files[0];importData(f);e.target.value="";}}/>
   </div>}
-  {(all||s==="trash")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🗑️ {t.trash}</div><div style={{display:"flex",gap:8,marginBottom:8}}>{[30,60,90].map(d=><button key={d} onClick={()=>setTrashDays(d)} style={pill(trashDays===d)}>{d} {t.trD}</button>)}</div>{trashItems.length===0&&<div style={{color:mt,textAlign:"center",padding:12}}>🗑️ {t.trE}</div>}{trashItems.map((item,ix)=>{const days=Math.max(0,trashDays-Math.floor((Date.now()-(item._d||Date.now()))/864e5));const tl=lang==="tr"?{med:"İlaç",appt:"Randevu",note:"Not",contact:"Kişi",record:"Kayıt",lab:"Tahlil",image:"Görüntü",message:"Mesaj",group:"Grup",emergency:"Acil No"}:{med:"Med",appt:"Appt",note:"Note",contact:"Contact",record:"Record",lab:"Lab",image:"Image",message:"Message",group:"Group",emergency:"Emergency"};return (<div key={item._d+"_"+ix} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${bd}`}}><div style={{minWidth:0,flex:1}}><div style={{fontSize:fs-1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{(()=>{
+  {(all||s==="trash")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🗑️ {t.trash}</div><div style={{display:"flex",gap:8,marginBottom:8}}>{[30,60,90].map(d=><button key={d} onClick={()=>setTrashDays(d)} style={pill(trashDays===d)}>{d} {t.trD}</button>)}</div>{trashItems.length===0&&<div style={{color:mt,textAlign:"center",padding:12}}>🗑️ {t.trE}</div>}{trashItems.map((item,ix)=>{const days=Math.max(0,trashDays-Math.floor((Date.now()-(item._d||Date.now()))/864e5));const tl=lang==="tr"?{med:"İlaç",appt:"Randevu",note:"Not",contact:"Kişi",record:"Kayıt",lab:"Tahlil",image:"Görüntü",message:"Mesaj",group:"Grup",emergency:"Acil No"}:{med:"Med",appt:"Appt",note:"Note",contact:"Contact",record:"Record",lab:"Lab",image:"Image",message:"Message",group:"Group",emergency:"Emergency"};const _thumb=(item._t==="note"&&Array.isArray(item._media))?item._media.find(x=>(x.type==="drawing"||x.type==="photo"||x.type==="image")&&x.data):null;
+              return (<div key={item._d+"_"+ix} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${bd}`}}>{_thumb&&<img src={_thumb.data} alt="" style={{width:40,height:40,borderRadius:6,objectFit:"cover",flexShrink:0,background:"#fff",border:`1px solid ${bd}`}}/>}<div style={{minWidth:0,flex:1}}><div style={{fontSize:fs-1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{(()=>{
                 if(item._t==="lab"){const ti=LAB_TESTS.find(x=>x.k===item.test);return `${ti?(lang==="tr"?ti.tr:ti.en):item.test}: ${item.value} ${item.unit||""}`;}
                 if(item._t==="image")return (item.label||item.kind||(lang==="tr"?"Tıbbi görüntü":"Medical image"))+(item.date?` · ${item.date}`:"");
                 if(item._t==="message")return (item.text||"").substring(0,30)||(lang==="tr"?"Mesaj":"Message");
+                if(item._t==="note"){
+                  const txt=(item.title||"").trim()||(item.content?item.content.replace(/<[^>]+>/g,"").trim().substring(0,24):"");
+                  if(txt)return txt;
+                  const md=item._media||[];
+                  if(md.some(x=>x.type==="drawing"))return lang==="tr"?"🎨 Çizim":"🎨 Drawing";
+                  if(md.some(x=>x.type==="photo"||x.type==="image"))return lang==="tr"?"🖼️ Fotoğraf":"🖼️ Photo";
+                  if(md.some(x=>x.type==="audio"))return lang==="tr"?"🎤 Ses kaydı":"🎤 Voice note";
+                  if(item.checklist&&item.checklist.length)return lang==="tr"?"☑️ Liste":"☑️ Checklist";
+                  return lang==="tr"?"Boş not":"Empty note";
+                }
                 return item.name||item.title||item.doctor||(item.content?item.content.replace(/<[^>]+>/g,"").substring(0,24):"")||"—";
               })()}</div><div style={{fontSize:fs-3,color:mt}}>{tl[item._t]||"—"} · {days} {lang==="tr"?"gün sonra silinir":"days left"}</div></div><div style={{display:"flex",gap:6,flexShrink:0}}><button onClick={()=>restoreItem(item)} style={{...BP,padding:"4px 10px",fontSize:fs-2}}>{t.rest}</button><button onClick={()=>setTrashItems(p=>p.filter(x=>x!==item))} aria-label={lang==="tr"?"Kalıcı sil":"Delete forever"} style={{background:"none",border:`1px solid ${dg}33`,color:dg,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:fs-2}}>✕</button></div></div>);})}{trashItems.length>0&&<button onClick={()=>setTrashItems([])} style={{...BD,width:"100%",marginTop:8}}>{t.empT}</button>}</div>}
   {(all||s==="legal")&&<div style={CS}><div style={{fontWeight:700,marginBottom:6}}>⚖️ {t.legal}</div><div style={{fontSize:fs-2,color:mt,lineHeight:1.4}}>{t.legalText}</div></div>}
@@ -5915,7 +5959,7 @@ return (
             </div>}
             {noteSheet==="more"&&<div style={sheetBox}>
               <div style={{fontSize:fs-2,color:mt,padding:"6px 16px 8px"}}>{lang==="tr"?"Az önce düzenlendi":"Edited just now"}</div>
-              {[["🗑️",lang==="tr"?"Sil":"Delete",()=>{toTrash("note",n);setNoteMedia(p=>{const q={...p};delete q[n.id];return q;});setEditNote(null);setNoteSheet(null);}],["📋",lang==="tr"?"Kopya oluştur":"Make a copy",()=>duplicateNote(n)],["📤",lang==="tr"?"Gönder":"Send",()=>shareNote(n)],["👥",lang==="tr"?"Ortak çalışan":"Collaborator",()=>{notify(lang==="tr"?"Ortak çalışma yakında — hesap/sunucu gerekli":"Collaboration coming soon — needs account/server");setNoteSheet(null);}],["🏷️",lang==="tr"?"Etiketler":"Labels",()=>{const l=prompt(lang==="tr"?"Etiket adı:":"Label name:");if(l&&l.trim())setNotes(p=>p.map(x=>x.id===n.id?{...x,labels:[...new Set([...(x.labels||[]),l.trim()])]}:x));setNoteSheet(null);}],["❓",lang==="tr"?"Yardım ve geri bildirim":"Help & feedback",()=>{setNoteSheet(null);setEditNote(null);goTo("admin");}]].map(([ic,lb,fn])=><button key={lb} onClick={fn} style={sheetRow}><span style={{fontSize:20,width:24,textAlign:"center",flexShrink:0}}>{ic}</span>{lb}</button>)}
+              {[["🗑️",lang==="tr"?"Sil":"Delete",()=>{trashNote(n);setEditNote(null);setNoteSheet(null);}],["📋",lang==="tr"?"Kopya oluştur":"Make a copy",()=>duplicateNote(n)],["📤",lang==="tr"?"Gönder":"Send",()=>shareNote(n)],["👥",lang==="tr"?"Ortak çalışan":"Collaborator",()=>{notify(lang==="tr"?"Ortak çalışma yakında — hesap/sunucu gerekli":"Collaboration coming soon — needs account/server");setNoteSheet(null);}],["🏷️",lang==="tr"?"Etiketler":"Labels",()=>{const l=prompt(lang==="tr"?"Etiket adı:":"Label name:");if(l&&l.trim())setNotes(p=>p.map(x=>x.id===n.id?{...x,labels:[...new Set([...(x.labels||[]),l.trim()])]}:x));setNoteSheet(null);}],["❓",lang==="tr"?"Yardım ve geri bildirim":"Help & feedback",()=>{setNoteSheet(null);setEditNote(null);goTo("admin");}]].map(([ic,lb,fn])=><button key={lb} onClick={fn} style={sheetRow}><span style={{fontSize:20,width:24,textAlign:"center",flexShrink:0}}>{ic}</span>{lb}</button>)}
             </div>}
             {noteSheet==="format"?<div style={{display:"flex",alignItems:"center",gap:2,padding:"6px",borderTop:`1px solid ${dark?bd:"#00000018"}`,flexShrink:0,background:cbg,justifyContent:"center"}}>
               <button onMouseDown={noP} onClick={()=>fmt("formatBlock","H1")} style={fbtn(blk==="h1")}>H1</button>
@@ -5943,7 +5987,7 @@ return (
           const PAPER="#ffffff";                 // Keep: canvas is always white, chrome is dark
           const CHROME="#202124", ONCHROME="#e8eaed", DIM="#7a7f87";
           const inkDefault="#202124";
-          const palette=["#202124","#1a73e8","#e63946","#f4a261","#2a9d8f","#b5179e"];
+          const palette=["#202124","#5f6368","#ffffff","#e63946","#f4511e","#f4a261","#fbbc04","#34a853","#2a9d8f","#1a73e8","#4285f4","#7b1fa2","#b5179e","#795548"];
           const redraw=(el)=>{
             if(!el||!el._ctx)return;
             const c=el._ctx;
@@ -6035,15 +6079,25 @@ return (
               onPointerLeave={e=>{e.currentTarget._drawing=false;}}
               style={{flex:"1 1 0",height:0,width:"100%",background:PAPER,touchAction:"none",display:"block",cursor:"crosshair"}}/>
             {/* colour strip (opens when tapping the active tool) */}
-            {D.showColors&&<div style={{flexShrink:0,background:CHROME,display:"flex",gap:14,justifyContent:"center",padding:"10px 8px 2px"}}>
+            {D.showColors&&<div style={{flexShrink:0,background:CHROME,display:"flex",gap:14,overflowX:"auto",WebkitOverflowScrolling:"touch",padding:"10px 12px 2px"}}>
               {palette.map(col=>(
-                <button key={col} onClick={()=>{D.color=col;D.showColors=false;bump();}} aria-label={lang==="tr"?"Renk":"Color"}
-                  style={{width:30,height:30,borderRadius:"50%",background:col,cursor:"pointer",
-                    border:(D.color||inkDefault)===col?"3px solid #8ab4f8":"1px solid #5f6368"}}/>
+                <button key={col} onClick={()=>{D.color=col;D.erase=false;D.showColors=false;bump();}} aria-label={lang==="tr"?"Renk":"Color"}
+                  style={{width:30,height:30,minWidth:30,borderRadius:"50%",background:col,cursor:"pointer",flexShrink:0,
+                    border:(D.color||inkDefault)===col?"3px solid #8ab4f8":(col==="#ffffff"?"1px solid #9aa0a6":"1px solid #5f6368")}}/>
               ))}
             </div>}
             {/* bottom tool bar */}
             <div style={{flexShrink:0,background:CHROME,display:"flex",alignItems:"center",justifyContent:"space-around",padding:"4px 2px 6px"}}>
+              {/* Always-visible colour swatch: tapping it opens the palette. Previously the palette
+                  only opened by re-tapping the active tool (Keep-style), which users could not find. */}
+              <button onClick={()=>{D.showColors=!D.showColors;D.erase=false;bump();}}
+                aria-label={lang==="tr"?"Renk seç":"Pick colour"} title={lang==="tr"?"Renk":"Colour"}
+                style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}>
+                <span style={{width:26,height:26,borderRadius:"50%",background:(D.color||inkDefault),
+                  border:D.showColors?"3px solid #8ab4f8":((D.color||inkDefault)==="#ffffff"?"1px solid #9aa0a6":"2px solid #e8eaed"),
+                  boxShadow:"0 0 0 1px rgba(0,0,0,.25)"}}/>
+                <span style={{fontSize:10,color:"#e8eaed"}}>{lang==="tr"?"Renk":"Colour"}</span>
+              </button>
               {tool("eraser",lang==="tr"?"Silgi":"Eraser","🧽",()=>{D.erase=true;D.showColors=false;bump();},!!D.erase)}
               {tool("marker",lang==="tr"?"Marker":"Marker","🖍️",()=>pickTool("marker",18,false),!D.erase&&D.tool==="marker")}
               {tool("pen",lang==="tr"?"Kalem":"Pen","🖊️",()=>pickTool("pen",6,false),penActive(6))}
