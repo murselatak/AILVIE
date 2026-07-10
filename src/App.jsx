@@ -458,6 +458,77 @@ const FIRST_AID=[
   en:["Nosebleed","Lean forward (do NOT tilt the head back).","Pinch the soft part of the nose for 10 minutes; breathe through the mouth.","If it doesn't stop in 20 min or is very heavy, seek care."]}
 ];
 const FB_VER="10.12.0";
+// ---------------------------------------------------------------------------
+// These components own state/effects. They MUST live outside AILVIE_App: a component
+// defined inside another component is a NEW type on every render, so React unmounts and
+// remounts it. StorageHealth then flashed its "…" placeholder, Clock reset its interval and
+// StepTimer restarted its countdown — visible as rapid flashing on screen.
+// ---------------------------------------------------------------------------
+const storageEstimate=async()=>{try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();return{usage:e.usage||0,quota:e.quota||0};}}catch(e){}return null;};
+const StorageHealth=({lang,fs,tc,mt,sc,ac,bd,dg,t,BP,lastBackup,idbGet,idbSet,notify})=>{
+  const[st,setSt]=useState(null);
+  useEffect(()=>{let m=true;(async()=>{const e=await storageEstimate();let p=false;try{p=!!(navigator.storage&&navigator.storage.persisted&&await navigator.storage.persisted());}catch(x){}if(m)setSt({e,p});})();return()=>{m=false;};},[]);
+  const L=lang==="tr";
+  if(!st)return <div style={{fontSize:fs-2,color:mt}}>…</div>;
+  const mb=(n)=>(n/1048576).toFixed(1);
+  const pct=st.e&&st.e.quota?Math.min(100,Math.round(st.e.usage/st.e.quota*100)):null;
+  return <div>
+    <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2,color:tc}}>
+      <span>{L?"Kalıcı depolama":"Persistent storage"}</span>
+      <b style={{color:st.p?sc:"#e9a23b"}}>{st.p?(L?"✓ Açık":"✓ On"):(L?"Kapalı":"Off")}</b>
+    </div>
+    <div style={{fontSize:fs-4,color:mt,marginTop:2,lineHeight:1.4}}>{st.p?(L?"Tarayıcı verilerinizi kendiliğinden silmez.":"Browser won't auto-evict your data."):(L?"Tarayıcı yer açmak için verileri silebilir. Uygulamayı ana ekrana ekleyip birkaç kez kullanınca genelde otomatik açılır.":"Browser may evict data.")}</div>
+    {pct!=null&&<div style={{marginTop:8}}>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-3,color:mt}}><span>{L?"Kullanım":"Usage"}</span><span>{mb(st.e.usage)} / {mb(st.e.quota)} MB ({pct}%)</span></div>
+      <div style={{height:6,borderRadius:3,background:bd,overflow:"hidden",marginTop:3}}><div style={{width:pct+"%",height:"100%",background:pct>85?dg:pct>60?"#e9a23b":sc}}/></div>
+    </div>}
+    {(()=>{const days=lastBackup?Math.floor((Date.now()-lastBackup)/864e5):null;
+      const stale=days===null||days>=30;
+      return <div style={{marginTop:10,background:stale?`${dg}12`:`${sc}10`,border:`1px solid ${stale?dg:sc}44`,borderRadius:9,padding:"8px 10px"}}>
+        <div style={{fontSize:fs-2,color:tc,fontWeight:600}}>{stale?"⚠️ ":"✓ "}{L?"Son yedek":"Last backup"}: <span style={{color:stale?dg:sc}}>{days===null?(L?"hiç alınmadı":"never"):(days===0?(L?"bugün":"today"):`${days} ${L?"gün önce":"days ago"}`)}</span></div>
+        {stale&&<div style={{fontSize:fs-4,color:mt,marginTop:3,lineHeight:1.4}}>{L?"Cihazınızı kaybederseniz veriler geri gelmez. Ayarlar > Yedekle ile şifreli yedek alın.":"Take an encrypted backup."}</div>}
+      </div>;})()}
+    <button onClick={async()=>{
+      const L2=lang==="tr";
+      let prev=null;try{prev=await idbGet("ailvie_data_prev");}catch(e){}
+      if(!prev){notify(L2?"Önceki sürüm bulunamadı":"No previous revision");return;}
+      let n=0;try{const d=JSON.parse(prev);n=(d.notes||[]).length+(d.meds||[]).length+(d.labs||[]).length;}catch(e){}
+      if(!window.confirm(L2?`Bir önceki kaydedilmiş sürüme dönülecek (${n} kayıt içeriyor). Mevcut veriler onunla değiştirilecek. Devam?`:`Restore previous revision (${n} records)?`))return;
+      try{const cur=await idbGet("ailvie_data");if(cur)await idbSet("ailvie_data_prev_undo",cur);}catch(e){}
+      try{await idbSet("ailvie_data",prev);localStorage.setItem("ailvie_data",prev);}catch(e){}
+      notify(L2?"Geri yüklendi, yenileniyor…":"Restored, reloading…");
+      setTimeout(()=>location.reload(),800);
+    }} style={{...BP,width:"100%",padding:"8px",marginTop:10,background:"transparent",color:ac,border:`1px solid ${ac}`,fontSize:fs-2}}>↩️ {lang==="tr"?"Önceki sürüme dön":"Restore previous revision"}</button>
+    <div style={{fontSize:fs-5,color:mt,marginTop:4,lineHeight:1.4}}>{lang==="tr"?"Her kayıttan önce bir önceki sürüm saklanır. Bir şey yanlış giderse buradan geri alabilirsiniz.":"One previous revision is kept before each save."}</div>
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Veriler yalnızca bu cihazda saklanır (IndexedDB) ve sunucuya gönderilmez; cihazlar arası senkron yoktur. Yedekleriniz AES-256 ile parolayla şifrelenebilir.":"Data stored on this device only (IndexedDB). No cloud sync. Backups can be AES-256 encrypted."}</div>
+  </div>;
+};
+const Clock=({dark,ac,tc,mt,dg})=>{
+  const[t,setT]=useState(()=>new Date());
+  useEffect(()=>{const iv=setInterval(()=>setT(new Date()),1000);return()=>clearInterval(iv);},[]);
+  const s=t.getSeconds(),m=t.getMinutes(),h=t.getHours()%12;return(<svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill={dark?"#151d2b":"#f8fafc"} stroke={ac} strokeWidth="2"/>{[...Array(12)].map((_,i)=>{const a=(i*30-90)*Math.PI/180;return <line key={i} x1={32+(i%3===0?22:24)*Math.cos(a)} y1={32+(i%3===0?22:24)*Math.sin(a)} x2={32+27*Math.cos(a)} y2={32+27*Math.sin(a)} stroke={tc} strokeWidth={i%3===0?"2":"1"} strokeLinecap="round"/>;})}<line x1="32" y1="32" x2={32+15*Math.cos(((h*30+m*.5)-90)*Math.PI/180)} y2={32+15*Math.sin(((h*30+m*.5)-90)*Math.PI/180)} stroke={tc} strokeWidth="2.5" strokeLinecap="round"/><line x1="32" y1="32" x2={32+20*Math.cos(((m*6+s*.1)-90)*Math.PI/180)} y2={32+20*Math.sin(((m*6+s*.1)-90)*Math.PI/180)} stroke={ac} strokeWidth="1.8" strokeLinecap="round"/><line x1="32" y1="32" x2={32+24*Math.cos((s*6-90)*Math.PI/180)} y2={32+24*Math.sin((s*6-90)*Math.PI/180)} stroke={dg} strokeWidth=".8" strokeLinecap="round"/><circle cx="32" cy="32" r="2.5" fill={ac}/></svg>);};
+const Compass=({heading,dark,ac,dg,tc,mt})=>{const h=heading||0;return(<svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill={dark?"#151d2b":"#f8fafc"} stroke={ac} strokeWidth="1.5"/><g transform={`rotate(${-h} 20 20)`}><polygon points="20,4 16.5,20 20,16.5 23.5,20" fill={dg}/><polygon points="20,36 16.5,20 20,23.5 23.5,20" fill={mt}/><text x="20" y="12" textAnchor="middle" fontSize="6.5" fontWeight="700" fill={tc}>N</text></g><circle cx="20" cy="20" r="2" fill={ac}/></svg>);};
+const StepTimer=({seconds,onDone,label,resume,pause,done,ac,sc,fs,BP})=>{
+  const[left,setLeft]=useState(seconds);
+  const[paused,setPaused]=useState(false);
+  const firedRef=useRef(false);
+  useEffect(()=>{setLeft(seconds);setPaused(false);firedRef.current=false;},[seconds]);
+  useEffect(()=>{
+    if(paused||left<=0)return;
+    const iv=setInterval(()=>setLeft(v=>Math.max(0,v-1)),1000);
+    return()=>clearInterval(iv);
+  },[paused,left>0]);
+  useEffect(()=>{
+    if(left===0&&!firedRef.current){firedRef.current=true;if(onDone)onDone();}
+  },[left,onDone]);
+  const mm=String(Math.floor(left/60)).padStart(2,"0"),ss=String(left%60).padStart(2,"0");
+  return(<div style={{textAlign:"center",margin:"10px 0"}}>
+    <div style={{fontSize:34,fontWeight:800,fontVariantNumeric:"tabular-nums",color:left?ac:sc}}>{left?`${mm}:${ss}`:done}</div>
+    {!!left&&<button onClick={()=>setPaused(p=>!p)} style={{...BP,background:"transparent",color:ac,border:`1px solid ${ac}`,padding:"4px 12px",marginTop:6,fontSize:fs-3}}>
+      {paused?resume:pause}</button>}
+  </div>);
+};
+
 export default function AILVIE_App(){
 const[lang,setLang]=useState(function(){try{var s=localStorage.getItem("ailvie_lang");if(s)return s;}catch(e){}var b=(navigator.language||"tr").split("-")[0].toLowerCase();return["tr","en","de","ru","zh","hi","nl","es","ar"].indexOf(b)>=0?b:"en";});
 const[dark,setDark]=useState(()=>{try{const v=localStorage.getItem("ailvie_theme");return v?v==="dark":true;}catch(e){return true;}});
@@ -635,44 +706,7 @@ useEffect(()=>{const bip=(e)=>{e.preventDefault();setInstallEvt(e);};const inst=
 // Notifications
 const[notifs,setNotifs]=useState([]);
 const unread=notifs.filter(n=>!n.read).length;
-const StorageHealth=()=>{
-  const[st,setSt]=useState(null);
-  useEffect(()=>{let m=true;(async()=>{const e=await storageEstimate();let p=false;try{p=!!(navigator.storage&&navigator.storage.persisted&&await navigator.storage.persisted());}catch(x){}if(m)setSt({e,p});})();return()=>{m=false;};},[]);
-  const L=lang==="tr";
-  if(!st)return <div style={{fontSize:fs-2,color:mt}}>…</div>;
-  const mb=(n)=>(n/1048576).toFixed(1);
-  const pct=st.e&&st.e.quota?Math.min(100,Math.round(st.e.usage/st.e.quota*100)):null;
-  return <div>
-    <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2,color:tc}}>
-      <span>{L?"Kalıcı depolama":"Persistent storage"}</span>
-      <b style={{color:st.p?sc:"#e9a23b"}}>{st.p?(L?"✓ Açık":"✓ On"):(L?"Kapalı":"Off")}</b>
-    </div>
-    <div style={{fontSize:fs-4,color:mt,marginTop:2,lineHeight:1.4}}>{st.p?(L?"Tarayıcı verilerinizi kendiliğinden silmez.":"Browser won't auto-evict your data."):(L?"Tarayıcı yer açmak için verileri silebilir. Uygulamayı ana ekrana ekleyip birkaç kez kullanınca genelde otomatik açılır.":"Browser may evict data.")}</div>
-    {pct!=null&&<div style={{marginTop:8}}>
-      <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-3,color:mt}}><span>{L?"Kullanım":"Usage"}</span><span>{mb(st.e.usage)} / {mb(st.e.quota)} MB ({pct}%)</span></div>
-      <div style={{height:6,borderRadius:3,background:bd,overflow:"hidden",marginTop:3}}><div style={{width:pct+"%",height:"100%",background:pct>85?dg:pct>60?"#e9a23b":sc}}/></div>
-    </div>}
-    {(()=>{const days=lastBackup?Math.floor((Date.now()-lastBackup)/864e5):null;
-      const stale=days===null||days>=30;
-      return <div style={{marginTop:10,background:stale?`${dg}12`:`${sc}10`,border:`1px solid ${stale?dg:sc}44`,borderRadius:9,padding:"8px 10px"}}>
-        <div style={{fontSize:fs-2,color:tc,fontWeight:600}}>{stale?"⚠️ ":"✓ "}{L?"Son yedek":"Last backup"}: <span style={{color:stale?dg:sc}}>{days===null?(L?"hiç alınmadı":"never"):(days===0?(L?"bugün":"today"):`${days} ${L?"gün önce":"days ago"}`)}</span></div>
-        {stale&&<div style={{fontSize:fs-4,color:mt,marginTop:3,lineHeight:1.4}}>{L?"Cihazınızı kaybederseniz veriler geri gelmez. Ayarlar > Yedekle ile şifreli yedek alın.":"Take an encrypted backup."}</div>}
-      </div>;})()}
-    <button onClick={async()=>{
-      const L2=lang==="tr";
-      let prev=null;try{prev=await idbGet("ailvie_data_prev");}catch(e){}
-      if(!prev){notify(L2?"Önceki sürüm bulunamadı":"No previous revision");return;}
-      let n=0;try{const d=JSON.parse(prev);n=(d.notes||[]).length+(d.meds||[]).length+(d.labs||[]).length;}catch(e){}
-      if(!window.confirm(L2?`Bir önceki kaydedilmiş sürüme dönülecek (${n} kayıt içeriyor). Mevcut veriler onunla değiştirilecek. Devam?`:`Restore previous revision (${n} records)?`))return;
-      try{const cur=await idbGet("ailvie_data");if(cur)await idbSet("ailvie_data_prev_undo",cur);}catch(e){}
-      try{await idbSet("ailvie_data",prev);localStorage.setItem("ailvie_data",prev);}catch(e){}
-      notify(L2?"Geri yüklendi, yenileniyor…":"Restored, reloading…");
-      setTimeout(()=>location.reload(),800);
-    }} style={{...BP,width:"100%",padding:"8px",marginTop:10,background:"transparent",color:ac,border:`1px solid ${ac}`,fontSize:fs-2}}>↩️ {lang==="tr"?"Önceki sürüme dön":"Restore previous revision"}</button>
-    <div style={{fontSize:fs-5,color:mt,marginTop:4,lineHeight:1.4}}>{lang==="tr"?"Her kayıttan önce bir önceki sürüm saklanır. Bir şey yanlış giderse buradan geri alabilirsiniz.":"One previous revision is kept before each save."}</div>
-    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Veriler yalnızca bu cihazda saklanır (IndexedDB) ve sunucuya gönderilmez; cihazlar arası senkron yoktur. Yedekleriniz AES-256 ile parolayla şifrelenebilir.":"Data stored on this device only (IndexedDB). No cloud sync. Backups can be AES-256 encrypted."}</div>
-  </div>;
-};
+
 // --- E2E sync operations (opt-in; default OFF) ---
 const collectSyncPayload=async()=>{
   let data=null,medimg=null;
@@ -909,7 +943,7 @@ const idbGet=async(k)=>{const r=await idbGetSafe(k);return r.ok?r.value:undefine
 const idbSet=async(k,v)=>{const db=await idbOpen();return await new Promise((res,rej)=>{const tx=db.transaction(IDB_STORE,"readwrite");tx.objectStore(IDB_STORE).put(v,k);tx.oncomplete=()=>res(true);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||new Error("abort"));});};
 // Ask the browser to make storage persistent (won't be auto-evicted). Best-effort.
 const requestPersistentStorage=async()=>{try{if(navigator.storage&&navigator.storage.persist){if(await navigator.storage.persisted())return true;return await navigator.storage.persist();}}catch(e){}return false;};
-const storageEstimate=async()=>{try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();return{usage:e.usage||0,quota:e.quota||0};}}catch(e){}return null;};
+
 if(typeof window!=="undefined"){window.__idbGet=idbGet;window.__idbSet=idbSet;window.__idbGetSafe=idbGetSafe;}
 // ---------- Unit normalization + canonical reference library + reference selector ----------
 // Factors verified against standard clinical conversions. Unit mismatch => NO score (doc rule).
@@ -3120,13 +3154,10 @@ const HField=({icon,label,field,unit})=>{
 // Analog Clock
 // The analog clock is the ONLY thing that needs second precision. It keeps its own state so
 // the second hand ticks without re-rendering the rest of the app.
-const Clock=()=>{
-  const[t,setT]=useState(()=>new Date());
-  useEffect(()=>{const iv=setInterval(()=>setT(new Date()),1000);return()=>clearInterval(iv);},[]);
-  const s=t.getSeconds(),m=t.getMinutes(),h=t.getHours()%12;return(<svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill={dark?"#151d2b":"#f8fafc"} stroke={ac} strokeWidth="2"/>{[...Array(12)].map((_,i)=>{const a=(i*30-90)*Math.PI/180;return <line key={i} x1={32+(i%3===0?22:24)*Math.cos(a)} y1={32+(i%3===0?22:24)*Math.sin(a)} x2={32+27*Math.cos(a)} y2={32+27*Math.sin(a)} stroke={tc} strokeWidth={i%3===0?"2":"1"} strokeLinecap="round"/>;})}<line x1="32" y1="32" x2={32+15*Math.cos(((h*30+m*.5)-90)*Math.PI/180)} y2={32+15*Math.sin(((h*30+m*.5)-90)*Math.PI/180)} stroke={tc} strokeWidth="2.5" strokeLinecap="round"/><line x1="32" y1="32" x2={32+20*Math.cos(((m*6+s*.1)-90)*Math.PI/180)} y2={32+20*Math.sin(((m*6+s*.1)-90)*Math.PI/180)} stroke={ac} strokeWidth="1.8" strokeLinecap="round"/><line x1="32" y1="32" x2={32+24*Math.cos((s*6-90)*Math.PI/180)} y2={32+24*Math.sin((s*6-90)*Math.PI/180)} stroke={dg} strokeWidth=".8" strokeLinecap="round"/><circle cx="32" cy="32" r="2.5" fill={ac}/></svg>);};
+
 const wxIcon=(c)=>{if(c==null)return"🌡️";if(c===0)return"☀️";if(c<=2)return"🌤️";if(c===3)return"☁️";if(c<=48)return"🌫️";if(c<=57)return"🌦️";if(c<=67)return"🌧️";if(c<=77)return"🌨️";if(c<=82)return"🌧️";if(c<=86)return"🌨️";return"⛈️";};
 const dirLabel=(d)=>{const dl=lang==="tr"?["K","KD","D","GD","G","GB","B","KB"]:["N","NE","E","SE","S","SW","W","NW"];return dl[Math.round(((d||0)%360)/45)%8];};
-const Compass=({heading})=>{const h=heading||0;return(<svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill={dark?"#151d2b":"#f8fafc"} stroke={ac} strokeWidth="1.5"/><g transform={`rotate(${-h} 20 20)`}><polygon points="20,4 16.5,20 20,16.5 23.5,20" fill={dg}/><polygon points="20,36 16.5,20 20,23.5 23.5,20" fill={mt}/><text x="20" y="12" textAnchor="middle" fontSize="6.5" fontWeight="700" fill={tc}>N</text></g><circle cx="20" cy="20" r="2" fill={ac}/></svg>);};
+
 
 // ══════ HOME — cleaned up, no duplicate cards ══════
 const renderHome=()=>{
@@ -3136,7 +3167,7 @@ const renderHome=()=>{
   return(<div style={{display:"flex",flexDirection:"column",gap:8}}>
     {/* Greeting + Clock */}
     <div style={{display:"flex",alignItems:"center",gap:10}}>
-      <Clock/>
+      <Clock dark={dark} ac={ac} tc={tc} mt={mt} dg={dg}/>
       <div style={{flex:1}}>
         <div style={{fontSize:fs,fontWeight:700,color:ac}}>{greetTxt}{pat.name?`, ${pat.name.split(" ")[0]}`:""} 👋</div>
         <div style={{fontSize:fs-2,color:mt,marginTop:2}}>{t.feel}</div>
@@ -3153,7 +3184,7 @@ const renderHome=()=>{
         </div>
       </div>
       <div onClick={heading==null?startCompass:undefined} style={{...CS,flex:1,padding:"10px 12px",display:"flex",alignItems:"center",gap:9,cursor:heading==null?"pointer":"default"}}>
-        <Compass heading={heading}/>
+        <Compass heading={heading} dark={dark} ac={ac} dg={dg} tc={tc} mt={mt}/>
         <div style={{minWidth:0}}>
           {heading!=null?<><div style={{fontSize:fs+2,fontWeight:800,color:tc,lineHeight:1}}>{Math.round(heading)}° {dirLabel(heading)}</div><div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Pusula":"Compass"}</div></>:<div style={{fontSize:fs-3,color:mt}}>{compassErr==="unsupported"?(lang==="tr"?"Pusula desteklenmiyor":"No compass"):(lang==="tr"?"Pusula · dokun":"Compass · tap")}</div>}
         </div>
@@ -3844,7 +3875,7 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
       </>}
   </div>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>💾 {lang==="tr"?"Depolama":"Storage"}</div>
-    <StorageHealth/>
+    <StorageHealth lang={lang} fs={fs} tc={tc} mt={mt} sc={sc} ac={ac} bd={bd} dg={dg} t={t} BP={BP} lastBackup={lastBackup} idbGet={idbGet} idbSet={idbSet} notify={notify}/>
   </div>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🧹 {lang==="tr"?"İçerik Filtresi":"Content Filter"}</div>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",gap:8}}>
@@ -5527,26 +5558,7 @@ const gotoStep=(key,i)=>{
 };
 // The countdown owns its own state. Keeping `left` in the app-level `guide` state made the
 // entire 5900-line component re-render once per second, which is visible as flicker.
-const StepTimer=({seconds,onDone,label,resume,pause,done})=>{
-  const[left,setLeft]=useState(seconds);
-  const[paused,setPaused]=useState(false);
-  const firedRef=useRef(false);
-  useEffect(()=>{setLeft(seconds);setPaused(false);firedRef.current=false;},[seconds]);
-  useEffect(()=>{
-    if(paused||left<=0)return;
-    const iv=setInterval(()=>setLeft(v=>Math.max(0,v-1)),1000);
-    return()=>clearInterval(iv);
-  },[paused,left>0]);
-  useEffect(()=>{
-    if(left===0&&!firedRef.current){firedRef.current=true;if(onDone)onDone();}
-  },[left,onDone]);
-  const mm=String(Math.floor(left/60)).padStart(2,"0"),ss=String(left%60).padStart(2,"0");
-  return(<div style={{textAlign:"center",margin:"10px 0"}}>
-    <div style={{fontSize:34,fontWeight:800,fontVariantNumeric:"tabular-nums",color:left?ac:sc}}>{left?`${mm}:${ss}`:done}</div>
-    {!!left&&<button onClick={()=>setPaused(p=>!p)} style={{...BP,background:"transparent",color:ac,border:`1px solid ${ac}`,padding:"4px 12px",marginTop:6,fontSize:fs-3}}>
-      {paused?resume:pause}</button>}
-  </div>);
-};
+
 const renderGuide=()=>{
   if(!guide)return null;
   const g=GUIDES[guide.key];
@@ -5568,7 +5580,7 @@ const renderGuide=()=>{
       </div>
       {st.warn&&<div style={{fontSize:fs-2,color:dg,fontWeight:700,marginBottom:6}}>⚠️ {L?"Önemli":"Important"}</div>}
       <div style={{fontSize:fs+3,lineHeight:1.45,minHeight:74}}>{txt}</div>
-      {!!st.sec&&<StepTimer key={guide.key+"_"+guide.i} seconds={st.sec}
+      {!!st.sec&&<StepTimer key={guide.key+"_"+guide.i} seconds={st.sec} ac={ac} sc={sc} fs={fs} BP={BP}
         label={L?"Süre":"Timer"} done={L?"Tamam":"Done"}
         pause={L?"⏸ Duraklat":"⏸ Pause"} resume={L?"▶ Devam":"▶ Resume"}
         onDone={()=>{if(voiceGuide)speakNow(L?"Süre doldu.":"Time is up.");}}/>}
