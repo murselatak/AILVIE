@@ -2825,14 +2825,24 @@ const[calY,setCalY]=useState(now.getFullYear());
 
 // Speech — FEMALE ONLY
 // Speech — FEMALE ONLY (never falls to male voice)
+// Stop whatever is currently being spoken, without starting anything new.
+const stopSpeech=()=>{
+  try{speechSynthesis.cancel();}catch(e){}
+  try{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}}catch(e){}
+  setIsSpeak(false);
+};
+// speak() TOGGLES: pressing the mic while it talks should stop it.
+// startSpeech() always speaks - the guided flow needs that, otherwise advancing a step
+// would silence the guide instead of reading the next instruction.
 const speak=(text,overrideLang,onEnd)=>{
   if(!text){if(onEnd)onEnd();return;}
-  // Toggle off if already speaking
-  if(isSpeak){
-    try{speechSynthesis.cancel();}catch(e){}
-    try{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}}catch(e){}
-    setIsSpeak(false);return;
-  }
+  if(isSpeak){stopSpeech();return;}
+  startSpeech(text,overrideLang,onEnd);
+};
+const startSpeech=(text,overrideLang,onEnd)=>{
+  if(!text){if(onEnd)onEnd();return;}
+  try{speechSynthesis.cancel();}catch(e){}
+  try{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}}catch(e){}
   setIsSpeak(true);
   const useLang=overrideLang||lang;
   const azureLang=LC[useLang]||(typeof useLang==="string"&&useLang.includes("-")?useLang:useLang)||"en-US";
@@ -5484,21 +5494,21 @@ useEffect(()=>{
 
 // --- Guided flow engine -----------------------------------------------------
 const stopGuideTimer=()=>{if(guideTickRef.current){clearInterval(guideTickRef.current);guideTickRef.current=null;}};
-const closeGuide=()=>{stopGuideTimer();try{speechSynthesis.cancel();}catch(e){}
-  try{if(audioRef.current){audioRef.current.pause();audioRef.current.currentTime=0;}}catch(e){}
-  setIsSpeak(false);setGuide(null);};
+const closeGuide=()=>{stopGuideTimer();stopSpeech();setGuide(null);};
+// speak() is a TOGGLE (calling it while speaking stops the speech). That is right for the
+// mic button, but wrong here: advancing to step 2 would silence the guide instead of reading
+// it. speakNow() always cancels whatever is playing and starts the new text.
+const speakNow=(txt)=>{if(txt)try{startSpeech(txt);}catch(e){}};
 const sayStep=(key,i)=>{
   if(!voiceGuide)return;                                   // silent mode: text only
   const st=GUIDES[key]&&GUIDES[key].steps[i];
   if(!st)return;
-  const txt=lang==="tr"?st.tr:(st.en||st.tr);
-  try{speak(txt);}catch(e){}
+  speakNow(lang==="tr"?st.tr:(st.en||st.tr));
 };
 const startGuide=(key)=>{
   if(!GUIDES[key])return;
   stopGuideTimer();
-  const st=GUIDES[key].steps[0];
-  setGuide({key,i:0,left:st.sec||0,paused:false});
+  setGuide({key,i:0});
   sayStep(key,0);
 };
 const gotoStep=(key,i)=>{
@@ -5506,32 +5516,37 @@ const gotoStep=(key,i)=>{
   if(!g)return;
   stopGuideTimer();
   if(i>=g.steps.length){
-    if(voiceGuide){try{speak(lang==="tr"?"Yönlendirme tamamlandı.":"Guidance complete.");}catch(e){}}
+    if(voiceGuide)speakNow(lang==="tr"?"Yönlendirme tamamlandı.":"Guidance complete.");
     setGuide(null);
     notify(lang==="tr"?"✓ Yönlendirme tamamlandı":"✓ Guidance complete");
     return;
   }
   if(i<0)i=0;
-  setGuide({key,i,left:g.steps[i].sec||0,paused:false});
+  setGuide({key,i});
   sayStep(key,i);
 };
-// countdown for timed steps
-useEffect(()=>{
-  stopGuideTimer();
-  if(!guide||guide.paused||!guide.left)return;
-  guideTickRef.current=setInterval(()=>{
-    setGuide(p=>{
-      if(!p||p.paused||!p.left)return p;
-      const left=p.left-1;
-      if(left<=0){stopGuideTimer();
-        try{if(voiceGuide)speak(lang==="tr"?"Süre doldu.":"Time is up.");}catch(e){}
-        return{...p,left:0};}
-      return{...p,left};
-    });
-  },1000);
-  return stopGuideTimer;
-},[guide&&guide.key,guide&&guide.i,guide&&guide.paused,guide&&guide.left>0,voiceGuide,lang]);
-
+// The countdown owns its own state. Keeping `left` in the app-level `guide` state made the
+// entire 5900-line component re-render once per second, which is visible as flicker.
+const StepTimer=({seconds,onDone,label,resume,pause,done})=>{
+  const[left,setLeft]=useState(seconds);
+  const[paused,setPaused]=useState(false);
+  const firedRef=useRef(false);
+  useEffect(()=>{setLeft(seconds);setPaused(false);firedRef.current=false;},[seconds]);
+  useEffect(()=>{
+    if(paused||left<=0)return;
+    const iv=setInterval(()=>setLeft(v=>Math.max(0,v-1)),1000);
+    return()=>clearInterval(iv);
+  },[paused,left>0]);
+  useEffect(()=>{
+    if(left===0&&!firedRef.current){firedRef.current=true;if(onDone)onDone();}
+  },[left,onDone]);
+  const mm=String(Math.floor(left/60)).padStart(2,"0"),ss=String(left%60).padStart(2,"0");
+  return(<div style={{textAlign:"center",margin:"10px 0"}}>
+    <div style={{fontSize:34,fontWeight:800,fontVariantNumeric:"tabular-nums",color:left?ac:sc}}>{left?`${mm}:${ss}`:done}</div>
+    {!!left&&<button onClick={()=>setPaused(p=>!p)} style={{...BP,background:"transparent",color:ac,border:`1px solid ${ac}`,padding:"4px 12px",marginTop:6,fontSize:fs-3}}>
+      {paused?resume:pause}</button>}
+  </div>);
+};
 const renderGuide=()=>{
   if(!guide)return null;
   const g=GUIDES[guide.key];
@@ -5539,7 +5554,6 @@ const renderGuide=()=>{
   const L=lang==="tr";
   const txt=L?st.tr:(st.en||st.tr);
   const pct=Math.round(100*(guide.i)/g.steps.length);
-  const mm=String(Math.floor(guide.left/60)).padStart(2,"0"),ss=String(guide.left%60).padStart(2,"0");
   return(<div role="dialog" aria-modal="true" aria-label={L?g.tr:g.en}
     style={{position:"fixed",inset:0,zIndex:9996,background:"rgba(0,0,0,.72)",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
     <div style={{width:"100%",maxWidth:520,background:cd,borderRadius:"18px 18px 0 0",padding:"14px 16px calc(16px + env(safe-area-inset-bottom))",boxShadow:"0 -8px 30px rgba(0,0,0,.5)"}}>
@@ -5554,11 +5568,10 @@ const renderGuide=()=>{
       </div>
       {st.warn&&<div style={{fontSize:fs-2,color:dg,fontWeight:700,marginBottom:6}}>⚠️ {L?"Önemli":"Important"}</div>}
       <div style={{fontSize:fs+3,lineHeight:1.45,minHeight:74}}>{txt}</div>
-      {!!st.sec&&<div style={{textAlign:"center",margin:"10px 0"}}>
-        <div style={{fontSize:34,fontWeight:800,fontVariantNumeric:"tabular-nums",color:guide.left?ac:sc}}>{guide.left?`${mm}:${ss}`:(L?"Tamam":"Done")}</div>
-        {!!guide.left&&<button onClick={()=>setGuide(p=>({...p,paused:!p.paused}))} style={{...BP,background:"transparent",color:ac,border:`1px solid ${ac}`,padding:"4px 12px",marginTop:6,fontSize:fs-3}}>
-          {guide.paused?(L?"▶ Devam":"▶ Resume"):(L?"⏸ Duraklat":"⏸ Pause")}</button>}
-      </div>}
+      {!!st.sec&&<StepTimer key={guide.key+"_"+guide.i} seconds={st.sec}
+        label={L?"Süre":"Timer"} done={L?"Tamam":"Done"}
+        pause={L?"⏸ Duraklat":"⏸ Pause"} resume={L?"▶ Devam":"▶ Resume"}
+        onDone={()=>{if(voiceGuide)speakNow(L?"Süre doldu.":"Time is up.");}}/>}
       <div style={{display:"flex",gap:8,marginTop:10}}>
         <button onClick={()=>gotoStep(guide.key,guide.i-1)} disabled={guide.i===0}
           style={{...BP,flex:"0 0 auto",padding:"10px 14px",background:"transparent",color:guide.i===0?mt:tc,border:`1px solid ${bd}`}}>←</button>
