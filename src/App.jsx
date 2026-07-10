@@ -465,7 +465,7 @@ const FB_VER="10.12.0";
 // StepTimer restarted its countdown — visible as rapid flashing on screen.
 // ---------------------------------------------------------------------------
 const storageEstimate=async()=>{try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();return{usage:e.usage||0,quota:e.quota||0};}}catch(e){}return null;};
-const StorageHealth=({lang,fs,tc,mt,sc,ac,bd,dg,t,BP,lastBackup,idbGet,idbSet,notify})=>{
+const StorageHealth=({lang,fs,tc,mt,sc,ac,acTx,bd,dg,t,BP,lastBackup,idbGet,idbSet,notify})=>{
   const[st,setSt]=useState(null);
   useEffect(()=>{let m=true;(async()=>{const e=await storageEstimate();let p=false;try{p=!!(navigator.storage&&navigator.storage.persisted&&await navigator.storage.persisted());}catch(x){}if(m)setSt({e,p});})();return()=>{m=false;};},[]);
   const L=lang==="tr";
@@ -498,7 +498,7 @@ const StorageHealth=({lang,fs,tc,mt,sc,ac,bd,dg,t,BP,lastBackup,idbGet,idbSet,no
       try{await idbSet("ailvie_data",prev);localStorage.setItem("ailvie_data",prev);}catch(e){}
       notify(L2?"Geri yüklendi, yenileniyor…":"Restored, reloading…");
       setTimeout(()=>location.reload(),800);
-    }} style={{...BP,width:"100%",padding:"8px",marginTop:10,background:"transparent",color:ac,border:`1px solid ${ac}`,fontSize:fs-2}}>↩️ {lang==="tr"?"Önceki sürüme dön":"Restore previous revision"}</button>
+    }} style={{...BP,width:"100%",padding:"8px",marginTop:10,background:"transparent",color:acTx,border:`1px solid ${ac}`,fontSize:fs-2}}>↩️ {lang==="tr"?"Önceki sürüme dön":"Restore previous revision"}</button>
     <div style={{fontSize:fs-5,color:mt,marginTop:4,lineHeight:1.4}}>{lang==="tr"?"Her kayıttan önce bir önceki sürüm saklanır. Bir şey yanlış giderse buradan geri alabilirsiniz.":"One previous revision is kept before each save."}</div>
     <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Veriler yalnızca bu cihazda saklanır (IndexedDB) ve sunucuya gönderilmez; cihazlar arası senkron yoktur. Yedekleriniz AES-256 ile parolayla şifrelenebilir.":"Data stored on this device only (IndexedDB). No cloud sync. Backups can be AES-256 encrypted."}</div>
   </div>;
@@ -508,7 +508,7 @@ const Clock=({dark,ac,tc,mt,dg})=>{
   useEffect(()=>{const iv=setInterval(()=>setT(new Date()),1000);return()=>clearInterval(iv);},[]);
   const s=t.getSeconds(),m=t.getMinutes(),h=t.getHours()%12;return(<svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill={dark?"#151d2b":"#f8fafc"} stroke={ac} strokeWidth="2"/>{[...Array(12)].map((_,i)=>{const a=(i*30-90)*Math.PI/180;return <line key={i} x1={32+(i%3===0?22:24)*Math.cos(a)} y1={32+(i%3===0?22:24)*Math.sin(a)} x2={32+27*Math.cos(a)} y2={32+27*Math.sin(a)} stroke={tc} strokeWidth={i%3===0?"2":"1"} strokeLinecap="round"/>;})}<line x1="32" y1="32" x2={32+15*Math.cos(((h*30+m*.5)-90)*Math.PI/180)} y2={32+15*Math.sin(((h*30+m*.5)-90)*Math.PI/180)} stroke={tc} strokeWidth="2.5" strokeLinecap="round"/><line x1="32" y1="32" x2={32+20*Math.cos(((m*6+s*.1)-90)*Math.PI/180)} y2={32+20*Math.sin(((m*6+s*.1)-90)*Math.PI/180)} stroke={ac} strokeWidth="1.8" strokeLinecap="round"/><line x1="32" y1="32" x2={32+24*Math.cos((s*6-90)*Math.PI/180)} y2={32+24*Math.sin((s*6-90)*Math.PI/180)} stroke={dg} strokeWidth=".8" strokeLinecap="round"/><circle cx="32" cy="32" r="2.5" fill={ac}/></svg>);};
 const Compass=({heading,dark,ac,dg,tc,mt})=>{const h=heading||0;return(<svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill={dark?"#151d2b":"#f8fafc"} stroke={ac} strokeWidth="1.5"/><g transform={`rotate(${-h} 20 20)`}><polygon points="20,4 16.5,20 20,16.5 23.5,20" fill={dg}/><polygon points="20,36 16.5,20 20,23.5 23.5,20" fill={mt}/><text x="20" y="12" textAnchor="middle" fontSize="6.5" fontWeight="700" fill={tc}>N</text></g><circle cx="20" cy="20" r="2" fill={ac}/></svg>);};
-const StepTimer=({seconds,onDone,label,resume,pause,done,ac,sc,fs,BP})=>{
+const StepTimer=({seconds,onDone,label,resume,pause,done,ac,acTx,sc,fs,BP})=>{
   const[left,setLeft]=useState(seconds);
   const[paused,setPaused]=useState(false);
   const firedRef=useRef(false);
@@ -523,8 +523,8 @@ const StepTimer=({seconds,onDone,label,resume,pause,done,ac,sc,fs,BP})=>{
   },[left,onDone]);
   const mm=String(Math.floor(left/60)).padStart(2,"0"),ss=String(left%60).padStart(2,"0");
   return(<div style={{textAlign:"center",margin:"10px 0"}}>
-    <div style={{fontSize:34,fontWeight:800,fontVariantNumeric:"tabular-nums",color:left?ac:sc}}>{left?`${mm}:${ss}`:done}</div>
-    {!!left&&<button onClick={()=>setPaused(p=>!p)} style={{...BP,background:"transparent",color:ac,border:`1px solid ${ac}`,padding:"4px 12px",marginTop:6,fontSize:fs-3}}>
+    <div style={{fontSize:34,fontWeight:800,fontVariantNumeric:"tabular-nums",color:left?acTx:sc}}>{left?`${mm}:${ss}`:done}</div>
+    {!!left&&<button onClick={()=>setPaused(p=>!p)} style={{...BP,background:"transparent",color:acTx,border:`1px solid ${ac}`,padding:"4px 12px",marginTop:6,fontSize:fs-3}}>
       {paused?resume:pause}</button>}
   </div>);
 };
@@ -3118,7 +3118,14 @@ const tc=dark?(hc?"#fff":"#d5dde8"):(hc?"#000":"#1a2332");
 //   white on ac(#00b4d8)=2.46 FAIL, on sc(#35b3a3)=2.58 FAIL, on dg(#e63946)=4.17 FAIL
 //   -> onAc(#04222b) on ac=6.71, on sc=6.41 ; white on dgBg(#c1121f)=6.22
 //   -> dg as TEXT: dark #f2606c=5.82, light #c1121f=6.22
-const ac="#00b4d8",a2="#0077b6",dg=dark?"#f2606c":"#c1121f",dgBg="#c1121f",onAc="#04222b",sc=dark?"#35b3a3":"#1b665d",mt=dark?"#93a4b6":"#5a6b7d",bd=dark?"#1e2d3d":"#dde3ea";
+const ac="#00b4d8",a2="#0077b6",dg=dark?"#f2606c":"#c1121f",dgBg="#c1121f",onAc="#04222b",sc=dark?"#35b3a3":"#1b665d",mt=dark?"#93a4b6":"#4b5a68",bd=dark?"#1e2d3d":"#dde3ea";
+// ac is a FILL colour. As TEXT it fails AA on light surfaces (#00b4d8 on #ffffff = 2.46).
+// acTx is the accent for text/icons. On light we need #036a9e: a2 (#0077b6) still fails on the
+// accent tints used for cards (#ddf5fa -> 4.22). Measured worst case for #036a9e is 5.11.
+const acTx=dark?ac:"#036a9e";
+// Text placed ON the success colour. onAc is dark, which is unreadable on the light-theme sc
+// (#04222b on #1b665d = 2.45); white gives 6.76.
+const onSc=dark?onAc:"#ffffff";
 const CS={background:cd,borderRadius:14,padding:"12px 14px",boxShadow:dark?"0 2px 8px rgba(0,0,0,.3)":"0 1px 6px rgba(0,0,0,.06)",border:`1px solid ${bd}`,overflow:"hidden",minWidth:0};
 const BP={background:`linear-gradient(135deg,${ac},${a2})`,color:"#fff",border:"none",borderRadius:10,padding:"8px 16px",cursor:"pointer",fontWeight:600,fontSize:fs-1};
 const BD={...BP,background:`linear-gradient(135deg,${dg},#c1121f)`};
@@ -3177,7 +3184,7 @@ const renderHome=()=>{
     <div style={{display:"flex",alignItems:"center",gap:10}}>
       <Clock dark={dark} ac={ac} tc={tc} mt={mt} dg={dg}/>
       <div style={{flex:1}}>
-        <div style={{fontSize:fs,fontWeight:700,color:ac}}>{greetTxt}{pat.name?`, ${pat.name.split(" ")[0]}`:""} 👋</div>
+        <div style={{fontSize:fs,fontWeight:700,color:acTx}}>{greetTxt}{pat.name?`, ${pat.name.split(" ")[0]}`:""} 👋</div>
         <div style={{fontSize:fs-2,color:mt,marginTop:2}}>{t.feel}</div>
         <div style={{fontSize:fs+8,fontWeight:800,fontVariantNumeric:"tabular-nums",color:tc,letterSpacing:1}}>{now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</div>
         <div style={{fontSize:fs-2,color:mt}}>{now.toLocaleDateString(lc,{weekday:"long",day:"numeric",month:"long"})}</div>
@@ -3217,7 +3224,7 @@ const renderHome=()=>{
       const rows=mm.map(([k,lbl,u,ic])=>{const ser=(k==="glucose"?(glucose||[]).map(r=>({ts:r.ts,val:r.val})):(healthLog||[]).filter(x=>x.type===k).map(x=>({ts:x.ts,val:x.val,meta:x.meta}))).slice().sort((a,b)=>a.ts-b.ts);if(!ser.length)return null;return {k,lbl,u,ic,last:ser[ser.length-1],spark:ser.slice(-8).map(x=>x.val)};}).filter(Boolean);
       if(!rows.length)return null;
       return <div style={{...CS}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}><b style={{fontSize:fs,color:tc}}>📈 {lang==="tr"?"Canlı Sağlık":"Live Health"}</b><button onClick={()=>goTo("health")} style={{background:"none",border:"none",color:ac,fontSize:fs-2,cursor:"pointer",fontWeight:700}}>{lang==="tr"?"Rapor →":"Report →"}</button></div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}><b style={{fontSize:fs,color:tc}}>📈 {lang==="tr"?"Canlı Sağlık":"Live Health"}</b><button onClick={()=>goTo("health")} style={{background:"none",border:"none",color:acTx,fontSize:fs-2,cursor:"pointer",fontWeight:700}}>{lang==="tr"?"Rapor →":"Report →"}</button></div>
         {rows.map(r=>{const mn=Math.min(...r.spark),mx=Math.max(...r.spark);const vv=r.k==="bp"?`${r.last.val}/${(r.last.meta&&r.last.meta.d)||"?"}`:r.last.val;const dt=new Date(r.last.ts);
           return <div key={r.k} style={{display:"flex",alignItems:"center",gap:9,padding:"6px 0",borderBottom:`1px solid ${bd}`}}>
             <span style={{fontSize:17,width:20,flexShrink:0}}>{r.ic}</span>
@@ -3235,8 +3242,8 @@ const renderHome=()=>{
         <span style={{fontSize:fs-3,color:mt}}>→</span>
       </div>
       <div style={{textAlign:"center",marginBottom:10}}>
-        <div style={{fontSize:fs+20,fontWeight:800,color:hscore>70?sc:hscore>40?ac:hscore>0?dg:mt,lineHeight:1}}>{hscore||"—"}<span style={{fontSize:fs-1,color:mt,fontWeight:400}}>/100</span></div>
-        <div style={{fontSize:fs,fontWeight:600,color:hscore>80?sc:hscore>60?ac:hscore>40?"#f0a030":hscore>0?dg:mt,marginTop:4}}>
+        <div style={{fontSize:fs+20,fontWeight:800,color:hscore>70?sc:hscore>40?acTx:hscore>0?dg:mt,lineHeight:1}}>{hscore||"—"}<span style={{fontSize:fs-1,color:mt,fontWeight:400}}>/100</span></div>
+        <div style={{fontSize:fs,fontWeight:600,color:hscore>80?sc:hscore>60?acTx:hscore>40?"#f0a030":hscore>0?dg:mt,marginTop:4}}>
           {hscore>80?(lang==="tr"?"Mükemmel 🌟":"Excellent 🌟"):hscore>60?(lang==="tr"?"İyi 💪":"Good 💪"):hscore>40?(lang==="tr"?"Orta ⚠️":"Average ⚠️"):hscore>0?(lang==="tr"?"Dikkat! 🔴":"Attention! 🔴"):(lang==="tr"?"Veri girin":"Enter data")}
         </div>
       </div>
@@ -3252,7 +3259,7 @@ const renderHome=()=>{
             <div style={{flex:1}}>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2}}>
                 <span style={{color:mt}}>{item.label}: <strong style={{color:tc}}>{item.val}</strong></span>
-                <span style={{fontWeight:700,color:item.status?sc:item.score>0?ac:dg}}>{item.score}/{item.max}</span>
+                <span style={{fontWeight:700,color:item.status?sc:item.score>0?acTx:dg}}>{item.score}/{item.max}</span>
               </div>
               <div style={{height:4,background:`${mt}22`,borderRadius:2,marginTop:2}}><div style={{height:"100%",borderRadius:2,background:item.status?sc:item.score>0?ac:dg,width:`${(item.score/item.max)*100}%`,transition:"width .5s"}}/></div>
             </div>
@@ -3273,7 +3280,7 @@ const renderHome=()=>{
     {<div style={{display:"grid",gridTemplateColumns:nextMed&&nextAppt?"1fr 1fr":"1fr",gap:6}}>
       {<div onClick={()=>goTo("medTime")} style={{...CS,cursor:"pointer",padding:"12px",border:`1px solid ${ac}33`,background:`${ac}06`}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <span style={{fontWeight:800,fontSize:fs,color:ac}}>💊 {lang==="tr"?"İlaç Zamanı":"Med Time"}</span>
+          <span style={{fontWeight:800,fontSize:fs,color:acTx}}>💊 {lang==="tr"?"İlaç Zamanı":"Med Time"}</span>
           <span style={{fontSize:fs-2,color:sc,fontWeight:700}}>{meds.filter(m=>m.taken).length}/{meds.length} {lang==="tr"?"Alındı":"Taken"}</span>
         </div>
         <div style={{height:6,background:`${mt}30`,borderRadius:3,overflow:"hidden",marginBottom:6}}>
@@ -3286,7 +3293,7 @@ const renderHome=()=>{
             <div style={{fontSize:fs-3,color:mt}}>{pat.name?pat.name.split(" ")[0]+", ":""}{nextMed.name} {(()=>{const[mH,mM]=(nextMed.time||"00:00").split(":").map(Number);const nowM=now.getHours()*60+now.getMinutes();const medM=mH*60+mM;const diff=nowM-medM;if(diff>0&&diff<120)return lang==="tr"?`${diff} dk geçti. İlacını aldıysan onay ver.`:`${diff} min passed. Confirm if taken.`;if(diff>=120)return lang==="tr"?`${Math.floor(diff/60)} saat ${diff%60} dk geçti!`:`${Math.floor(diff/60)}h ${diff%60}m passed!`;return lang==="tr"?"saatin yaklaşıyor!":"time approaching!";})()}</div>
           </div>
           <div style={{textAlign:"right"}}>
-            <div style={{fontWeight:800,fontSize:fs+1,color:ac}}>{nextMed.time}</div>
+            <div style={{fontWeight:800,fontSize:fs+1,color:acTx}}>{nextMed.time}</div>
             {nextMed.count>0&&<div style={{fontSize:fs-3,color:nextMed.count<=5?dg:sc}}>📦 {nextMed.count} {lang==="tr"?"kaldı":"left"}</div>}
           </div>
         </div>
@@ -3300,9 +3307,9 @@ const renderHome=()=>{
     {/* Calendar */}
     <div style={{...CS,padding:"8px 10px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-        <button onClick={()=>{if(calM===0){setCalM(11);setCalY(y=>y-1);}else setCalM(m=>m-1);}} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:14}}>◀</button>
+        <button onClick={()=>{if(calM===0){setCalM(11);setCalY(y=>y-1);}else setCalM(m=>m-1);}} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:14}}>◀</button>
         <span style={{fontWeight:700,fontSize:fs-1}}>{[t.jan,t.feb,t.mar,t.apr,t.may,t.jun,t.jul,t.aug,t.sep,t.oct,t.nov,t.dec][calM]} {calY}</span>
-        <button onClick={()=>{if(calM===11){setCalM(0);setCalY(y=>y+1);}else setCalM(m=>m+1);}} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:14}}>▶</button>
+        <button onClick={()=>{if(calM===11){setCalM(0);setCalY(y=>y+1);}else setCalM(m=>m+1);}} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:14}}>▶</button>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,textAlign:"center"}}>
         {[t.su,t.mo,t.tu,t.we,t.th,t.fr,t.sa].map(d=><div key={d} style={{fontSize:11,color:mt,fontWeight:700}}>{d}</div>)}
@@ -3319,7 +3326,7 @@ const renderHome=()=>{
     {/* Calendar Date Panel */}
     {selDate&&<div style={{...CS,border:`2px solid ${ac}`,marginTop:4,padding:"10px 12px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-        <span style={{fontWeight:700,fontSize:fs,color:ac}}>📅 {selDate}{(()=>{const h=HOLIDAYS[selDate?.substring(5)];return h?<span style={{marginLeft:6,color:sc,fontSize:fs-2}}>🎉 {h[lang]||h.en}</span>:null;})()}</span>
+        <span style={{fontWeight:700,fontSize:fs,color:acTx}}>📅 {selDate}{(()=>{const h=HOLIDAYS[selDate?.substring(5)];return h?<span style={{marginLeft:6,color:sc,fontSize:fs-2}}>🎉 {h[lang]||h.en}</span>:null;})()}</span>
         <button onClick={()=>setSelDate(null)} style={{background:"none",border:"none",color:mt,cursor:"pointer",fontSize:16}}>✕</button>
       </div>
       <div style={{marginBottom:6}}>
@@ -3337,13 +3344,13 @@ const renderHome=()=>{
     <div style={{...CS,padding:"10px 12px",background:`linear-gradient(135deg,${ac}08,${sc}08)`,border:`1px solid ${ac}22`}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
         <span style={{fontWeight:700,fontSize:fs-1}}>📚 {lang==="tr"?"Günün Kelimesi":"Word of the Day"}</span>
-        <div style={{display:"flex",gap:3}}>{Object.entries(TOPIC_NAMES).map(([k,v])=><button key={k} onClick={()=>setWordTopic(k)} style={{padding:"2px 6px",borderRadius:6,fontSize:fs-3,border:wordTopic===k?`1px solid ${ac}`:`1px solid ${bd}`,background:wordTopic===k?`${ac}15`:"transparent",color:wordTopic===k?ac:mt,cursor:"pointer",fontWeight:wordTopic===k?700:400}}>{v[lang]||v.en}</button>)}</div>
+        <div style={{display:"flex",gap:3}}>{Object.entries(TOPIC_NAMES).map(([k,v])=><button key={k} onClick={()=>setWordTopic(k)} style={{padding:"2px 6px",borderRadius:6,fontSize:fs-3,border:wordTopic===k?`1px solid ${ac}`:`1px solid ${bd}`,background:wordTopic===k?`${ac}15`:"transparent",color:wordTopic===k?acTx:mt,cursor:"pointer",fontWeight:wordTopic===k?700:400}}>{v[lang]||v.en}</button>)}</div>
         <div style={{display:"flex",gap:4,alignItems:"center"}}>
           <div style={{position:"relative"}}>
-            <button onClick={()=>setShowWordLangPicker(!showWordLangPicker)} style={{background:`${ac}15`,border:`1px solid ${bd}`,borderRadius:8,padding:"3px 10px",fontSize:fs-2,color:ac,cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:4}}><Flag code={(EXT_LANGS.find(l=>l.k===wordLang)||{flag:wordLang}).flag} size={14}/> {(EXT_LANGS.find(l=>l.k===wordLang)||{n:wordLang}).n} ▾</button>
+            <button onClick={()=>setShowWordLangPicker(!showWordLangPicker)} style={{background:`${ac}15`,border:`1px solid ${bd}`,borderRadius:8,padding:"3px 10px",fontSize:fs-2,color:acTx,cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:4}}><Flag code={(EXT_LANGS.find(l=>l.k===wordLang)||{flag:wordLang}).flag} size={14}/> {(EXT_LANGS.find(l=>l.k===wordLang)||{n:wordLang}).n} ▾</button>
             {showWordLangPicker&&<div style={{position:"absolute",right:0,top:28,background:cd,border:`1px solid ${bd}`,borderRadius:10,boxShadow:`0 4px 16px rgba(0,0,0,.3)`,zIndex:50,padding:4,width:200,maxHeight:280,overflowY:"auto"}}>{EXT_LANGS.filter(l=>l.k!==lang).map(l=><button key={l.k} onClick={()=>{setWordLang(l.k);setShowWordLangPicker(false);}} style={{display:"flex",alignItems:"center",gap:6,width:"100%",padding:"6px 10px",background:wordLang===l.k?`${ac}15`:"transparent",border:"none",borderRadius:6,fontSize:fs-2,color:tc,cursor:"pointer"}}><Flag code={l.flag} size={14}/><span style={{fontWeight:wordLang===l.k?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.n}</span></button>)}</div>}
           </div>
-          <button onClick={()=>setWordIdx(p=>(p+1)%WORDS.length)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"3px 10px",cursor:"pointer",color:ac,fontSize:fs-1}}>→</button>
+          <button onClick={()=>setWordIdx(p=>(p+1)%WORDS.length)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"3px 10px",cursor:"pointer",color:acTx,fontSize:fs-1}}>→</button>
         </div>
       </div>
       <div style={{textAlign:"center",padding:"8px 0"}}>
@@ -3354,7 +3361,7 @@ const renderHome=()=>{
         <div style={{width:40,height:2,background:ac,margin:"0 auto 8px",borderRadius:1,opacity:.5}}/>
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
           <Flag code={wordLang} size={22}/>
-          <span style={{fontSize:fs+8,fontWeight:800,color:ac}}>{WORDS[wordIdx]?.[wordLang]||WORDS[wordIdx]?.en}</span>
+          <span style={{fontSize:fs+8,fontWeight:800,color:acTx}}>{WORDS[wordIdx]?.[wordLang]||WORDS[wordIdx]?.en}</span>
         </div>
         <div style={{fontSize:fs-3,color:mt,marginTop:4}}>{(LL_LOCAL[lang]||LL_LOCAL.en)[lang]} → {(LL_LOCAL[lang]||LL_LOCAL.en)[wordLang]}</div>
       </div>
@@ -3363,7 +3370,7 @@ const renderHome=()=>{
     <div style={{...CS,padding:10,position:"relative"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
         <div style={{fontWeight:700,fontSize:fs,display:"flex",alignItems:"center",gap:6}}><img src={GLOBE_IMG} alt="" aria-hidden="true" style={{width:20,height:20,borderRadius:10}}/> {lang==="tr"?"Çeviri":lang==="en"?"Translator":lang==="de"?"Übersetzer":lang==="ru"?"Переводчик":lang==="zh"?"翻译":lang==="hi"?"अनुवादक":lang==="nl"?"Vertaler":lang==="es"?"Traductor":lang==="ar"?"مترجم":"Translator"}</div>
-        <span style={{fontSize:fs-3,color:ac,fontWeight:500}}>60+ {lang==="tr"?"Dil":"Lang"}</span>
+        <span style={{fontSize:fs-3,color:acTx,fontWeight:500}}>60+ {lang==="tr"?"Dil":"Lang"}</span>
       </div>
       {/* Language selector bar — src ↔ tgt */}
       <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
@@ -3373,7 +3380,7 @@ const renderHome=()=>{
           <span style={{color:mt,fontSize:fs-2}}>▾</span>
         </button>
         {/* Swap button */}
-        <button onClick={()=>{const nSrc=trTgt,nTgt=trSrc;setTrSrc(nSrc);setTrTgt(nTgt);setTrIn(trResult||"");setTrResult(trIn||"");}} style={{padding:"8px 10px",borderRadius:10,border:`1px solid ${ac}44`,background:`${ac}11`,color:ac,cursor:"pointer",fontSize:16,flexShrink:0}} title={lang==="tr"?"Dilleri Değiştir":"Swap languages"}>⇄</button>
+        <button onClick={()=>{const nSrc=trTgt,nTgt=trSrc;setTrSrc(nSrc);setTrTgt(nTgt);setTrIn(trResult||"");setTrResult(trIn||"");}} style={{padding:"8px 10px",borderRadius:10,border:`1px solid ${ac}44`,background:`${ac}11`,color:acTx,cursor:"pointer",fontSize:16,flexShrink:0}} title={lang==="tr"?"Dilleri Değiştir":"Swap languages"}>⇄</button>
         {/* Target selector */}
         <button onClick={()=>{setTrShowTgtPick(!trShowTgtPick);setTrShowSrcPick(false);setTrSearch("");}} style={{flex:1,padding:"9px 10px",borderRadius:10,border:`1px solid ${trShowTgtPick?ac:bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:fs-2,minWidth:0}}>
           {(()=>{const s=EXT_LANGS.find(l=>l.k===trTgt);return s?<><Flag code={s.flag} size={20}/><span style={{flex:1,textAlign:"left",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",fontWeight:600}}>{s.n}</span></>:null;})()}
@@ -3391,7 +3398,7 @@ const renderHome=()=>{
           }).map(l=><button key={l.k} onClick={()=>{if(trShowSrcPick){setTrSrc(l.k);setTrShowSrcPick(false);}else{setTrTgt(l.k);setTrShowTgtPick(false);}setTrSearch("");}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"8px 10px",background:((trShowSrcPick&&trSrc===l.k)||(trShowTgtPick&&trTgt===l.k))?`${ac}22`:"transparent",border:"none",borderRadius:6,cursor:"pointer",color:tc,fontSize:fs-1,textAlign:"left"}}>
             <Flag code={l.flag} size={22}/>
             <span style={{flex:1,fontWeight:((trShowSrcPick&&trSrc===l.k)||(trShowTgtPick&&trTgt===l.k))?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.n}</span>
-            {((trShowSrcPick&&trSrc===l.k)||(trShowTgtPick&&trTgt===l.k))&&<span style={{color:ac}}>✓</span>}
+            {((trShowSrcPick&&trSrc===l.k)||(trShowTgtPick&&trTgt===l.k))&&<span style={{color:acTx}}>✓</span>}
           </button>)}
         </div>
       </div>}
@@ -3412,7 +3419,7 @@ const renderHome=()=>{
         </div>
         {/* Target panel */}
         <div style={{background:dark?"#12344d":"#e8f4fd",borderRadius:10,padding:8,border:`1px solid ${ac}44`,minHeight:120,display:"flex",flexDirection:"column"}}>
-          <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:4,fontSize:fs-3,color:ac}}>
+          <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:4,fontSize:fs-3,color:acTx}}>
             <Flag code={(EXT_LANGS.find(l=>l.k===trTgt)||{}).flag} size={14}/>
             <span style={{fontWeight:700}}>{(EXT_LANGS.find(l=>l.k===trTgt)||{n:trTgt}).n}</span>
           </div>
@@ -3421,7 +3428,7 @@ const renderHome=()=>{
           </div>
           {trResult&&<div style={{display:"flex",gap:4,marginTop:4}}>
             <SpeakBtn text={trResult} langCode={(EXT_LANGS.find(l=>l.k===trTgt)||{code:"en"}).code}/>
-            <button onClick={()=>copyTxt(trResult)} title={lang==="tr"?"Kopyala":"Copy"} style={{background:"none",border:`1px solid ${ac}44`,borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:12,color:ac}}>📋</button>
+            <button onClick={()=>copyTxt(trResult)} title={lang==="tr"?"Kopyala":"Copy"} style={{background:"none",border:`1px solid ${ac}44`,borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:12,color:acTx}}>📋</button>
           </div>}
         </div>
       </div>
@@ -3491,7 +3498,7 @@ const renderAppts=()=>{
     {/* 2. Add Appt */}
     <button onClick={()=>{setEditApptId(null);setNewAppt(EMPTY_APPT);apptDraftIdRef.current=null;setShowAddAppt(true);}} style={{...CS,border:`2px solid ${ac}`,textAlign:"center",cursor:"pointer",padding:14,background:`${ac}06`}}>
       <span style={{fontSize:24}}>📝</span>
-      <div style={{fontWeight:700,color:ac,marginTop:4}}>+ {t.addAppt}</div>
+      <div style={{fontWeight:700,color:acTx,marginTop:4}}>+ {t.addAppt}</div>
     </button>
     {showAddAppt&&<div style={{...CS,border:`2px solid ${ac}`}}>
       <input placeholder={t.dr} value={newAppt.doctor} onChange={e=>setNewAppt({...newAppt,doctor:e.target.value})} style={{...IS,marginBottom:6}}/>
@@ -3503,11 +3510,11 @@ const renderAppts=()=>{
     {/* 3. Upcoming / Past */}
     <div style={{display:"flex",gap:6}}>{["up","past"].map(tab=><button key={tab} onClick={()=>goTo(tab==="up"?"appts":"appts")} style={pill(true)}>{t[tab]}</button>)}</div>
     {appts.filter(a=>a.date>=today).length===0&&<div style={{textAlign:"center",color:mt,padding:16}}>{t.noA}</div>}
-    {appts.filter(a=>a.date>=today).map(a=>(<div key={a.id} style={CS}><div style={{fontWeight:700,fontSize:fs+1}}>{a.doctor}</div><div style={{fontSize:fs-1,color:mt}}>🏥 {a.hospital} • {a.clinic}</div><div style={{color:ac}}>📅 {a.date} ⏰ {a.time}</div><div style={{fontSize:fs-3,color:sc,marginTop:2}}>🔔 1 gün + 6 saat önce alarm</div><div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.hospital)}`} target="_blank" rel="noopener noreferrer" aria-label={`${t.dir} ${a.hospital}`} style={{...BP,padding:"6px 12px",textDecoration:"none"}}>🗺️ {t.dir}</a><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.hospital)}&travelmode=transit`} target="_blank" rel="noopener noreferrer" style={{...BP,padding:"6px 12px",background:sc,color:onAc,textDecoration:"none"}}>🚌</a><button onClick={()=>{setEditApptId(a.id);setNewAppt({doctor:a.doctor||"",hospital:a.hospital||"",clinic:a.clinic||"",date:a.date||"",time:a.time||""});setShowAddAppt(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:ac,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button><button onClick={()=>toTrash("appt",a)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>🗑️</button></div></div>))}
+    {appts.filter(a=>a.date>=today).map(a=>(<div key={a.id} style={CS}><div style={{fontWeight:700,fontSize:fs+1}}>{a.doctor}</div><div style={{fontSize:fs-1,color:mt}}>🏥 {a.hospital} • {a.clinic}</div><div style={{color:acTx}}>📅 {a.date} ⏰ {a.time}</div><div style={{fontSize:fs-3,color:sc,marginTop:2}}>🔔 1 gün + 6 saat önce alarm</div><div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.hospital)}`} target="_blank" rel="noopener noreferrer" aria-label={`${t.dir} ${a.hospital}`} style={{...BP,padding:"6px 12px",textDecoration:"none"}}>🗺️ {t.dir}</a><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.hospital)}&travelmode=transit`} target="_blank" rel="noopener noreferrer" style={{...BP,padding:"6px 12px",background:sc,color:onSc,textDecoration:"none"}}>🚌</a><button onClick={()=>{setEditApptId(a.id);setNewAppt({doctor:a.doctor||"",hospital:a.hospital||"",clinic:a.clinic||"",date:a.date||"",time:a.time||""});setShowAddAppt(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:acTx,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button><button onClick={()=>toTrash("appt",a)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>🗑️</button></div></div>))}
     {/* 4. AI Location + Transit */}
     <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
       <button onClick={getLoc} style={{...BP,padding:"6px 12px"}}>📍 {t.loc}</button>
-      {[{n:"IETT",u:"https://www.iett.istanbul"},{n:"TfL",u:"https://tfl.gov.uk"},{n:"Moovit",u:"https://moovitapp.com"}].map(l=><a key={l.n} href={l.u} target="_blank" rel="noopener noreferrer" style={{...BP,padding:"6px 12px",background:sc,color:onAc,textDecoration:"none"}}>{l.n}</a>)}
+      {[{n:"IETT",u:"https://www.iett.istanbul"},{n:"TfL",u:"https://tfl.gov.uk"},{n:"Moovit",u:"https://moovitapp.com"}].map(l=><a key={l.n} href={l.u} target="_blank" rel="noopener noreferrer" style={{...BP,padding:"6px 12px",background:sc,color:onSc,textDecoration:"none"}}>{l.n}</a>)}
     </div>
   </div>);
 };
@@ -3524,7 +3531,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   {/* Header */}
   <div style={{textAlign:"center",padding:"10px 0"}}>
     <div style={{fontSize:40,marginBottom:4,animation:"pulse 2s infinite"}}>⏰</div>
-    <div style={{fontWeight:800,fontSize:fs+4,color:ac}}>{lang==="tr"?"İlaç Zamanı":"Med Time"}</div>
+    <div style={{fontWeight:800,fontSize:fs+4,color:acTx}}>{lang==="tr"?"İlaç Zamanı":"Med Time"}</div>
     <div style={{fontSize:fs-2,color:mt}}>{pat.name?pat.name+", ":""}{pending.length>0?(lang==="tr"?`${pending.length} ilaç bekliyor`:`${pending.length} meds pending`):(lang==="tr"?"Tüm ilaçlar alındı! ✅":"All meds taken! ✅")}</div>
   </div>
 
@@ -3552,7 +3559,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
           <div style={{fontWeight:800,fontSize:fs+1}}>{m.name}</div>
           <div style={{fontSize:fs-2,color:mt}}>{m.dose} — {m.alarmType==="ring"?"🔔":m.alarmType==="vibrate"?"📳":"🔔📳"}</div>
           <div style={{display:"flex",gap:8,marginTop:3}}>
-            <span style={{fontSize:fs-3,color:ac,fontWeight:600}}>📦 {m.count||30} {lang==="tr"?"kaldı":"left"}</span>
+            <span style={{fontSize:fs-3,color:acTx,fontWeight:600}}>📦 {m.count||30} {lang==="tr"?"kaldı":"left"}</span>
           </div>
         </div>
         <div style={{textAlign:"right"}}>
@@ -3601,7 +3608,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   </div>))}
 
   {/* Add Med shortcut */}
-  <button onClick={()=>goTo("meds")} style={{...CS,border:`2px dashed ${ac}33`,cursor:"pointer",textAlign:"center",padding:"14px",color:ac,fontWeight:600}}>
+  <button onClick={()=>goTo("meds")} style={{...CS,border:`2px dashed ${ac}33`,cursor:"pointer",textAlign:"center",padding:"14px",color:acTx,fontWeight:600}}>
     💊 {lang==="tr"?"İlaç Ekle / Düzenle":"Add / Edit Meds"} →
   </button>
 </div>);};
@@ -3710,7 +3717,7 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
     </div>
     {scanResult.found&&<div style={{padding:"8px 10px",borderRadius:8,background:cd,border:`1px solid ${bd}`}}>
       <div style={{fontWeight:700,fontSize:fs+1}}>{scanResult.name}</div>
-      <div style={{fontSize:fs-1,color:ac}}>{t.dose}: {scanResult.dose}</div>
+      <div style={{fontSize:fs-1,color:acTx}}>{t.dose}: {scanResult.dose}</div>
       <div style={{fontSize:fs-2,color:mt,marginTop:4}}>{lang==="tr"?"↓ İlaç bilgileri aşağıda gösteriliyor":"↓ Drug info shown below"}</div>
     </div>}
     {!scanResult.found&&<div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Bu barkod veritabanımızda yok. İlaç adını manuel olarak aratabilirsiniz.":"This barcode is not in our database. You can search the drug name manually."}</div>}
@@ -3722,7 +3729,7 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
       {guideForMed(m.name)&&<button onClick={(e)=>{e.stopPropagation();startGuide(guideForMed(m.name));}}
         aria-label={lang==="tr"?`${m.name} kullanım rehberi`:`${m.name} technique guide`}
         title={lang==="tr"?"Nasıl kullanılır?":"How to use"}
-        style={{marginTop:4,background:"transparent",border:`1px solid ${ac}`,color:ac,borderRadius:7,padding:"1px 5px",fontSize:fs-4,cursor:"pointer",lineHeight:1.4}}>🔊</button>}</div>
+        style={{marginTop:4,background:"transparent",border:`1px solid ${acTx}`,color:acTx,borderRadius:7,padding:"1px 5px",fontSize:fs-4,cursor:"pointer",lineHeight:1.4}}>🔊</button>}</div>
     <div style={{flex:1,minWidth:0}}><div style={{fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</div><div style={{fontSize:fs-2,color:mt}}>{m.dose} — ⏰ {m.time}</div><div style={{fontSize:fs-3,color:sc}}>{m.alarmType==="ring"?"🔔":m.alarmType==="vibrate"?"📳":"🔔📳"} {m.count>0&&<span style={{color:m.count<=5?dg:mt}}>({lang==="tr"?"Kalan":"Left"}: {m.count})</span>}</div></div>
     {!m.taken&&<button onClick={()=>{
       const nm=m.name?.trim().toLowerCase();
@@ -3737,7 +3744,7 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
       }));
       notify(`✅ ${m.name} ${t.taken} (${lang==="tr"?"Kalan":"Left"}: ${newCount})`);
     }} style={{...BP,padding:"6px 12px"}}>✓</button>}
-    <button onClick={()=>{setEditMedId(m.id);setNewMed({name:m.name||"",dose:m.dose||"",time:m.time||"",startDate:m.startDate||"",alarmType:m.alarmType||"both",count:m.count||30,timesPerDay:m.timesPerDay||1,recurring:m.recurring!==false});setShowAddMed(true);}} style={{background:"none",border:`1px solid ${ac}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:ac}}>✏️</button>
+    <button onClick={()=>{setEditMedId(m.id);setNewMed({name:m.name||"",dose:m.dose||"",time:m.time||"",startDate:m.startDate||"",alarmType:m.alarmType||"both",count:m.count||30,timesPerDay:m.timesPerDay||1,recurring:m.recurring!==false});setShowAddMed(true);}} style={{background:"none",border:`1px solid ${ac}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:acTx}}>✏️</button>
     <button onClick={()=>toTrash("med",m)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:16}}>🗑️</button>
   </div>))}
   {showAddMed&&<div style={{...CS,border:`2px solid ${ac}`}}>
@@ -3754,15 +3761,15 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
     </div>
     <div style={{marginBottom:6}}><div style={{fontSize:fs-2,color:mt,marginBottom:4}}>⏰ {t.alarmType}</div><div style={{display:"flex",gap:6}}>{["ring","vibrate","both"].map(at=><button key={at} onClick={()=>setNewMed({...newMed,alarmType:at})} style={pill(newMed.alarmType===at)}>{at==="ring"?"🔔 "+t.ring:at==="vibrate"?"📳 "+t.vibrate:"🔔📳 "+t.both}</button>)}</div></div>
     <div style={{display:"flex",gap:6,marginBottom:6,alignItems:"center",flexWrap:"wrap"}}><span style={{fontSize:fs-2,color:mt}}>💊 {lang==="tr"?"Kutu adedi":"Box count"}:</span><input type="number" min="1" value={newMed.count} onChange={e=>setNewMed({...newMed,count:Number(e.target.value)})} style={{...IS,width:65,textAlign:"center",fontWeight:700}}/><span style={{fontSize:fs-2,color:mt}}>🔁 {lang==="tr"?"Günde":"Per day"}:</span><input type="number" min="1" max="6" value={newMed.timesPerDay||1} onChange={e=>setNewMed({...newMed,timesPerDay:Number(e.target.value)})} style={{...IS,width:50,textAlign:"center",fontWeight:700}}/></div>
-    {(newMed.timesPerDay||1)>1&&<div style={{fontSize:fs-3,color:ac,marginBottom:6,padding:"4px 8px",background:`${ac}08`,borderRadius:6}}>💡 {lang==="tr"?`Günde ${newMed.timesPerDay} doz: Her doz için ayrı saat girerek ekleyin.`:`${newMed.timesPerDay} doses/day: Add each dose with a different time.`}</div>}
+    {(newMed.timesPerDay||1)>1&&<div style={{fontSize:fs-3,color:acTx,marginBottom:6,padding:"4px 8px",background:`${ac}08`,borderRadius:6}}>💡 {lang==="tr"?`Günde ${newMed.timesPerDay} doz: Her doz için ayrı saat girerek ekleyin.`:`${newMed.timesPerDay} doses/day: Add each dose with a different time.`}</div>}
     <div style={{display:"flex",gap:8}}><button onClick={()=>{medDraftIdRef.current=null;setNewMed(EMPTY_MED);setEditMedId(null);setShowAddMed(false);}} style={BP}>{lang==="tr"?"Bitti":"Done"}</button><button onClick={()=>{if(!editMedId&&medDraftIdRef.current!=null){const id=medDraftIdRef.current;setMeds(p=>p.filter(x=>x.id!==id));}medDraftIdRef.current=null;setNewMed(EMPTY_MED);setEditMedId(null);setShowAddMed(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div>
   </div>}
-  <div style={{...CS,border:`2px dashed ${ac}33`}}><div style={{fontWeight:700,marginBottom:8}}>🔍 {t.drugR}</div><div style={{display:"flex",gap:8}}><input placeholder={t.drugN} value={drugQ} onChange={e=>setDrugQ(e.target.value)} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter")analyzeDrug();}}/><button onClick={analyzeDrug} disabled={drugLoad} style={BP}>{drugLoad?"⏳":t.anlz}</button></div>{drugRes&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:5}}>{[[t.cls,"class"],[t.usg,"usage"],[t.dose,"dose"],[t.sEff,"sideEffects"],[t.wrn,"warnings"],[t.intr,"interactions"]].map(([l,k])=><div key={k} style={{fontSize:fs-1}}><span style={{fontWeight:700,color:ac}}>{l}: </span><span>{drugRes[k]}</span></div>)}</div>}</div>
+  <div style={{...CS,border:`2px dashed ${ac}33`}}><div style={{fontWeight:700,marginBottom:8}}>🔍 {t.drugR}</div><div style={{display:"flex",gap:8}}><input placeholder={t.drugN} value={drugQ} onChange={e=>setDrugQ(e.target.value)} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter")analyzeDrug();}}/><button onClick={analyzeDrug} disabled={drugLoad} style={BP}>{drugLoad?"⏳":t.anlz}</button></div>{drugRes&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:5}}>{[[t.cls,"class"],[t.usg,"usage"],[t.dose,"dose"],[t.sEff,"sideEffects"],[t.wrn,"warnings"],[t.intr,"interactions"]].map(([l,k])=><div key={k} style={{fontSize:fs-1}}><span style={{fontWeight:700,color:acTx}}>{l}: </span><span>{drugRes[k]}</span></div>)}</div>}</div>
 </div>);
 
 // Settings with tab filtering
 const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
-  {!all&&<button onClick={()=>setSettingsTab("all")} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:fs,textAlign:"left",padding:0}}>← {t.settings}</button>}
+  {!all&&<button onClick={()=>setSettingsTab("all")} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:fs,textAlign:"left",padding:0}}>← {t.settings}</button>}
   {all&&<span style={{fontWeight:700,fontSize:fs+2}}>⚙️ {t.settings}</span>}
   {(all||s==="all")&&<div style={{...CS,borderLeft:`3px solid ${ac}`}}>
     <div style={{fontWeight:700,marginBottom:4}}>♿ {lang==="tr"?"Erişilebilirlik":"Accessibility"}</div>
@@ -3778,6 +3785,24 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   <div style={CS}><div style={{marginBottom:6}}>🤖 AI API Key <span style={{fontSize:fs-3,color:mt}}>(Anthropic)</span></div><div style={{display:"flex",gap:6}}><input type="password" value={apiKey} onChange={e=>{setApiKey(e.target.value);try{localStorage.setItem("ailvie_api_key",e.target.value);}catch(ex){}}} placeholder="sk-ant-..." style={{...IS,flex:1,fontFamily:"monospace",fontSize:fs-2}}/>{apiKey&&<button onClick={()=>{setApiKey("");try{localStorage.removeItem("ailvie_api_key");}catch(ex){}}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",color:dg,cursor:"pointer"}}>✕</button>}</div><div style={{fontSize:fs-3,color:apiKey?sc:mt,marginTop:4}}>{apiKey?(lang==="tr"?"✓ API anahtarı ayarlandı":"✓ API key set"):(lang==="tr"?"AI Sohbet, çeviri ve ilaç analizi için gerekli":"Required for AI Chat, translation & drug analysis")}</div></div>
   <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>{toTrash("emergency",en);notify(lang==="tr"?"Çöp kutusuna taşındı":"Moved to Trash");}} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🛡️ {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button aria-label={lang==="tr"?"Aç/Kapat":"Toggle"} onClick={()=>{const willOn=!perms[k];setPerms(p=>({...p,[k]:willOn}));if(k==="loc"){if(willOn){notify(lang==="tr"?"📍 Konum açılıyor…":"📍 Enabling location…");loadWeather(true);}else setWeather({err:"off"});return;}if(k==="notif"){if(willOn&&('Notification'in window)){if(Notification.permission==="denied")notify(lang==="tr"?"⚠️ Bildirim tarayıcıda engelli. Tarayıcı > Site izinleri > Bildirim'i açın.":"⚠️ Notifications blocked in browser settings.");else Notification.requestPermission().then(st=>{if(st!=="granted")notify(lang==="tr"?"Bildirim izni verilmedi — tarayıcı ayarlarından açabilirsiniz.":"Notification permission not granted.");}).catch(()=>{});}return;}}} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
+  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🧹 {lang==="tr"?"İçerik Filtresi":"Content Filter"}</div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",gap:8}}>
+      <span style={{flex:1}}>🔊 {lang==="tr"?"Sesli yönlendirme":"Voice guidance"}<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Ölçüm ve ilaç tekniklerinde adım adım sesli anlatım":"Step-by-step spoken coaching for measurements and drug technique"}</div></span>
+      <button onClick={()=>setVoiceGuide(v=>!v)} aria-label={lang==="tr"?"Sesli yönlendirme":"Voice guidance"} style={{width:40,height:22,borderRadius:11,background:voiceGuide?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:voiceGuide?21:3,transition:"left .2s"}}/></button>
+    </div>
+    {voiceGuide&&<div style={{fontSize:fs-4,color:mt,padding:"2px 0 4px",lineHeight:1.5}}>
+      {ttsInfo.engine==="azure"
+        ? <span style={{color:sc}}>🎙️ {lang==="tr"?"AILVIE doğal sesi (Azure Neural)":"AILVIE natural voice (Azure Neural)"}</span>
+        : ttsInfo.engine==="browser"
+          ? <span>⚠️ {lang==="tr"?`Cihaz sesi kullanılıyor: ${ttsInfo.voice}. Doğal AILVIE sesi için sunucuda Azure anahtarı gerekir.`:`Using device voice: ${ttsInfo.voice}.`}</span>
+          : <span>{lang==="tr"?"Ses motoru ilk konuşmada belirlenir.":"Voice engine is detected on first speech."}</span>}
+    </div>}
+
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",gap:8}}>
+      <span style={{flex:1}}>🚫 {lang==="tr"?"Küfür / argo maskeleme":"Profanity masking"}<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Toplulukta uygunsuz kelimeler *** ile gizlenir":"Hides inappropriate words with *** in Community"}</div></span>
+      <button onClick={()=>setProfanityFilter(v=>!v)} aria-label="profanity" style={{width:40,height:22,borderRadius:11,background:profanityFilter?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:profanityFilter?21:3,transition:"left .2s"}}/></button>
+    </div>
+  </div>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>☁️ {lang==="tr"?"Cihazlar Arası Senkron":"Cross-device Sync"}</div>
     {!syncCfg
       ? <>
@@ -3818,10 +3843,10 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
           try{syncKeysRef.current=await deriveSyncKeys(pw.trim(),syncCfg.syncId);setSyncMsg(L?"🔓 Senkron kilidi açıldı":"🔓 Unlocked");}
           catch(e){setSyncMsg(L?"Parola işlenemedi":"Failed");}
           finally{setSyncBusy(false);}
-        }} style={{...BP,width:"100%",padding:"8px",marginBottom:6,background:"transparent",color:ac,border:`1px solid ${ac}`,opacity:syncBusy?0.6:1}}>🔓 {lang==="tr"?"Parolayı gir (senkron kilidini aç)":"Unlock sync"}</button>}
+        }} style={{...BP,width:"100%",padding:"8px",marginBottom:6,background:"transparent",color:acTx,border:`1px solid ${ac}`,opacity:syncBusy?0.6:1}}>🔓 {lang==="tr"?"Parolayı gir (senkron kilidini aç)":"Unlock sync"}</button>}
         <div style={{display:"flex",gap:6,marginBottom:6}}>
           <button disabled={syncBusy} onClick={()=>syncPush(false)} style={{...BP,flex:1,padding:"8px",fontSize:fs-2,opacity:syncBusy?0.6:1}}>⬆️ {lang==="tr"?"Yükle":"Push"}</button>
-          <button disabled={syncBusy} onClick={syncPull} style={{...BP,flex:1,padding:"8px",fontSize:fs-2,background:"transparent",color:ac,border:`1px solid ${ac}`,opacity:syncBusy?0.6:1}}>⬇️ {lang==="tr"?"İndir":"Pull"}</button>
+          <button disabled={syncBusy} onClick={syncPull} style={{...BP,flex:1,padding:"8px",fontSize:fs-2,background:"transparent",color:acTx,border:`1px solid ${ac}`,opacity:syncBusy?0.6:1}}>⬇️ {lang==="tr"?"İndir":"Pull"}</button>
         </div>
         {syncMsg&&<div style={{fontSize:fs-3,color:/❌|başarısız|failed|değil/i.test(syncMsg)?dg:sc,marginBottom:6}}>{syncMsg}</div>}
         <button disabled={syncBusy} onClick={async()=>{
@@ -3868,9 +3893,9 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
         <div style={{fontSize:fs-3,color:mt,marginBottom:6}}>{lang==="tr"?"Kilitlenme süresi (arka planda)":"Auto-lock delay"}</div>
         <div style={{display:"flex",gap:6,marginBottom:8}}>{[[0,lang==="tr"?"Hemen":"Instant"],[60,"1 dk"],[300,"5 dk"],[900,"15 dk"]].map(([v,l])=>
           <button key={v} onClick={()=>{const c={...lockCfg,graceSec:v};try{localStorage.setItem("ailvie_lock",JSON.stringify(c));}catch(e){}setLockCfg(c);}}
-            style={{flex:1,padding:"6px 2px",borderRadius:8,border:`1px solid ${lockCfg.graceSec===v?ac:bd}`,background:lockCfg.graceSec===v?`${ac}22`:"transparent",color:lockCfg.graceSec===v?ac:mt,fontSize:fs-3,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
+            style={{flex:1,padding:"6px 2px",borderRadius:8,border:`1px solid ${lockCfg.graceSec===v?ac:bd}`,background:lockCfg.graceSec===v?`${ac}22`:"transparent",color:lockCfg.graceSec===v?acTx:mt,fontSize:fs-3,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
         <div style={{display:"flex",gap:6}}>
-          <button onClick={()=>setLocked(true)} style={{...BP,flex:1,padding:"8px",background:"transparent",color:ac,border:`1px solid ${ac}`,fontSize:fs-2}}>{lang==="tr"?"Şimdi Kilitle":"Lock now"}</button>
+          <button onClick={()=>setLocked(true)} style={{...BP,flex:1,padding:"8px",background:"transparent",color:acTx,border:`1px solid ${ac}`,fontSize:fs-2}}>{lang==="tr"?"Şimdi Kilitle":"Lock now"}</button>
           <button onClick={async()=>{
             const L=lang==="tr";
             const p=window.prompt(L?"Kilidi kaldırmak için mevcut PIN:":"Enter current PIN to remove lock:","");
@@ -3883,31 +3908,9 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
       </>}
   </div>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>💾 {lang==="tr"?"Depolama":"Storage"}</div>
-    <StorageHealth lang={lang} fs={fs} tc={tc} mt={mt} sc={sc} ac={ac} bd={bd} dg={dg} t={t} BP={BP} lastBackup={lastBackup} idbGet={idbGet} idbSet={idbSet} notify={notify}/>
+    <StorageHealth lang={lang} fs={fs} tc={tc} mt={mt} sc={sc} ac={ac} acTx={acTx} bd={bd} dg={dg} t={t} BP={BP} lastBackup={lastBackup} idbGet={idbGet} idbSet={idbSet} notify={notify}/>
   </div>}
-  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🧹 {lang==="tr"?"İçerik Filtresi":"Content Filter"}</div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",gap:8}}>
-      <span style={{flex:1}}>🔊 {lang==="tr"?"Sesli yönlendirme":"Voice guidance"}<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Ölçüm ve ilaç tekniklerinde adım adım sesli anlatım":"Step-by-step spoken coaching for measurements and drug technique"}</div></span>
-      <button onClick={()=>setVoiceGuide(v=>!v)} aria-label={lang==="tr"?"Sesli yönlendirme":"Voice guidance"} style={{width:40,height:22,borderRadius:11,background:voiceGuide?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:voiceGuide?21:3,transition:"left .2s"}}/></button>
-    </div>
-    {voiceGuide&&<div style={{fontSize:fs-4,color:mt,padding:"2px 0 4px",lineHeight:1.5}}>
-      {ttsInfo.engine==="azure"
-        ? <span style={{color:sc}}>🎙️ {lang==="tr"?"AILVIE doğal sesi (Azure Neural)":"AILVIE natural voice (Azure Neural)"}</span>
-        : ttsInfo.engine==="browser"
-          ? <span>⚠️ {lang==="tr"?`Cihaz sesi kullanılıyor: ${ttsInfo.voice}. Doğal AILVIE sesi için sunucuda Azure anahtarı gerekir.`:`Using device voice: ${ttsInfo.voice}.`}</span>
-          : <span>{lang==="tr"?"Ses motoru ilk konuşmada belirlenir.":"Voice engine is detected on first speech."}</span>}
-    </div>}
-    {voiceGuide&&<div style={{display:"flex",gap:6,flexWrap:"wrap",padding:"6px 0 2px"}}>
-      {Object.keys(GUIDES).map(k=>(
-        <button key={k} onClick={()=>startGuide(k)} style={{...pill(false),fontSize:fs-3,display:"flex",alignItems:"center",gap:5}}>
-          <span>{GUIDES[k].icon}</span><span>{lang==="tr"?GUIDES[k].tr:GUIDES[k].en}</span>
-        </button>))}
-    </div>}
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",gap:8}}>
-      <span style={{flex:1}}>🚫 {lang==="tr"?"Küfür / argo maskeleme":"Profanity masking"}<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Toplulukta uygunsuz kelimeler *** ile gizlenir":"Hides inappropriate words with *** in Community"}</div></span>
-      <button onClick={()=>setProfanityFilter(v=>!v)} aria-label="profanity" style={{width:40,height:22,borderRadius:11,background:profanityFilter?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:profanityFilter?21:3,transition:"left .2s"}}/></button>
-    </div>
-  </div>}
+  
   {(all||s==="subs")&&<div style={CS}>
     <div style={{fontWeight:700,marginBottom:6}}>{acctEmail.trim()?(lang==="tr"?"👤 Hesap":"👤 Account"):(lang==="tr"?"🔑 Giriş Yap / Abone Ol":"🔑 Sign in / Subscribe")}</div>
     {acctEmail.trim()
@@ -3928,7 +3931,7 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
         </>}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 10px",borderRadius:8,background:`${mt}11`,marginTop:8}}>
       <span style={{fontSize:fs-1}}>{lang==="tr"?"Geçerli plan":"Current plan"}</span>
-      {(()=>{const pro=(()=>{try{const pl=localStorage.getItem("ailvie_active_plan")||"";return pl.includes("PRO")||pl.includes("Enterprise");}catch(e){return false;}})();return <span style={{fontSize:fs-2,fontWeight:700,padding:"2px 10px",borderRadius:8,background:pro?`${ac}22`:`${mt}22`,color:pro?ac:mt}}>{pro?"PRO ✓":t.free}</span>;})()}
+      {(()=>{const pro=(()=>{try{const pl=localStorage.getItem("ailvie_active_plan")||"";return pl.includes("PRO")||pl.includes("Enterprise");}catch(e){return false;}})();return <span style={{fontSize:fs-2,fontWeight:700,padding:"2px 10px",borderRadius:8,background:pro?`${ac}22`:`${mt}22`,color:pro?acTx:mt}}>{pro?"PRO ✓":t.free}</span>;})()}
     </div>
   </div>}
   {(all||s==="subs")&&<div style={CS}>
@@ -3961,7 +3964,7 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   {(all||s==="subs")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>💎 {t.subscription}</div>
     {/* Promo Code Redemption */}
     <div style={{padding:"10px 12px",borderRadius:10,background:`${ac}10`,border:`1px solid ${ac}44`,marginBottom:10}}>
-      <div style={{fontWeight:700,marginBottom:6,color:ac,fontSize:fs-1}}>🎁 {lang==="tr"?"PRO Kodu Kullan":"Redeem PRO Code"}</div>
+      <div style={{fontWeight:700,marginBottom:6,color:acTx,fontSize:fs-1}}>🎁 {lang==="tr"?"PRO Kodu Kullan":"Redeem PRO Code"}</div>
       <div style={{display:"flex",gap:6}}>
         <input placeholder={lang==="tr"?"AILVIE-XXXX-XXXX":"AILVIE-XXXX-XXXX"} value={promoIn||""} onChange={e=>setPromoIn(e.target.value.toUpperCase())} style={{...IS,flex:1,fontFamily:"monospace",letterSpacing:1}}/>
         <button onClick={()=>{
@@ -4213,7 +4216,7 @@ const moods=[{v:1,e:"😢",l:lang==="tr"?"Çok Kötü":"Very Bad"},{v:2,e:"😕"
 return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <span style={{fontWeight:700,fontSize:fs+2}}>📊 {t.health}</span>
   {/* Info Banner */}
-  <div style={{padding:"8px 12px",borderRadius:10,background:`${ac}10`,border:`1px solid ${ac}33`,fontSize:fs-2,color:ac,display:"flex",alignItems:"center",gap:6}}>
+  <div style={{padding:"8px 12px",borderRadius:10,background:`${ac}10`,border:`1px solid ${ac}33`,fontSize:fs-2,color:dark?acTx:tc,display:"flex",alignItems:"center",gap:6}}>
     <span>💡</span><span>{lang==="tr"?"Verileriniz Hasta Karnesi ile otomatik senkronize":"Data auto-syncs with Patient Card"}</span>
   </div>
   {/* Body Measurements */}
@@ -4222,7 +4225,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <span style={{fontSize:22}}>🎂</span>
     <div style={{flex:1}}>
       <div style={{fontSize:fs-2,color:mt}}>{t.bDate}</div>
-      <div style={{fontWeight:700,fontSize:fs+1,color:pat.birthDate?tc:mt}}>{pat.birthDate?`${pat.birthDate} (${patAge} ${t.age})`:<span onClick={()=>goTo("pCard")} style={{cursor:"pointer",color:ac}}>{t.tap}</span>}</div>
+      <div style={{fontWeight:700,fontSize:fs+1,color:pat.birthDate?tc:mt}}>{pat.birthDate?`${pat.birthDate} (${patAge} ${t.age})`:<span onClick={()=>goTo("pCard")} style={{cursor:"pointer",color:acTx}}>{t.tap}</span>}</div>
     </div>
   </div>
   <HField icon="📏" label={t.ht} field="height" unit={t.cm}/>
@@ -4244,7 +4247,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{lang==="tr"?"Diyetisyeninizin verdiği programı girin. AILVIE diyet oluşturmaz, yalnızca takip eder.":"Enter the program your dietitian gave you. AILVIE doesn't create diets, only tracks."}</div>
     {meals.map(m=>{const dk=tk+'_'+m.id;const on=diet.done&&diet.done[dk];return <div key={m.id} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 0",borderBottom:`1px solid ${bd}`}}>
       <button onClick={()=>setDiet(d=>({...d,done:{...(d.done||{}),[dk]:!on}}))} style={{flexShrink:0,width:24,height:24,borderRadius:7,border:`2px solid ${on?sc:bd}`,background:on?sc:"transparent",color:"#fff",cursor:"pointer",fontSize:14,lineHeight:1}}>{on?"✓":""}</button>
-      <div style={{flex:1,minWidth:0}}><div style={{fontSize:fs-2,fontWeight:700,color:ac}}>{m.slot}</div><div style={{fontSize:fs-1,color:tc,opacity:on?0.55:1,textDecoration:on?"line-through":"none"}}>{m.text}</div></div>
+      <div style={{flex:1,minWidth:0}}><div style={{fontSize:fs-2,fontWeight:700,color:acTx}}>{m.slot}</div><div style={{fontSize:fs-1,color:tc,opacity:on?0.55:1,textDecoration:on?"line-through":"none"}}>{m.text}</div></div>
       <button onClick={()=>setDiet(d=>({...d,meals:d.meals.filter(x=>x.id!==m.id)}))} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:fs}}>✕</button>
     </div>;})}
     {meals.length===0&&<div style={{color:mt,fontSize:fs-2,padding:"6px 0"}}>{lang==="tr"?"Henüz öğün eklenmedi.":"No meals added yet."}</div>}
@@ -4281,7 +4284,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     return <div style={{...CS}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <b style={{fontSize:fs+1,color:tc}}>🩸 {lang==="tr"?"Şeker (Glikoz) Takibi":"Blood Glucose"}</b>
-        <button onClick={()=>startGuide("glucose")} aria-label={lang==="tr"?"Kan şekeri ölçüm rehberi":"Blood glucose measurement guide"} title={lang==="tr"?"Nasıl ölçülür?":"How to measure"} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${bd}`,color:ac,borderRadius:8,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,flexShrink:0}}>🔊 {lang==="tr"?"Rehber":"Guide"}</button>
+        <button onClick={()=>startGuide("glucose")} aria-label={lang==="tr"?"Kan şekeri ölçüm rehberi":"Blood glucose measurement guide"} title={lang==="tr"?"Nasıl ölçülür?":"How to measure"} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${bd}`,color:acTx,borderRadius:8,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,flexShrink:0}}>🔊 {lang==="tr"?"Rehber":"Guide"}</button>
       </div>
       {(()=>{const c=patCtx();const L=lang==="tr";let msg=null;
         if(!c.band)msg=L?"⚠️ Doğum tarihi girilmemiş — değerler sınıflandırılmıyor. Hasta Karnesi'nden yaş/cinsiyet ekleyin.":"⚠️ No birth date — values are not classified. Add age/sex in Patient Card.";
@@ -4348,14 +4351,14 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         <button onClick={()=>{const t=Date.now();const add=[];if(hd.weight>0)add.push({type:"weight",val:hd.weight});if(hd.pulse>0)add.push({type:"pulse",val:hd.pulse});if(hd.bpS>0)add.push({type:"bp",val:hd.bpS,meta:{d:hd.bpD||0}});if(hd.spo2>0)add.push({type:"spo2",val:hd.spo2});if(!add.length){notify(lang==="tr"?"Önce Yaşamsal Değerler'e değer girin.":"Enter vitals first.");return;}setHealthLog(l=>[...l,...add.map((a,i)=>({id:t+"_"+i,ts:t,...a,meta:a.meta||null}))]);notify(lang==="tr"?`✓ ${add.length} değer geçmişe kaydedildi`:`✓ ${add.length} values logged`);if(hd.bpS>=180||hd.bpD>=120)setActiveAlert({icon:"🩺",title:lang==="tr"?"YÜKSEK TANSİYON":"HIGH BLOOD PRESSURE",msg:hd.bpS+"/"+hd.bpD+" — "+(lang==="tr"?"doktorunuza danışın":"consult your doctor")});}} style={{...BP,padding:"6px 12px",fontSize:fs-2}}>📌 {lang==="tr"?"Bugünü Kaydet":"Log Today"}</button><button onClick={exportReportPDF} style={{...BP,background:sc,padding:"6px 12px",fontSize:fs-2}}>📄 PDF</button><button onClick={exportCSV} style={{...BP,background:a2,padding:"6px 12px",fontSize:fs-2}}>📊 Excel/CSV</button><button onClick={exportFHIR} style={{...BP,background:mt,padding:"6px 12px",fontSize:fs-2}}>🔗 FHIR</button>
       </div>
       <div style={{display:"flex",gap:6,overflowX:"auto",margin:"10px 0",paddingBottom:2}}>{M2.map(m=><button key={m.k} onClick={()=>setRepMetric(m.k)} style={{flex:"0 0 auto",padding:"6px 12px",borderRadius:20,border:`1px solid ${sel===m.k?ac:bd}`,background:sel===m.k?ac:"transparent",color:sel===m.k?onAc:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{m.ic} {m.lbl}</button>)}</div>
-      <div style={{display:"flex",gap:6,marginBottom:8}}>{[[7,lang==="tr"?"7 gün":"7d"],[30,lang==="tr"?"30 gün":"30d"],[90,lang==="tr"?"90 gün":"90d"],[0,lang==="tr"?"Tümü":"All"]].map(([d,l])=><button key={d} onClick={()=>setRepRange(d)} style={{flex:1,padding:"5px 0",borderRadius:8,border:`1px solid ${repRange===d?ac:bd}`,background:repRange===d?`${ac}22`:"transparent",color:repRange===d?ac:mt,fontSize:fs-3,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
+      <div style={{display:"flex",gap:6,marginBottom:8}}>{[[7,lang==="tr"?"7 gün":"7d"],[30,lang==="tr"?"30 gün":"30d"],[90,lang==="tr"?"90 gün":"90d"],[0,lang==="tr"?"Tümü":"All"]].map(([d,l])=><button key={d} onClick={()=>setRepRange(d)} style={{flex:1,padding:"5px 0",borderRadius:8,border:`1px solid ${repRange===d?ac:bd}`,background:repRange===d?`${ac}22`:"transparent",color:repRange===d?acTx:mt,fontSize:fs-3,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
       {n===0?<div style={{color:mt,fontSize:fs-2,padding:"14px 0",textAlign:"center"}}>{lang==="tr"?"Bu metrik için henüz kayıt yok. Değer girip 'Bugünü Kaydet' ile geçmişe ekleyin.":"No records yet. Enter a value and tap 'Log Today'."}</div>:<>
         {n>=2&&<div style={{marginTop:4}}><svg width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"><polyline fill="none" stroke={ac} strokeWidth="2" points={series.slice(-12).map((s,i,a)=>`${(i/(a.length-1||1))*300},${yy(s.val)}`).join(" ")}/>{series.slice(-12).map((s,i,a)=><circle key={i} cx={(i/(a.length-1||1))*300} cy={yy(s.val)} r="3" fill={ac}/>)}</svg><div style={{display:"flex",justifyContent:"space-between",fontSize:fs-4,color:mt}}><span>{mn}</span><span>{mi.u}</span><span>{mx}</span></div></div>}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,margin:"10px 0"}}>
           {[[lang==="tr"?"Son":"Latest",fmt(cur),tc],[lang==="tr"?"Önceki":"Prev",prev?fmt(prev):"—",mt],[lang==="tr"?"Değişim":"Change",(delta>0?"▲ +":delta<0?"▼ ":"")+ (sel==="bp"?delta:delta),delta>0?dg:delta<0?sc:mt],[lang==="tr"?"Ortalama":"Avg",avg,tc],[lang==="tr"?"En düşük":"Min",mn,tc],[lang==="tr"?"En yüksek":"Max",mx,tc]].map(([l,v,c],i)=><div key={i} style={{background:dark?"#0e1620":"#f4f7fa",borderRadius:10,padding:"8px 6px",textAlign:"center"}}><div style={{fontSize:fs-4,color:mt}}>{l}</div><div style={{fontSize:fs+1,fontWeight:800,color:c}}>{v}</div></div>)}
         </div>
         {concl&&<div style={{background:`${ac}14`,border:`1px solid ${ac}33`,borderRadius:10,padding:"9px 11px",fontSize:fs-1,color:tc,lineHeight:1.4,marginBottom:8}}>🧭 {concl}</div>}
-        {pAvg!=null&&n>0&&<div style={{fontSize:fs-2,color:mt,marginBottom:8}}>{lang==="tr"?"Önceki döneme göre:":"vs previous period:"} {pAvg} → <b style={{color:tc}}>{avg}</b> {mi.u} <span style={{color:avg>pAvg?"#e9a23b":avg<pAvg?ac:mt,fontWeight:700}}>({avg>pAvg?"+":""}{Math.round((avg-pAvg)*10)/10})</span></div>}
+        {pAvg!=null&&n>0&&<div style={{fontSize:fs-2,color:mt,marginBottom:8}}>{lang==="tr"?"Önceki döneme göre:":"vs previous period:"} {pAvg} → <b style={{color:tc}}>{avg}</b> {mi.u} <span style={{color:avg>pAvg?"#e9a23b":avg<pAvg?acTx:mt,fontWeight:700}}>({avg>pAvg?"+":""}{Math.round((avg-pAvg)*10)/10})</span></div>}
         {sel==="weight"&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}><span style={{fontSize:fs-2,color:mt}}>🎯 {lang==="tr"?"Hedef kilo":"Goal weight"}:</span><input type="number" value={goals.weight} onChange={e=>setGoals(g=>({...g,weight:e.target.value}))} placeholder="kg" style={{...IS,width:70,textAlign:"center",padding:"5px 6px"}}/>{goals.weight>0&&cur&&<span style={{fontSize:fs-2,color:tc,fontWeight:600}}>{(()=>{const diff=Math.round((cur.val-parseFloat(goals.weight))*10)/10;return diff===0?(lang==="tr"?"🎉 hedefte!":"🎉 reached!"):(lang==="tr"?`${Math.abs(diff)} kg ${diff>0?"vermeniz":"almanız"} gerek`:`${Math.abs(diff)} kg to ${diff>0?"lose":"gain"}`);})()}</span>}</div>}
         <div style={{fontSize:fs-2,fontWeight:700,color:mt,margin:"4px 0"}}>{lang==="tr"?"Kayıtlar (tarih · saat)":"Records (date · time)"}</div>
         {[...series].reverse().slice(0,10).map((s,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span style={{fontSize:fs-2,color:mt}}>{dstr(s.ts)}</span><b style={{fontSize:fs,color:tc}}>{fmt(s)} {mi.u}{sel==="glucose"&&s.meta?` · ${s.meta==="fasting"?(lang==="tr"?"Açlık":"Fast"):s.meta==="postmeal"?(lang==="tr"?"Tokluk":"Post"):(lang==="tr"?"Rastgele":"Rand")}`:""}</b></div>)}
@@ -4365,7 +4368,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <div style={{...CS}}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
       <span style={{fontSize:20}}>🩺</span>
-      <div style={{fontWeight:700,color:ac}}>e-Nabız {lang==="tr"?"Bağlantısı":"Connection"}</div>
+      <div style={{fontWeight:700,color:acTx}}>e-Nabız {lang==="tr"?"Bağlantısı":"Connection"}</div>
     </div>
     <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"T.C. Sağlık Bakanlığı kişisel sağlık kaydın: muayene, tahlil, reçete ve radyoloji raporların tek yerde.":"Turkey's Ministry of Health personal health record: visits, labs, prescriptions and radiology reports."}</div>
     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
@@ -4379,7 +4382,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.5}}>ℹ️ {lang==="tr"?"Uygulama içinden otomatik veri çekme; Sağlık Bakanlığı resmi API izni (OAuth2/FHIR) + güvenli sunucu + KVKK uyumu gerektirir. Bu onay alınınca \"Hesabımı Bağla\" tek dokunuşla çalışacak (sahte bağlantı göstermiyoruz).":"Automatic in-app data pull requires official Ministry of Health API approval (OAuth2/FHIR) + a secure server + data-protection compliance. Once approved, \"Connect account\" works in one tap (we don't show a fake connection)."}</div>
   </div>
   <div style={{...CS}}>
-    <div style={{fontWeight:700,marginBottom:4,color:ac}}>🩻 {lang==="tr"?"Tıbbi Görüntüleme & Belgeler":"Medical Imaging & Documents"}</div>
+    <div style={{fontWeight:700,marginBottom:4,color:acTx}}>🩻 {lang==="tr"?"Tıbbi Görüntüleme & Belgeler":"Medical Imaging & Documents"}</div>
     <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"Röntgen, tomografi, MR, ultrason, tahlil… Pencereden seç, sürükle-bırak, fotoğraf çek ya da QR/barkod ile yükle. AILVIE görüntüyü okuyup genel yorum yapar.":"X-ray, CT, MRI, ultrasound, labs… Pick, drag & drop, take a photo, or upload via QR/barcode. AILVIE reads and gives a general interpretation."}</div>
     <select aria-label={lang==="tr"?"Görüntüleme türü":"Imaging type"} value={imgType} onChange={e=>setImgType(e.target.value)} style={{...IS,marginBottom:8}}>{[["xray","Röntgen"],["ct","Tomografi (BT)"],["mri","MR"],["ultra","Ultrason"],["lab","Tahlil/Rapor"],["other","Diğer"]].map(([v,l])=><option key={v} value={v}>{t[v]||l}</option>)}</select>
     <div onDragOver={e=>{e.preventDefault();setImgDrag(true);}} onDragLeave={()=>setImgDrag(false)} onDrop={e=>{e.preventDefault();setImgDrag(false);addMedFiles(e.dataTransfer.files,imgType);}} style={{border:`2px dashed ${imgDrag?ac:bd}`,borderRadius:12,padding:"14px 10px",textAlign:"center",background:imgDrag?`${ac}12`:"transparent",marginBottom:8,transition:"all .15s"}}>
@@ -4398,7 +4401,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       {medImages.map(im=><div key={im.id} style={{border:`1px solid ${bd}`,borderRadius:10,overflow:"hidden",background:cd}}>
         <img src={im.dataUrl} alt="" onClick={()=>setImgView(im)} style={{width:"100%",height:70,objectFit:"cover",cursor:"pointer",display:"block"}}/>
         <div style={{padding:"4px 5px"}}>
-          <div style={{fontSize:fs-4,fontWeight:700,color:ac,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t[im.type]||({ct:lang==="tr"?"Tomografi":"CT",other:lang==="tr"?"Diğer":"Other"}[im.type])||im.type}{im.aiNote?" ✓":""}</div>
+          <div style={{fontSize:fs-4,fontWeight:700,color:acTx,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t[im.type]||({ct:lang==="tr"?"Tomografi":"CT",other:lang==="tr"?"Diğer":"Other"}[im.type])||im.type}{im.aiNote?" ✓":""}</div>
           <div style={{display:"flex",gap:4,marginTop:3}}>
             <button onClick={()=>interpretImage(im)} disabled={imgBusy===im.id} title={lang==="tr"?"AI Yorumla":"AI interpret"} style={{flex:1,background:imgBusy===im.id?mt:`linear-gradient(135deg,${ac},${a2})`,border:"none",color:"#fff",borderRadius:6,padding:"3px 0",fontSize:fs-4,cursor:"pointer"}}>{imgBusy===im.id?"…":"🤖"}</button>
             <button onClick={()=>setImgView(im)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 6px",fontSize:fs-4,cursor:"pointer",color:tc}}>👁️</button>
@@ -4412,7 +4415,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   {imgView&&<div onClick={()=>setImgView(null)} style={{position:"fixed",inset:0,zIndex:360,background:"rgba(0,0,0,.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
     <img src={imgView.dataUrl} alt="" onClick={e=>e.stopPropagation()} style={{maxWidth:"100%",maxHeight:"52vh",objectFit:"contain",borderRadius:8}}/>
     <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,borderRadius:12,padding:14,marginTop:12,maxWidth:460,width:"100%",maxHeight:"34vh",overflowY:"auto"}}>
-      <div style={{fontWeight:700,color:ac,marginBottom:6}}>{t[imgView.type]||({ct:lang==="tr"?"Tomografi":"CT",other:lang==="tr"?"Diğer":"Other"}[imgView.type])||imgView.type} · {imgView.date}</div>
+      <div style={{fontWeight:700,color:acTx,marginBottom:6}}>{t[imgView.type]||({ct:lang==="tr"?"Tomografi":"CT",other:lang==="tr"?"Diğer":"Other"}[imgView.type])||imgView.type} · {imgView.date}</div>
       {imgView.aiNote
         ? <div style={{fontSize:fs-1,whiteSpace:"pre-wrap",lineHeight:1.5}}>{imgView.aiNote}</div>
         : <div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Henüz AI yorumu yok. 🤖 ile yorumlatabilirsiniz.":"No AI interpretation yet. Use 🤖 to interpret."}</div>}
@@ -4563,14 +4566,14 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div style={{display:"flex",gap:6,marginBottom:8}}>
         <label style={{flex:1}}>
           <input type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={e=>{const f2=e.target.files&&e.target.files[0];e.target.value="";if(f2)parseLabDocument(f2);}}/>
-          <div style={{...BP,background:"transparent",color:ac,border:`1px dashed ${ac}`,textAlign:"center",padding:"10px 6px",cursor:"pointer",opacity:labParse.busy?0.6:1,fontSize:fs-2}}>{L?"📷 Fotoğraf çek":"📷 Take photo"}</div>
+          <div style={{...BP,background:"transparent",color:acTx,border:`1px dashed ${ac}`,textAlign:"center",padding:"10px 6px",cursor:"pointer",opacity:labParse.busy?0.6:1,fontSize:fs-2}}>{L?"📷 Fotoğraf çek":"📷 Take photo"}</div>
         </label>
         <label style={{flex:1.3}}>
           <input type="file" accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.webp,.heic,.heif" style={{display:"none"}} onChange={e=>{const f2=e.target.files&&e.target.files[0];e.target.value="";if(f2)parseLabDocument(f2);}}/>
-          <div style={{...BP,background:"transparent",color:ac,border:`1px dashed ${ac}`,textAlign:"center",padding:"10px 6px",cursor:"pointer",opacity:labParse.busy?0.6:1,fontSize:fs-2}}>{L?"📁 Dosya / PDF seç":"📁 Choose file / PDF"}</div>
+          <div style={{...BP,background:"transparent",color:acTx,border:`1px dashed ${ac}`,textAlign:"center",padding:"10px 6px",cursor:"pointer",opacity:labParse.busy?0.6:1,fontSize:fs-2}}>{L?"📁 Dosya / PDF seç":"📁 Choose file / PDF"}</div>
         </label>
       </div>
-      {labParse.busy&&<div style={{textAlign:"center",color:ac,fontSize:fs-2,marginBottom:8}}>🔍 {L?"Belge okunuyor…":"Reading…"}</div>}
+      {labParse.busy&&<div style={{textAlign:"center",color:acTx,fontSize:fs-2,marginBottom:8}}>🔍 {L?"Belge okunuyor…":"Reading…"}</div>}
       <div style={{fontSize:fs-5,color:mt,marginBottom:8,textAlign:"center"}}>{L?"Dosya seç: galeri, Dosyalar, Drive, İndirilenler — hepsinden yükleyebilirsiniz":"Choose file: gallery, Files, Drive, Downloads"}</div>
       {labParse.err&&<div style={{background:`${dg}12`,border:`1px solid ${dg}44`,borderRadius:9,padding:"8px 10px",fontSize:fs-3,color:tc,marginBottom:8}}>⚠️ {labParse.err}</div>}
       {labParse.rows.length>0&&<div style={{background:dark?"#0e1620":"#f4f7fa",borderRadius:10,padding:"9px 10px",marginBottom:8}}>
@@ -4643,6 +4646,27 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       </div>}
       <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Referans aralıkları laboratuvara/yönteme/yaşa göre değişir. Bu değerlendirme tarama amaçlıdır, tıbbi tanı değildir — raporunuzu doktorunuz yorumlamalıdır.":"Reference ranges vary by lab/method/age. Screening only, not a diagnosis."}</div>
     </div>;})()}
+  {/* Measurement guides — moved here from Settings: they belong next to the measurements */}
+  <div style={{...CS}}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+      <span style={{fontSize:20}}>🔊</span>
+      <b style={{fontSize:fs+1,color:tc}}>{lang==="tr"?"Ölçüm Rehberleri":"Measurement Guides"}</b>
+    </div>
+    <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.45}}>
+      {voiceGuide
+        ? (lang==="tr"?"Adım adım sesli anlatım açık. Bir ölçüme dokunduğunuzda rehber kendiliğinden başlar.":"Spoken step-by-step coaching is on.")
+        : (lang==="tr"?"Sessiz metin modu. Sesli anlatım için Ayarlar > İçerik Filtresi > Sesli yönlendirme.":"Silent text mode. Enable voice in Settings.")}
+    </div>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+      {Object.keys(GUIDES).map(k=>(
+        <button key={k} onClick={()=>startGuide(k)}
+          aria-label={(lang==="tr"?GUIDES[k].tr:GUIDES[k].en)+" "+(lang==="tr"?"rehberi":"guide")}
+          style={{...pill(false),fontSize:fs-3,display:"flex",alignItems:"center",gap:5}}>
+          <span>{GUIDES[k].icon}</span><span>{lang==="tr"?GUIDES[k].tr:GUIDES[k].en}</span>
+        </button>))}
+    </div>
+  </div>
+
   {/* Vital Signs */}
   <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🫀 {lang==="tr"?"Yaşamsal Değerler":"Vital Signs"}</div>
   <div style={{...CS,display:"flex",alignItems:"center",gap:10}}>
@@ -4652,8 +4676,8 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       {editH==="pulse"?<div style={{display:"flex",gap:6,alignItems:"center",marginTop:3}}><input type="number" autoFocus value={tmpH} onChange={e=>setTmpH(e.target.value)} style={{...IS,width:80,padding:"6px 8px",fontWeight:700}} onKeyDown={e=>{if(e.key==="Enter"){setHd(p=>({...p,pulse:Number(tmpH)}));logMetric("pulse",Number(tmpH));setEditH(null);}}}/><span style={{fontSize:fs-2,color:mt}}>{t.bpm}</span><button onClick={()=>{setHd(p=>({...p,pulse:Number(tmpH)}));logMetric("pulse",Number(tmpH));setEditH(null);}} style={{...BP,padding:"5px 10px"}}>✓</button></div>
       :<div onClick={()=>{setEditH("pulse");setTmpH(hd.pulse>0?String(hd.pulse):"");if(voiceGuide)startGuide("pulse");}} style={{cursor:"pointer",fontWeight:700,fontSize:fs+2,color:hd.pulse>0?tc:mt,marginTop:2}}>{hd.pulse>0?`${hd.pulse} ${t.bpm}`:t.tap}</div>}
       {hd.pulse>0&&<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Referans":"Ref"}: {pulseRef.label} bpm {patAge?`(${patAge} ${t.age})`:""}</div>}
-      {hd.hrvRmssd>0&&<div style={{fontSize:fs-3,color:ac,marginTop:2}}>HRV · RMSSD {hd.hrvRmssd} ms · SDNN {hd.hrvSdnn} ms</div>}
-      {hd.resp>0&&<div style={{fontSize:fs-3,color:ac,marginTop:2}}>{lang==="tr"?"Solunum":"Resp"}: {hd.resp} {lang==="tr"?"/dk (tahmini)":"/min (est.)"}</div>}
+      {hd.hrvRmssd>0&&<div style={{fontSize:fs-3,color:acTx,marginTop:2}}>HRV · RMSSD {hd.hrvRmssd} ms · SDNN {hd.hrvSdnn} ms</div>}
+      {hd.resp>0&&<div style={{fontSize:fs-3,color:acTx,marginTop:2}}>{lang==="tr"?"Solunum":"Resp"}: {hd.resp} {lang==="tr"?"/dk (tahmini)":"/min (est.)"}</div>}
     </div>
     <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
       {hd.pulse>0&&<span style={{padding:"3px 8px",borderRadius:6,fontSize:fs-3,fontWeight:600,background:pulseOk?`${sc}22`:`${dg}22`,color:pulseOk?sc:dg}}>{pulseOk?t.norm:t.caut}</span>}
@@ -4676,7 +4700,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   </div>
   <div style={CS}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:22}}>🩺</span><span style={{fontWeight:700,fontSize:fs+1}}>{t.bp} (SYS / DIA)</span>
-      <button onClick={()=>startGuide("bp")} aria-label={lang==="tr"?"Tansiyon ölçüm rehberi":"BP measurement guide"} title={lang==="tr"?"Nasıl ölçülür?":"How to measure"} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${bd}`,color:ac,borderRadius:8,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,flexShrink:0}}>🔊 {lang==="tr"?"Rehber":"Guide"}</button></div>
+      <button onClick={()=>startGuide("bp")} aria-label={lang==="tr"?"Tansiyon ölçüm rehberi":"BP measurement guide"} title={lang==="tr"?"Nasıl ölçülür?":"How to measure"} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${bd}`,color:acTx,borderRadius:8,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,flexShrink:0}}>🔊 {lang==="tr"?"Rehber":"Guide"}</button></div>
     <div style={{display:"flex",gap:10,alignItems:"center"}}>
       <input type="number" value={hd.bpS||""} placeholder="SYS" onFocus={()=>{if(voiceGuide&&!guide)startGuide("bp");}} onChange={e=>setHd({...hd,bpS:Number(e.target.value)})} style={{...IS,width:70,textAlign:"center",fontWeight:700}}/>
       <span style={{fontSize:20,color:mt}}>/</span>
@@ -4714,7 +4738,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:22}}>🧍‍♂️</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Postür":"Posture"}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"duruş açısı":"tilt angle"}</span></span></div>
     {(!postureM||postureM.phase==="error")&&<div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonu göğüs hizasında dik tutun (ekran size dönük); dik durup başlatın, referans alınır.":"Hold the phone upright at chest level (screen facing you); stand upright and start to set the reference."}</div>}
     {tests.postAt&&(!postureM||postureM.phase==="error")&&<div style={{fontSize:fs-3,color:sc,marginBottom:8}}>{lang==="tr"?"Son sonuç":"Last"}: {tests.postAngle}° · {ago(tests.postAt)}</div>}
-    {postureM&&postureM.phase==="calibrating"&&<div style={{fontSize:fs-1,color:ac,textAlign:"center",marginBottom:8}}>{lang==="tr"?"Kalibre ediliyor… dik durun":"Calibrating… stand upright"}</div>}
+    {postureM&&postureM.phase==="calibrating"&&<div style={{fontSize:fs-1,color:acTx,textAlign:"center",marginBottom:8}}>{lang==="tr"?"Kalibre ediliyor… dik durun":"Calibrating… stand upright"}</div>}
     {postureM&&postureM.phase==="live"&&(()=>{const b=postureM.band;const L=b==="good"?[lang==="tr"?"Dik ✓":"Upright ✓",sc]:b==="mild"?[lang==="tr"?"Hafif eğim":"Slight lean",ac]:[lang==="tr"?"Belirgin eğim — dikleş":"Notable lean — straighten",dg];return <div style={{textAlign:"center",marginBottom:8}}>
       <div style={{fontSize:38,fontWeight:800,color:L[1]}}>{postureM.angle}°</div>
       <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"dik referanstan sapma":"deviation from upright"}</div>
@@ -4770,7 +4794,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>🛏️ {lang==="tr"?"Yatış":"Bedtime"}</div><input type="time" aria-label={lang==="tr"?"Saat":"Time"} value={sleepTimes.bed} onChange={e=>setSleepTime("bed",e.target.value)} style={{...IS,padding:"6px 8px",width:"100%"}}/></div>
       <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>☀️ {lang==="tr"?"Kalkış":"Wake"}</div><input type="time" aria-label={lang==="tr"?"Saat":"Time"} value={sleepTimes.wake} onChange={e=>setSleepTime("wake",e.target.value)} style={{...IS,padding:"6px 8px",width:"100%"}}/></div>
     </div>
-    {sleepTimes.bed&&sleepTimes.wake&&<div style={{fontSize:fs-2,color:ac,textAlign:"center",marginBottom:6,fontWeight:600}}>{lang==="tr"?"Tahmini süre":"Estimated"}: {computeSleepDur(sleepTimes.bed,sleepTimes.wake)} {lang==="tr"?"saat":"h"} <span style={{color:mt,fontWeight:400}}>({sleepTimes.bed} → {sleepTimes.wake})</span></div>}
+    {sleepTimes.bed&&sleepTimes.wake&&<div style={{fontSize:fs-2,color:acTx,textAlign:"center",marginBottom:6,fontWeight:600}}>{lang==="tr"?"Tahmini süre":"Estimated"}: {computeSleepDur(sleepTimes.bed,sleepTimes.wake)} {lang==="tr"?"saat":"h"} <span style={{color:mt,fontWeight:400}}>({sleepTimes.bed} → {sleepTimes.wake})</span></div>}
     <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginBottom:4}}>{lang==="tr"?"veya süreyi elle ayarla":"or set duration manually"}</div>
     <input type="range" aria-label={lang==="tr"?"Değer kaydırıcı":"Value slider"} min="0" max="12" step="0.5" value={wellness.sleep} onChange={e=>setWellness(w=>({...w,sleep:Number(e.target.value)}))} style={{width:"100%"}}/>
     <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:2}}>{wellness.sleep>=7&&wellness.sleep<=9?(lang==="tr"?"✓ İdeal":"✓ Ideal"):wellness.sleep<6?(lang==="tr"?"⚠️ Yetersiz":"⚠️ Insufficient"):wellness.sleep>10?(lang==="tr"?"⚠️ Çok fazla":"⚠️ Too much"):(lang==="tr"?"Orta":"Average")}</div>
@@ -4842,7 +4866,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   </div>
   {/* Reminders */}
   <div style={{...CS,border:`1px solid ${ac}33`,background:`${ac}05`}}>
-    <div style={{fontWeight:700,marginBottom:8,color:ac}}>🔔 {lang==="tr"?"Sağlık Hatırlatıcıları":"Health Reminders"}</div>
+    <div style={{fontWeight:700,marginBottom:8,color:acTx}}>🔔 {lang==="tr"?"Sağlık Hatırlatıcıları":"Health Reminders"}</div>
     <div style={{display:"flex",flexDirection:"column",gap:5,fontSize:fs-2}}>
       <div>💧 {lang==="tr"?`Günde ${wellness.waterGoal} bardak su içmeyi hedefleyin`:`Aim for ${wellness.waterGoal} glasses of water daily`}</div>
       <div>😴 {lang==="tr"?"7-9 saat kaliteli uyku sağlığınız için kritiktir":"7-9 hours of quality sleep is critical for health"}</div>
@@ -4855,8 +4879,8 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🏆 {t.hScore}</div>
   <div style={{...CS,padding:14,border:`1px solid ${ac}33`}}>
     <div style={{textAlign:"center",marginBottom:10}}>
-      <div style={{fontSize:fs+16,fontWeight:800,color:hscore>70?sc:hscore>40?ac:hscore>0?dg:mt}}>{hscore||"—"}<span style={{fontSize:fs-1,color:mt,fontWeight:400}}>/100</span></div>
-      <div style={{fontSize:fs,fontWeight:600,color:hscore>80?sc:hscore>60?ac:hscore>40?"#f0a030":hscore>0?dg:mt,marginTop:2}}>
+      <div style={{fontSize:fs+16,fontWeight:800,color:hscore>70?sc:hscore>40?acTx:hscore>0?dg:mt}}>{hscore||"—"}<span style={{fontSize:fs-1,color:mt,fontWeight:400}}>/100</span></div>
+      <div style={{fontSize:fs,fontWeight:600,color:hscore>80?sc:hscore>60?acTx:hscore>40?"#f0a030":hscore>0?dg:mt,marginTop:2}}>
         {hscore>80?(lang==="tr"?"Mükemmel 🌟":"Excellent 🌟"):hscore>60?(lang==="tr"?"İyi 💪":"Good 💪"):hscore>40?(lang==="tr"?"Orta ⚠️":"Average ⚠️"):hscore>0?(lang==="tr"?"Dikkat! 🔴":"Attention! 🔴"):(lang==="tr"?"Veri girin":"Enter data")}
       </div>
     </div>
@@ -4879,7 +4903,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         </div>
       ):null)}
     </div>}
-    {hscore>0&&hscore<=60&&<div style={{marginTop:8,padding:"8px 10px",borderRadius:8,background:`${ac}08`,fontSize:fs-2,color:ac}}>
+    {hscore>0&&hscore<=60&&<div style={{marginTop:8,padding:"8px 10px",borderRadius:8,background:`${ac}08`,fontSize:fs-2,color:acTx}}>
       💡 {lang==="tr"?"Skorunuzu artırmak için: Değerlerinizi referans aralığına getirin ve ilaçlarınızı düzenli kullanın.":"To improve: Keep values in reference range and take medications regularly."}
     </div>}
     {/* Risk factors from history */}
@@ -5017,7 +5041,7 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   <span style={{fontWeight:700,fontSize:fs+2}}>🪪 {t.pCard}</span>
   {/* Kimlik Bilgileri */}
   <div style={{...CS,border:`1px solid ${ac}33`}}>
-    <div style={{fontWeight:700,color:ac,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>👤 {lang==="tr"?"Kimlik Bilgileri":"Identity Info"}</div>
+    <div style={{fontWeight:700,color:acTx,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>👤 {lang==="tr"?"Kimlik Bilgileri":"Identity Info"}</div>
     {[["fName","name","text"],["bDate","birthDate","date"],["bType","bloodType","text"]].map(([label,field,type])=>(
       <div key={field} style={{marginBottom:8}}>
         <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||field}{field==="birthDate"&&patAge?` (${patAge} ${t.age})`:""}</div>
@@ -5026,7 +5050,7 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
     ))}
     <div style={{marginBottom:8}}>
       <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>⚧ {lang==="tr"?"Biyolojik Cinsiyet":"Biological Sex"} <span style={{fontSize:fs-4}}>({lang==="tr"?"referans aralıkları için":"for reference ranges"})</span></div>
-      <div style={{display:"flex",gap:6}}>{[["female",lang==="tr"?"Kadın":"Female"],["male",lang==="tr"?"Erkek":"Male"],["",lang==="tr"?"Belirtme":"Unset"]].map(([v,l])=><button key={v||"none"} onClick={()=>setPat(p=>({...p,sex:v,pregnant:v==="female"?p.pregnant:false}))} style={{flex:1,padding:"7px 4px",borderRadius:9,border:`1px solid ${pat.sex===v?ac:bd}`,background:pat.sex===v?`${ac}22`:"transparent",color:pat.sex===v?ac:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
+      <div style={{display:"flex",gap:6}}>{[["female",lang==="tr"?"Kadın":"Female"],["male",lang==="tr"?"Erkek":"Male"],["",lang==="tr"?"Belirtme":"Unset"]].map(([v,l])=><button key={v||"none"} onClick={()=>setPat(p=>({...p,sex:v,pregnant:v==="female"?p.pregnant:false}))} style={{flex:1,padding:"7px 4px",borderRadius:9,border:`1px solid ${pat.sex===v?ac:bd}`,background:pat.sex===v?`${ac}22`:"transparent",color:pat.sex===v?acTx:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
     </div>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8}}>
       <span style={{flex:1,fontSize:fs-1,color:tc}}>💊 {lang==="tr"?"Kan sulandırıcı kullanıyorum":"On anticoagulant"}<div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Açıkken INR hedefi kişiye özeldir; uygulama INR'yi sınıflandırmaz":"INR target is therapy-specific"}</div></span>
@@ -5053,7 +5077,7 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
     <div style={{display:"flex",gap:8,marginBottom:8}}>
       {[["❤️",t.pulse,hd.pulse>0?hd.pulse+" "+t.bpm:"—"],["🩺",t.bp,hd.bpS>0?hd.bpS+"/"+(hd.bpD||"?"):"—"],["⚖️",t.wt,hd.weight>0?hd.weight+" "+t.kg:"—"]].map(([ic,lb,vv],i)=><div key={i} style={{flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,background:dark?"#0e1620":"#f4f7fa"}}><div style={{fontSize:fs-4,color:mt}}>{ic} {lb}</div><div style={{fontSize:fs-1,fontWeight:700,color:tc,marginTop:2}}>{vv}</div></div>)}
     </div>
-    <button onClick={()=>goTo("health")} style={{...BP,width:"100%",padding:"9px",background:"transparent",color:ac,border:`1px solid ${ac}`}}>📊 {lang==="tr"?"Sağlık'ta Ölç / Güncelle":"Measure / Update in Health"} →</button>
+    <button onClick={()=>goTo("health")} style={{...BP,width:"100%",padding:"9px",background:"transparent",color:acTx,border:`1px solid ${ac}`}}>📊 {lang==="tr"?"Sağlık'ta Ölç / Güncelle":"Measure / Update in Health"} →</button>
   </div>
   {/* Sağlık Durumu */}
   <div style={{...CS,border:`1px solid ${dg}33`,background:`${dg}05`}}>
@@ -5067,7 +5091,7 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   </div>
   {/* Kullandığı İlaçlar — meds state'den okuyor */}
   <div style={{...CS,border:`1px solid ${ac}33`,background:`${ac}05`}}>
-    <div style={{fontWeight:700,color:ac,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+    <div style={{fontWeight:700,color:acTx,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
       <span style={{display:"flex",alignItems:"center",gap:6}}>💊 {lang==="tr"?"Kullandığı İlaçlar":"Current Medications"} <span style={{fontSize:fs-4,color:mt,fontWeight:400}}>↔ {t.meds}</span></span>
       <button onClick={()=>goTo("meds")} style={{...BP,padding:"4px 10px",fontSize:fs-2}}>+ {t.add}</button>
     </div>
@@ -5077,7 +5101,7 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
           <span>💊</span>
           <span style={{fontWeight:600,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</span>
           <span style={{color:mt}}>{m.dose}</span>
-          <span style={{color:ac,fontWeight:600}}>{m.time}</span>
+          <span style={{color:acTx,fontWeight:600}}>{m.time}</span>
         </div>)}
       </div>
     }
@@ -5097,8 +5121,8 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
     <span style={{fontWeight:700}}>📋 {t.diag} / {t.lab}</span>
     <button onClick={()=>{setEditRecId(null);setNewRec(EMPTY_REC);recDraftIdRef.current=null;setShowAddRec(true);}} style={{...BP,padding:"6px 14px"}}>+ {t.add}</button>
   </div>
-  {records.map(r=>(<div key={r.id} style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,color:ac}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-2,color:mt}}>{r.date}</span></div><div style={{fontSize:fs-1,color:mt}}>{r.doctor} — {r.hospital}</div><div style={{marginTop:4,wordBreak:"break-word"}}>{r.content}</div><div style={{display:"flex",gap:6,marginTop:4}}><button onClick={()=>{setEditRecId(r.id);setNewRec({type:r.type||"diag",doctor:r.doctor||"",hospital:r.hospital||"",date:r.date||"",content:r.content||"",notes:r.notes||""});setShowAddRec(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:ac,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button><button onClick={()=>toTrash("record",r)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>🗑️ {t.del}</button></div></div>))}
-  {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><div style={{fontWeight:700,marginBottom:8,color:ac}}>{editRecId?"✏️ "+(lang==="tr"?"Kaydı Düzenle":"Edit Record"):"+ "+(lang==="tr"?"Yeni Kayıt":"New Record")}</div><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" aria-label={lang==="tr"?"Tarih":"Date"} value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><textarea placeholder={lang==="tr"?"İçerik / Sonuç":"Content / Result"} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={BP}>{lang==="tr"?"Bitti":"Done"}</button><button onClick={()=>{if(!editRecId&&recDraftIdRef.current!=null){const id=recDraftIdRef.current;setRecords(p=>p.filter(x=>x.id!==id));}recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
+  {records.map(r=>(<div key={r.id} style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,color:acTx}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-2,color:mt}}>{r.date}</span></div><div style={{fontSize:fs-1,color:mt}}>{r.doctor} — {r.hospital}</div><div style={{marginTop:4,wordBreak:"break-word"}}>{r.content}</div><div style={{display:"flex",gap:6,marginTop:4}}><button onClick={()=>{setEditRecId(r.id);setNewRec({type:r.type||"diag",doctor:r.doctor||"",hospital:r.hospital||"",date:r.date||"",content:r.content||"",notes:r.notes||""});setShowAddRec(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:acTx,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button><button onClick={()=>toTrash("record",r)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>🗑️ {t.del}</button></div></div>))}
+  {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><div style={{fontWeight:700,marginBottom:8,color:acTx}}>{editRecId?"✏️ "+(lang==="tr"?"Kaydı Düzenle":"Edit Record"):"+ "+(lang==="tr"?"Yeni Kayıt":"New Record")}</div><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" aria-label={lang==="tr"?"Tarih":"Date"} value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><textarea placeholder={lang==="tr"?"İçerik / Sonuç":"Content / Result"} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={BP}>{lang==="tr"?"Bitti":"Done"}</button><button onClick={()=>{if(!editRecId&&recDraftIdRef.current!=null){const id=recDraftIdRef.current;setRecords(p=>p.filter(x=>x.id!==id));}recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
 </div>);
 
 const svgPat=(inner,w,h)=>`url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>${inner}</svg>`)}")`;
@@ -5155,7 +5179,7 @@ const renderNotes=()=>{
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <span style={{fontWeight:700,fontSize:fs+2}}>📝 {t.notes}</span>
       <div style={{display:"flex",gap:6}}>
-        <button onClick={()=>{setEditNote(null);setNoteDraw(true);}} aria-label={lang==="tr"?"Yeni çizim notu":"New drawing note"} title={lang==="tr"?"Çizim notu":"Drawing note"} style={{...BP,padding:"7px 12px",background:"transparent",color:ac,border:`1px solid ${ac}`}}>✏️</button>
+        <button onClick={()=>{setEditNote(null);setNoteDraw(true);}} aria-label={lang==="tr"?"Yeni çizim notu":"New drawing note"} title={lang==="tr"?"Çizim notu":"Drawing note"} style={{...BP,padding:"7px 12px",background:"transparent",color:acTx,border:`1px solid ${ac}`}}>✏️</button>
         <button onClick={()=>{const id=Date.now();setNotes(p=>[{id,title:"",content:"",color:"default",pinned:false},...p]);setEditNote(id);}} style={{...BP,padding:"7px 14px"}}>+ {t.nNote}</button>
       </div>
     </div>
@@ -5183,10 +5207,10 @@ const renderNotes=()=>{
                   {auds>0&&<span style={{fontSize:fs-1}}>🎤</span>}
                 </div>}
               </div>;})()}
-            {(n.labels||[]).length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>{n.labels.map(l=><span key={l} style={{fontSize:fs-3,background:`${ac}22`,color:ac,borderRadius:10,padding:"2px 8px"}}>🏷️ {l}</span>)}</div>}
+            {(n.labels||[]).length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>{n.labels.map(l=><span key={l} style={{fontSize:fs-3,background:`${ac}22`,color:acTx,borderRadius:10,padding:"2px 8px"}}>🏷️ {l}</span>)}</div>}
           </div>
           <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
-            <button onClick={()=>{setEditNote(n.id);setNoteSheet(null);}} style={{background:`${ac}22`,border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:fs-2,color:ac,fontWeight:600}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button>
+            <button onClick={()=>{setEditNote(n.id);setNoteSheet(null);}} style={{background:`${ac}22`,border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:fs-2,color:acTx,fontWeight:600}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button>
             <button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} aria-label={lang==="tr"?"Sabitle":"Pin"} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,opacity:n.pinned?1:0.5}}>📌</button>
             <button onClick={()=>copyTxt((n.content||"").replace(/<[^>]+>/g,""))} aria-label={lang==="tr"?"Kopyala":"Copy"} style={{background:"none",border:"none",cursor:"pointer",fontSize:14}}>📋</button>
             <SpeakBtn text={(n.content||"").replace(/<[^>]+>/g,"")}/>
@@ -5196,7 +5220,7 @@ const renderNotes=()=>{
       })}
     </div>
     <div style={{fontWeight:700,marginTop:4}}>{t.extA}</div>
-    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{noteApps.map(a=><a key={a.name} href={a.url} target="_blank" rel="noopener noreferrer" style={{...CS,display:"flex",alignItems:"center",gap:6,textDecoration:"none",color:tc,padding:"8px 12px"}}><span style={{fontSize:18}}>{a.icon}</span><span style={{fontSize:fs-1}}>{a.name}</span></a>)}<button onClick={()=>setShowAddNApp(true)} style={{...CS,border:"2px dashed "+ac+"44",cursor:"pointer",padding:"8px 12px",color:ac}}>+ {t.addApp}</button></div>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{noteApps.map(a=><a key={a.name} href={a.url} target="_blank" rel="noopener noreferrer" style={{...CS,display:"flex",alignItems:"center",gap:6,textDecoration:"none",color:tc,padding:"8px 12px"}}><span style={{fontSize:18}}>{a.icon}</span><span style={{fontSize:fs-1}}>{a.name}</span></a>)}<button onClick={()=>setShowAddNApp(true)} style={{...CS,border:"2px dashed "+ac+"44",cursor:"pointer",padding:"8px 12px",color:acTx}}>+ {t.addApp}</button></div>
     {showAddNApp&&<div style={{...CS,border:"2px solid "+ac}}><input placeholder="App Name" value={newNApp.name} onChange={e=>setNewNApp({...newNApp,name:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder="https://..." value={newNApp.url} onChange={e=>setNewNApp({...newNApp,url:e.target.value})} style={{...IS,marginBottom:6}}/><div style={{display:"flex",gap:6}}><button onClick={()=>{if(newNApp.name&&newNApp.url){setNoteApps(p=>[...p,newNApp]);setNewNApp({name:"",url:"",icon:"📱"});setShowAddNApp(false);}}} style={BP}>{t.save}</button><button onClick={()=>setShowAddNApp(false)} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
   </div>);
 };
@@ -5217,7 +5241,7 @@ const renderContacts=()=>{
     </div>
     {filtered.length===0&&<div style={{textAlign:"center",color:mt,padding:20}}>{t.noC}</div>}
     {filtered.map(c=>(<div key={c.id} style={{...CS,display:"flex",alignItems:"center",gap:10}}>
-      <div style={{width:40,height:40,borderRadius:"50%",background:`${ac}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:ac,flexShrink:0}}>{c.name[0]}</div>
+      <div style={{width:40,height:40,borderRadius:"50%",background:`${ac}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:acTx,flexShrink:0}}>{c.name[0]}</div>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</div>
         <div style={{fontSize:fs-2,color:mt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.phone}</div>
@@ -5231,11 +5255,11 @@ const renderContacts=()=>{
         setEditContactId(c.id);
         setNewC({name:c.name,phone:rest,countryCode:cc,category:c.category,note:c.note||""});
         setShowAddC(true);
-      }} style={{background:"none",border:`1px solid ${ac}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:ac}}>✏️</button>
+      }} style={{background:"none",border:`1px solid ${ac}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:acTx}}>✏️</button>
       <button onClick={()=>toTrash("contact",c)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:14}}>🗑️</button>
     </div>))}
     {showAddC&&<div style={{...CS,border:`2px solid ${ac}`}}>
-      <div style={{fontWeight:700,marginBottom:8,color:ac}}>{editContactId?"✏️ "+(lang==="tr"?"Kişiyi Düzenle":"Edit Contact"):"+ "+(lang==="tr"?"Yeni Kişi":"New Contact")}</div>
+      <div style={{fontWeight:700,marginBottom:8,color:acTx}}>{editContactId?"✏️ "+(lang==="tr"?"Kişiyi Düzenle":"Edit Contact"):"+ "+(lang==="tr"?"Yeni Kişi":"New Contact")}</div>
       <input placeholder={t.nm} value={newC.name} onChange={e=>setNewC({...newC,name:e.target.value})} style={{...IS,marginBottom:6}}/>
       {/* CUSTOM COUNTRY PICKER - real flags */}
       <div style={{marginBottom:6,position:"relative"}}>
@@ -5243,7 +5267,7 @@ const renderContacts=()=>{
         <button type="button" onClick={()=>setShowCountryPicker(!showCountryPicker)} style={{...IS,width:"100%",padding:"9px 10px",display:"flex",alignItems:"center",gap:8,cursor:"pointer",background:dark?"#0d1520":"#f8fafc"}}>
           <Flag code={currentCC.flag} size={22}/>
           <span style={{flex:1,fontSize:fs-1,textAlign:"left",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{currentCC.n[lang]||currentCC.n.en}</span>
-          <span style={{color:ac,fontWeight:700,fontSize:fs-2}}>{currentCC.code}</span>
+          <span style={{color:acTx,fontWeight:700,fontSize:fs-2}}>{currentCC.code}</span>
           <span style={{color:mt,fontSize:fs-2}}>▾</span>
         </button>
         {showCountryPicker&&<>
@@ -5252,7 +5276,7 @@ const renderContacts=()=>{
             {COUNTRY_CODES.map((cc,i)=><button type="button" key={cc.code+cc.flag+i} onClick={()=>{setNewC({...newC,countryCode:cc.code,_ccIdx:i});setShowCountryPicker(false);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"9px 12px",background:(newC._ccIdx!==undefined?newC._ccIdx===i:newC.countryCode===cc.code)?`${ac}15`:"transparent",border:"none",borderBottom:`1px solid ${bd}`,cursor:"pointer",color:tc,fontSize:fs-1,textAlign:"left"}}>
               <Flag code={cc.flag} size={22}/>
               <span style={{flex:1,fontWeight:newC.countryCode===cc.code?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{cc.n[lang]||cc.n.en}</span>
-              <span style={{color:ac,fontWeight:700,fontSize:fs-2}}>{cc.code}</span>
+              <span style={{color:acTx,fontWeight:700,fontSize:fs-2}}>{cc.code}</span>
             </button>)}
           </div>
         </>}
@@ -5261,7 +5285,7 @@ const renderContacts=()=>{
       <div style={{marginBottom:6}}>
         <div style={{fontSize:fs-3,color:mt,marginBottom:3}}>📞 {lang==="tr"?"Telefon Numarası":"Phone Number"}</div>
         <div style={{display:"flex",gap:4,alignItems:"stretch"}}>
-          <div style={{...IS,flex:"0 0 70px",textAlign:"center",fontWeight:700,padding:"9px 4px",color:ac,background:dark?"#0d1520":"#eef2f7",display:"flex",alignItems:"center",justifyContent:"center"}}>{newC.countryCode}</div>
+          <div style={{...IS,flex:"0 0 70px",textAlign:"center",fontWeight:700,padding:"9px 4px",color:acTx,background:dark?"#0d1520":"#eef2f7",display:"flex",alignItems:"center",justifyContent:"center"}}>{newC.countryCode}</div>
           <input placeholder="5XX XXX XXXX" value={newC.phone} onChange={e=>setNewC({...newC,phone:e.target.value.replace(/[^0-9\s]/g,"")})} type="tel" inputMode="numeric" style={{...IS,flex:1,letterSpacing:1,minWidth:0}}/>
         </div>
       </div>
@@ -5332,7 +5356,7 @@ const renderCommunity=()=>{const me=pat.name||"Ben";const q=fold(commSearch.trim
     {fmsgs.map(m=>{
       const isMine=m.user===(pat.name||"Ben");
       return(<div key={m.id} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:isMine?"flex-end":"flex-start",background:isMine?`linear-gradient(135deg,${ac},${a2})`:cd,color:isMine?"#fff":tc,animation:"slideD .3s"}}>
-        {!isMine&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><span style={{fontWeight:700,color:ac,fontSize:fs-2}}>{m.user}</span><span style={{fontSize:fs-3,color:mt}}>{m.time}</span></div>}
+        {!isMine&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><span style={{fontWeight:700,color:acTx,fontSize:fs-2}}>{m.user}</span><span style={{fontSize:fs-3,color:mt}}>{m.time}</span></div>}
         <div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{profanityFilter?maskProfanity(m.text):m.text}{m.edited&&<span style={{fontSize:fs-4,color:isMine?"rgba(255,255,255,.6)":mt,marginLeft:4}}>({lang==="tr"?"düzenlendi":"edited"})</span>}</div>
         <div style={{display:"flex",gap:4,marginTop:4,flexWrap:"wrap"}}>
           <button onClick={()=>{
@@ -5417,11 +5441,11 @@ const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,f
     {chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}
     {chatSearch.trim()&&!chatM.some(m=>fold(m.text||"").includes(fold(chatSearch.trim())))&&<div style={{...CS,textAlign:"center",padding:16,color:mt}}>{lang==="tr"?"Eşleşen mesaj yok":"No matching messages"}</div>}
     {(chatSearch.trim()?chatM.filter(m=>fold(m.text||"").includes(fold(chatSearch.trim()))):chatM).map((m,i)=>(<div key={i} className="msg-card" style={{...CS,padding:"8px 11px",borderRadius:12,flexShrink:0,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
-      {m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:ac,fontWeight:700}}>AILVIE</span></div>}
+      {m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:acTx,fontWeight:700}}>AILVIE</span></div>}
       <div style={{wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.role==="assistant"?<MD text={m.text}/>:<span style={{whiteSpace:"pre-wrap"}}>{m.text}</span>}</div>
       <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
         {m.role==="assistant"&&<>
-          {m.error&&m.retry&&<button onClick={()=>{setChatM(p=>p.filter((_,j)=>j!==i&&j!==i-1));sendChat(m.retry);}} style={{background:ac+"1e",border:`1px solid ${ac}`,borderRadius:6,padding:"3px 10px",cursor:"pointer",fontSize:fs-3,color:ac,fontWeight:600}}>🔄 {lang==="tr"?"Tekrar dene":"Retry"}</button>}
+          {m.error&&m.retry&&<button onClick={()=>{setChatM(p=>p.filter((_,j)=>j!==i&&j!==i-1));sendChat(m.retry);}} style={{background:ac+"1e",border:`1px solid ${ac}`,borderRadius:6,padding:"3px 10px",cursor:"pointer",fontSize:fs-3,color:acTx,fontWeight:600}}>🔄 {lang==="tr"?"Tekrar dene":"Retry"}</button>}
           <button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:tc}}>📋</button>
           <SpeakBtn text={m.text} langCode={lang}/>
         </>}
@@ -5442,7 +5466,7 @@ const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,f
 
 // Privacy Policy page
 const renderPrivacy=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
-  <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>📜 {t.privPolicy}</span></div>
+  <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>📜 {t.privPolicy}</span></div>
   <div style={CS}><div style={{fontSize:fs-1,color:tc,lineHeight:1.6}}>
     <p style={{marginBottom:8}}><strong>AILVIE {t.privPolicy}</strong></p>
     <p style={{marginBottom:8}}>{lang==="tr"?"AILVIE, kullanıcı verilerini gizlilik ve güvenlik çerçevesinde işler. Kişisel sağlık bilgileriniz yalnızca cihazınızda saklanır ve üçüncü taraflarla paylaşılmaz.":"AILVIE processes user data within a privacy and security framework. Your personal health data is stored only on your device and is not shared with third parties."}</p>
@@ -5453,7 +5477,7 @@ const renderPrivacy=()=>(<div style={{display:"flex",flexDirection:"column",gap:
 
 // Terms of Service page
 const renderTerms=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
-  <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>📋 {t.terms}</span></div>
+  <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>📋 {t.terms}</span></div>
   <div style={CS}><div style={{fontSize:fs-1,color:tc,lineHeight:1.6}}>
     <p style={{marginBottom:8}}><strong>AILVIE {t.terms}</strong></p>
     <p style={{marginBottom:8}}>{lang==="tr"?"1. AILVIE bir tıbbi teşhis aracı değildir. Verilen bilgiler yalnızca bilgilendirme amaçlıdır.\n2. AI yanıtları hatalı olabilir. Sağlık kararları için mutlaka doktora danışın.\n3. Kullanıcı, girdiği verilerden sorumludur.\n4. AILVIE, AI kaynaklı hatalardan doğan zararlardan hukuken sorumlu tutulamaz.\n5. Uygulama, kullanıcı verilerini üçüncü taraflarla paylaşmaz.\n6. Abonelik iptali istediğiniz zaman yapılabilir.":"1. AILVIE is not a medical diagnosis tool.\n2. AI responses may contain errors. Consult a doctor.\n3. Users are responsible for data they enter.\n4. AILVIE is not legally liable for AI errors.\n5. The app does not share data with third parties.\n6. Subscription can be cancelled anytime."}</p>
@@ -5463,14 +5487,14 @@ const renderTerms=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
 
 // About page
 const renderAbout=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
-  <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>ℹ️ {t.about}</span></div>
+  <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>ℹ️ {t.about}</span></div>
   <div style={{...CS,textAlign:"center",padding:20}}>
     <img src="/avatar2-256.webp" alt="" style={{height:80,objectFit:"contain",marginTop:8}} />
     <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:32,color:"#e8a817",letterSpacing:4,WebkitTextStroke:"0.8px #e8a817",marginTop:10}}>AILVIE</div>
     <div style={{fontSize:fs-1,color:mt,marginTop:2}}>{t.sl}</div>
     <div style={{fontSize:fs-1,color:mt,marginTop:8}}>{t.version}: 9.0.0</div>
     <div style={{fontSize:fs-1,color:mt}}>© 2025-2026 AILVIE Health Technologies</div>
-    <div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:`${ac}11`,fontSize:fs-2,color:ac}}>
+    <div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:`${ac}11`,fontSize:fs-2,color:acTx}}>
       {lang==="tr"?"60+ dil • 60+ ilaç DB • AI sohbet • Hasta karnesi • KVKK/GDPR uyumlu":"60+ languages • 60+ drug DB • AI chat • Patient card • GDPR compliant"}
     </div>
   </div>
@@ -5595,7 +5619,7 @@ const renderGuide=()=>{
       </div>
       {st.warn&&<div style={{fontSize:fs-2,color:dg,fontWeight:700,marginBottom:6}}>⚠️ {L?"Önemli":"Important"}</div>}
       <div style={{fontSize:fs+3,lineHeight:1.45,minHeight:74}}>{txt}</div>
-      {!!st.sec&&<StepTimer key={guide.key+"_"+guide.i} seconds={st.sec} ac={ac} sc={sc} fs={fs} BP={BP}
+      {!!st.sec&&<StepTimer key={guide.key+"_"+guide.i} seconds={st.sec} ac={ac} acTx={acTx} sc={sc} fs={fs} BP={BP}
         label={L?"Süre":"Timer"} done={L?"Tamam":"Done"}
         pause={L?"⏸ Duraklat":"⏸ Pause"} resume={L?"▶ Devam":"▶ Resume"}
         onDone={()=>{if(voiceGuide)speakNow(L?"Süre doldu.":"Time is up.");}}/>}
@@ -5603,7 +5627,7 @@ const renderGuide=()=>{
         <button onClick={()=>gotoStep(guide.key,guide.i-1)} disabled={guide.i===0}
           style={{...BP,flex:"0 0 auto",padding:"10px 14px",background:"transparent",color:guide.i===0?mt:tc,border:`1px solid ${bd}`}}>←</button>
         <button onClick={()=>sayStep(guide.key,guide.i)} aria-label={L?"Tekrar oku":"Repeat"}
-          style={{...BP,flex:"0 0 auto",padding:"10px 14px",background:"transparent",color:voiceGuide?ac:mt,border:`1px solid ${bd}`}}>🔊</button>
+          style={{...BP,flex:"0 0 auto",padding:"10px 14px",background:"transparent",color:voiceGuide?acTx:mt,border:`1px solid ${bd}`}}>🔊</button>
         <button onClick={()=>gotoStep(guide.key,guide.i+1)}
           style={{...BP,flex:1,padding:"10px",fontWeight:700}}>
           {guide.i===g.steps.length-1?(L?"Bitir":"Finish"):(L?"Sonraki":"Next")}
@@ -5651,7 +5675,7 @@ const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:render
             style={{...IS,width:"100%",maxWidth:260,textAlign:"center",letterSpacing:6,fontSize:fs+4,padding:"12px"}}/>
           {lockErr&&<div style={{color:dg,fontSize:fs-2}}>{lockErr}</div>}
           <button onClick={tryUnlockPIN} disabled={pinIn.length<4} style={{...BP,width:"100%",maxWidth:260,padding:"11px",opacity:pinIn.length<4?0.5:1}}>{lang==="tr"?"Kilidi Aç":"Unlock"}</button>
-          {lockCfg.credId&&<button onClick={tryUnlockBio} style={{...BP,width:"100%",maxWidth:260,padding:"11px",background:"transparent",color:ac,border:`1px solid ${ac}`}}>🔐 {lang==="tr"?"Biyometrik ile aç":"Use biometrics"}</button>}
+          {lockCfg.credId&&<button onClick={tryUnlockBio} style={{...BP,width:"100%",maxWidth:260,padding:"11px",background:"transparent",color:acTx,border:`1px solid ${ac}`}}>🔐 {lang==="tr"?"Biyometrik ile aç":"Use biometrics"}</button>}
           <div style={{color:mt,fontSize:fs-4,textAlign:"center",maxWidth:280,lineHeight:1.4,marginTop:6}}>{lang==="tr"?"PIN'inizi unuttuysanız verileri açmanın bir yolu yoktur; uygulamayı sıfırlayıp şifreli yedeğinizden geri yükleyin.":"If you forget the PIN, restore from your encrypted backup."}</div>
         </div>
   </div>);
@@ -5858,7 +5882,7 @@ return (
             <div style={{display:"flex",alignItems:"center",gap:6,padding:"10px 8px 6px",flexShrink:0}}>
               <button onClick={saveClose} aria-label={lang==="tr"?"Geri":"Back"} style={{...tbBtn}}>{svgIco(ICO.back,26)}</button>
               <div style={{flex:1}}/>
-              <button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} aria-label={lang==="tr"?"Sabitle":"Pin"} style={{...tbBtn,color:n.pinned?ac:(dark?tc:"#333")}}>{svgIco(ICO.pin,22)}</button>
+              <button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} aria-label={lang==="tr"?"Sabitle":"Pin"} style={{...tbBtn,color:n.pinned?acTx:(dark?tc:"#333")}}>{svgIco(ICO.pin,22)}</button>
             </div>
             <div onClick={()=>{if(noteSheet)setNoteSheet(null);}} style={{flex:"1 1 0",minHeight:0,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 18px 24px"}}>
               {media.length>0&&<div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:10}}>{media.map((m,mi)=><div key={mi} style={{position:"relative"}}>
@@ -5874,10 +5898,10 @@ return (
                   <input value={it.text} onChange={e=>setCheck(n.id,n.checklist.map(x=>x.id===it.id?{...x,text:e.target.value}:x))} placeholder={lang==="tr"?"Öğe":"Item"} style={{flex:1,background:"transparent",border:"none",outline:"none",color:dark?tc:"#333",fontSize:fs+4,textDecoration:it.done?"line-through":"none",opacity:it.done?0.55:1}}/>
                   <button onClick={()=>setCheck(n.id,n.checklist.filter(x=>x.id!==it.id))} aria-label={lang==="tr"?"Kaldır":"Remove"} style={{background:"none",border:"none",cursor:"pointer",fontSize:15,color:mt}}>✕</button>
                 </div>)}
-                <button onClick={()=>setCheck(n.id,[...n.checklist,{id:Date.now(),text:"",done:false}])} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:fs+3,textAlign:"left",padding:"4px 0",display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:22}}>➕</span>{lang==="tr"?"Öğe ekle":"Add item"}</button>
+                <button onClick={()=>setCheck(n.id,[...n.checklist,{id:Date.now(),text:"",done:false}])} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:fs+3,textAlign:"left",padding:"4px 0",display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:22}}>➕</span>{lang==="tr"?"Öğe ekle":"Add item"}</button>
               </div>:<div contentEditable suppressContentEditableWarning className="note-edit" ref={el=>{editableRef.current=el;if(el&&el.dataset.nid!==String(n.id)){el.dataset.nid=String(n.id);el.innerHTML=n.content||"";noteHistRef.current={stack:[n.content||""],idx:0,nid:n.id};}}} onInput={e=>{const html=e.currentTarget.innerHTML;setNotes(p=>p.map(x=>x.id===n.id?{...x,content:html}:x));pushHist(n.id,html);}} data-ph={lang==="tr"?"Not al...":"Take a note..."} style={{minHeight:"50vh",outline:"none",color:dark?tc:"#333",fontSize:fs+5,lineHeight:1.55,wordBreak:"break-word",overflowWrap:"anywhere",whiteSpace:"pre-wrap",direction:lang==="ar"?"rtl":"ltr",marginTop:4}}/>}
               
-              {(n.labels||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:12}}>{n.labels.map(l=><span key={l} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,labels:(x.labels||[]).filter(y=>y!==l)}:x))} style={{fontSize:fs-2,background:`${ac}22`,color:ac,borderRadius:12,padding:"4px 10px",cursor:"pointer"}}>🏷️ {l} ✕</span>)}</div>}
+              {(n.labels||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:12}}>{n.labels.map(l=><span key={l} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,labels:(x.labels||[]).filter(y=>y!==l)}:x))} style={{fontSize:fs-2,background:`${ac}22`,color:acTx,borderRadius:12,padding:"4px 10px",cursor:"pointer"}}>🏷️ {l} ✕</span>)}</div>}
             </div>
             {noteSheet==="add"&&<div style={sheetBox}>{[["📷",lang==="tr"?"Fotoğraf çek":"Take photo",()=>pickNoteImage(n.id,true)],["🖼️",lang==="tr"?"Resim ekle":"Add image",()=>pickNoteImage(n.id,false)],["🖌️",lang==="tr"?"Çizim":"Drawing",()=>{setNoteSheet(null);setNoteDraw(true);}],["🎤",lang==="tr"?"Kayıt":"Recording",()=>startNoteRec(n.id)],["☑️",lang==="tr"?"Onay kutuları":"Checkboxes",()=>toggleChecklist(n)]].map(([ic,lb,fn])=><button key={lb} onClick={fn} style={sheetRow}><span style={{fontSize:20,width:24,textAlign:"center",flexShrink:0}}>{ic}</span>{lb}</button>)}</div>}
             {noteSheet==="color"&&<div style={{...sheetBox,padding:"10px"}}>
@@ -6063,8 +6087,8 @@ return (
             {pulseM.phase==="done"&&<>
               <div style={{fontSize:40,fontWeight:800,color:dg}}>{pulseM.bpm} <span style={{fontSize:fs}}>{t.bpm}</span></div>
               {(()=>{const q=pulseM.quality;const L=q==="excellent"?(lang==="tr"?"mükemmel ✓✓":"excellent ✓✓"):q==="good"?(lang==="tr"?"iyi ✓":"good ✓"):q==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük — tekrar dene":"poor — retry");return <div style={{fontSize:fs-2,color:mt,marginTop:4}}>{lang==="tr"?"Sinyal kalitesi":"Signal quality"}: {L} · {lang==="tr"?"güven":"conf"} %{pulseM.conf}{pulseM.fps?` · ${pulseM.fps} fps`:""}</div>;})()}
-              {pulseM.hrvRmssd!=null&&<div style={{fontSize:fs-2,color:ac,marginTop:6}}>HRV · RMSSD {pulseM.hrvRmssd} ms · SDNN {pulseM.hrvSdnn} ms{pulseM.beats?` · ${pulseM.beats} ${lang==="tr"?"atım":"beats"}`:""}</div>}
-              {pulseM.respRate!=null&&<div style={{fontSize:fs-2,color:ac,marginTop:4}}>{lang==="tr"?"Solunum (tahmini)":"Respiration (est.)"}: {pulseM.respRate} {lang==="tr"?"/dk":"/min"}</div>}
+              {pulseM.hrvRmssd!=null&&<div style={{fontSize:fs-2,color:acTx,marginTop:6}}>HRV · RMSSD {pulseM.hrvRmssd} ms · SDNN {pulseM.hrvSdnn} ms{pulseM.beats?` · ${pulseM.beats} ${lang==="tr"?"atım":"beats"}`:""}</div>}
+              {pulseM.respRate!=null&&<div style={{fontSize:fs-2,color:acTx,marginTop:4}}>{lang==="tr"?"Solunum (tahmini)":"Respiration (est.)"}: {pulseM.respRate} {lang==="tr"?"/dk":"/min"}</div>}
               {pulseM.wantHrv&&pulseM.hrvRmssd==null&&<div style={{fontSize:fs-3,color:mt,marginTop:6}}>{pulseM.hrvNote==="short"?(lang==="tr"?"HRV için ≥45 sn iyi sinyal gerekir.":"HRV needs ≥45s of good signal."):(lang==="tr"?"HRV: yeterli/kararlı atım bulunamadı — sabit tutup tekrar dene.":"HRV: not enough stable beats — hold still and retry.")}</div>}
               <div style={{fontSize:fs-2,color:sc,marginTop:6}}>{lang==="tr"?"Sağlık verilerine kaydedildi. AILVIE yorumluyor…":"Saved. AILVIE is interpreting…"}</div>
             </>}
@@ -6082,7 +6106,7 @@ return (
             <div style={{fontSize:fs+8,fontWeight:800,marginBottom:6}}>{t.unlockTitle}</div>
             <div style={{fontSize:fs,opacity:0.85}}>{t.unlockDesc}</div>
           </div>
-          <button onClick={unlockApp} style={{background:"#fff",color:ac,border:"none",borderRadius:14,padding:"14px 32px",fontSize:fs+2,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:"0 4px 16px rgba(0,0,0,.2)"}}>
+          <button onClick={unlockApp} style={{background:"#fff",color:acTx,border:"none",borderRadius:14,padding:"14px 32px",fontSize:fs+2,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:"0 4px 16px rgba(0,0,0,.2)"}}>
             👆 {t.unlockBtn}
           </button>
           <div style={{position:"absolute",bottom:30,color:"rgba(255,255,255,.7)",fontSize:fs-2,textAlign:"center"}}>AILVIE</div>
@@ -6130,9 +6154,9 @@ return (
           onTouchMove={(e)=>{if(!zoomDrag.current.active)return;const t=e.touches[0];const dx=t.clientX-zoomDrag.current.startX;const dy=t.clientY-zoomDrag.current.startY;if(Math.abs(dx)>3||Math.abs(dy)>3)zoomDrag.current.moved=true;const newTop=Math.max(48,Math.min(window.innerHeight-180,zoomDrag.current.startTop+dy));const newRight=Math.max(4,Math.min(window.innerWidth-50,zoomDrag.current.startRight-dx));setZoomPos({top:newTop,right:newRight});}}
           onTouchEnd={()=>{if(zoomDrag.current.moved){try{localStorage.setItem("ailvie_zoompos",JSON.stringify(zoomPos));}catch{}}zoomDrag.current.active=false;}}
         >
-          <div title={lang==="tr"?"Taşımak için basılı tutup sürükle":"Hold & drag to move"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:ac,fontSize:23,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Yakınlaştır":"Zoom in"} onClick={()=>{if(!zoomDrag.current.moved)setZoom(z=>Math.min(Math.round((z+0.1)*10)/10,1.5));}}>+</div>
-          <div title={lang==="tr"?"Taşımak için basılı tutup sürükle":"Hold & drag to move"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:ac,fontSize:26,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Uzaklaştır":"Zoom out"} onClick={()=>{if(!zoomDrag.current.moved)setZoom(z=>Math.max(Math.round((z-0.1)*10)/10,1));}}>−</div>
-          {zoom!==1&&<div title={lang==="tr"?"Sıfırla":"Reset"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:ac,fontSize:13,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Sıfırla":"Reset zoom"} onClick={()=>{if(!zoomDrag.current.moved)setZoom(1);}}>{zoom.toFixed(1)}x</div>}
+          <div title={lang==="tr"?"Taşımak için basılı tutup sürükle":"Hold & drag to move"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:acTx,fontSize:23,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Yakınlaştır":"Zoom in"} onClick={()=>{if(!zoomDrag.current.moved)setZoom(z=>Math.min(Math.round((z+0.1)*10)/10,1.5));}}>+</div>
+          <div title={lang==="tr"?"Taşımak için basılı tutup sürükle":"Hold & drag to move"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:acTx,fontSize:26,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Uzaklaştır":"Zoom out"} onClick={()=>{if(!zoomDrag.current.moved)setZoom(z=>Math.max(Math.round((z-0.1)*10)/10,1));}}>−</div>
+          {zoom!==1&&<div title={lang==="tr"?"Sıfırla":"Reset"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:acTx,fontSize:13,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Sıfırla":"Reset zoom"} onClick={()=>{if(!zoomDrag.current.moved)setZoom(1);}}>{zoom.toFixed(1)}x</div>}
         </div>
 
         {/* LEFT SIDE MENU — compact */}
@@ -6238,7 +6262,7 @@ return (
         <div style={{flex:"1 1 0",minHeight:0,height:0,overflowY:page==="chat"?"hidden":"auto",overflowX:"hidden",padding:page==="chat"?"10px 12px 8px":"10px 12px 24px",display:page==="chat"?"flex":"block",flexDirection:"column",WebkitOverflowScrolling:"touch",cursor:"default",zoom:page==="chat"?1:zoom}} role="main" id="ailvie-main" tabIndex={-1} aria-label={pageTitle(page)} ref={mainRef} onClick={(e)=>{if(e.target===e.currentTarget){setEditNote(null);setNOpen(false);setShowAddMed(false);setShowAddAppt(false);setShowAddC(false);setShowWordLangPicker(false);setSelDate(null);}}}>{pages[page]?.()}</div>
 
         {/* Notif Panel */}
-        {showNotif&&<><div onClick={()=>setShowNotif(false)} style={{position:"absolute",inset:0,zIndex:249}}/><div style={{position:"absolute",bottom:86,left:0,right:0,maxHeight:"50%",background:cd,borderRadius:"16px 16px 0 0",boxShadow:"0 -6px 24px rgba(0,0,0,.3)",zIndex:250,padding:"14px 16px",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontWeight:700}}>🔔 {t.notif}</span><div style={{display:"flex",gap:8,alignItems:"center"}}><button onClick={()=>{setShowNotif(false);setShowAlerts(true);}} style={{fontSize:fs-3,color:dg,background:"none",border:`1px solid ${dg}55`,borderRadius:8,padding:"2px 8px",cursor:"pointer",fontWeight:700}}>⚠️ {lang==="tr"?"UYARILAR":"ALERTS"}</button><button onClick={()=>setNotifs(p=>p.map(n=>({...n,read:true})))} aria-label={lang==="tr"?"Tümünü okundu işaretle":"Mark all read"} style={{fontSize:fs-2,color:ac,background:"none",border:"none",cursor:"pointer"}}>✓</button><button onClick={()=>setNotifs([])} aria-label={lang==="tr"?"Bildirimleri temizle":"Clear notifications"} style={{fontSize:fs-2,color:dg,background:"none",border:"none",cursor:"pointer"}}>✕</button><button onClick={()=>setShowNotif(false)} aria-label={lang==="tr"?"Kapat":"Close"} style={{background:"none",border:"none",fontSize:16,cursor:"pointer",color:tc}}>✕</button></div></div>{notifs.length===0&&<div style={{textAlign:"center",color:mt,padding:16}}>—</div>}{notifs.map(n=><div key={n.id} style={{padding:"6px 0",borderBottom:`1px solid ${bd}`,opacity:n.read?0.4:1}}><div>{n.text}</div><div style={{fontSize:fs-3,color:mt}}>{n.time}</div></div>)}</div></>}
+        {showNotif&&<><div onClick={()=>setShowNotif(false)} style={{position:"absolute",inset:0,zIndex:249}}/><div style={{position:"absolute",bottom:86,left:0,right:0,maxHeight:"50%",background:cd,borderRadius:"16px 16px 0 0",boxShadow:"0 -6px 24px rgba(0,0,0,.3)",zIndex:250,padding:"14px 16px",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontWeight:700}}>🔔 {t.notif}</span><div style={{display:"flex",gap:8,alignItems:"center"}}><button onClick={()=>{setShowNotif(false);setShowAlerts(true);}} style={{fontSize:fs-3,color:dg,background:"none",border:`1px solid ${dg}55`,borderRadius:8,padding:"2px 8px",cursor:"pointer",fontWeight:700}}>⚠️ {lang==="tr"?"UYARILAR":"ALERTS"}</button><button onClick={()=>setNotifs(p=>p.map(n=>({...n,read:true})))} aria-label={lang==="tr"?"Tümünü okundu işaretle":"Mark all read"} style={{fontSize:fs-2,color:acTx,background:"none",border:"none",cursor:"pointer"}}>✓</button><button onClick={()=>setNotifs([])} aria-label={lang==="tr"?"Bildirimleri temizle":"Clear notifications"} style={{fontSize:fs-2,color:dg,background:"none",border:"none",cursor:"pointer"}}>✕</button><button onClick={()=>setShowNotif(false)} aria-label={lang==="tr"?"Kapat":"Close"} style={{background:"none",border:"none",fontSize:16,cursor:"pointer",color:tc}}>✕</button></div></div>{notifs.length===0&&<div style={{textAlign:"center",color:mt,padding:16}}>—</div>}{notifs.map(n=><div key={n.id} style={{padding:"6px 0",borderBottom:`1px solid ${bd}`,opacity:n.read?0.4:1}}><div>{n.text}</div><div style={{fontSize:fs-3,color:mt}}>{n.time}</div></div>)}</div></>}
         {/* Big red half-screen health alert overlay */}
         {activeAlert&&<div onClick={()=>{setActiveAlert(null);setShowAlerts(true);}} style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,.78)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
           <div style={{width:"100%",maxWidth:460,minHeight:"50vh",background:"linear-gradient(160deg,#e63946,#b71c2c)",borderRadius:22,boxShadow:"0 14px 44px rgba(0,0,0,.55)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"26px 18px",border:"3px solid rgba(255,255,255,.28)"}}>
@@ -6261,7 +6285,7 @@ return (
               <span style={{fontSize:30}}>{w.icon}</span>
               <div style={{flex:1,minWidth:0}}><div style={{fontSize:fs+1,fontWeight:800,color:w.high?dg:tc}}>{w.title}</div><div style={{fontSize:fs-2,color:w.high?dg:mt,marginTop:2}}>{w.high?"❗ ":""}{w.sub}</div></div>
               {w.kind==="med"&&<button onClick={()=>setMeds(p=>p.map(m=>m.id===w.ref.id?{...m,taken:true}:m))} style={{padding:"7px 12px",borderRadius:10,border:"none",background:sc,color:onAc,fontWeight:700,fontSize:fs-2,cursor:"pointer",flexShrink:0}}>{lang==="tr"?"Aldım":"Taken"}</button>}
-              {w.kind==="appt"&&<button onClick={()=>{setShowAlerts(false);goTo("appts");}} style={{padding:"7px 12px",borderRadius:10,border:`1px solid ${ac}`,background:"transparent",color:ac,fontWeight:700,fontSize:fs-2,cursor:"pointer",flexShrink:0}}>{lang==="tr"?"Git":"View"}</button>}
+              {w.kind==="appt"&&<button onClick={()=>{setShowAlerts(false);goTo("appts");}} style={{padding:"7px 12px",borderRadius:10,border:`1px solid ${ac}`,background:"transparent",color:acTx,fontWeight:700,fontSize:fs-2,cursor:"pointer",flexShrink:0}}>{lang==="tr"?"Git":"View"}</button>}
             </div>)}
             <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:8}}>{lang==="tr"?"İlaç · randevu · takvim alarmları":"Meds · appointments · calendar alarms"}</div>
           </div>
@@ -6272,21 +6296,21 @@ return (
 
         {/* Language Picker */}
         {showLangPicker&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.4)",zIndex:350}} onClick={()=>setShowLangPicker(false)}><div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:50,right:6,background:cd,borderRadius:14,padding:8,width:210,maxHeight:"80vh",overflowY:"auto",boxShadow:"0 8px 32px rgba(0,0,0,.5)",border:`1px solid ${bd}`}}>
-          <div style={{marginBottom:8,fontWeight:700,fontSize:fs,color:ac}}>🌍 {t.lang}</div>
+          <div style={{marginBottom:8,fontWeight:700,fontSize:fs,color:acTx}}>🌍 {t.lang}</div>
           {Object.entries(LL).sort((a,b)=>a[0]===lang?-1:b[0]===lang?1:((LL_LOCAL[lang]||LL_LOCAL.en)[a[0]]||a[1]).localeCompare((LL_LOCAL[lang]||LL_LOCAL.en)[b[0]]||b[1],lang)).map(([k,v])=><button key={k} onClick={()=>{setLang(k);try{localStorage.setItem("ailvie_lang",k);}catch(e){}setShowLangPicker(false);}} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"9px 12px",borderRadius:10,border:lang===k?`2px solid ${ac}`:`1px solid ${bd}`,background:lang===k?`${ac}12`:"transparent",marginBottom:4,cursor:"pointer",color:tc,fontSize:fs-1}}>
             <Flag code={k} size={22}/>
             <span style={{fontWeight:lang===k?700:400}}>{(LL_LOCAL[lang]||LL_LOCAL.en)[k]||v}</span>
-            {lang===k&&<span style={{marginLeft:"auto",color:ac}}>✓</span>}
+            {lang===k&&<span style={{marginLeft:"auto",color:acTx}}>✓</span>}
           </button>)}
         </div></div>}
 
         {/* BOTTOM NAV — compact 2 rows */}
         <nav role="navigation" aria-label={lang==="tr"?"Ana gezinme":"Main navigation"} style={{flexShrink:0,background:cd,borderTop:`1px solid ${bd}`,paddingBottom:"max(env(safe-area-inset-bottom),0px)"}}>
           <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)"}}>
-            {nav1.map(n=>(<button key={n.key} aria-current={page===n.key?"page":undefined} onClick={()=>page===n.key?goTo("home"):goTo(n.key)} style={{background:"none",border:"none",padding:"9px 1px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:(dark?"#c5cfd9":"#3c4a57"),position:"relative",minWidth:0}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"25%",right:"25%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:21,opacity:1,lineHeight:1}}>{n.icon}</span><span style={{fontSize:11.5,fontWeight:page===n.key?700:600,lineHeight:1.1,textAlign:"center",wordBreak:"break-word",letterSpacing:"-0.01em"}}>{n.label}</span></button>))}
+            {nav1.map(n=>(<button key={n.key} aria-current={page===n.key?"page":undefined} onClick={()=>page===n.key?goTo("home"):goTo(n.key)} style={{background:"none",border:"none",padding:"9px 1px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?acTx:(dark?"#c5cfd9":"#3c4a57"),position:"relative",minWidth:0}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"25%",right:"25%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:21,opacity:1,lineHeight:1}}>{n.icon}</span><span style={{fontSize:11.5,fontWeight:page===n.key?700:600,lineHeight:1.1,textAlign:"center",wordBreak:"break-word",letterSpacing:"-0.01em"}}>{n.label}</span></button>))}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",borderTop:`1px solid ${bd}`}}>
-            {nav2.map(n=>(<button key={n.key} aria-current={page===n.key?"page":undefined} onClick={()=>{if(n.onNav)n.onNav();if(n.key==="settings"){if(page==="settings"&&settingsTab==="all")goTo("home");else{setSettingsTab("all");goTo("settings");}}else if(page===n.key)goTo("home");else goTo(n.key);}} style={{background:"none",border:"none",padding:"8px 0 6px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:(dark?"#c5cfd9":"#3c4a57"),position:"relative"}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:21,opacity:1,lineHeight:1}}>{n.icon}</span><span style={{fontSize:11.5,fontWeight:page===n.key?700:600,letterSpacing:"-0.01em"}}>{n.label}</span></button>))}
+            {nav2.map(n=>(<button key={n.key} aria-current={page===n.key?"page":undefined} onClick={()=>{if(n.onNav)n.onNav();if(n.key==="settings"){if(page==="settings"&&settingsTab==="all")goTo("home");else{setSettingsTab("all");goTo("settings");}}else if(page===n.key)goTo("home");else goTo(n.key);}} style={{background:"none",border:"none",padding:"8px 0 6px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?acTx:(dark?"#c5cfd9":"#3c4a57"),position:"relative"}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:21,opacity:1,lineHeight:1}}>{n.icon}</span><span style={{fontSize:11.5,fontWeight:page===n.key?700:600,letterSpacing:"-0.01em"}}>{n.label}</span></button>))}
           </div>
         </nav>
 
