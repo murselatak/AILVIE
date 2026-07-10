@@ -5444,8 +5444,23 @@ const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:render
 
 
 // ═══ RESTRUCTURED NAV — 2 rows only ═══
-const nav1=[{key:"contacts",icon:"📇",label:t.contacts},{key:"pCard",icon:"🪪",label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:"📊",label:t.health}];
-const nav2=[{key:"notes",icon:"📝",label:t.notes},{key:"community",icon:"👥",label:t.community},{key:"chat",icon:"🤖",label:t.chat},{key:"admin",icon:"💬",label:t.adminCh||"Destek"},{key:"settings",icon:"⚙️",label:t.settings,onNav:()=>setSettingsTab("all")}];
+const IcoPhone=({size=21})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
+    <path fill="#e8a817" stroke="#8a6210" strokeWidth="0.6" strokeLinejoin="round"
+      d="M6.6 10.8c1.45 2.83 3.77 5.15 6.6 6.6l2.2-2.2c.28-.28.68-.37 1.03-.25 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.6 21 3 13.4 3 4c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.24.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.21z"/>
+  </svg>
+);
+const IcoSupport=({size=21})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
+    <path fill="#f1f5f9" stroke="#94a3b8" strokeWidth="0.6" strokeLinejoin="round"
+      d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12l4 4V4c0-1.1-.9-2-2-2z"/>
+    <circle cx="7.5" cy="10" r="1.5" fill="#e8a817"/>
+    <circle cx="12" cy="10" r="1.5" fill="#e8a817"/>
+    <circle cx="16.5" cy="10" r="1.5" fill="#e8a817"/>
+  </svg>
+);
+const nav1=[{key:"contacts",icon:<IcoPhone/>,label:t.contacts},{key:"pCard",icon:"🪪",label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:"📊",label:t.health}];
+const nav2=[{key:"notes",icon:"📝",label:t.notes},{key:"community",icon:"👥",label:t.community},{key:"chat",icon:"🤖",label:t.chat},{key:"admin",icon:<IcoSupport/>,label:t.adminCh||"Destek"},{key:"settings",icon:"⚙️",label:t.settings,onNav:()=>setSettingsTab("all")}];
 
 return (
   <div style={{width:"100%",maxWidth:480,margin:"0 auto",height:"100dvh",display:"flex",flexDirection:"column",overflow:"hidden",background:bg,fontSize:fs,color:tc,fontFamily:"'SF Pro Display',-apple-system,'Segoe UI',system-ui,sans-serif",direction:rtl?"rtl":"ltr",position:"relative"}}>
