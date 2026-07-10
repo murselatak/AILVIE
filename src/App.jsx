@@ -5446,61 +5446,68 @@ const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:render
 // ═══ RESTRUCTURED NAV — 2 rows only ═══
 // Inline SVG nav icons. Emoji glyphs are drawn by the OS colour font and CANNOT be
 // recoloured with CSS, so anything needing a specific brand colour must be an SVG.
-const IcoPhone=({size=21})=>(
+const IcoPhone=({size=23})=>(
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
     <path fill="#e11d2e" stroke="#7f0f1a" strokeWidth="0.6" strokeLinejoin="round"
       d="M6.6 10.8c1.45 2.83 3.77 5.15 6.6 6.6l2.2-2.2c.28-.28.68-.37 1.03-.25 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.6 21 3 13.4 3 4c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.24.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.21z"/>
   </svg>
 );
-// Health: red heart with a white ECG trace running through it
-const IcoHeartBeat=({size=21})=>(
+// Health: bigger heart, fills the whole viewBox, white ECG trace across it
+const IcoHeartBeat=({size=25})=>(
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
-    <path fill="#e11d2e"
-      d="M12 21.3l-1.45-1.32C5.4 15.3 2 12.2 2 8.4 2 5.3 4.4 3 7.5 3c1.74 0 3.41.8 4.5 2.08C13.09 3.8 14.76 3 16.5 3 19.6 3 22 5.3 22 8.4c0 3.8-3.4 6.9-8.55 11.6L12 21.3z"/>
-    <path fill="none" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-      d="M3.2 10.6h4.1l1.4-3.1 2.4 6.8 1.9-4.9 1.3 2.4h4.9"/>
+    <path fill="#e11d2e" stroke="#8f0f1c" strokeWidth="0.5"
+      d="M12 23L10.2 21.4C3.9 15.8 0.4 12.6 0.4 8.5 0.4 5.1 3.1 2.4 6.5 2.4c1.9 0 3.8 0.9 5.5 2.7 1.7-1.8 3.6-2.7 5.5-2.7 3.4 0 6.1 2.7 6.1 6.1 0 4.1-3.5 7.3-9.8 12.9L12 23z"/>
+    <path fill="none" stroke="#ffffff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
+      d="M1.6 10.4h4.3l1.5-3.4 2.6 7.6 2.1-5.4 1.4 2.7h5.6"/>
   </svg>
 );
-// Community: a woman and a man side by side
-const IcoPeople=({size=21})=>(
+// Community: half-length (bust) figures - a woman and a man, large and legible
+const IcoPeople=({size=24})=>(
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
-    <circle cx="7.8" cy="5.6" r="2.7" fill="#f2a0c0"/>
-    <path fill="#e0629a" d="M7.8 9.2c-2 0-3.3 1.3-3.7 3.1L2.7 20h2.3l.7-5.1V21h4.2v-6.1l.7 5.1h2.3l-1.4-7.7c-.4-1.8-1.7-3.1-3.7-3.1z"/>
-    <circle cx="16.6" cy="5.6" r="2.7" fill="#8ec5ff"/>
-    <path fill="#2f7fd6" d="M16.6 9.2c-2.1 0-3.6 1.4-3.6 3.4v5h1.9v3.4h3.4V17.6h1.9v-5c0-2-1.5-3.4-3.6-3.4z"/>
+    <circle cx="7" cy="6.4" r="3.7" fill="#f7b3cf" stroke="#c2185b" strokeWidth="0.7"/>
+    <path fill="#e0629a" stroke="#a3134f" strokeWidth="0.6" strokeLinejoin="round"
+      d="M7 11c-3.1 0-5.5 2.1-5.9 5.1L0.7 21h12.6l-0.4-4.9C12.5 13.1 10.1 11 7 11z"/>
+    <circle cx="17.2" cy="6.4" r="3.7" fill="#a7d4ff" stroke="#0d47a1" strokeWidth="0.7"/>
+    <path fill="#2f7fd6" stroke="#0d47a1" strokeWidth="0.6" strokeLinejoin="round"
+      d="M17.2 11c-3.1 0-5.5 2.1-5.9 5.1L10.9 21h12.6l-0.4-4.9C22.7 13.1 20.3 11 17.2 11z"/>
   </svg>
 );
-// Patient card: bright ID card, clearly legible on dark chrome
-const IcoIdCard=({size=21})=>(
+// Patient card: larger, brighter, high-contrast ID card
+const IcoIdCard=({size=24})=>(
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
-    <rect x="1.6" y="4.2" width="20.8" height="15.6" rx="2.6" fill="#f8fafc" stroke="#e8a817" strokeWidth="1.3"/>
-    <circle cx="7.6" cy="10.4" r="2.5" fill="#0077b6"/>
-    <path fill="#0077b6" d="M3.6 16.6c0-2.1 1.8-3.3 4-3.3s4 1.2 4 3.3z"/>
-    <rect x="13.4" y="8.4" width="6.6" height="1.7" rx="0.85" fill="#e11d2e"/>
-    <rect x="13.4" y="11.6" width="6.6" height="1.5" rx="0.75" fill="#94a3b8"/>
-    <rect x="13.4" y="14.5" width="4.6" height="1.5" rx="0.75" fill="#94a3b8"/>
+    <rect x="0.7" y="3" width="22.6" height="18" rx="2.8" fill="#ffffff" stroke="#e8a817" strokeWidth="1.6"/>
+    <circle cx="7.4" cy="10.2" r="3.1" fill="#0077b6"/>
+    <path fill="#0077b6" d="M2.6 18c0-2.6 2.2-4.1 4.8-4.1S12.2 15.4 12.2 18z"/>
+    <rect x="14" y="7.6" width="7.7" height="2.2" rx="1.1" fill="#e11d2e"/>
+    <rect x="14" y="11.4" width="7.7" height="1.9" rx="0.95" fill="#64748b"/>
+    <rect x="14" y="14.9" width="5.4" height="1.9" rx="0.95" fill="#64748b"/>
   </svg>
 );
-// AILVIE assistant face (uses the brand avatar) - chat
-const AVATAR_ZOOM={width:"250%",height:"250%",position:"absolute",left:"-65%",top:"-18%",display:"block"};
-const AilvieFace=({size=21})=>(
+// AILVIE face. avatar.png is a 200x200 square portrait; face centre measured at x46% y27%.
+// zoom = how tightly we crop (higher = closer). left/top place that centre in the middle.
+const AilvieFace=({size=24,zoom=250,left=-65,top=-18,ring="#e8a817",ringW=1.6})=>(
   <span style={{display:"block",width:size,height:size,borderRadius:"50%",overflow:"hidden",
-    position:"relative",background:"#0b3d5c",boxShadow:"0 0 0 1.4px #e8a817"}}>
-    <img src="/avatar.png" alt="" style={AVATAR_ZOOM}/>
+    position:"relative",background:"#0b3d5c",boxShadow:`0 0 0 ${ringW}px ${ring}`}}>
+    <img src="/avatar.png" alt="" style={{width:`${zoom}%`,height:`${zoom}%`,position:"absolute",left:`${left}%`,top:`${top}%`,display:"block"}}/>
   </span>
 );
-const IcoAilvie=({size=21})=><AilvieFace size={size}/>;
-// AILVIE support = the same face with a small gold speech bubble badge
-const IcoAilvieSupport=({size=21})=>(
+// Chat: tight, bright portrait
+const IcoAilvie=({size=25})=><AilvieFace size={size} zoom={265} left={-70} top={-20} ringW={1.8}/>;
+// Support: portrait wearing a headset (not a giant head) - pulled back so the shoulders show
+const IcoAilvieSupport=({size=25})=>(
   <span style={{display:"block",width:size,height:size,position:"relative"}}>
-    <AilvieFace size={size}/>
-    <svg width={size*0.62} height={size*0.62} viewBox="0 0 24 24" aria-hidden="true"
-      style={{position:"absolute",right:-3,bottom:-3}}>
-      <path fill="#f8fafc" stroke="#202124" strokeWidth="1.1" strokeLinejoin="round"
-        d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12l4 4V4c0-1.1-.9-2-2-2z"/>
-      <circle cx="7.5" cy="10" r="1.9" fill="#e8a817"/>
-      <circle cx="12" cy="10" r="1.9" fill="#e8a817"/>
-      <circle cx="16.5" cy="10" r="1.9" fill="#e8a817"/>
+    <AilvieFace size={size} zoom={205} left={-44} top={-9} ringW={1.8}/>
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"
+      style={{position:"absolute",left:0,top:0,pointerEvents:"none"}}>
+      {/* headband + ear cups */}
+      <path d="M4.4 12.6V11a7.6 7.6 0 0 1 15.2 0v1.6" fill="none" stroke="#202124" strokeWidth="2.6" strokeLinecap="round"/>
+      <path d="M4.4 12.6V11a7.6 7.6 0 0 1 15.2 0v1.6" fill="none" stroke="#e8a817" strokeWidth="1.5" strokeLinecap="round"/>
+      <rect x="2.5" y="11.6" width="3.4" height="5.4" rx="1.7" fill="#e8a817" stroke="#202124" strokeWidth="0.8"/>
+      <rect x="18.1" y="11.6" width="3.4" height="5.4" rx="1.7" fill="#e8a817" stroke="#202124" strokeWidth="0.8"/>
+      {/* boom mic */}
+      <path d="M4.2 17.2c0 2.6 2.1 4.3 4.6 4.3" fill="none" stroke="#202124" strokeWidth="2.2" strokeLinecap="round"/>
+      <path d="M4.2 17.2c0 2.6 2.1 4.3 4.6 4.3" fill="none" stroke="#e8a817" strokeWidth="1.2" strokeLinecap="round"/>
+      <circle cx="9.4" cy="21.5" r="1.8" fill="#e8a817" stroke="#202124" strokeWidth="0.8"/>
     </svg>
   </span>
 );
