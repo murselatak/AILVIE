@@ -5493,23 +5493,20 @@ const AilvieFace=({size=24,zoom=250,left=-65,top=-18,ring="#e8a817",ringW=1.6})=
 );
 // Chat: tight, bright portrait
 const IcoAilvie=({size=25})=><AilvieFace size={size} zoom={265} left={-70} top={-20} ringW={1.8}/>;
-// Support: portrait wearing a headset (not a giant head) - pulled back so the shoulders show
+// Support: flat TWO-COLOUR icon (no photo underneath -> nothing looks busy).
+// Brand blue silhouette + gold headset. Reads cleanly at 25px.
 const IcoAilvieSupport=({size=25})=>(
-  <span style={{display:"block",width:size,height:size,position:"relative"}}>
-    <AilvieFace size={size} zoom={205} left={-44} top={-9} ringW={1.8}/>
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"
-      style={{position:"absolute",left:0,top:0,pointerEvents:"none"}}>
-      {/* headband + ear cups */}
-      <path d="M4.4 12.6V11a7.6 7.6 0 0 1 15.2 0v1.6" fill="none" stroke="#202124" strokeWidth="2.6" strokeLinecap="round"/>
-      <path d="M4.4 12.6V11a7.6 7.6 0 0 1 15.2 0v1.6" fill="none" stroke="#e8a817" strokeWidth="1.5" strokeLinecap="round"/>
-      <rect x="2.5" y="11.6" width="3.4" height="5.4" rx="1.7" fill="#e8a817" stroke="#202124" strokeWidth="0.8"/>
-      <rect x="18.1" y="11.6" width="3.4" height="5.4" rx="1.7" fill="#e8a817" stroke="#202124" strokeWidth="0.8"/>
-      {/* boom mic */}
-      <path d="M4.2 17.2c0 2.6 2.1 4.3 4.6 4.3" fill="none" stroke="#202124" strokeWidth="2.2" strokeLinecap="round"/>
-      <path d="M4.2 17.2c0 2.6 2.1 4.3 4.6 4.3" fill="none" stroke="#e8a817" strokeWidth="1.2" strokeLinecap="round"/>
-      <circle cx="9.4" cy="21.5" r="1.8" fill="#e8a817" stroke="#202124" strokeWidth="0.8"/>
-    </svg>
-  </span>
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
+    {/* head + shoulders, brand blue */}
+    <circle cx="12" cy="8.6" r="4.1" fill="#00b4d8"/>
+    <path fill="#00b4d8" d="M12 13.6c-3.7 0-6.6 2.4-6.6 5.6V21h13.2v-1.8c0-3.2-2.9-5.6-6.6-5.6z"/>
+    {/* gold headset: band + ear cups + boom mic */}
+    <path d="M4.6 12.2v-1.6a7.4 7.4 0 0 1 14.8 0v1.6" fill="none" stroke="#e8a817" strokeWidth="2"/>
+    <rect x="2.2" y="10.8" width="3.6" height="6" rx="1.8" fill="#e8a817"/>
+    <rect x="18.2" y="10.8" width="3.6" height="6" rx="1.8" fill="#e8a817"/>
+    <path d="M19.9 17c0 2.6-2.1 4.5-4.6 4.5" fill="none" stroke="#e8a817" strokeWidth="1.7" strokeLinecap="round"/>
+    <circle cx="14.6" cy="21.5" r="1.9" fill="#e8a817"/>
+  </svg>
 );
 const nav1=[{key:"contacts",icon:<IcoPhone/>,label:t.contacts},{key:"pCard",icon:<IcoIdCard/>,label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:<IcoHeartBeat/>,label:t.health}];
 const nav2=[{key:"notes",icon:"📝",label:t.notes},{key:"community",icon:<IcoPeople/>,label:t.community},{key:"chat",icon:<IcoAilvie/>,label:t.chat},{key:"admin",icon:<IcoAilvieSupport/>,label:t.adminCh||"Destek"},{key:"settings",icon:"⚙️",label:t.settings,onNav:()=>setSettingsTab("all")}];
