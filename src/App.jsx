@@ -637,6 +637,18 @@ const StorageHealth=()=>{
         <div style={{fontSize:fs-2,color:tc,fontWeight:600}}>{stale?"⚠️ ":"✓ "}{L?"Son yedek":"Last backup"}: <span style={{color:stale?dg:sc}}>{days===null?(L?"hiç alınmadı":"never"):(days===0?(L?"bugün":"today"):`${days} ${L?"gün önce":"days ago"}`)}</span></div>
         {stale&&<div style={{fontSize:fs-4,color:mt,marginTop:3,lineHeight:1.4}}>{L?"Cihazınızı kaybederseniz veriler geri gelmez. Ayarlar > Yedekle ile şifreli yedek alın.":"Take an encrypted backup."}</div>}
       </div>;})()}
+    <button onClick={async()=>{
+      const L2=lang==="tr";
+      let prev=null;try{prev=await idbGet("ailvie_data_prev");}catch(e){}
+      if(!prev){notify(L2?"Önceki sürüm bulunamadı":"No previous revision");return;}
+      let n=0;try{const d=JSON.parse(prev);n=(d.notes||[]).length+(d.meds||[]).length+(d.labs||[]).length;}catch(e){}
+      if(!window.confirm(L2?`Bir önceki kaydedilmiş sürüme dönülecek (${n} kayıt içeriyor). Mevcut veriler onunla değiştirilecek. Devam?`:`Restore previous revision (${n} records)?`))return;
+      try{const cur=await idbGet("ailvie_data");if(cur)await idbSet("ailvie_data_prev_undo",cur);}catch(e){}
+      try{await idbSet("ailvie_data",prev);localStorage.setItem("ailvie_data",prev);}catch(e){}
+      notify(L2?"Geri yüklendi, yenileniyor…":"Restored, reloading…");
+      setTimeout(()=>location.reload(),800);
+    }} style={{...BP,width:"100%",padding:"8px",marginTop:10,background:"transparent",color:ac,border:`1px solid ${ac}`,fontSize:fs-2}}>↩️ {lang==="tr"?"Önceki sürüme dön":"Restore previous revision"}</button>
+    <div style={{fontSize:fs-5,color:mt,marginTop:4,lineHeight:1.4}}>{lang==="tr"?"Her kayıttan önce bir önceki sürüm saklanır. Bir şey yanlış giderse buradan geri alabilirsiniz.":"One previous revision is kept before each save."}</div>
     <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Veriler yalnızca bu cihazda saklanır (IndexedDB) ve sunucuya gönderilmez; cihazlar arası senkron yoktur. Yedekleriniz AES-256 ile parolayla şifrelenebilir.":"Data stored on this device only (IndexedDB). No cloud sync. Backups can be AES-256 encrypted."}</div>
   </div>;
 };
@@ -866,12 +878,18 @@ const idbOpen=()=>new Promise((res,rej)=>{
     r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);
   }catch(e){rej(e);}
 });
-const idbGet=async(k)=>{try{const db=await idbOpen();return await new Promise((res,rej)=>{const t=db.transaction(IDB_STORE,"readonly").objectStore(IDB_STORE).get(k);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error);});}catch(e){return undefined;}};
+const idbGetSafe=async(k)=>{
+  try{const db=await idbOpen();
+    const v=await new Promise((res,rej)=>{const t=db.transaction(IDB_STORE,"readonly").objectStore(IDB_STORE).get(k);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error);});
+    return{ok:true,value:v};                       // v may be undefined = key genuinely absent
+  }catch(e){return{ok:false,error:e};}             // read FAILED - caller must not assume "no data"
+};
+const idbGet=async(k)=>{const r=await idbGetSafe(k);return r.ok?r.value:undefined;};
 const idbSet=async(k,v)=>{const db=await idbOpen();return await new Promise((res,rej)=>{const tx=db.transaction(IDB_STORE,"readwrite");tx.objectStore(IDB_STORE).put(v,k);tx.oncomplete=()=>res(true);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||new Error("abort"));});};
 // Ask the browser to make storage persistent (won't be auto-evicted). Best-effort.
 const requestPersistentStorage=async()=>{try{if(navigator.storage&&navigator.storage.persist){if(await navigator.storage.persisted())return true;return await navigator.storage.persist();}}catch(e){}return false;};
 const storageEstimate=async()=>{try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();return{usage:e.usage||0,quota:e.quota||0};}}catch(e){}return null;};
-if(typeof window!=="undefined"){window.__idbGet=idbGet;window.__idbSet=idbSet;}
+if(typeof window!=="undefined"){window.__idbGet=idbGet;window.__idbSet=idbSet;window.__idbGetSafe=idbGetSafe;}
 // ---------- Unit normalization + canonical reference library + reference selector ----------
 // Factors verified against standard clinical conversions. Unit mismatch => NO score (doc rule).
 const UNIT_CONV={
@@ -2094,6 +2112,7 @@ const tryUnlockBio=async()=>{
 
 const[persisted,setPersisted]=useState(false);
 const dataLoadedRef=useRef(false);
+const firstWriteRef=useRef(true);
 const[repMetric,setRepMetric]=useState("weight");
 const[repRange,setRepRange]=useState(30); // days; 0=all
 const[hba1cVal,setHba1cVal]=useState("");
@@ -2403,7 +2422,16 @@ riskPenalty
 // ═══ AUTO-SAVE/LOAD ═══
 useEffect(()=>{(async()=>{
   let raw=null;
-  try{raw=await idbGet("ailvie_data");}catch(e){}
+  const r=await idbGetSafe("ailvie_data");
+  if(!r.ok){
+    // Read failed (corrupt DB, private mode, quota). Loading "empty" here would let autosave
+    // overwrite good data on disk. Freeze writes instead and tell the user.
+    setStorageWarn(lang==="tr"
+      ?"⚠️ Veriler okunamadı. Güvenlik için kayıt durduruldu — verileriniz silinmedi. Uygulamayı yeniden başlatın."
+      :"⚠️ Could not read your data. Saving is paused; nothing was deleted.");
+    return; // dataLoadedRef stays false -> autosave never runs
+  }
+  raw=r.value;
   if(raw==null){try{raw=localStorage.getItem("ailvie_data");if(raw)await idbSet("ailvie_data",raw);}catch(e){}} // one-time migration
   requestPersistentStorage().then(ok=>setPersisted(!!ok));
   try{const d=JSON.parse(raw||"{}");
@@ -2415,7 +2443,33 @@ if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);i
 })();},[]); // load once (IndexedDB primary)
 useEffect(()=>{if(!dataLoadedRef.current)return;const tm=setTimeout(()=>{const payload=JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs});
   (async()=>{
+    // GUARD (first write after startup only): a load bug could leave state empty and the
+    // very next autosave would wipe good data on disk. Later writes are genuine user edits
+    // (including "delete everything"), so the guard must not block them.
+    try{
+      if(firstWriteRef.current){
+      const isEmpty=(o)=>!o||(!((o.notes||[]).length)&&!((o.meds||[]).length)&&!((o.appts||[]).length)
+        &&!((o.labs||[]).length)&&!((o.contacts||[]).length)&&!((o.healthLog||[]).length)
+        &&!((o.glucose||[]).length)&&!(o.pat&&(o.pat.name||o.pat.birthDate)));
+        const next=JSON.parse(payload);
+        if(isEmpty(next)){
+          const prevRaw=await idbGet("ailvie_data");
+          if(prevRaw&&!isEmpty(JSON.parse(prevRaw))){
+            setStorageWarn(lang==="tr"
+              ?"⚠️ Beklenmeyen boş kayıt engellendi — verileriniz korundu."
+              :"⚠️ Blocked an unexpected empty write; your data is intact.");
+            return;
+          }
+        }
+      }
+    }catch(e){}
+    firstWriteRef.current=false;
     let idbOk=false;
+    try{
+      // keep one previous revision so a bad write is recoverable
+      const prev=await idbGet("ailvie_data");
+      if(prev&&prev!==payload)await idbSet("ailvie_data_prev",prev).catch(()=>{});
+    }catch(e){}
     try{await idbSet("ailvie_data",payload);idbOk=true;setStorageWarn(null);}catch(e){idbOk=false;}
     try{localStorage.setItem("ailvie_data",payload);}catch(e){ if(!idbOk){ setStorageWarn(lang==="tr"?"⚠️ Cihaz depolaması dolu — yeni kayıtlar SAKLANAMIYOR. Ayarlar > Yedekle ile verilerinizi dışa aktarın.":"⚠️ Device storage full — new data is NOT being saved. Export a backup."); } }
     if(!idbOk){
