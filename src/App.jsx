@@ -5444,23 +5444,68 @@ const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:render
 
 
 // ═══ RESTRUCTURED NAV — 2 rows only ═══
+// Inline SVG nav icons. Emoji glyphs are drawn by the OS colour font and CANNOT be
+// recoloured with CSS, so anything needing a specific brand colour must be an SVG.
 const IcoPhone=({size=21})=>(
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
-    <path fill="#e8a817" stroke="#8a6210" strokeWidth="0.6" strokeLinejoin="round"
+    <path fill="#e11d2e" stroke="#7f0f1a" strokeWidth="0.6" strokeLinejoin="round"
       d="M6.6 10.8c1.45 2.83 3.77 5.15 6.6 6.6l2.2-2.2c.28-.28.68-.37 1.03-.25 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.6 21 3 13.4 3 4c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.24.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.21z"/>
   </svg>
 );
-const IcoSupport=({size=21})=>(
+// Health: red heart with a white ECG trace running through it
+const IcoHeartBeat=({size=21})=>(
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
-    <path fill="#f1f5f9" stroke="#94a3b8" strokeWidth="0.6" strokeLinejoin="round"
-      d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12l4 4V4c0-1.1-.9-2-2-2z"/>
-    <circle cx="7.5" cy="10" r="1.5" fill="#e8a817"/>
-    <circle cx="12" cy="10" r="1.5" fill="#e8a817"/>
-    <circle cx="16.5" cy="10" r="1.5" fill="#e8a817"/>
+    <path fill="#e11d2e"
+      d="M12 21.3l-1.45-1.32C5.4 15.3 2 12.2 2 8.4 2 5.3 4.4 3 7.5 3c1.74 0 3.41.8 4.5 2.08C13.09 3.8 14.76 3 16.5 3 19.6 3 22 5.3 22 8.4c0 3.8-3.4 6.9-8.55 11.6L12 21.3z"/>
+    <path fill="none" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+      d="M3.2 10.6h4.1l1.4-3.1 2.4 6.8 1.9-4.9 1.3 2.4h4.9"/>
   </svg>
 );
-const nav1=[{key:"contacts",icon:<IcoPhone/>,label:t.contacts},{key:"pCard",icon:"🪪",label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:"📊",label:t.health}];
-const nav2=[{key:"notes",icon:"📝",label:t.notes},{key:"community",icon:"👥",label:t.community},{key:"chat",icon:"🤖",label:t.chat},{key:"admin",icon:<IcoSupport/>,label:t.adminCh||"Destek"},{key:"settings",icon:"⚙️",label:t.settings,onNav:()=>setSettingsTab("all")}];
+// Community: a woman and a man side by side
+const IcoPeople=({size=21})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
+    <circle cx="7.8" cy="5.6" r="2.7" fill="#f2a0c0"/>
+    <path fill="#e0629a" d="M7.8 9.2c-2 0-3.3 1.3-3.7 3.1L2.7 20h2.3l.7-5.1V21h4.2v-6.1l.7 5.1h2.3l-1.4-7.7c-.4-1.8-1.7-3.1-3.7-3.1z"/>
+    <circle cx="16.6" cy="5.6" r="2.7" fill="#8ec5ff"/>
+    <path fill="#2f7fd6" d="M16.6 9.2c-2.1 0-3.6 1.4-3.6 3.4v5h1.9v3.4h3.4V17.6h1.9v-5c0-2-1.5-3.4-3.6-3.4z"/>
+  </svg>
+);
+// Patient card: bright ID card, clearly legible on dark chrome
+const IcoIdCard=({size=21})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
+    <rect x="1.6" y="4.2" width="20.8" height="15.6" rx="2.6" fill="#f8fafc" stroke="#e8a817" strokeWidth="1.3"/>
+    <circle cx="7.6" cy="10.4" r="2.5" fill="#0077b6"/>
+    <path fill="#0077b6" d="M3.6 16.6c0-2.1 1.8-3.3 4-3.3s4 1.2 4 3.3z"/>
+    <rect x="13.4" y="8.4" width="6.6" height="1.7" rx="0.85" fill="#e11d2e"/>
+    <rect x="13.4" y="11.6" width="6.6" height="1.5" rx="0.75" fill="#94a3b8"/>
+    <rect x="13.4" y="14.5" width="4.6" height="1.5" rx="0.75" fill="#94a3b8"/>
+  </svg>
+);
+// AILVIE assistant face (uses the brand avatar) - chat
+const AVATAR_ZOOM={width:"250%",height:"250%",position:"absolute",left:"-65%",top:"-18%",display:"block"};
+const AilvieFace=({size=21})=>(
+  <span style={{display:"block",width:size,height:size,borderRadius:"50%",overflow:"hidden",
+    position:"relative",background:"#0b3d5c",boxShadow:"0 0 0 1.4px #e8a817"}}>
+    <img src="/avatar.png" alt="" style={AVATAR_ZOOM}/>
+  </span>
+);
+const IcoAilvie=({size=21})=><AilvieFace size={size}/>;
+// AILVIE support = the same face with a small gold speech bubble badge
+const IcoAilvieSupport=({size=21})=>(
+  <span style={{display:"block",width:size,height:size,position:"relative"}}>
+    <AilvieFace size={size}/>
+    <svg width={size*0.62} height={size*0.62} viewBox="0 0 24 24" aria-hidden="true"
+      style={{position:"absolute",right:-3,bottom:-3}}>
+      <path fill="#f8fafc" stroke="#202124" strokeWidth="1.1" strokeLinejoin="round"
+        d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12l4 4V4c0-1.1-.9-2-2-2z"/>
+      <circle cx="7.5" cy="10" r="1.9" fill="#e8a817"/>
+      <circle cx="12" cy="10" r="1.9" fill="#e8a817"/>
+      <circle cx="16.5" cy="10" r="1.9" fill="#e8a817"/>
+    </svg>
+  </span>
+);
+const nav1=[{key:"contacts",icon:<IcoPhone/>,label:t.contacts},{key:"pCard",icon:<IcoIdCard/>,label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:<IcoHeartBeat/>,label:t.health}];
+const nav2=[{key:"notes",icon:"📝",label:t.notes},{key:"community",icon:<IcoPeople/>,label:t.community},{key:"chat",icon:<IcoAilvie/>,label:t.chat},{key:"admin",icon:<IcoAilvieSupport/>,label:t.adminCh||"Destek"},{key:"settings",icon:"⚙️",label:t.settings,onNav:()=>setSettingsTab("all")}];
 
 return (
   <div style={{width:"100%",maxWidth:480,margin:"0 auto",height:"100dvh",display:"flex",flexDirection:"column",overflow:"hidden",background:bg,fontSize:fs,color:tc,fontFamily:"'SF Pro Display',-apple-system,'Segoe UI',system-ui,sans-serif",direction:rtl?"rtl":"ltr",position:"relative"}}>
