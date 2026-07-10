@@ -5542,6 +5542,28 @@ const renderGuide=()=>{
     </div>
   </div>);
 };
+// --- Screen-reader support -------------------------------------------------
+// We deliberately do NOT build our own screen reader: TalkBack/VoiceOver already
+// exist and a second speaking layer fights with them. Instead we expose correct
+// semantics (landmarks, aria-current, live regions) so they work well.
+const pageTitle=(k)=>{
+  const map={home:t.home,contacts:t.contacts,pCard:t.pCard,meds:t.meds,appts:t.appts,health:t.health,
+    notes:t.notes,community:t.community,chat:t.chat,settings:t.settings,admin:t.adminCh||"Destek"};
+  return map[k]||t.app;
+};
+const mainRef=useRef(null);
+const[srMsg,setSrMsg]=useState("");
+const firstPageRef=useRef(true);
+useEffect(()=>{
+  if(firstPageRef.current){firstPageRef.current=false;return;}   // don't announce on cold start
+  const title=pageTitle(page);
+  setSrMsg(title);                                                // announced by the live region
+  try{if(mainRef.current)mainRef.current.focus({preventScroll:true});}catch(e){}
+  // voice guidance users also hear the page name; everyone else stays silent
+  if(voiceGuide){try{speak(title);}catch(e){}}
+  const tm=setTimeout(()=>setSrMsg(""),1200);
+  return()=>clearTimeout(tm);
+},[page]);
 const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:renderMeds,appts:renderAppts,health:renderHealth,pCard:renderPCard,notes:renderNotes,contacts:renderContacts,community:renderCommunity,chat:renderChat,settings:renderSettings,privacy:renderPrivacy,terms:renderTerms,about:renderAbout};
   // SECURITY: when locked, render ONLY the lock screen. The app tree (health data) is never mounted.
   if(locked&&lockCfg)return(<div style={{fontFamily:"system-ui,-apple-system,sans-serif",background:dark?"#0b1117":"#f7fafc",minHeight:"100vh"}}>
@@ -6090,12 +6112,14 @@ return (
           </div>
         </>}
 
+        {/* Screen-reader live region: page changes and status text */}
+        <div aria-live="polite" aria-atomic="true" style={{position:"absolute",width:1,height:1,overflow:"hidden",clip:"rect(0 0 0 0)",whiteSpace:"nowrap"}}>{srMsg}</div>
         {/* Toast */}
         {toast&&<div role="status" aria-live="polite" style={{position:"absolute",top:100,left:"50%",transform:"translateX(-50%)",background:cd,color:tc,padding:"10px 20px",borderRadius:12,boxShadow:"0 6px 24px rgba(0,0,0,.3)",zIndex:300,maxWidth:300,border:`1px solid ${ac}`,fontSize:fs,animation:"slideD .3s ease-out",textAlign:"center"}}>{toast}</div>}
 
-        {storageWarn&&<div style={{flexShrink:0,background:"#b45309",color:"#fff",fontSize:fs-2,textAlign:"center",padding:"5px 8px"}}>{storageWarn}</div>}
+        {storageWarn&&<div role="alert" aria-live="assertive" style={{flexShrink:0,background:"#b45309",color:"#fff",fontSize:fs-2,textAlign:"center",padding:"5px 8px"}}>{storageWarn}</div>}
         {/* Offline banner */}
-        {!online&&<div style={{flexShrink:0,background:"#b91c1c",color:"#fff",fontSize:fs-2,textAlign:"center",padding:"4px 8px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>📡 {lang==="tr"?"Çevrimdışısınız — bazı özellikler sınırlı olabilir":"You're offline — some features may be limited"}</div>}
+        {!online&&<div role="status" aria-live="polite" style={{flexShrink:0,background:"#b91c1c",color:"#fff",fontSize:fs-2,textAlign:"center",padding:"4px 8px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>📡 {lang==="tr"?"Çevrimdışısınız — bazı özellikler sınırlı olabilir":"You're offline — some features may be limited"}</div>}
 
         {/* Install / Open-in-app banner (web only, dismissible) */}
         {(()=>{
@@ -6138,7 +6162,7 @@ return (
         </div>}
 
         {/* Content */}
-        <div style={{flex:"1 1 0",minHeight:0,height:0,overflowY:page==="chat"?"hidden":"auto",overflowX:"hidden",padding:page==="chat"?"10px 12px 8px":"10px 12px 24px",display:page==="chat"?"flex":"block",flexDirection:"column",WebkitOverflowScrolling:"touch",cursor:"default",zoom:page==="chat"?1:zoom}} onClick={(e)=>{if(e.target===e.currentTarget){setEditNote(null);setNOpen(false);setShowAddMed(false);setShowAddAppt(false);setShowAddC(false);setShowWordLangPicker(false);setSelDate(null);}}}>{pages[page]?.()}</div>
+        <div style={{flex:"1 1 0",minHeight:0,height:0,overflowY:page==="chat"?"hidden":"auto",overflowX:"hidden",padding:page==="chat"?"10px 12px 8px":"10px 12px 24px",display:page==="chat"?"flex":"block",flexDirection:"column",WebkitOverflowScrolling:"touch",cursor:"default",zoom:page==="chat"?1:zoom}} role="main" id="ailvie-main" tabIndex={-1} aria-label={pageTitle(page)} ref={mainRef} onClick={(e)=>{if(e.target===e.currentTarget){setEditNote(null);setNOpen(false);setShowAddMed(false);setShowAddAppt(false);setShowAddC(false);setShowWordLangPicker(false);setSelDate(null);}}}>{pages[page]?.()}</div>
 
         {/* Notif Panel */}
         {showNotif&&<><div onClick={()=>setShowNotif(false)} style={{position:"absolute",inset:0,zIndex:249}}/><div style={{position:"absolute",bottom:86,left:0,right:0,maxHeight:"50%",background:cd,borderRadius:"16px 16px 0 0",boxShadow:"0 -6px 24px rgba(0,0,0,.3)",zIndex:250,padding:"14px 16px",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontWeight:700}}>🔔 {t.notif}</span><div style={{display:"flex",gap:8,alignItems:"center"}}><button onClick={()=>{setShowNotif(false);setShowAlerts(true);}} style={{fontSize:fs-3,color:dg,background:"none",border:`1px solid ${dg}55`,borderRadius:8,padding:"2px 8px",cursor:"pointer",fontWeight:700}}>⚠️ {lang==="tr"?"UYARILAR":"ALERTS"}</button><button onClick={()=>setNotifs(p=>p.map(n=>({...n,read:true})))} aria-label={lang==="tr"?"Tümünü okundu işaretle":"Mark all read"} style={{fontSize:fs-2,color:ac,background:"none",border:"none",cursor:"pointer"}}>✓</button><button onClick={()=>setNotifs([])} aria-label={lang==="tr"?"Bildirimleri temizle":"Clear notifications"} style={{fontSize:fs-2,color:dg,background:"none",border:"none",cursor:"pointer"}}>✕</button><button onClick={()=>setShowNotif(false)} aria-label={lang==="tr"?"Kapat":"Close"} style={{background:"none",border:"none",fontSize:16,cursor:"pointer",color:tc}}>✕</button></div></div>{notifs.length===0&&<div style={{textAlign:"center",color:mt,padding:16}}>—</div>}{notifs.map(n=><div key={n.id} style={{padding:"6px 0",borderBottom:`1px solid ${bd}`,opacity:n.read?0.4:1}}><div>{n.text}</div><div style={{fontSize:fs-3,color:mt}}>{n.time}</div></div>)}</div></>}
@@ -6184,14 +6208,14 @@ return (
         </div></div>}
 
         {/* BOTTOM NAV — compact 2 rows */}
-        <div style={{flexShrink:0,background:cd,borderTop:`1px solid ${bd}`,paddingBottom:"max(env(safe-area-inset-bottom),0px)"}}>
+        <nav role="navigation" aria-label={lang==="tr"?"Ana gezinme":"Main navigation"} style={{flexShrink:0,background:cd,borderTop:`1px solid ${bd}`,paddingBottom:"max(env(safe-area-inset-bottom),0px)"}}>
           <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)"}}>
-            {nav1.map(n=>(<button key={n.key} onClick={()=>page===n.key?goTo("home"):goTo(n.key)} style={{background:"none",border:"none",padding:"9px 1px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:(dark?"#c5cfd9":"#3c4a57"),position:"relative",minWidth:0}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"25%",right:"25%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:21,opacity:1,lineHeight:1}}>{n.icon}</span><span style={{fontSize:11.5,fontWeight:page===n.key?700:600,lineHeight:1.1,textAlign:"center",wordBreak:"break-word",letterSpacing:"-0.01em"}}>{n.label}</span></button>))}
+            {nav1.map(n=>(<button key={n.key} aria-current={page===n.key?"page":undefined} onClick={()=>page===n.key?goTo("home"):goTo(n.key)} style={{background:"none",border:"none",padding:"9px 1px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:(dark?"#c5cfd9":"#3c4a57"),position:"relative",minWidth:0}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"25%",right:"25%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:21,opacity:1,lineHeight:1}}>{n.icon}</span><span style={{fontSize:11.5,fontWeight:page===n.key?700:600,lineHeight:1.1,textAlign:"center",wordBreak:"break-word",letterSpacing:"-0.01em"}}>{n.label}</span></button>))}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",borderTop:`1px solid ${bd}`}}>
-            {nav2.map(n=>(<button key={n.key} onClick={()=>{if(n.onNav)n.onNav();if(n.key==="settings"){if(page==="settings"&&settingsTab==="all")goTo("home");else{setSettingsTab("all");goTo("settings");}}else if(page===n.key)goTo("home");else goTo(n.key);}} style={{background:"none",border:"none",padding:"8px 0 6px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:(dark?"#c5cfd9":"#3c4a57"),position:"relative"}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:21,opacity:1,lineHeight:1}}>{n.icon}</span><span style={{fontSize:11.5,fontWeight:page===n.key?700:600,letterSpacing:"-0.01em"}}>{n.label}</span></button>))}
+            {nav2.map(n=>(<button key={n.key} aria-current={page===n.key?"page":undefined} onClick={()=>{if(n.onNav)n.onNav();if(n.key==="settings"){if(page==="settings"&&settingsTab==="all")goTo("home");else{setSettingsTab("all");goTo("settings");}}else if(page===n.key)goTo("home");else goTo(n.key);}} style={{background:"none",border:"none",padding:"8px 0 6px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?ac:(dark?"#c5cfd9":"#3c4a57"),position:"relative"}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:21,opacity:1,lineHeight:1}}>{n.icon}</span><span style={{fontSize:11.5,fontWeight:page===n.key?700:600,letterSpacing:"-0.01em"}}>{n.label}</span></button>))}
           </div>
-        </div>
+        </nav>
 
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&display=swap');
