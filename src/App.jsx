@@ -3234,7 +3234,7 @@ const renderHome=()=>{
           const isToday=d===now.getDate()&&calM===now.getMonth()&&calY===now.getFullYear();
           const hasAppt=apptDates.includes(iso);
           const dayOfWeek=new Date(calY,calM,d).getDay();const isWeekend=dayOfWeek===0||dayOfWeek===6;const holKey=`${String(calM+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;const holiday=HOLIDAYS[holKey];const hasNote=calNotes[iso];const hasAlarm=calAlarms[iso];
-          return <div key={i} onClick={()=>{setSelDate(selDate===iso?null:iso);setCalNoteText(calNotes[iso]||"");setCalAlarmTime(calAlarms[iso]||"");}} style={{fontSize:12,padding:"3px 0",borderRadius:5,background:isToday?ac:holiday?`${sc}25`:hasAppt?`${dg}22`:isWeekend?"rgba(255,180,0,0.1)":"transparent",color:isToday?"#fff":holiday?sc:hasAppt?dg:isWeekend?"#f0a030":tc,fontWeight:isToday||hasAppt||isWeekend?700:400,position:"relative",cursor:"pointer"}}>{d}{hasAppt&&<span style={{position:"absolute",bottom:-1,left:"50%",transform:"translateX(-50%)",width:3,height:3,borderRadius:"50%",background:dg,display:"block"}}/>}{hasNote&&<span style={{position:"absolute",top:-1,right:1,width:3,height:3,borderRadius:"50%",background:sc,display:"block"}}/>}{hasAlarm&&<span style={{position:"absolute",top:-1,left:1,width:3,height:3,borderRadius:"50%",background:"#f0a030",display:"block"}}/>}</div>;
+          return <div key={i} onClick={()=>{setSelDate(selDate===iso?null:iso);setCalNoteText(calNotes[iso]||"");setCalAlarmTime(calAlarms[iso]||"");}} style={{fontSize:12,padding:"3px 0",borderRadius:5,background:isToday?ac:holiday?`${sc}25`:hasAppt?`${dg}22`:isWeekend?"rgba(255,180,0,0.1)":"transparent",color:isToday?onAc:holiday?sc:hasAppt?dg:isWeekend?"#f0a030":tc,fontWeight:isToday||hasAppt||isWeekend?700:400,position:"relative",cursor:"pointer"}}>{d}{hasAppt&&<span style={{position:"absolute",bottom:-1,left:"50%",transform:"translateX(-50%)",width:3,height:3,borderRadius:"50%",background:dg,display:"block"}}/>}{hasNote&&<span style={{position:"absolute",top:-1,right:1,width:3,height:3,borderRadius:"50%",background:sc,display:"block"}}/>}{hasAlarm&&<span style={{position:"absolute",top:-1,left:1,width:3,height:3,borderRadius:"50%",background:"#f0a030",display:"block"}}/>}</div>;
         })}
       </div>
     </div>
@@ -4194,7 +4194,10 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     const typeLbl=(t)=>t==="fasting"?(lang==="tr"?"Açlık":"Fasting"):t==="postmeal"?(lang==="tr"?"Tokluk":"Post-meal"):(lang==="tr"?"Rastgele":"Random");
     const vals=recent.map(r=>r.val);const mn=Math.min(70,...vals),mx=Math.max(200,...vals);const yy=v=>78-((v-mn)/(mx-mn||1))*74-2;
     return <div style={{...CS}}>
-      <b style={{fontSize:fs+1,color:tc}}>🩸 {lang==="tr"?"Şeker (Glikoz) Takibi":"Blood Glucose"}</b>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <b style={{fontSize:fs+1,color:tc}}>🩸 {lang==="tr"?"Şeker (Glikoz) Takibi":"Blood Glucose"}</b>
+        <button onClick={()=>startGuide("glucose")} aria-label={lang==="tr"?"Kan şekeri ölçüm rehberi":"Blood glucose measurement guide"} title={lang==="tr"?"Nasıl ölçülür?":"How to measure"} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${bd}`,color:ac,borderRadius:8,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,flexShrink:0}}>🔊 {lang==="tr"?"Rehber":"Guide"}</button>
+      </div>
       {(()=>{const c=patCtx();const L=lang==="tr";let msg=null;
         if(!c.band)msg=L?"⚠️ Doğum tarihi girilmemiş — değerler sınıflandırılmıyor. Hasta Karnesi'nden yaş/cinsiyet ekleyin.":"⚠️ No birth date — values are not classified. Add age/sex in Patient Card.";
         else if(c.pregnant)msg=L?"⚠️ Gebelikte şeker eşikleri farklıdır (ör. gestasyonel diyabet). Uygulama sınıflandırma yapmaz; değerleriniz yalnızca kaydedilir. Doktorunuz/kadın doğum uzmanınız değerlendirmelidir.":"⚠️ Pregnancy thresholds differ. Values are recorded but not classified.";
@@ -4202,7 +4205,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         return msg?<div style={{background:`${dg}12`,border:`1px solid ${dg}44`,borderRadius:9,padding:"8px 10px",fontSize:fs-3,color:tc,lineHeight:1.4,marginTop:6}}>{msg}</div>:null;})()}
       <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{lang==="tr"?"Ölçüm cihazınızın değerini girin. Tarama amaçlıdır, tıbbi tanı değildir — doktorunuza danışın.":"Enter your meter reading. Screening only, not a diagnosis — consult your doctor."}</div>
       <div style={{display:"flex",gap:6}}>
-        <input type="number" inputMode="numeric" value={gluVal} onChange={e=>setGluVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric("glucose",v,gluType);if(v<54||v>=300)setActiveAlert({icon:"🩸",title:lang==="tr"?"KRİTİK ŞEKER":"CRITICAL GLUCOSE",msg:v+" mg/dL — "+(lang==="tr"?"acil kontrol edin / doktorunuza danışın":"seek medical attention")});setGluVal("");}}}} placeholder="mg/dL" style={{...IS,flex:"0 0 32%"}}/>
+        <input type="number" inputMode="numeric" value={gluVal} onFocus={()=>{if(voiceGuide&&!guide)startGuide("glucose");}} onChange={e=>setGluVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric("glucose",v,gluType);if(v<54||v>=300)setActiveAlert({icon:"🩸",title:lang==="tr"?"KRİTİK ŞEKER":"CRITICAL GLUCOSE",msg:v+" mg/dL — "+(lang==="tr"?"acil kontrol edin / doktorunuza danışın":"seek medical attention")});setGluVal("");}}}} placeholder="mg/dL" style={{...IS,flex:"0 0 32%"}}/>
         <select aria-label={lang==="tr"?"Ölçüm zamanı (açlık/tokluk)":"Measurement timing"} value={gluType} onChange={e=>setGluType(e.target.value)} style={{...IS,flex:1}}><option value="fasting">{lang==="tr"?"Açlık":"Fasting"}</option><option value="postmeal">{lang==="tr"?"Tokluk (2 saat)":"Post-meal (2h)"}</option><option value="random">{lang==="tr"?"Rastgele":"Random"}</option></select>
       </div>
       <button onClick={()=>{const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric('glucose',v,gluType);if(v<54||v>=300)setActiveAlert({icon:"🩸",title:lang==="tr"?"KRİTİK ŞEKER":"CRITICAL GLUCOSE",msg:v+" mg/dL — "+(lang==="tr"?"acil kontrol edin / doktorunuza danışın":"seek medical attention")});setGluVal("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Ölçüm Ekle":"Add Reading"}</button>
@@ -5559,8 +5562,9 @@ useEffect(()=>{
   const title=pageTitle(page);
   setSrMsg(title);                                                // announced by the live region
   try{if(mainRef.current)mainRef.current.focus({preventScroll:true});}catch(e){}
-  // voice guidance users also hear the page name; everyone else stays silent
-  if(voiceGuide){try{speak(title);}catch(e){}}
+  // NOTE: we do NOT speak the page name here. A screen-reader user already hears it from the
+  // live region above, so speaking it too would read every page twice. And "voice guidance"
+  // means step-by-step coaching during a measurement - not narration while browsing menus.
   const tm=setTimeout(()=>setSrMsg(""),1200);
   return()=>clearTimeout(tm);
 },[page]);
