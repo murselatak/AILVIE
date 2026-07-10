@@ -4927,7 +4927,18 @@ const startNoteRec=async(nid)=>{
 // Opened from inside a note (editNote set), it is attached to that note instead.
 const saveDrawing=(dataUrl)=>{
   if(!dataUrl){setNoteDraw(false);return;}
-  if(editNote){addNoteMedia(editNote,{type:"drawing",data:dataUrl});setNoteDraw(false);return;}
+  if(editNote){
+    addNoteMedia(editNote,{type:"drawing",data:dataUrl});
+    setNoteDraw(false);
+    // Keep behaviour: if the host note has no text of its own, the drawing IS the note ->
+    // close the editor and return to the list instead of leaving an empty text note open.
+    const host=notes.find(x=>x.id===editNote);
+    const textless=host&&!(host.title||"").trim()
+      &&!(host.content||"").replace(/<[^>]+>/g,"").trim()
+      &&!(host.checklist&&host.checklist.some(i=>(i.text||"").trim()));
+    if(textless){setEditNote(null);setNoteSheet(null);notify(lang==="tr"?"✓ Çizim not olarak kaydedildi":"✓ Drawing saved as a note");}
+    return;
+  }
   const nid=Date.now();
   setNotes(p=>[{id:nid,title:"",content:"",color:"default",pinned:false},...p]);
   addNoteMedia(nid,{type:"drawing",data:dataUrl});
@@ -4962,7 +4973,15 @@ const renderNotes=()=>{
           <div onClick={()=>{setEditNote(n.id);setNoteSheet(null);}} style={{cursor:"pointer",width:"100%",maxWidth:"100%",overflow:"hidden"}}>
             {n.title&&<div style={{fontWeight:700,marginBottom:4,color:dark?tc:"#1a1a1a",fontSize:fs+1,wordBreak:"break-word",overflowWrap:"anywhere"}}>{n.title}</div>}
             {n.checklist?<div style={{display:"flex",flexDirection:"column",gap:2}}>{n.checklist.slice(0,8).map(it=><div key={it.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:fs,color:dark?mt:"#444"}}><span>{it.done?"☑️":"⬜"}</span><span style={{textDecoration:it.done?"line-through":"none",opacity:it.done?0.6:1,wordBreak:"break-word"}}>{it.text}</span></div>)}</div>:<div className="note-view" dangerouslySetInnerHTML={{__html:(n.content||"").trim()||(lang==="tr"?"Boş not":"Empty note")}} style={{fontSize:fs,color:dark?mt:"#444",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:180,overflow:"hidden"}}/>}
-            {media.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}}>{media.slice(0,4).map((m,mi)=>m.type==="audio"?<span key={mi} style={{fontSize:fs-1}}>🎤</span>:<img key={mi} alt="" src={m.data} style={{width:56,height:56,objectFit:"cover",borderRadius:8,display:"block"}}/>)}</div>}
+            {(()=>{const pics=media.filter(m=>m.type!=="audio");const auds=media.length-pics.length;
+              if(!media.length)return null;
+              return <div style={{marginTop:n.title||n.content?8:0}}>
+                {pics[0]&&<img alt="" src={pics[0].data} style={{width:"100%",maxHeight:200,objectFit:"contain",borderRadius:10,display:"block",background:dark?"#0d1520":"#f4f6f9"}}/>}
+                {(pics.length>1||auds>0)&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}}>
+                  {pics.slice(1,4).map((m,mi)=><img key={mi} alt="" src={m.data} style={{width:48,height:48,objectFit:"cover",borderRadius:8,display:"block"}}/>)}
+                  {auds>0&&<span style={{fontSize:fs-1}}>🎤</span>}
+                </div>}
+              </div>;})()}
             {(n.labels||[]).length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>{n.labels.map(l=><span key={l} style={{fontSize:fs-3,background:`${ac}22`,color:ac,borderRadius:10,padding:"2px 8px"}}>🏷️ {l}</span>)}</div>}
           </div>
           <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
@@ -5427,7 +5446,13 @@ return (
               <button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} aria-label={lang==="tr"?"Sabitle":"Pin"} style={{...tbBtn,color:n.pinned?ac:(dark?tc:"#333")}}>{svgIco(ICO.pin,22)}</button>
             </div>
             <div onClick={()=>{if(noteSheet)setNoteSheet(null);}} style={{flex:"1 1 0",minHeight:0,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 18px 24px"}}>
-              <input value={n.title} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,title:e.target.value}:x))} placeholder={lang==="tr"?"Başlık":"Title"} style={{fontWeight:700,background:"transparent",border:"none",padding:"6px 0",color:dark?tc:"#1a1a1a",fontSize:fs+9,outline:"none",width:"100%",boxSizing:"border-box",direction:lang==="ar"?"rtl":"ltr"}}/>
+              {media.length>0&&<div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:10}}>{media.map((m,mi)=><div key={mi} style={{position:"relative"}}>
+              {m.type==="audio"
+                ? <audio controls src={m.data} style={{width:"100%"}}/>
+                : <img alt="" src={m.data} onClick={()=>{if(m.type==="drawing")setNoteDraw(true);}} style={{width:"100%",maxHeight:340,objectFit:"contain",borderRadius:12,display:"block",background:dark?"#0d1520":"#f4f6f9",cursor:m.type==="drawing"?"pointer":"default"}}/>}
+              <button onClick={()=>delNoteMedia(n.id,mi)} aria-label={lang==="tr"?"Kaldır":"Remove"} style={{position:"absolute",top:6,right:6,background:"rgba(0,0,0,.55)",color:"#fff",border:"none",borderRadius:"50%",width:28,height:28,cursor:"pointer",fontSize:15,lineHeight:1}}>✕</button>
+            </div>)}</div>}
+            <input value={n.title} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,title:e.target.value}:x))} placeholder={lang==="tr"?"Başlık":"Title"} style={{fontWeight:700,background:"transparent",border:"none",padding:"6px 0",color:dark?tc:"#1a1a1a",fontSize:fs+9,outline:"none",width:"100%",boxSizing:"border-box",direction:lang==="ar"?"rtl":"ltr"}}/>
               {n.checklist?<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>
                 {n.checklist.map(it=><div key={it.id} style={{display:"flex",alignItems:"center",gap:10}}>
                   <button onClick={()=>setCheck(n.id,n.checklist.map(x=>x.id===it.id?{...x,done:!x.done}:x))} aria-label={lang==="tr"?"İşaretle":"Toggle"} style={{background:"none",border:"none",cursor:"pointer",fontSize:19,padding:0}}>{it.done?"☑️":"⬜"}</button>
@@ -5436,7 +5461,7 @@ return (
                 </div>)}
                 <button onClick={()=>setCheck(n.id,[...n.checklist,{id:Date.now(),text:"",done:false}])} style={{background:"none",border:"none",color:ac,cursor:"pointer",fontSize:fs+3,textAlign:"left",padding:"4px 0",display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:22}}>➕</span>{lang==="tr"?"Öğe ekle":"Add item"}</button>
               </div>:<div contentEditable suppressContentEditableWarning className="note-edit" ref={el=>{editableRef.current=el;if(el&&el.dataset.nid!==String(n.id)){el.dataset.nid=String(n.id);el.innerHTML=n.content||"";noteHistRef.current={stack:[n.content||""],idx:0,nid:n.id};}}} onInput={e=>{const html=e.currentTarget.innerHTML;setNotes(p=>p.map(x=>x.id===n.id?{...x,content:html}:x));pushHist(n.id,html);}} data-ph={lang==="tr"?"Not al...":"Take a note..."} style={{minHeight:"50vh",outline:"none",color:dark?tc:"#333",fontSize:fs+5,lineHeight:1.55,wordBreak:"break-word",overflowWrap:"anywhere",whiteSpace:"pre-wrap",direction:lang==="ar"?"rtl":"ltr",marginTop:4}}/>}
-              {media.length>0&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>{media.map((m,mi)=><div key={mi} style={{position:"relative"}}>{m.type==="audio"?<audio controls src={m.data} style={{height:36,maxWidth:220}}/>:<img alt="" src={m.data} style={{width:96,height:96,objectFit:"cover",borderRadius:10,display:"block"}}/>}<button onClick={()=>delNoteMedia(n.id,mi)} aria-label={lang==="tr"?"Kaldır":"Remove"} style={{position:"absolute",top:-7,right:-7,background:dg,color:"#fff",border:"none",borderRadius:"50%",width:20,height:20,fontSize:12,cursor:"pointer",lineHeight:1}}>✕</button></div>)}</div>}
+              
               {(n.labels||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:12}}>{n.labels.map(l=><span key={l} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,labels:(x.labels||[]).filter(y=>y!==l)}:x))} style={{fontSize:fs-2,background:`${ac}22`,color:ac,borderRadius:12,padding:"4px 10px",cursor:"pointer"}}>🏷️ {l} ✕</span>)}</div>}
             </div>
             {noteSheet==="add"&&<div style={sheetBox}>{[["📷",lang==="tr"?"Fotoğraf çek":"Take photo",()=>pickNoteImage(n.id,true)],["🖼️",lang==="tr"?"Resim ekle":"Add image",()=>pickNoteImage(n.id,false)],["🖌️",lang==="tr"?"Çizim":"Drawing",()=>{setNoteSheet(null);setNoteDraw(true);}],["🎤",lang==="tr"?"Kayıt":"Recording",()=>startNoteRec(n.id)],["☑️",lang==="tr"?"Onay kutuları":"Checkboxes",()=>toggleChecklist(n)]].map(([ic,lb,fn])=><button key={lb} onClick={fn} style={sheetRow}><span style={{fontSize:20,width:24,textAlign:"center",flexShrink:0}}>{ic}</span>{lb}</button>)}</div>}
