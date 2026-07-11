@@ -52,6 +52,25 @@ function requestFromApp(request, env) {
   return request.headers.get("X-AILVIE-Client") === "web";
 }
 
+// Per-IP daily hard ceiling — a bill-protection backstop against scripted abuse. This is NOT
+// the product's free-tier limit (that stays client-side and friendly); it's set high enough
+// that no real user, free or PRO, ever reaches it, but low enough to stop a runaway script
+// from draining the API budget. No-op until SYNC_KV is bound, so it ships safely and turns
+// itself on the moment the binding exists. KV is eventually consistent, which is fine here —
+// an approximate cap is all a bill guard needs.
+async function overDailyIpCap(env, ip) {
+  const kv = env.SYNC_KV;
+  if (!kv || !ip) return false; // not bound / no IP → skip entirely
+  const cap = parseInt(env.RATE_LIMIT_PER_DAY || "200", 10);
+  const key = `rl:${new Date().toISOString().slice(0, 10)}:${ip}`;
+  let n = 0;
+  try { const v = await kv.get(key); n = v ? parseInt(v, 10) : 0; }
+  catch (e) { return false; } // KV read error → never block a real user
+  if (n >= cap) return true;
+  try { await kv.put(key, String(n + 1), { expirationTtl: 172800 }); } catch (e) {} // ~2 days
+  return false;
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Which upstream statuses are worth retrying? Rate limit + server-side/overload only.
@@ -121,6 +140,11 @@ export async function onRequestPost(context) {
   // (1) Abuse shield — reject anything not coming from the AILVIE app.
   if (!requestFromApp(request, env)) {
     return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers });
+  }
+
+  // (1b) Per-IP daily bill-protection cap (active once SYNC_KV is bound; otherwise a no-op).
+  if (await overDailyIpCap(env, request.headers.get("CF-Connecting-IP") || "")) {
+    return new Response(JSON.stringify({ error: "rate_limited", retryable: false }), { status: 429, headers });
   }
 
   const apiKey = env.ANTHROPIC_API_KEY;
