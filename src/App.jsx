@@ -529,6 +529,167 @@ const StepTimer=({seconds,onDone,label,resume,pause,done,ac,acTx,sc,fs,BP})=>{
   </div>);
 };
 
+// ---------------------------------------------------------------------------
+// AILVIEFace — an original, lightweight animated SVG face for the voice chat.
+// Not a photoreal human: a warm, stylised "humanoid" assistant whose mouth moves
+// while speaking, whose eyes blink, and whose expression follows the state
+// (idle / listening / thinking / speaking). Fully hand-drawn SVG, no external assets,
+// so it is copyright-clean and cheap to render.
+//
+// state: "idle" | "listening" | "thinking" | "speaking"
+// Defined OUTSIDE the app component so it is not remounted on every app render.
+// ---------------------------------------------------------------------------
+const AILVIEFace=({state="idle",dark=true})=>{
+  const [mouth,setMouth]=React.useState(0);   // 0..1 mouth openness
+  const [blink,setBlink]=React.useState(false);
+  const rafRef=React.useRef(0);
+
+  // Mouth animation: while speaking, oscillate openness with a little randomness so it
+  // reads as speech rather than a metronome. Otherwise settle closed (idle/thinking) or
+  // a soft open (listening).
+  React.useEffect(()=>{
+    let t0=performance.now();
+    const tick=(now)=>{
+      const dt=(now-t0)/1000;
+      if(state==="speaking"){
+        // layered sine waves + noise = mouth that looks like it is forming words
+        const base=0.5+0.5*Math.sin(dt*11)*Math.sin(dt*4.3);
+        const jitter=0.15*Math.sin(dt*23.7);
+        setMouth(Math.max(0.08,Math.min(1,Math.abs(base)+jitter)));
+      }else if(state==="listening"){
+        setMouth(0.12+0.05*Math.sin(dt*3));   // barely parted, attentive
+      }else{
+        setMouth(m=>m>0.02?m*0.8:0);           // ease closed
+      }
+      rafRef.current=requestAnimationFrame(tick);
+    };
+    rafRef.current=requestAnimationFrame(tick);
+    return ()=>cancelAnimationFrame(rafRef.current);
+  },[state]);
+
+  // Blink on a natural, slightly random cadence.
+  React.useEffect(()=>{
+    let alive=true;
+    const loop=()=>{
+      if(!alive)return;
+      setBlink(true);
+      setTimeout(()=>{if(alive)setBlink(false);},120);
+      setTimeout(loop, 2200+Math.random()*3200);
+    };
+    const id=setTimeout(loop, 1500+Math.random()*2000);
+    return ()=>{alive=false;clearTimeout(id);};
+  },[]);
+
+  // Palette
+  const skin="#f5c9a6", skinShade="#e6b48f", hair="#f0c840", hairShade="#d9a72c";
+  const coat="#ffffff", coatShade="#e6ebf0";
+  const accent="#00b4d8", lip="#c96a6a";
+  const eyeWhite="#ffffff", iris="#0077b6", pupil="#08324a";
+
+  // Eye openness (blink), mouth path
+  const eyeH=blink?1.2:8;
+  // Mouth: an ellipse whose vertical radius grows with openness; teeth hint when open.
+  const mo=mouth;                                // 0..1
+  const mryOpen=2+mo*10;                          // vertical radius
+  const mrx=13-mo*2;                              // narrows a touch when open
+  const smiling=(state==="idle"||state==="listening");
+  const mouthCY=150;
+
+  // Subtle head bob while speaking
+  const bob=state==="speaking"?Math.sin(performance.now()/220)*1.3:0;
+
+  // Expression eyebrows
+  const browY=state==="thinking"?58:62;
+  const browTilt=state==="thinking"?6:(state==="speaking"?-2:0);
+
+  const ringColor=state==="listening"?accent:(state==="speaking"?"#34c3a3":(state==="thinking"?"#e9a23b":accent));
+
+  return (
+    <svg viewBox="0 0 200 210" width="100%" height="100%" style={{display:"block"}} aria-hidden="true">
+      <defs>
+        <radialGradient id="halo" cx="50%" cy="42%" r="55%">
+          <stop offset="0%" stopColor={ringColor} stopOpacity={state==="idle"?0.10:0.24}/>
+          <stop offset="100%" stopColor={ringColor} stopOpacity="0"/>
+        </radialGradient>
+        <linearGradient id="hairG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={hair}/><stop offset="100%" stopColor={hairShade}/>
+        </linearGradient>
+        <linearGradient id="coatG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={coat}/><stop offset="100%" stopColor={coatShade}/>
+        </linearGradient>
+      </defs>
+
+      {/* soft reactive halo */}
+      <ellipse cx="100" cy="92" rx="96" ry="98" fill="url(#halo)"/>
+
+      <g transform={`translate(0 ${bob})`}>
+        {/* shoulders / lab coat */}
+        <path d="M40 210 Q40 168 72 158 L128 158 Q160 168 160 210 Z" fill="url(#coatG)" stroke={coatShade} strokeWidth="1"/>
+        {/* stethoscope hint */}
+        <path d="M84 160 q-14 22 2 40" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" opacity="0.85"/>
+        <circle cx="88" cy="202" r="5" fill={accent} opacity="0.9"/>
+        {/* collar */}
+        <path d="M84 158 L100 176 L116 158 Z" fill={coat} stroke={coatShade} strokeWidth="1"/>
+
+        {/* hair back */}
+        <path d="M52 96 Q48 44 100 40 Q152 44 148 96 Q150 132 132 150 L128 120 Q130 78 100 74 Q70 78 72 120 L68 150 Q50 132 52 96 Z" fill="url(#hairG)"/>
+
+        {/* neck */}
+        <path d="M88 138 h24 v20 q-12 8 -24 0 Z" fill={skinShade}/>
+
+        {/* face */}
+        <ellipse cx="100" cy="100" rx="42" ry="48" fill={skin}/>
+        <ellipse cx="100" cy="100" rx="42" ry="48" fill="none" stroke={skinShade} strokeWidth="0.6"/>
+
+        {/* subtle "humanoid" cheek panels (the robot hint) */}
+        <path d="M63 104 q-4 10 4 20" fill="none" stroke={accent} strokeWidth="1.4" opacity="0.45"/>
+        <path d="M137 104 q4 10 -4 20" fill="none" stroke={accent} strokeWidth="1.4" opacity="0.45"/>
+        <circle cx="61" cy="100" r="2.4" fill={accent} opacity="0.6"/>
+        <circle cx="139" cy="100" r="2.4" fill={accent} opacity="0.6"/>
+
+        {/* hair front / fringe */}
+        <path d="M58 92 Q56 50 100 48 Q144 50 142 92 Q120 66 100 66 Q80 66 58 92 Z" fill="url(#hairG)"/>
+
+        {/* eyebrows */}
+        <g stroke={hairShade} strokeWidth="3" strokeLinecap="round">
+          <line x1="74" y1={browY+browTilt} x2="92" y2={browY-1}/>
+          <line x1="108" y1={browY-1} x2="126" y2={browY+browTilt}/>
+        </g>
+
+        {/* eyes */}
+        <g>
+          <ellipse cx="83" cy="96" rx="10" ry={eyeH} fill={eyeWhite}/>
+          <ellipse cx="117" cy="96" rx="10" ry={eyeH} fill={eyeWhite}/>
+          {!blink&&<>
+            <circle cx="83" cy="96" r="5" fill={iris}/>
+            <circle cx="117" cy="96" r="5" fill={iris}/>
+            <circle cx="83" cy="96" r="2.3" fill={pupil}/>
+            <circle cx="117" cy="96" r="2.3" fill={pupil}/>
+            <circle cx="85" cy="94" r="1.2" fill="#fff"/>
+            <circle cx="119" cy="94" r="1.2" fill="#fff"/>
+          </>}
+          {/* lids */}
+          <path d="M73 96 q10 -9 20 0" fill="none" stroke={skinShade} strokeWidth="1"/>
+          <path d="M107 96 q10 -9 20 0" fill="none" stroke={skinShade} strokeWidth="1"/>
+        </g>
+
+        {/* nose */}
+        <path d="M100 104 q-3 10 0 14 q3 2 5 0" fill="none" stroke={skinShade} strokeWidth="1.4" strokeLinecap="round"/>
+
+        {/* mouth: smiles when idle/listening, animates open while speaking */}
+        {smiling
+          ? <path d={`M84 ${mouthCY} q16 ${10+mo*6} 32 0`} fill="none" stroke={lip} strokeWidth="3" strokeLinecap="round"/>
+          : <g>
+              <ellipse cx="100" cy={mouthCY} rx={mrx} ry={mryOpen} fill="#7a2e33"/>
+              {mo>0.35&&<rect x={100-mrx+2} y={mouthCY-mryOpen} width={(mrx-2)*2} height={Math.min(3.2,mo*4)} rx="1.4" fill="#fff"/>}
+              <path d={`M${100-mrx} ${mouthCY} q${mrx} ${1+mo*2} ${mrx*2} 0`} fill="none" stroke={lip} strokeWidth="2.4" strokeLinecap="round"/>
+            </g>}
+      </g>
+    </svg>
+  );
+};
+
+
 export default function AILVIE_App(){
 const[lang,setLang]=useState(function(){try{var s=localStorage.getItem("ailvie_lang");if(s)return s;}catch(e){}var b=(navigator.language||"tr").split("-")[0].toLowerCase();return["tr","en","de","ru","zh","hi","nl","es","ar"].indexOf(b)>=0?b:"en";});
 const[dark,setDark]=useState(()=>{try{const v=localStorage.getItem("ailvie_theme");return v?v==="dark":true;}catch(e){return true;}});
@@ -539,7 +700,13 @@ useEffect(()=>{try{document.documentElement.lang=lang;document.documentElement.d
 const[page,setPage]=useState("home");
 const[pageHist,setPageHist]=useState(["home"]);
 const[histIdx,setHistIdx]=useState(0);
-const goTo=(p)=>{const nh=[...pageHist.slice(0,histIdx+1),p];setPageHist(nh);setHistIdx(nh.length-1);setPage(p);if(voiceFirstRef.current){try{haptic(12);const m={home:t.home,meds:t.meds,appts:t.appts,health:t.health,notes:t.notes,contacts:t.contacts,community:t.community,chat:t.chat,admin:t.adminCh,settings:t.settings,pCard:t.pCard};const lbl=m[p]||p;if(lbl)speak(lbl,lang);}catch(e){}}};
+const goTo=(p)=>{const nh=[...pageHist.slice(0,histIdx+1),p];setPageHist(nh);setHistIdx(nh.length-1);setPage(p);
+  // Tapping "AILVIE Sohbet" starts the voice conversation immediately (this runs inside the
+  // tap handler, so autoplay is allowed). Leaving chat stops it. If the user turns voice off
+  // by hand they can tap the mic to resume.
+  if(p==="chat"){ if(!voiceActiveRef.current) setTimeout(()=>startVoiceMode(true),150); }
+  else { if(voiceActiveRef.current) stopVoiceMode(); }
+  if(voiceFirstRef.current){try{haptic(12);const m={home:t.home,meds:t.meds,appts:t.appts,health:t.health,notes:t.notes,contacts:t.contacts,community:t.community,chat:t.chat,admin:t.adminCh,settings:t.settings,pCard:t.pCard};const lbl=m[p]||p;if(lbl&&p!=="chat")speak(lbl,lang);}catch(e){}}};
 const goBack=()=>{if(histIdx>0){setHistIdx(histIdx-1);setPage(pageHist[histIdx-1]);}};
 const[trIn,setTrIn]=useState("");
 const[trOut,setTrOut]=useState(null);
@@ -627,6 +794,8 @@ useEffect(()=>{try{localStorage.setItem("ailvie_zoom",String(zoom));}catch{}},[z
 const[zoomPos,setZoomPos]=useState(()=>{try{const p=JSON.parse(localStorage.getItem("ailvie_zoompos"));if(p&&typeof p.top==="number"&&typeof p.right==="number")return p;}catch{}return{top:64,right:10};});
 const zoomDrag=useRef({active:false,moved:false,startX:0,startY:0,startTop:0,startRight:0});
 const[voiceActive,setVoiceActive]=useState(false);
+const[chatThinking,setChatThinking]=useState(false);   // AI is composing a reply (drives the face)
+const faceState=isSpeak?"speaking":(isListen?"listening":(chatThinking?"thinking":"idle"));
 const voiceActiveRef=useRef(false); // always-current value for callbacks (avoids stale closure)
 useEffect(()=>{voiceActiveRef.current=voiceActive;},[voiceActive]);
 const isSpeakRef=useRef(false); // always-current isSpeak for voice loop
@@ -2701,6 +2870,21 @@ const readData=(kind)=>{
   try{speak(txt,lang);}catch(e){}
   haptic(12);
 };
+const startVoiceMode=(greet=true)=>{
+  setVoiceActive(true);voiceActiveRef.current=true;
+  if(page!=="chat")goTo("chat");
+  if(!greet){setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current)startVoice((txt)=>{sendChat(txt);},true);},300);return;}
+  const greetings={tr:"Merhaba, ben AILVIE. Sizi dinliyorum.",en:"Hello, I'm AILVIE. I'm listening.",de:"Hallo, ich bin AILVIE. Ich höre zu.",ru:"Здравствуйте, я AILVIE. Я вас слушаю.",zh:"你好，我是 AILVIE。我在听。",hi:"नमस्ते, मैं AILVIE हूँ। मैं सुन रही हूँ।",nl:"Hallo, ik ben AILVIE. Ik luister.",es:"Hola, soy AILVIE. Te escucho.",ar:"مرحبا، أنا AILVIE. أنا أستمع إليك."};
+  const greeting=greetings[lang]||greetings.en;
+  speak(greeting,lang,()=>{setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current)startVoice((txt)=>{sendChat(txt);},true);},400);});
+};
+const stopVoiceMode=()=>{
+  setVoiceActive(false);voiceActiveRef.current=false;
+  try{speechSynthesis.cancel();}catch(e){}
+  try{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}}catch(e){}
+  if(recRef.current)try{recRef.current.onend=null;recRef.current.onerror=null;recRef.current.abort();}catch(e){}
+  recRef.current=null;setIsListen(false);setIsSpeak(false);setChatThinking(false);
+};
 const sendChat=async(text)=>{
   const q=text||chatIn;if(!q.trim())return;
   // Offline guard — clear message + retry, without consuming a daily message
@@ -2716,7 +2900,7 @@ const sendChat=async(text)=>{
   if(!isPRO&&!hasBYOK){
     const today=new Date().toDateString();
     let usage={};
-    try{usage=JSON.parse(localStorage.getItem("ailvie_ai_usage")||"{}");}catch(e){usage={};}
+    setChatThinking(true);try{usage=JSON.parse(localStorage.getItem("ailvie_ai_usage")||"{}");}catch(e){usage={};}
     const todayCount=usage.date===today?(usage.count||0):0;
     const DAILY_LIMIT=3;
     if(todayCount>=DAILY_LIMIT){
@@ -2819,6 +3003,7 @@ SESLİ KOMUTLAR / GEZİNME (kullanıcı özellikle bir yere gitmek/okumak isters
     if(navM){const norm={home:"home",meds:"meds",appts:"appts",health:"health",notes:"notes",contacts:"contacts",community:"community",chat:"chat",settings:"settings",pcard:"pCard",admin:"admin"}[navM[1].toLowerCase()];if(norm)setTimeout(()=>goTo(norm),400);}
     if(wantsFA)setTimeout(()=>{setFaOpen(null);setShowFirstAid(true);},400);
     if(readM)setTimeout(()=>readData(readM[1].toLowerCase()),500);
+    setChatThinking(false);
     if(voiceActiveRef.current){
       // Speak the reply; when speech truly ends, resume listening (no fragile polling)
       speak(reply,null,()=>{
@@ -2828,6 +3013,7 @@ SESLİ KOMUTLAR / GEZİNME (kullanıcı özellikle bir yere gitmek/okumak isters
       });
     }
   }catch(e){
+    setChatThinking(false);
     const noKey=e.message==="NO_KEY";
     const isAIError=e.message?.startsWith("AI_ERROR:");
     let errorText;
@@ -5509,6 +5695,35 @@ const renderCommunity=()=>{const me=pat.name||"Ben";const q=fold(commSearch.trim
 
 const q1Dynamic=pat.name?`${pat.name.split(" ")[0]}, ${t.q1.toLowerCase()} ${lang==="tr"?"Umarım iyisindir 💙":"Hope you are well 💙"}`:t.q1;
 const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,flex:"1 1 0",minHeight:0,height:0,position:"relative"}}>
+  {voiceActive&&(()=>{
+    const label=isSpeak?(lang==="tr"?"konuşuyor…":"speaking…"):isListen?(lang==="tr"?"dinliyor…":"listening…"):chatThinking?(lang==="tr"?"düşünüyor…":"thinking…"):(lang==="tr"?"hazır":"ready");
+    const ringC=isListen?ac:isSpeak?"#34c3a3":chatThinking?"#e9a23b":ac;
+    return <div style={{flexShrink:0,position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+      height:"42vh",minHeight:230,borderRadius:20,marginBottom:4,overflow:"hidden",
+      background:dark?"radial-gradient(120% 90% at 50% 22%, #17324a 0%, #0d1a26 70%)":"radial-gradient(120% 90% at 50% 22%, #d9f1fb 0%, #eef6fb 72%)",
+      border:`1px solid ${bd}`}}>
+      {/* close voice mode */}
+      <button onClick={()=>stopVoiceMode()} aria-label={lang==="tr"?"Sesli sohbeti kapat":"Close voice chat"}
+        style={{position:"absolute",top:8,right:10,zIndex:2,background:"rgba(0,0,0,.28)",color:"#fff",border:"none",borderRadius:"50%",width:30,height:30,fontSize:16,cursor:"pointer",lineHeight:1}}>✕</button>
+      {/* animated pulse ring behind the face while active */}
+      <div style={{position:"absolute",width:220,height:220,borderRadius:"50%",border:`2px solid ${ringC}`,opacity:0.35,
+        animation:(isSpeak||isListen)?"aiPulse 1.8s ease-out infinite":"none"}}/>
+      <div style={{width:"min(58vw,200px)",height:"min(58vw,200px)",filter:`drop-shadow(0 6px 18px ${ringC}55)`}}>
+        <AILVIEFace state={faceState} dark={dark}/>
+      </div>
+      <div style={{marginTop:2,display:"flex",alignItems:"center",gap:8}}>
+        <span style={{fontWeight:800,fontSize:fs+2,color:"#e8a817",letterSpacing:0.5,WebkitTextStroke:dark?"0.4px #00000055":"0"}}>AILVIE</span>
+        <span style={{fontSize:fs-2,color:mt}}>· {label}</span>
+      </div>
+      {/* mic / stop control */}
+      <button onClick={()=>{ if(isListen){ if(recRef.current){try{recRef.current.onend=null;recRef.current.abort();}catch(e){} recRef.current=null;setIsListen(false);} } else if(!isSpeak){ startVoice((txt)=>sendChat(txt),true); } }}
+        aria-label={isListen?(lang==="tr"?"Dinlemeyi durdur":"Stop listening"):(lang==="tr"?"Konuş":"Speak")}
+        style={{marginTop:8,display:"flex",alignItems:"center",gap:8,background:isListen?`${dg}`:BP.background,color:"#fff",border:"none",borderRadius:22,padding:"9px 18px",fontSize:fs,cursor:"pointer",boxShadow:`0 4px 14px ${ringC}44`}}>
+        <span style={{fontSize:18}}>{isListen?"⏹️":"🎤"}</span>
+        <span>{isListen?(lang==="tr"?"Durdur":"Stop"):isSpeak?(lang==="tr"?"…":"…"):(lang==="tr"?"Konuş":"Speak")}</span>
+      </button>
+    </div>;
+  })()}
   {chatM.length>2&&<div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}><input value={chatSearch} onChange={e=>setChatSearch(e.target.value)} placeholder={lang==="tr"?"🔍 Sohbette ara…":"🔍 Search chat…"} style={{...IS,flex:1,padding:"6px 10px",fontSize:fs-2}}/>{chatSearch&&<button onClick={()=>setChatSearch("")} aria-label="clear" style={{background:"none",border:"none",color:mt,cursor:"pointer",fontSize:15}}>✕</button>}</div>}
   <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0,alignItems:"center"}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}<button onClick={()=>sendChat(lang==="tr"?"Nabzımı ölçmek istiyorum":"I want to measure my pulse")} style={{...pill(false),whiteSpace:"nowrap"}}>❤️ {lang==="tr"?"Nabzımı ölç":"Measure pulse"}</button>{chatM.length>0&&<button onClick={()=>{if(confirm(lang==="tr"?"Tüm sohbet geçmişi silinsin mi?":"Clear all chat history?"))setChatM([]);}} style={{...pill(false),marginLeft:"auto",flexShrink:0,color:dg,borderColor:dg+"44",whiteSpace:"nowrap"}}>🗑️ {lang==="tr"?"Temizle":"Clear"}</button>}</div>
   {(()=>{
@@ -6230,23 +6445,7 @@ return (
             <button onClick={goBack} aria-label="Geri" style={{background:histIdx>0?"rgba(232,168,23,0.18)":"rgba(120,120,120,0.10)",border:histIdx>0?"1.5px solid rgba(232,168,23,0.55)":"1px solid rgba(120,120,120,0.25)",borderRadius:"50%",padding:5,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",filter:"drop-shadow(0 2px 5px rgba(0,0,0,0.55))"}}>
               <svg width="30" height="30" viewBox="4.2 -3.3 23.8 23.8" fill="none" stroke={histIdx>0?"#ffc94d":"#9c7e2c"} strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><g transform="rotate(-55 15 15)"><path d="M19.1 4.8 A 11 11 0 0 1 19.1 25.2"/><path d="M16.3 3.3 L19.1 4.8"/><path d="M19.0 10.8 L16.3 3.3 L24.1 1.4"/></g></svg>
             </button>
-            <button onClick={()=>{const newState=!voiceActive;setVoiceActive(newState);voiceActiveRef.current=newState;
-            if(newState){
-              if(page!=="chat")goTo("chat");
-              // Speak greeting; when it truly ends (Azure OR browser), start listening
-              const greetings={tr:"Sesli diyalog başladı. Konuşabilirsiniz.",en:"Voice dialog started. You can speak.",de:"Sprachdialog gestartet. Sie können sprechen.",ru:"Голосовой диалог начат. Можете говорить.",zh:"语音对话已开始。您可以说话了。",hi:"वॉइस डायलॉग शुरू हुआ। आप बोल सकते हैं।",nl:"Spraakdialoog gestart. U kunt spreken.",es:"Diálogo de voz iniciado. Puede hablar.",ar:"بدأ الحوار الصوتي. يمكنك التحدث."};
-              const greeting=greetings[lang]||greetings.en;
-              speak(greeting,lang,()=>{
-                // Greeting finished → start listening (small delay so mic doesn't catch tail)
-                setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current)startVoice((txt)=>{sendChat(txt);},true);},400);
-              });
-            }else{
-              try{speechSynthesis.cancel();}catch(e){}
-              try{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}}catch(e){}
-              if(recRef.current)try{recRef.current.onend=null;recRef.current.onerror=null;recRef.current.abort();}catch(e){}
-              recRef.current=null;
-              setIsListen(false);setIsSpeak(false);
-            }}} aria-label={t.voiceOn} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:27,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:1,filter:"drop-shadow(0 1px 3px rgba(0,0,0,0.55))"}}>🎙️</button>
+            <button onClick={()=>{if(voiceActive)stopVoiceMode();else startVoiceMode(true);}} aria-label={t.voiceOn} style={{background:"none",border:"none",color:voiceActive?"#e8a817":"#e8a817",fontSize:27,cursor:"pointer",padding:0,animation:voiceActive?"micPulse 2s infinite":"none",opacity:1,filter:"drop-shadow(0 1px 3px rgba(0,0,0,0.55))"}}>🎙️</button>
             <button onClick={()=>setShowNotif(!showNotif)} aria-label={t.notif} style={{background:"none",border:"none",color:"#fff",fontSize:25,cursor:"pointer",padding:0,position:"relative"}}>🔔{unread>0&&<span style={{position:"absolute",top:-4,right:-6,width:16,height:16,borderRadius:"50%",background:dg,color:"#fff",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>{unread}</span>}</button>
           </div>
         </div>
@@ -6424,6 +6623,7 @@ return (
       @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
       @keyframes slideD{from{transform:translateX(-50%) translateY(-10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
       @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(230,57,70,.5)}50%{box-shadow:0 0 0 10px rgba(230,57,70,0)}}
+      @keyframes aiPulse{0%{transform:scale(0.85);opacity:.5}100%{transform:scale(1.25);opacity:0}}
       @keyframes slideRight{from{transform:translateX(-100%)}to{transform:translateX(0)}}
       @keyframes fadeIn{from{opacity:0}to{opacity:1}}
       @keyframes globeSpin{0%{transform:rotateY(0deg)}100%{transform:rotateY(360deg)}}
