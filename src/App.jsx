@@ -540,152 +540,43 @@ const StepTimer=({seconds,onDone,label,resume,pause,done,ac,acTx,sc,fs,BP})=>{
 // Defined OUTSIDE the app component so it is not remounted on every app render.
 // ---------------------------------------------------------------------------
 const AILVIEFace=({state="idle",dark=true})=>{
-  const [mouth,setMouth]=React.useState(0);   // 0..1 mouth openness
-  const [blink,setBlink]=React.useState(false);
-  const rafRef=React.useRef(0);
-
-  // Mouth animation: while speaking, oscillate openness with a little randomness so it
-  // reads as speech rather than a metronome. Otherwise settle closed (idle/thinking) or
-  // a soft open (listening).
+  // Use the REAL AILVIE portrait (not a cartoon). A photo cannot lip-sync, so instead we make
+  // the image feel alive the way real voice assistants do: a reactive glow ring, a gentle
+  // breathing scale, and a speaking waveform. Expression is conveyed by the ring + waveform,
+  // not by moving the mouth.
+  const speaking=state==="speaking", listening=state==="listening", thinking=state==="thinking";
+  const ring=listening?"#00b4d8":speaking?"#34c3a3":thinking?"#e9a23b":"#00b4d8";
+  const [bars,setBars]=React.useState([6,10,7,12,8]);
+  const raf=React.useRef(0);
   React.useEffect(()=>{
+    if(!speaking&&!listening){setBars([5,5,5,5,5]);return;}
     let t0=performance.now();
     const tick=(now)=>{
-      const dt=(now-t0)/1000;
-      if(state==="speaking"){
-        // layered sine waves + noise = mouth that looks like it is forming words
-        const base=0.5+0.5*Math.sin(dt*11)*Math.sin(dt*4.3);
-        const jitter=0.15*Math.sin(dt*23.7);
-        setMouth(Math.max(0.08,Math.min(1,Math.abs(base)+jitter)));
-      }else if(state==="listening"){
-        setMouth(0.12+0.05*Math.sin(dt*3));   // barely parted, attentive
-      }else{
-        setMouth(m=>m>0.02?m*0.8:0);           // ease closed
-      }
-      rafRef.current=requestAnimationFrame(tick);
+      const d=(now-t0)/1000;
+      const amp=speaking?1:0.4;
+      setBars([0,1,2,3,4].map(k=>6+Math.abs(Math.sin(d*(6+k*1.7)+k))*18*amp));
+      raf.current=requestAnimationFrame(tick);
     };
-    rafRef.current=requestAnimationFrame(tick);
-    return ()=>cancelAnimationFrame(rafRef.current);
-  },[state]);
-
-  // Blink on a natural, slightly random cadence.
-  React.useEffect(()=>{
-    let alive=true;
-    const loop=()=>{
-      if(!alive)return;
-      setBlink(true);
-      setTimeout(()=>{if(alive)setBlink(false);},120);
-      setTimeout(loop, 2200+Math.random()*3200);
-    };
-    const id=setTimeout(loop, 1500+Math.random()*2000);
-    return ()=>{alive=false;clearTimeout(id);};
-  },[]);
-
-  // Palette
-  const skin="#f5c9a6", skinShade="#e6b48f", hair="#f0c840", hairShade="#d9a72c";
-  const coat="#ffffff", coatShade="#e6ebf0";
-  const accent="#00b4d8", lip="#c96a6a";
-  const eyeWhite="#ffffff", iris="#0077b6", pupil="#08324a";
-
-  // Eye openness (blink), mouth path
-  const eyeH=blink?1.2:8;
-  // Mouth: an ellipse whose vertical radius grows with openness; teeth hint when open.
-  const mo=mouth;                                // 0..1
-  const mryOpen=2+mo*10;                          // vertical radius
-  const mrx=13-mo*2;                              // narrows a touch when open
-  const smiling=(state==="idle"||state==="listening");
-  const mouthCY=150;
-
-  // Subtle head bob while speaking
-  const bob=state==="speaking"?Math.sin(performance.now()/220)*1.3:0;
-
-  // Expression eyebrows
-  const browY=state==="thinking"?58:62;
-  const browTilt=state==="thinking"?6:(state==="speaking"?-2:0);
-
-  const ringColor=state==="listening"?accent:(state==="speaking"?"#34c3a3":(state==="thinking"?"#e9a23b":accent));
-
+    raf.current=requestAnimationFrame(tick);
+    return ()=>cancelAnimationFrame(raf.current);
+  },[speaking,listening]);
   return (
-    <svg viewBox="0 0 200 210" width="100%" height="100%" style={{display:"block"}} aria-hidden="true">
-      <defs>
-        <radialGradient id="halo" cx="50%" cy="42%" r="55%">
-          <stop offset="0%" stopColor={ringColor} stopOpacity={state==="idle"?0.10:0.24}/>
-          <stop offset="100%" stopColor={ringColor} stopOpacity="0"/>
-        </radialGradient>
-        <linearGradient id="hairG" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={hair}/><stop offset="100%" stopColor={hairShade}/>
-        </linearGradient>
-        <linearGradient id="coatG" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={coat}/><stop offset="100%" stopColor={coatShade}/>
-        </linearGradient>
-      </defs>
-
-      {/* soft reactive halo */}
-      <ellipse cx="100" cy="92" rx="96" ry="98" fill="url(#halo)"/>
-
-      <g transform={`translate(0 ${bob})`}>
-        {/* shoulders / lab coat */}
-        <path d="M40 210 Q40 168 72 158 L128 158 Q160 168 160 210 Z" fill="url(#coatG)" stroke={coatShade} strokeWidth="1"/>
-        {/* stethoscope hint */}
-        <path d="M84 160 q-14 22 2 40" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" opacity="0.85"/>
-        <circle cx="88" cy="202" r="5" fill={accent} opacity="0.9"/>
-        {/* collar */}
-        <path d="M84 158 L100 176 L116 158 Z" fill={coat} stroke={coatShade} strokeWidth="1"/>
-
-        {/* hair back */}
-        <path d="M52 96 Q48 44 100 40 Q152 44 148 96 Q150 132 132 150 L128 120 Q130 78 100 74 Q70 78 72 120 L68 150 Q50 132 52 96 Z" fill="url(#hairG)"/>
-
-        {/* neck */}
-        <path d="M88 138 h24 v20 q-12 8 -24 0 Z" fill={skinShade}/>
-
-        {/* face */}
-        <ellipse cx="100" cy="100" rx="42" ry="48" fill={skin}/>
-        <ellipse cx="100" cy="100" rx="42" ry="48" fill="none" stroke={skinShade} strokeWidth="0.6"/>
-
-        {/* subtle "humanoid" cheek panels (the robot hint) */}
-        <path d="M63 104 q-4 10 4 20" fill="none" stroke={accent} strokeWidth="1.4" opacity="0.45"/>
-        <path d="M137 104 q4 10 -4 20" fill="none" stroke={accent} strokeWidth="1.4" opacity="0.45"/>
-        <circle cx="61" cy="100" r="2.4" fill={accent} opacity="0.6"/>
-        <circle cx="139" cy="100" r="2.4" fill={accent} opacity="0.6"/>
-
-        {/* hair front / fringe */}
-        <path d="M58 92 Q56 50 100 48 Q144 50 142 92 Q120 66 100 66 Q80 66 58 92 Z" fill="url(#hairG)"/>
-
-        {/* eyebrows */}
-        <g stroke={hairShade} strokeWidth="3" strokeLinecap="round">
-          <line x1="74" y1={browY+browTilt} x2="92" y2={browY-1}/>
-          <line x1="108" y1={browY-1} x2="126" y2={browY+browTilt}/>
-        </g>
-
-        {/* eyes */}
-        <g>
-          <ellipse cx="83" cy="96" rx="10" ry={eyeH} fill={eyeWhite}/>
-          <ellipse cx="117" cy="96" rx="10" ry={eyeH} fill={eyeWhite}/>
-          {!blink&&<>
-            <circle cx="83" cy="96" r="5" fill={iris}/>
-            <circle cx="117" cy="96" r="5" fill={iris}/>
-            <circle cx="83" cy="96" r="2.3" fill={pupil}/>
-            <circle cx="117" cy="96" r="2.3" fill={pupil}/>
-            <circle cx="85" cy="94" r="1.2" fill="#fff"/>
-            <circle cx="119" cy="94" r="1.2" fill="#fff"/>
-          </>}
-          {/* lids */}
-          <path d="M73 96 q10 -9 20 0" fill="none" stroke={skinShade} strokeWidth="1"/>
-          <path d="M107 96 q10 -9 20 0" fill="none" stroke={skinShade} strokeWidth="1"/>
-        </g>
-
-        {/* nose */}
-        <path d="M100 104 q-3 10 0 14 q3 2 5 0" fill="none" stroke={skinShade} strokeWidth="1.4" strokeLinecap="round"/>
-
-        {/* mouth: smiles when idle/listening, animates open while speaking */}
-        {smiling
-          ? <path d={`M84 ${mouthCY} q16 ${10+mo*6} 32 0`} fill="none" stroke={lip} strokeWidth="3" strokeLinecap="round"/>
-          : <g>
-              <ellipse cx="100" cy={mouthCY} rx={mrx} ry={mryOpen} fill="#7a2e33"/>
-              {mo>0.35&&<rect x={100-mrx+2} y={mouthCY-mryOpen} width={(mrx-2)*2} height={Math.min(3.2,mo*4)} rx="1.4" fill="#fff"/>}
-              <path d={`M${100-mrx} ${mouthCY} q${mrx} ${1+mo*2} ${mrx*2} 0`} fill="none" stroke={lip} strokeWidth="2.4" strokeLinecap="round"/>
-            </g>}
-      </g>
-    </svg>
+    <div style={{position:"relative",width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+      {/* glow ring */}
+      <div style={{position:"absolute",top:"6%",width:"78%",aspectRatio:"1",borderRadius:"50%",
+        border:`3px solid ${ring}`,opacity:(speaking||listening)?0.9:0.4,
+        boxShadow:`0 0 26px ${ring}77, inset 0 0 24px ${ring}44`,
+        animation:(speaking||listening)?"aiPulse 1.8s ease-out infinite":(thinking?"aiSpin 3.2s linear infinite":"none")}}/>
+      {/* the real AILVIE image, gently breathing */}
+      <img src="/avatar2-256.webp" alt="AILVIE" width="129" height="152"
+        style={{width:"auto",height:"70%",maxWidth:"82%",objectFit:"contain",borderRadius:16,position:"relative",zIndex:1,
+          filter:`drop-shadow(0 8px 22px ${ring}66)`,
+          animation:speaking?"aiTalk 0.9s ease-in-out infinite":"aiBreathe 3.6s ease-in-out infinite"}}/>
+      {/* speaking waveform */}
+      <div style={{display:"flex",alignItems:"flex-end",gap:4,height:26,marginTop:6,zIndex:1,opacity:(speaking||listening)?1:0.25}}>
+        {bars.map((h,k)=><span key={k} style={{width:5,height:h,borderRadius:3,background:ring,transition:"height .08s linear"}}/>)}
+      </div>
+    </div>
   );
 };
 
@@ -6451,8 +6342,9 @@ return (
         </div>
 
 
-        {/* ZOOM CONTROLS — transparent, draggable (user can move anywhere) */}
-        <div
+        {/* ZOOM CONTROLS — transparent, draggable (user can move anywhere).
+            Hidden during the voice chat so they don't overlap the AILVIE face panel. */}
+        {!(voiceActive&&page==="chat")&&<div
           style={{position:"absolute",top:zoomPos.top,right:zoomPos.right,zIndex:90,display:"flex",flexDirection:"column",gap:8,alignItems:"center",touchAction:"none"}}
           onTouchStart={(e)=>{const t=e.touches[0];zoomDrag.current={active:true,moved:false,startX:t.clientX,startY:t.clientY,startTop:zoomPos.top,startRight:zoomPos.right};}}
           onTouchMove={(e)=>{if(!zoomDrag.current.active)return;const t=e.touches[0];const dx=t.clientX-zoomDrag.current.startX;const dy=t.clientY-zoomDrag.current.startY;if(Math.abs(dx)>3||Math.abs(dy)>3)zoomDrag.current.moved=true;const newTop=Math.max(48,Math.min(window.innerHeight-180,zoomDrag.current.startTop+dy));const newRight=Math.max(4,Math.min(window.innerWidth-50,zoomDrag.current.startRight-dx));setZoomPos({top:newTop,right:newRight});}}
@@ -6461,7 +6353,7 @@ return (
           <div title={lang==="tr"?"Taşımak için basılı tutup sürükle":"Hold & drag to move"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:acTx,fontSize:23,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Yakınlaştır":"Zoom in"} onClick={()=>{if(!zoomDrag.current.moved)setZoom(z=>Math.min(Math.round((z+0.1)*10)/10,1.5));}}>+</div>
           <div title={lang==="tr"?"Taşımak için basılı tutup sürükle":"Hold & drag to move"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:acTx,fontSize:26,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Uzaklaştır":"Zoom out"} onClick={()=>{if(!zoomDrag.current.moved)setZoom(z=>Math.max(Math.round((z-0.1)*10)/10,1));}}>−</div>
           {zoom!==1&&<div title={lang==="tr"?"Sıfırla":"Reset"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:acTx,fontSize:13,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Sıfırla":"Reset zoom"} onClick={()=>{if(!zoomDrag.current.moved)setZoom(1);}}>{zoom.toFixed(1)}x</div>}
-        </div>
+        </div>}
 
         {/* LEFT SIDE MENU — compact */}
         {showMenu&&<>
@@ -6624,6 +6516,9 @@ return (
       @keyframes slideD{from{transform:translateX(-50%) translateY(-10px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
       @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(230,57,70,.5)}50%{box-shadow:0 0 0 10px rgba(230,57,70,0)}}
       @keyframes aiPulse{0%{transform:scale(0.85);opacity:.5}100%{transform:scale(1.25);opacity:0}}
+      @keyframes aiBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+      @keyframes aiTalk{0%,100%{transform:scale(1) translateY(0)}50%{transform:scale(1.02) translateY(-2px)}}
+      @keyframes aiSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
       @keyframes slideRight{from{transform:translateX(-100%)}to{transform:translateX(0)}}
       @keyframes fadeIn{from{opacity:0}to{opacity:1}}
       @keyframes globeSpin{0%{transform:rotateY(0deg)}100%{transform:rotateY(360deg)}}
