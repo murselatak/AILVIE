@@ -73,38 +73,85 @@ function resolveVoice(lang) {
   return VOICE_MAP["en-US"];
 }
 
+// ---- Abuse shield + per-IP bill-protection cap (mirrors chat.js) -------------------------
+const PRIMARY_ORIGIN = "https://ailvie.com";
+const BASE_ORIGINS = ["https://ailvie.com", "https://www.ailvie.com", "https://ailvie.pages.dev"];
+function allowedList(env) {
+  const extra = (env && env.ALLOWED_ORIGINS ? String(env.ALLOWED_ORIGINS).split(",").map((s) => s.trim()).filter(Boolean) : []);
+  return BASE_ORIGINS.concat(extra);
+}
+function isAllowedOrigin(origin, env) {
+  if (!origin) return false;
+  if (allowedList(env).includes(origin)) return true;
+  try {
+    const h = new URL(origin).hostname;
+    if (h.endsWith(".ailvie.pages.dev")) return true;
+    if (h === "localhost" || h === "127.0.0.1") return true;
+  } catch (e) {}
+  return false;
+}
+function corsHeadersFor(origin, env) {
+  const allow = isAllowedOrigin(origin, env) ? origin : PRIMARY_ORIGIN;
+  return {
+    "Access-Control-Allow-Origin": allow,
+    "Vary": "Origin",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, X-AILVIE-Client",
+    "Content-Type": "application/json",
+  };
+}
+function requestFromApp(request, env) {
+  const origin = request.headers.get("Origin");
+  if (origin) return isAllowedOrigin(origin, env);
+  const referer = request.headers.get("Referer");
+  if (referer) { try { return isAllowedOrigin(new URL(referer).origin, env); } catch (e) { return false; } }
+  return request.headers.get("X-AILVIE-Client") === "web";
+}
+// TTS is billed per character → its own per-IP daily ceiling (separate counter from chat's).
+// No-op until SYNC_KV is bound.
+async function overDailyIpCap(env, ip) {
+  const kv = env.SYNC_KV;
+  if (!kv || !ip) return false;
+  const cap = parseInt(env.TTS_RATE_LIMIT_PER_DAY || "400", 10);
+  const key = `rlt:${new Date().toISOString().slice(0, 10)}:${ip}`;
+  let n = 0;
+  try { const v = await kv.get(key); n = v ? parseInt(v, 10) : 0; }
+  catch (e) { return false; }
+  if (n >= cap) return true;
+  try { await kv.put(key, String(n + 1), { expirationTtl: 172800 }); } catch (e) {}
+  return false;
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
+  const headers = corsHeadersFor(request.headers.get("Origin"), env);
+  const audioHeaders = { ...headers, "Content-Type": "audio/mpeg", "Cache-Control": "no-store" };
+  const json = (obj, status) => new Response(JSON.stringify(obj), { status, headers });
+
+  // Abuse shield — only the AILVIE app may use this endpoint.
+  if (!requestFromApp(request, env)) return json({ error: "forbidden" }, 403);
+
   const key = env.AZURE_SPEECH_KEY;
   const region = env.AZURE_SPEECH_REGION;
+  // If Azure not configured, tell client to fall back to browser TTS.
+  if (!key || !region) return json({ error: "tts_not_configured" }, 503);
 
-  // If Azure not configured, tell client to fall back to browser TTS
-  if (!key || !region) {
-    return new Response(JSON.stringify({ error: "tts_not_configured" }), {
-      status: 503,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
-    });
+  // Per-IP daily bill-protection cap (active once SYNC_KV is bound; otherwise a no-op).
+  if (await overDailyIpCap(env, request.headers.get("CF-Connecting-IP") || "")) {
+    return json({ error: "rate_limited", retryable: false }, 429);
   }
 
   try {
     const body = await request.json();
     const text = (body.text || "").toString().slice(0, 3000); // cap length
     const lang = body.lang || "en-US";
-
-    if (!text.trim()) {
-      return new Response(JSON.stringify({ error: "empty_text" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
-      });
-    }
+    if (!text.trim()) return json({ error: "empty_text" }, 400);
 
     const voice = resolveVoice(lang);
     const locale = voice.split("-").slice(0, 2).join("-");
 
-    // AILVIE's character: warm & caring, like a reassuring nurse.
-    // Azure emotional styles (mstts:express-as) are only supported by SOME voices; requesting an
-    // unsupported style makes Azure reject the whole request. Keep an allow-list and fall back to
-    // plain prosody otherwise. Callers may pass an explicit style (e.g. an alarm wants a firmer tone).
+    // AILVIE's character: warm & caring. Azure express-as styles work on SOME voices only;
+    // requesting an unsupported style makes Azure reject the whole request, so keep an allow-list.
     const WARM_STYLE = {
       "en-US-JennyNeural": "friendly",
       "en-US-AriaNeural": "empathetic",
@@ -122,9 +169,8 @@ export async function onRequestPost(context) {
     const reqStyle = (body.style || "").toString().trim();
     const style = reqStyle || WARM_STYLE[voice] || null;
 
-    // A touch slower and softer than default so it feels caring, not clipped.
-    // Warmer, calmer delivery. Turkish (Emel) has no emotional style, so we lean a little more on
-    // prosody there to keep it soft rather than clipped.
+    // A touch slower/softer so it feels caring. Turkish (Emel) has no express-as style, so lean
+    // a little more on prosody there to keep it soft rather than clipped.
     const isTurkish = locale === "tr-TR";
     const rate = isTurkish ? "-8%" : "-5%";
     const pitch = isTurkish ? "+1%" : "+2%";
@@ -149,27 +195,17 @@ export async function onRequestPost(context) {
 
     if (!azureRes.ok) {
       const errText = await azureRes.text().catch(() => "");
-      return new Response(JSON.stringify({ error: "azure_error", status: azureRes.status, detail: errText.slice(0, 200) }), {
-        status: 502,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
-      });
+      return json({ error: "azure_error", status: azureRes.status, detail: errText.slice(0, 200) }, 502);
     }
 
-    // Stream the MP3 audio back to the client
     const audio = await azureRes.arrayBuffer();
-    return new Response(audio, {
-      status: 200,
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Cache-Control": "no-store",
-        "Access-Control-Allow-Origin": "*",
-      }
-    });
+    return new Response(audio, { status: 200, headers: audioHeaders });
   } catch (e) {
-    return new Response(JSON.stringify({ error: "proxy_exception", message: e.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
-    });
+    return json({ error: "proxy_exception", message: e.message }, 500);
   }
+}
+
+export async function onRequestOptions(context) {
+  return new Response(null, { headers: corsHeadersFor(context.request.headers.get("Origin"), context.env) });
 }
 // azure tts redeploy 1782416903

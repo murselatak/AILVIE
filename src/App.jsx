@@ -2033,7 +2033,7 @@ const speakAlarm=(text)=>{
   const azureLang=LC[lang]||"en-US";
   // Try Azure first, fall back to browser TTS
   fetch("/api/tts",{
-    method:"POST",headers:{"Content-Type":"application/json"},
+    method:"POST",headers:{"Content-Type":"application/json","X-AILVIE-Client":"web"},
     body:JSON.stringify({text,lang:azureLang})
   }).then(res=>{
     if(res.ok&&res.headers.get("Content-Type")?.includes("audio"))return res.blob();
@@ -3054,7 +3054,7 @@ const startSpeech=(text,overrideLang,onEnd)=>{
   // 1) Try Azure Neural TTS (high-quality female voice, every language/device)
   fetch("/api/tts",{
     method:"POST",
-    headers:{"Content-Type":"application/json"},
+    headers:{"Content-Type":"application/json","X-AILVIE-Client":"web"},
     body:JSON.stringify({text,lang:azureLang})
   }).then(res=>{
     if(res.ok&&res.headers.get("Content-Type")?.includes("audio")){
