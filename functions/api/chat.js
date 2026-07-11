@@ -34,18 +34,22 @@ function corsHeadersFor(origin, env) {
     "Access-Control-Allow-Origin": allow,
     "Vary": "Origin",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, X-AILVIE-Client",
     "Content-Type": "application/json",
   };
 }
 // Is this request coming from the AILVIE app? Real browser calls carry a same-origin Origin
-// (present on POST) or a Referer. We accept if either matches; reject foreign/header-less.
+// (present on POST). We block anything with a foreign Origin (cross-site abuse). When BOTH
+// Origin and Referer are absent — which a cross-site request can never be, since browsers
+// always send Origin on cross-origin POST — we accept only if the request carries our client
+// marker, so anonymous scripts/curl are still turned away without false-blocking a legit,
+// privacy-hardened same-origin client that stripped its Referer.
 function requestFromApp(request, env) {
   const origin = request.headers.get("Origin");
-  if (origin && isAllowedOrigin(origin, env)) return true;
+  if (origin) return isAllowedOrigin(origin, env);
   const referer = request.headers.get("Referer");
-  if (referer) { try { return isAllowedOrigin(new URL(referer).origin, env); } catch (e) {} }
-  return false;
+  if (referer) { try { return isAllowedOrigin(new URL(referer).origin, env); } catch (e) { return false; } }
+  return request.headers.get("X-AILVIE-Client") === "web";
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

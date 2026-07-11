@@ -115,7 +115,7 @@ async function callAI(body,apiKey){
   for(let attempt=0;attempt<3;attempt++){
     if(attempt>0)await _sleep(Math.min(3000,500*Math.pow(2,attempt-1))+Math.random()*200);
     try{
-      const pr=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      const pr=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json","X-AILVIE-Client":"web"},body:JSON.stringify(body)});
       const d=await pr.json().catch(()=>null);
       if(pr.ok&&d&&d.content)return d;                       // success
       lastStatus=pr.status;
