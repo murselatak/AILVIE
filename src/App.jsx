@@ -4426,8 +4426,8 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div style={{fontWeight:700,fontSize:fs+1,color:pat.birthDate?tc:mt}}>{pat.birthDate?`${pat.birthDate} (${patAge} ${t.age})`:<span onClick={()=>goTo("pCard")} style={{cursor:"pointer",color:acTx}}>{t.tap}</span>}</div>
     </div>
   </div>
-  <HField icon="📏" label={t.ht} field="height" unit={t.cm}/>
-  <HField icon="⚖️" label={t.wt} field="weight" unit={t.kg}/>
+  {HField({icon:"📏",label:t.ht,field:"height",unit:t.cm})}
+  {HField({icon:"⚖️",label:t.wt,field:"weight",unit:t.kg})}
   {bmi>0&&<div style={CS}>
     <div style={{display:"flex",justifyContent:"space-between"}}>
       <span style={{fontWeight:700,fontSize:fs+1}}>BMI</span>
