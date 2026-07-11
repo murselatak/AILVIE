@@ -32,8 +32,38 @@ async function sha256b64(str) {
 
 const validId = (id) => typeof id === "string" && /^[A-Za-z0-9]{16,64}$/.test(id);
 
+// Same-origin abuse shield (mirrors chat.js/tts.js): only the AILVIE app may reach this
+// endpoint. This is defense-in-depth on top of the per-record authToken + on-device encryption —
+// it also stops anonymous bots from probing random syncIds and burning KV read quota.
+const SYNC_ORIGINS = ["https://ailvie.com", "https://www.ailvie.com", "https://ailvie.pages.dev"];
+function okOrigin(o, env) {
+  if (!o) return false;
+  const list = SYNC_ORIGINS.concat((env && env.ALLOWED_ORIGINS ? String(env.ALLOWED_ORIGINS).split(",") : []).map((s) => s.trim()).filter(Boolean));
+  if (list.includes(o)) return true;
+  try { const h = new URL(o).hostname; if (h.endsWith(".ailvie.pages.dev") || h === "localhost" || h === "127.0.0.1") return true; } catch (e) {}
+  return false;
+}
+function fromApp(request, env) {
+  const o = request.headers.get("Origin");
+  if (o) return okOrigin(o, env);
+  const r = request.headers.get("Referer");
+  if (r) { try { return okOrigin(new URL(r).origin, env); } catch (e) { return false; } }
+  return request.headers.get("X-AILVIE-Client") === "web";
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
+
+  if (request.method === "OPTIONS") {
+    const o = request.headers.get("Origin");
+    return new Response(null, { headers: {
+      "Access-Control-Allow-Origin": okOrigin(o, env) ? o : "https://ailvie.com",
+      "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, X-AILVIE-Client",
+      "Vary": "Origin",
+    } });
+  }
+  if (!fromApp(request, env)) return json({ error: "forbidden" }, 403);
 
   if (!env.SYNC_KV) {
     return json({ error: "sync-not-configured", detail: "KV binding SYNC_KV is missing" }, 501);

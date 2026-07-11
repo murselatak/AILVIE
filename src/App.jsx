@@ -803,7 +803,7 @@ const syncPush=async(force)=>{
   try{
     const payload=await collectSyncPayload();
     const blob=await syncEncrypt(payload,syncKeysRef.current.encKey);
-    const r=await fetch("/api/sync",{method:"POST",headers:{"Content-Type":"application/json"},
+    const r=await fetch("/api/sync",{method:"POST",headers:{"Content-Type":"application/json","X-AILVIE-Client":"web"},
       body:JSON.stringify({id:syncCfg.syncId,authToken:syncKeysRef.current.authTok,blob,baseUpdatedAt:force?undefined:(syncCfg.updatedAt||0)})});
     if(r.status===409){
       const j=await r.json();
@@ -827,7 +827,7 @@ const syncPull=async()=>{
   if(!syncCfg||!syncKeysRef.current){setSyncMsg(L?"Senkron kilidi açık değil — parolayı girin.":"Unlock sync first.");return;}
   setSyncBusy(true);setSyncMsg("");
   try{
-    const r=await fetch("/api/sync?id="+encodeURIComponent(syncCfg.syncId));
+    const r=await fetch("/api/sync?id="+encodeURIComponent(syncCfg.syncId),{headers:{"X-AILVIE-Client":"web"}});
     if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||("HTTP "+r.status));}
     const j=await r.json();
     if(!j.found){setSyncMsg(L?"Sunucuda henüz veri yok. Önce 'Yükle' deyin.":"No server copy yet.");return;}
