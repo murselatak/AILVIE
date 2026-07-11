@@ -1,17 +1,52 @@
 // Cloudflare Pages Function — Anthropic API Proxy (production-hardened)
 // API key is stored as env variable ANTHROPIC_API_KEY in Cloudflare Pages settings.
 //
-// Why this file is defensive: users on mobile networks hit transient failures constantly
-// (rate limits, brief overloads, dropped connections). Without retries every one of those
-// becomes a visible error. So we retry transient failures here, server-side, with backoff —
-// the user never sees them. Only genuinely permanent errors are surfaced.
+// Layers, in order of importance:
+//  1) Abuse shield  — only requests coming from the AILVIE app are served. Header-less
+//     (curl/scripts) and foreign-origin requests get 403. This keeps random traffic from
+//     the public endpoint off your Anthropic bill. (Real per-user quotas still need auth+KV.)
+//  2) Prompt caching — the large system prompt is marked cacheable, so multi-turn
+//     conversations and repeated prompts read it from cache: cheaper input + lower latency.
+//  3) Resilience    — transient upstream failures (429/5xx/overload/timeouts) are retried
+//     server-side with backoff+jitter so the user never sees a flake.
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Content-Type": "application/json",
-};
+// Origins allowed to use this endpoint. Add more via env ALLOWED_ORIGINS (comma-separated).
+const PRIMARY_ORIGIN = "https://ailvie.com";
+const BASE_ORIGINS = ["https://ailvie.com", "https://www.ailvie.com", "https://ailvie.pages.dev"];
+
+function allowedList(env) {
+  const extra = (env && env.ALLOWED_ORIGINS ? String(env.ALLOWED_ORIGINS).split(",").map((s) => s.trim()).filter(Boolean) : []);
+  return BASE_ORIGINS.concat(extra);
+}
+function isAllowedOrigin(origin, env) {
+  if (!origin) return false;
+  if (allowedList(env).includes(origin)) return true;
+  try {
+    const h = new URL(origin).hostname;
+    if (h.endsWith(".ailvie.pages.dev")) return true; // Cloudflare preview deploys
+    if (h === "localhost" || h === "127.0.0.1") return true; // local dev
+  } catch (e) {}
+  return false;
+}
+function corsHeadersFor(origin, env) {
+  const allow = isAllowedOrigin(origin, env) ? origin : PRIMARY_ORIGIN;
+  return {
+    "Access-Control-Allow-Origin": allow,
+    "Vary": "Origin",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Content-Type": "application/json",
+  };
+}
+// Is this request coming from the AILVIE app? Real browser calls carry a same-origin Origin
+// (present on POST) or a Referer. We accept if either matches; reject foreign/header-less.
+function requestFromApp(request, env) {
+  const origin = request.headers.get("Origin");
+  if (origin && isAllowedOrigin(origin, env)) return true;
+  const referer = request.headers.get("Referer");
+  if (referer) { try { return isAllowedOrigin(new URL(referer).origin, env); } catch (e) {} }
+  return false;
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -62,22 +97,38 @@ async function callAnthropic(apiKey, payload) {
   return { ok: false, status: lastErr?.status || 503, data: { error: { message: lastErr?.message || "upstream_unavailable" } } };
 }
 
+// Attach prompt caching to a large system prompt. A short prompt (below the cacheable
+// minimum) is passed through untouched — caching it would do nothing and only add noise.
+function withCaching(system) {
+  if (!system) return undefined;
+  if (typeof system === "string") {
+    if (system.length > 3000) {
+      return [{ type: "text", text: system, cache_control: { type: "ephemeral" } }];
+    }
+    return system;
+  }
+  return system; // already structured blocks (client may have set its own cache breakpoints)
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
+  const headers = corsHeadersFor(request.headers.get("Origin"), env);
+
+  // (1) Abuse shield — reject anything not coming from the AILVIE app.
+  if (!requestFromApp(request, env)) {
+    return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers });
+  }
 
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: "server_not_configured" }),
-      { status: 503, headers: corsHeaders }
-    );
+    return new Response(JSON.stringify({ error: "server_not_configured" }), { status: 503, headers });
   }
 
   let body;
   try {
     body = await request.json();
   } catch (e) {
-    return new Response(JSON.stringify({ error: "bad_request" }), { status: 400, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: "bad_request" }), { status: 400, headers });
   }
 
   const ALLOWED_MODELS = ["claude-sonnet-4-6", "claude-haiku-4-5-20251001", "claude-opus-4-8"];
@@ -88,12 +139,15 @@ export async function onRequestPost(context) {
     max_tokens: Math.min(body.max_tokens || 1000, 4000),
     messages: body.messages || [],
   };
-  if (body.system) payload.system = body.system;
+  // (2) Prompt caching on the system prompt.
+  const sys = withCaching(body.system);
+  if (sys) payload.system = sys;
 
+  // (3) Resilient upstream call (retries handled inside).
   const result = await callAnthropic(apiKey, payload);
 
   if (result.ok) {
-    return new Response(JSON.stringify(result.data), { status: 200, headers: corsHeaders });
+    return new Response(JSON.stringify(result.data), { status: 200, headers });
   }
 
   // Map upstream failures to a stable, client-friendly shape. `retryable` tells the client
@@ -105,10 +159,11 @@ export async function onRequestPost(context) {
       status: result.status,
       retryable,
     }),
-    { status: result.status === 429 ? 429 : retryable ? 503 : (result.status || 502), headers: corsHeaders }
+    { status: result.status === 429 ? 429 : retryable ? 503 : (result.status || 502), headers }
   );
 }
 
-export async function onRequestOptions() {
-  return new Response(null, { headers: corsHeaders });
+export async function onRequestOptions(context) {
+  const { request, env } = context;
+  return new Response(null, { headers: corsHeadersFor(request.headers.get("Origin"), env) });
 }
