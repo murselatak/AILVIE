@@ -2761,13 +2761,30 @@ const readData=(kind)=>{
   try{speak(txt,lang);}catch(e){}
   haptic(12);
 };
+// Check the mic permission WITHOUT triggering a prompt. Returns "granted" | "denied" | "prompt"
+// | "unknown". If already granted we go straight into the dialog with no interruption; the browser
+// only shows its own permission dialog the first time (that is the OS/browser, not us).
+const micPermission=async()=>{
+  try{
+    if(navigator.permissions&&navigator.permissions.query){
+      const st=await navigator.permissions.query({name:"microphone"});
+      return st.state; // granted / denied / prompt
+    }
+  }catch(e){}
+  return "unknown";
+};
 const startVoiceMode=(greet=true)=>{
-  setVoiceActive(true);voiceActiveRef.current=true;
+  voiceActiveRef.current=true;setVoiceActive(true);   // set the flag FIRST so goTo won't re-trigger us
   if(page!=="chat")goTo("chat");
-  if(!greet){setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current)startVoice((txt)=>{sendChat(txt);},true);},300);return;}
+  // AILVIE speaks IMMEDIATELY (no waiting, no extra prompts). The mic only opens AFTER she has
+  // finished the greeting, so she never hears her own voice — that was the "interrupting sound".
+  // If the user previously DENIED the mic, don't start a silent dead dialog — say so once.
+  micPermission().then(st=>{ if(st==="denied"&&voiceActiveRef.current){ notify("🎤 "+(lang==="tr"?"Mikrofon izni kapalı. Adres çubuğundaki kilit simgesinden açabilirsiniz.":"Microphone is blocked. Enable it from the lock icon in the address bar.")); } });
+  const beginListening=()=>{setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current&&!isSpeakRef.current)startVoice((txt)=>{sendChat(txt);},true);},250);};
+  if(!greet){beginListening();return;}
   const greetings={tr:"Merhaba, ben AILVIE. Sizi dinliyorum.",en:"Hello, I'm AILVIE. I'm listening.",de:"Hallo, ich bin AILVIE. Ich höre zu.",ru:"Здравствуйте, я AILVIE. Я вас слушаю.",zh:"你好，我是 AILVIE。我在听。",hi:"नमस्ते, मैं AILVIE हूँ। मैं सुन रही हूँ।",nl:"Hallo, ik ben AILVIE. Ik luister.",es:"Hola, soy AILVIE. Te escucho.",ar:"مرحبا، أنا AILVIE. أنا أستمع إليك."};
   const greeting=greetings[lang]||greetings.en;
-  speak(greeting,lang,()=>{setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current)startVoice((txt)=>{sendChat(txt);},true);},400);});
+  speak(greeting,lang,beginListening);
 };
 const stopVoiceMode=()=>{
   setVoiceActive(false);voiceActiveRef.current=false;
@@ -2896,10 +2913,12 @@ SESLİ KOMUTLAR / GEZİNME (kullanıcı özellikle bir yere gitmek/okumak isters
     if(readM)setTimeout(()=>readData(readM[1].toLowerCase()),500);
     setChatThinking(false);
     if(voiceActiveRef.current){
-      // Speak the reply; when speech truly ends, resume listening (no fragile polling)
+      // Make sure the mic is fully closed while AILVIE speaks, otherwise she hears herself and
+      // the dialog "interrupts itself". Resume listening only AFTER speech truly ends.
+      if(recRef.current){try{recRef.current.onend=null;recRef.current.onerror=null;recRef.current.abort();}catch(e){}recRef.current=null;setIsListen(false);}
       speak(reply,null,()=>{
         if(voiceActiveRef.current){
-          setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current)startVoice((t2)=>sendChat(t2),true);},500);
+          setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current&&!isSpeakRef.current)startVoice((t2)=>sendChat(t2),true);},350);
         }
       });
     }
@@ -3159,7 +3178,7 @@ const startVoice=(cb,continuous=false)=>{
     r.continuous=continuous;r.interimResults=continuous;r.maxAlternatives=1;
     let gotResult=false;
     let finalText="";
-    r.onstart=()=>{setIsListen(true);notify("🎤 "+(lang==="tr"?"Dinliyorum, konuşun...":"Listening, speak now..."));};
+    r.onstart=()=>{setIsListen(true);};   // no toast/vibration: the face panel already shows "dinliyor…"
     r.onresult=(e)=>{
       gotResult=true;
       if(continuous){
@@ -3180,10 +3199,12 @@ const startVoice=(cb,continuous=false)=>{
     r.onerror=(e)=>{
       setIsListen(false);recRef.current=null;
       if(e.error==="not-allowed"||e.error==="service-not-allowed"){
-        notify("🎤 "+(lang==="tr"?"Mikrofon izni gerekli! Tarayıcı ayarlarından izin verin.":"Microphone permission required! Allow in browser settings."));
+        // Permission denied — stop the dialog and tell the user once (this is the ONE place we ask).
+        voiceActiveRef.current=false;setVoiceActive(false);
+        notify("🎤 "+(lang==="tr"?"Mikrofon izni gerekli. Tarayıcı adres çubuğundaki kilit simgesinden izin verin.":"Microphone permission needed. Allow it from the lock icon in the address bar."));
       }else if(e.error==="no-speech"){
-        if(continuous&&voiceActiveRef.current){setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current)startVoice(cb,true);},500);}
-        else notify("🎤 "+(lang==="tr"?"Ses algılanmadı, tekrar deneyin.":"No speech detected, try again."));
+        // In a live dialog just quietly resume listening; don't nag with a toast.
+        if(continuous&&voiceActiveRef.current){setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current&&!isSpeakRef.current)startVoice(cb,true);},400);}
       }else if(e.error==="network"){
         notify("⚠️ "+(lang==="tr"?"Ses tanıma ağ hatası. İnternet bağlantınızı kontrol edin.":"Voice recognition network error. Check your connection."));
       }else if(e.error==="aborted"){
