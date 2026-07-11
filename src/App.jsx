@@ -2759,7 +2759,7 @@ const sendChat=async(text)=>{
     {const wp=[];if(wellness.water>0)wp.push(`su ${wellness.water}/${wellness.waterGoal} bardak`);if(wellness.mood>0){const ml={1:"çok kötü",2:"kötü",3:"normal",4:"iyi",5:"harika"};wp.push(`bugünkü ruh hali: ${ml[wellness.mood]}`);}if(wellness.exercise>0)wp.push(`egzersiz ${wellness.exercise} dk`);if(wp.length)cx.push(`BUGÜNKÜ İYİ-OLUŞ: ${wp.join(", ")}`);}
     const ctxStr=cx.length?`\n\nHASTA PROFİLİ:\n${cx.join("\n")}\n`:"Hasta henüz bilgi girmemiş. ";
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
-    const voiceNote=voiceActiveRef.current?"\n\nSESLİ MOD (şu an aktif): Kullanıcı seninle SESLİ konuşuyor ve yanıtın sesli okunacak. Yanıtın KISA, doğal ve konuşma dilinde olsun (genelde 1-3 cümle). Madde işareti, numaralı liste, başlık veya markdown KULLANMA; akıcı cümleler kur. En önemli bilgiyi önce söyle, ayrıntıya kullanıcı isterse gir.":"";
+    const voiceNote=voiceActiveRef.current?"\n\nSESLİ MOD (şu an aktif) — SES KARAKTERİN: Kullanıcı seninle SESLİ konuşuyor; yanıtın yüksek sesle okunacak, yani bir arkadaşınla telefonda konuşur gibi düşün.\n- Sıcak, şefkatli, sakin bir kadın sağlık asistanısın — güven veren, yumuşak bir ses tonu. Aceleci değil, yanındaymış gibi.\n- KISA konuş: genelde 1-3 cümle. Uzun anlatım sesli dinlemede yorar.\n- Konuşma dili kullan: kasılmış, resmî cümleler değil, insanların gerçekten konuştuğu gibi. Kısa cümleler, doğal bağlaçlar.\n- Madde işareti, numaralı liste, başlık, markdown, yıldız/emoji KULLANMA — bunlar sesli okununca saçma çıkar. Sadece akan cümleler.\n- Sayıları ve kısaltmaları sesli okunacak şekilde yaz: '20:00' yerine 'akşam sekizde', 'mg' yerine 'miligram', '2x1' yerine 'günde iki kez'.\n- Doğal duraklar için virgül ve nokta kullan; cümleyi nefes alınacak yerlerde böl.\n- Duygu kat ama abartma ve ASLA yalan/uydurma bilgi verme: sevindirici bir şey varsa içtenlikle sevin, zor bir durumda sesin şefkatli olsun. Doğruluktan asla ödün verme.\n- En önemli bilgiyi önce söyle; ayrıntıya kullanıcı isterse gir. Cevabın sonunu nazik bir kapanışla bağla ama her seferinde soru sorma.":"";
     const d=await callAI({model:"claude-sonnet-4-6",max_tokens:1000,system:`Sen AILVIE — güvenilir, sıcak ve şefkatli bir kadın sağlık asistanısın. Sadece ilaç ve sağlık takibi yapmazsın; insanların duygularını içtenlikle dinleyen, onları hayata bağlayan bir sohbet arkadaşısın.${ctxStr}
 KONUŞMA TARZI (çok önemli):
 - Doğrudan, net ve doğal konuş — bir insan gibi. ChatGPT gibi anlaşılır ve mantıklı ol.
@@ -2908,7 +2908,34 @@ const speak=(text,overrideLang,onEnd)=>{
   if(isSpeak){stopSpeech();return;}
   startSpeech(text,overrideLang,onEnd);
 };
+// Give the browser voice natural pauses. Neural TTS (Azure) does this itself via SSML, but the
+// device voice reads flatly, so we lengthen pauses after sentence punctuation. Purely cosmetic:
+// it never changes the words, so nothing incorrect is ever spoken.
+// Turn WRITTEN text into something that sounds natural when SPOKEN. Screen text is full of
+// things a person would never voice: markdown, bullets, emoji, URLs, "1)" list markers. Read
+// aloud verbatim they sound robotic ("asterisk asterisk"), so we strip/convert them and add
+// small breaths so AILVIE sounds like a calm, caring nurse rather than a screen reader.
+const humanizeForSpeech=(t)=>{
+  if(!t)return t;
+  let x=String(t);
+  x=x.replace(/https?:\/\/\S+/g," ");                 // don't read URLs aloud
+  x=x.replace(/[*_`#>~|]+/g," ");                       // markdown symbols
+  x=x.replace(/\p{Extended_Pictographic}/gu," ");      // emoji
+  // list markers, whether at line start or after a sentence: "- ", "• ", "1) ", "2. "
+  x=x.replace(/(^|[\n])[ \t]*[-•·][ \t]+/g,"$1");
+  x=x.replace(/(^|[\n])[ \t]*\d+[.)][ \t]+/g,"$1");
+  x=x.replace(/([.!?])[ \t]*\d+[.)][ \t]+/g,"$1 ");
+  x=x.replace(/\r?\n+/g,". ");                         // line breaks become sentence breaks
+  x=x.replace(/\.{2,}/g," … ");                         // ellipsis -> a pause
+  x=x.replace(/([.!?,])[ \t]*(?=[.!?,])/g,"");          // drop the first of stacked punctuation
+  x=x.replace(/\s*([.!?,])\s*/g,"$1 ");                // one space after punctuation
+  x=x.replace(/([.!?])\s/g,"$1  ");                     // extra breath after a sentence
+  x=x.replace(/(^|\s)[.,]+(?=\s|$)/g," ");             // orphan punctuation from stripping
+  x=x.replace(/\s{3,}/g,"  ").replace(/\s+([.,!?])/g,"$1");
+  return x.trim();
+};
 const startSpeech=(text,overrideLang,onEnd)=>{
+  text=humanizeForSpeech(text);
   if(!text){if(onEnd)onEnd();return;}
   try{speechSynthesis.cancel();}catch(e){}
   try{if(audioRef.current){audioRef.current.pause();audioRef.current=null;}}catch(e){}
@@ -2962,7 +2989,12 @@ const fallbackSpeak=(text,overrideLang,onEnd)=>{
     const isFemale=(n)=>FEM_PAT.test(n)&&!MALE_PAT.test(n);
     // Same prosody rule for the cached and the fresh path, otherwise the first sentence and
     // every later sentence would be spoken at a different pitch.
-    const prosody=(v)=>({pitch:isMale(v.name)?1.45:1.05,rate:0.95});
+    // Warm & caring delivery: a little slower and a touch higher = softer, reassuring (nurse-like).
+    // A male fallback voice is pushed higher so it still reads as AILVIE rather than switching character.
+    // AILVIE's spoken character: warm & caring. Slightly slower and a touch higher keeps it
+// gentle and reassuring rather than clipped/robotic. A male fallback voice is nudged up so it
+// still reads as AILVIE, but a same-language female voice is always preferred upstream.
+const prosody=(v)=>({pitch:isMale(v.name)?1.4:1.12,rate:isMale(v.name)?0.95:0.9});
     const cached=voiceCacheRef.current[base];
     if(cached&&voices.some(v=>v.voiceURI===cached.voiceURI)){
       const pr=prosody(cached);

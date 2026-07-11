@@ -99,14 +99,41 @@ export async function onRequestPost(context) {
     }
 
     const voice = resolveVoice(lang);
-    // Extract locale from voice name (e.g. "tr-TR-EmelNeural" -> "tr-TR")
     const locale = voice.split("-").slice(0, 2).join("-");
 
-    // Build SSML with a slightly warm, natural delivery
-    const ssml = `<speak version='1.0' xml:lang='${locale}'>` +
-      `<voice name='${voice}'>` +
-      `<prosody rate='0%' pitch='+2%'>${escapeXml(text)}</prosody>` +
-      `</voice></speak>`;
+    // AILVIE's character: warm & caring, like a reassuring nurse.
+    // Azure emotional styles (mstts:express-as) are only supported by SOME voices; requesting an
+    // unsupported style makes Azure reject the whole request. Keep an allow-list and fall back to
+    // plain prosody otherwise. Callers may pass an explicit style (e.g. an alarm wants a firmer tone).
+    const WARM_STYLE = {
+      "en-US-JennyNeural": "friendly",
+      "en-US-AriaNeural": "empathetic",
+      "en-US-SaraNeural": "gentle",
+      "es-ES-ElviraNeural": "friendly",
+      "es-MX-DaliaNeural": "friendly",
+      "fr-FR-DeniseNeural": "friendly",
+      "de-DE-KatjaNeural": "friendly",
+      "it-IT-ElsaNeural": "friendly",
+      "pt-BR-FranciscaNeural": "friendly",
+      "zh-CN-XiaoxiaoNeural": "gentle",
+      "ja-JP-NanamiNeural": "friendly",
+      "ko-KR-SunHiNeural": "friendly",
+    };
+    const reqStyle = (body.style || "").toString().trim();
+    const style = reqStyle || WARM_STYLE[voice] || null;
+
+    // A touch slower and softer than default so it feels caring, not clipped.
+    // Warmer, calmer delivery. Turkish (Emel) has no emotional style, so we lean a little more on
+    // prosody there to keep it soft rather than clipped.
+    const isTurkish = locale === "tr-TR";
+    const rate = isTurkish ? "-8%" : "-5%";
+    const pitch = isTurkish ? "+1%" : "+2%";
+    const inner = `<prosody rate='${rate}' pitch='${pitch}'>${escapeXml(text)}</prosody>`;
+    const styled = style
+      ? `<mstts:express-as style='${escapeXml(style)}' styledegree='1.4'>${inner}</mstts:express-as>`
+      : inner;
+    const ssml = `<speak version='1.0' xml:lang='${locale}' xmlns:mstts='https://www.w3.org/2001/mstts'>` +
+      `<voice name='${voice}'>${styled}</voice></speak>`;
 
     const endpoint = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
     const azureRes = await fetch(endpoint, {
