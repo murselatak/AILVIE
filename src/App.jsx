@@ -100,6 +100,27 @@ id:{tr:"Turki",en:"Inggris",de:"Jerman",ru:"Rusia",zh:"Tionghoa",hi:"Hindi",nl:"
 bn:{tr:"তুর্কি",en:"ইংরেজি",de:"জার্মান",ru:"রুশ",zh:"চীনা",hi:"হিন্দি",nl:"ডাচ",es:"স্প্যানিশ",ar:"আরবি",fr:"ফরাসি",pt:"পর্তুগিজ",id:"ইন্দোনেশীয়",bn:"বাংলা"}
 };
 const LL=LL_NATIVE;
+// ---------- HTML sanitizer for user-authored rich-text notes (XSS defense) ----------
+// Notes are stored as contentEditable innerHTML and re-rendered via dangerouslySetInnerHTML.
+// This strips anything that could execute script — from typed, pasted, imported or synced
+// content — while keeping normal formatting tags. querySelectorAll catches nested cases.
+const sanitizeHTML=(html)=>{try{
+  const doc=new DOMParser().parseFromString(String(html||""),"text/html");
+  doc.querySelectorAll("script,style,iframe,object,embed,link,meta,base,form,input,button,textarea,select,svg,math,frame,frameset,applet,noscript,template").forEach(e=>e.remove());
+  doc.querySelectorAll("*").forEach(el=>{
+    for(const at of [...el.attributes]){
+      const n=at.name.toLowerCase();
+      const v=(at.value||"").replace(/[\s\u0000-\u001f]+/g,"").toLowerCase();
+      if(n.startsWith("on")||n==="srcdoc"||n==="formaction") el.removeAttribute(at.name);
+      else if((n==="href"||n==="xlink:href")&&/^(javascript|vbscript|data):/.test(v)) el.removeAttribute(at.name);
+      else if(n==="src"&&/^(javascript|vbscript):/.test(v)) el.removeAttribute(at.name);
+      else if(n==="src"&&/^data:/.test(v)&&!/^data:image\//.test(v)) el.removeAttribute(at.name);
+      else if(n==="style"&&/(expression|javascript:|vbscript:|url\()/i.test(at.value)) el.removeAttribute(at.name);
+    }
+    if(el.tagName==="A"){el.setAttribute("rel","noopener noreferrer nofollow");el.setAttribute("target","_blank");}
+  });
+  return doc.body.innerHTML;
+}catch(e){return String(html||"").replace(/<[^>]+>/g,"");}};
 const LC={tr:"tr-TR",en:"en-US",de:"de-DE",ru:"ru-RU",zh:"zh-CN",hi:"hi-IN",nl:"nl-NL",es:"es-ES",ar:"ar-SA",fr:"fr-FR",pt:"pt-BR",id:"id-ID",bn:"bn-BD"};
 
 // Drug DB (60 drugs, TR+EN)
@@ -5433,7 +5454,7 @@ const renderNotes=()=>{
           {n.pinned&&<span style={{position:"absolute",top:6,right:8,fontSize:14}}>📌</span>}
           <div onClick={()=>{setEditNote(n.id);setNoteSheet(null);}} style={{cursor:"pointer",width:"100%",maxWidth:"100%",overflow:"hidden"}}>
             {n.title&&<div style={{fontWeight:700,marginBottom:4,color:dark?tc:"#1a1a1a",fontSize:fs+1,wordBreak:"break-word",overflowWrap:"anywhere"}}>{n.title}</div>}
-            {n.checklist?<div style={{display:"flex",flexDirection:"column",gap:2}}>{n.checklist.slice(0,8).map(it=><div key={it.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:fs,color:dark?mt:"#444"}}><span>{it.done?"☑️":"⬜"}</span><span style={{textDecoration:it.done?"line-through":"none",opacity:it.done?0.6:1,wordBreak:"break-word"}}>{it.text}</span></div>)}</div>:<div className="note-view" dangerouslySetInnerHTML={{__html:(n.content||"").trim()||(lang==="tr"?"Boş not":"Empty note")}} style={{fontSize:fs,color:dark?mt:"#444",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:180,overflow:"hidden"}}/>}
+            {n.checklist?<div style={{display:"flex",flexDirection:"column",gap:2}}>{n.checklist.slice(0,8).map(it=><div key={it.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:fs,color:dark?mt:"#444"}}><span>{it.done?"☑️":"⬜"}</span><span style={{textDecoration:it.done?"line-through":"none",opacity:it.done?0.6:1,wordBreak:"break-word"}}>{it.text}</span></div>)}</div>:<div className="note-view" dangerouslySetInnerHTML={{__html:sanitizeHTML((n.content||"").trim())||(lang==="tr"?"Boş not":"Empty note")}} style={{fontSize:fs,color:dark?mt:"#444",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:180,overflow:"hidden"}}/>}
             {(()=>{const pics=media.filter(m=>m.type!=="audio");const auds=media.length-pics.length;
               if(!media.length)return null;
               return <div style={{marginTop:n.title||n.content?8:0}}>
