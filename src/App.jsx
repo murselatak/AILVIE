@@ -4054,7 +4054,7 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🔒 {lang==="tr"?"Uygulama Kilidi":"App Lock"}</div>
     {!lockCfg
       ? <>
-        <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonunuz başkasının eline geçerse sağlık verileriniz görünmesin. PIN, cihazınızda şifrelenmiş özet (PBKDF2) olarak saklanır — düz metin tutulmaz.":"Protect your health data with a PIN. Stored as a PBKDF2 hash."}</div>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonunuz başkasının eline geçerse sağlık verileriniz göz önünde olmasın diye bir ekran kilidi ekler. Not: veriyi cihazda şifrelemez; PIN düz metin değil, PBKDF2 özeti olarak saklanır.":"Adds a screen lock so your health data isn't in plain view if your phone is taken. Note: it doesn't encrypt data on the device; the PIN is stored as a PBKDF2 hash, not plaintext."}</div>
         <button onClick={async()=>{
           const L=lang==="tr";
           const p1=window.prompt(L?"Yeni PIN (en az 4 rakam):":"New PIN (min 4 digits):","");
@@ -5903,7 +5903,7 @@ const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:render
           {lockErr&&<div style={{color:dg,fontSize:fs-2}}>{lockErr}</div>}
           <button onClick={tryUnlockPIN} disabled={pinIn.length<4} style={{...BP,width:"100%",maxWidth:260,padding:"11px",opacity:pinIn.length<4?0.5:1}}>{lang==="tr"?"Kilidi Aç":"Unlock"}</button>
           {lockCfg.credId&&<button onClick={tryUnlockBio} style={{...BP,width:"100%",maxWidth:260,padding:"11px",background:"transparent",color:acTx,border:`1px solid ${ac}`}}>🔐 {lang==="tr"?"Biyometrik ile aç":"Use biometrics"}</button>}
-          <div style={{color:mt,fontSize:fs-4,textAlign:"center",maxWidth:280,lineHeight:1.4,marginTop:6}}>{lang==="tr"?"PIN'inizi unuttuysanız verileri açmanın bir yolu yoktur; uygulamayı sıfırlayıp şifreli yedeğinizden geri yükleyin.":"If you forget the PIN, restore from your encrypted backup."}</div>
+          <div style={{color:mt,fontSize:fs-4,textAlign:"center",maxWidth:280,lineHeight:1.4,marginTop:6}}>{lang==="tr"?"PIN, sağlık verilerinizi bu cihazda göz önünden gizler (ekran kilidi) — tam şifreleme değildir. Daha güçlü koruma için cihazınızın kendi kilidini/şifrelemesini kullanın ve şifreli bir yedek saklayın.":"The PIN hides your health data on this device (a screen lock), not full encryption. For stronger protection, use your device's own lock/encryption and keep an encrypted backup."}</div>
         </div>
   </div>);
 
