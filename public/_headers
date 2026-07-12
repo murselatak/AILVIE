@@ -4,6 +4,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(self), microphone=(self), geolocation=(self)
   X-Robots-Tag: noindex, nofollow
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-1DbAj81RyxaT4hchLtM2mS2JB78SB2W6rc23SxGrM/8=' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: data:; connect-src 'self' https://api.anthropic.com https://api.mymemory.translated.net https://api.open-meteo.com https://get.geojs.io https://ipwho.is https://rxnav.nlm.nih.gov https://api.fda.gov https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firestore.googleapis.com; worker-src 'self'; manifest-src 'self'; frame-src https://*.firebaseapp.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
