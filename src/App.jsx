@@ -2263,18 +2263,43 @@ useEffect(()=>{
 const tryUnlockPIN=async()=>{
   if(!lockCfg)return;
   const ok=await verifyPIN(pinIn,lockCfg.pin);
-  if(ok){setLocked(false);setPinIn("");setLockErr("");setLockTries(0);lastActiveRef.current=Date.now();}
+  if(ok){
+    try{dataKeyRef.current=await deriveDataKey(pinIn);}catch(e){dataKeyRef.current=null;}
+    if(pendingEncRef.current!=null){
+      try{const payload=await unpackData(pendingEncRef.current);const d=JSON.parse(payload||"{}");latestPayloadRef.current=payload||"{}";applyLoadedData(d);pendingEncRef.current=null;dataLoadedRef.current=true;}
+      catch(e){setLockErr(lang==="tr"?"Veri çözülemedi":"Could not decrypt");setStorageWarn(lang==="tr"?"⚠️ Veriler çözülemedi. Kayıt durduruldu — verileriniz silinmedi.":"⚠️ Could not decrypt data. Saving paused; nothing deleted.");return;}
+    }
+    setLocked(false);setPinIn("");setLockErr("");setLockTries(0);lastActiveRef.current=Date.now();
+  }
   else{const n=lockTries+1;setLockTries(n);setPinIn("");setLockErr(lang==="tr"?`Yanlış PIN (${n})`:`Wrong PIN (${n})`);}
 };
 const tryUnlockBio=async()=>{
   if(!lockCfg||!lockCfg.credId)return;
-  try{const ok=await biometricVerify(lockCfg.credId);if(ok){setLocked(false);setLockErr("");setLockTries(0);lastActiveRef.current=Date.now();}}
+  try{const ok=await biometricVerify(lockCfg.credId);if(ok){
+    if(pendingEncRef.current!=null&&!dataKeyRef.current){setLockErr(lang==="tr"?"Şifreli veriyi açmak için PIN gerekli":"Enter PIN to unlock encrypted data");return;}
+    setLocked(false);setLockErr("");setLockTries(0);lastActiveRef.current=Date.now();}}
   catch(e){setLockErr(lang==="tr"?"Biyometrik doğrulama başarısız — PIN girin":"Biometric failed — enter PIN");}
 };
 
 const[persisted,setPersisted]=useState(false);
 const dataLoadedRef=useRef(false);
 const firstWriteRef=useRef(true);
+// ---------- At-rest encryption of the main data blob (active only when app-lock/PIN is ON) ----------
+// The PIN-derived AES key lives ONLY in memory (dataKeyRef) after unlock. Every read/write of
+// ailvie_data goes through unpackData/packData so the empty-write guard and revision backup stay
+// correct even when the on-disk blob is an encrypted envelope. packData returns plaintext when
+// there is no key (no lock), so behaviour is unchanged for users without a PIN.
+const dataKeyRef=useRef(null);
+const pendingEncRef=useRef(null);   // raw encrypted blob held when load is deferred until unlock
+const latestPayloadRef=useRef(null);// most recent PLAINTEXT payload (for safe re-save on PIN removal)
+const deriveDataKey=async(pin,cfg)=>{const c=cfg||lockCfg;if(!c||!c.pin||!c.pin.salt)return null;try{return await deriveKey(pin,b64d(c.pin.salt));}catch(e){return null;}};
+const packData=async(jsonStr)=>{const key=dataKeyRef.current;if(!key)return jsonStr;const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,enc.encode(jsonStr));return JSON.stringify({v:2,enc:1,iv:b64e(iv),ct:b64e(ct)});};
+const unpackData=async(raw)=>{if(raw==null)return null;let env;try{env=JSON.parse(raw);}catch(e){return raw;}if(!env||env.enc!==1)return raw;const key=dataKeyRef.current;if(!key){const er=new Error("locked");er.code="locked";throw er;}const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(env.iv)},key,b64d(env.ct));return dec.decode(pt);};
+const applyLoadedData=(d)=>{
+if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(Array.isArray(d.labs))setLabs(d.labs);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);
+if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
+};
 const[repMetric,setRepMetric]=useState("weight");
 const[repRange,setRepRange]=useState(30); // days; 0=all
 const[hba1cVal,setHba1cVal]=useState("");
@@ -2596,7 +2621,11 @@ useEffect(()=>{(async()=>{
   raw=r.value;
   if(raw==null){try{raw=localStorage.getItem("ailvie_data");if(raw)await idbSet("ailvie_data",raw);}catch(e){}} // one-time migration
   requestPersistentStorage().then(ok=>setPersisted(!!ok));
-  try{const d=JSON.parse(raw||"{}");
+  let payload;
+  try{payload=await unpackData(raw);}
+  catch(e){ if(e&&e.code==="locked"){pendingEncRef.current=raw;return;} setStorageWarn(lang==="tr"?"⚠️ Veriler çözülemedi. Güvenlik için kayıt durduruldu — verileriniz silinmedi.":"⚠️ Could not decrypt your data. Saving paused; nothing was deleted.");return; }
+  latestPayloadRef.current=payload||"{}";
+  try{const d=JSON.parse(payload||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
 if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(Array.isArray(d.labs))setLabs(d.labs);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
@@ -2616,7 +2645,9 @@ useEffect(()=>{if(!dataLoadedRef.current)return;const tm=setTimeout(()=>{const p
         const next=JSON.parse(payload);
         if(isEmpty(next)){
           const prevRaw=await idbGet("ailvie_data");
-          if(prevRaw&&!isEmpty(JSON.parse(prevRaw))){
+          let prevPayload=null,prevUnknown=false;
+          if(prevRaw){try{prevPayload=await unpackData(prevRaw);}catch(e){prevUnknown=true;}}
+          if(prevRaw&&(prevUnknown||(prevPayload&&!isEmpty(JSON.parse(prevPayload))))){
             setStorageWarn(lang==="tr"
               ?"⚠️ Beklenmeyen boş kayıt engellendi — verileriniz korundu."
               :"⚠️ Blocked an unexpected empty write; your data is intact.");
@@ -2626,14 +2657,18 @@ useEffect(()=>{if(!dataLoadedRef.current)return;const tm=setTimeout(()=>{const p
       }
     }catch(e){}
     firstWriteRef.current=false;
+    latestPayloadRef.current=payload;
     let idbOk=false;
+    let toStore;
+    try{toStore=await packData(payload);}
+    catch(e){ setStorageWarn(lang==="tr"?"⚠️ Şifreleme hatası — bu değişiklik henüz diske yazılmadı, tekrar denenecek.":"⚠️ Encryption error — change not written yet; will retry.");return; }
     try{
       // keep one previous revision so a bad write is recoverable
       const prev=await idbGet("ailvie_data");
-      if(prev&&prev!==payload)await idbSet("ailvie_data_prev",prev).catch(()=>{});
+      if(prev&&prev!==toStore)await idbSet("ailvie_data_prev",prev).catch(()=>{});
     }catch(e){}
-    try{await idbSet("ailvie_data",payload);idbOk=true;setStorageWarn(null);}catch(e){idbOk=false;}
-    try{localStorage.setItem("ailvie_data",payload);}catch(e){ if(!idbOk){ setStorageWarn(lang==="tr"?"⚠️ Cihaz depolaması dolu — yeni kayıtlar SAKLANAMIYOR. Ayarlar > Yedekle ile verilerinizi dışa aktarın.":"⚠️ Device storage full — new data is NOT being saved. Export a backup."); } }
+    try{await idbSet("ailvie_data",toStore);idbOk=true;setStorageWarn(null);}catch(e){idbOk=false;}
+    try{localStorage.setItem("ailvie_data",toStore);}catch(e){ if(!idbOk){ setStorageWarn(lang==="tr"?"⚠️ Cihaz depolaması dolu — yeni kayıtlar SAKLANAMIYOR. Ayarlar > Yedekle ile verilerinizi dışa aktarın.":"⚠️ Device storage full — new data is NOT being saved. Export a backup."); } }
     if(!idbOk){
       try{localStorage.getItem("ailvie_data");}catch(e){}
     }
@@ -4071,7 +4106,9 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
           const cfg={pin:rec,credId,graceSec:60,createdAt:Date.now()};
           try{localStorage.setItem("ailvie_lock",JSON.stringify(cfg));}catch(e){}
           setLockCfg(cfg);lastActiveRef.current=Date.now();
-          notify(L?"🔒 Uygulama kilidi etkin":"🔒 App lock enabled");
+          try{dataKeyRef.current=await deriveDataKey(p1,cfg);}catch(e){dataKeyRef.current=null;}
+          setPat(pp=>({...pp}));
+          notify(L?"🔒 Uygulama kilidi etkin — verileriniz artık cihazda şifreleniyor":"🔒 App lock enabled — your data is now encrypted on device");
         }} style={{...BP,width:"100%",padding:"9px"}}>🔒 {lang==="tr"?"PIN Belirle":"Set PIN"}</button>
       </>
       : <>
@@ -4088,8 +4125,9 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
             const p=window.prompt(L?"Kilidi kaldırmak için mevcut PIN:":"Enter current PIN to remove lock:","");
             if(p===null)return;
             if(!await verifyPIN(p,lockCfg.pin)){notify(L?"PIN yanlış":"Wrong PIN");return;}
+            try{dataKeyRef.current=null;const plain=latestPayloadRef.current;if(plain!=null){await idbSet("ailvie_data",plain).catch(()=>{});try{localStorage.setItem("ailvie_data",plain);}catch(e){}}}catch(e){}
             try{localStorage.removeItem("ailvie_lock");}catch(e){}
-            setLockCfg(null);setLocked(false);notify(L?"Kilit kaldırıldı":"Lock removed");
+            setLockCfg(null);setLocked(false);notify(L?"Kilit kaldırıldı — veriler artık şifresiz":"Lock removed — data no longer encrypted");
           }} style={{...BP,flex:1,padding:"8px",background:dgBg,color:"#fff",fontSize:fs-2}}>{lang==="tr"?"Kilidi Kaldır":"Remove lock"}</button>
         </div>
       </>}
