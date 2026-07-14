@@ -225,7 +225,6 @@ export const TLD = {
   "system default": {de:"Systemstandard",ru:"по умолчанию",zh:"系统默认",hi:"सिस्टम डिफ़ॉल्ट",nl:"systeemstandaard",es:"predeterminado del sistema",ar:"افتراضي النظام",fr:"par défaut du système",pt:"padrão do sistema",id:"bawaan sistem",bn:"সিস্টেম ডিফল্ট"},
   "added as note": {de:"als Notiz hinzugefügt",ru:"добавлено как заметка",zh:"已添加为笔记",hi:"नोट के रूप में जोड़ा गया",nl:"toegevoegd als notitie",es:"añadido como nota",ar:"أُضيف كملاحظة",fr:"ajouté comme note",pt:"adicionado como nota",id:"ditambahkan sebagai catatan",bn:"নোট হিসেবে যোগ হয়েছে"},
   "Poison line": {de:"Vergiftungs-Hotline",ru:"Токсикологическая линия",zh:"中毒热线",hi:"ज़हर हेल्पलाइन",nl:"Vergiftigingslijn",es:"Línea de toxicología",ar:"خط التسمم",fr:"Centre antipoison",pt:"Linha de intoxicação",id:"Saluran keracunan",bn:"বিষক্রিয়া হেল্পলাইন"},
-  "Interpret": {de:"Auswerten",ru:"Расшифровать",zh:"解读",hi:"व्याख्या करें",nl:"Interpreteren",es:"Interpretar",ar:"تفسير",fr:"Interpréter",pt:"Interpretar",id:"Tafsirkan",bn:"ব্যাখ্যা করুন"},
   "Notifications": {de:"Benachrichtigungen",ru:"Уведомления",zh:"通知",hi:"सूचनाएं",nl:"Meldingen",es:"Notificaciones",ar:"الإشعارات",fr:"Notifications",pt:"Notificações",id:"Notifikasi",bn:"বিজ্ঞপ্তি"},
   "Appointment": {de:"Termin",ru:"Приём",zh:"预约",hi:"अपॉइंटमेंट",nl:"Afspraak",es:"Cita",ar:"موعد",fr:"Rendez-vous",pt:"Consulta",id:"Janji temu",bn:"অ্যাপয়েন্টমেন্ট"},
   "Medication": {de:"Medikament",ru:"Лекарство",zh:"药物",hi:"दवा",nl:"Medicijn",es:"Medicamento",ar:"دواء",fr:"Médicament",pt:"Medicamento",id:"Obat",bn:"ওষুধ"},
