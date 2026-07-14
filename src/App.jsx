@@ -1,4 +1,5 @@
 import React from "react";
+import { TL } from "./tl";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 /* ══════════════════════════════════════════════════════════
@@ -531,8 +532,8 @@ const StorageHealth=({lang,fs,tc,mt,sc,ac,acTx,bd,dg,t,BP,lastBackup,idbGet,idbS
       try{await idbSet("ailvie_data",prev);localStorage.setItem("ailvie_data",prev);}catch(e){}
       notify(L2?"Geri yüklendi, yenileniyor…":"Restored, reloading…");
       setTimeout(()=>location.reload(),800);
-    }} style={{...BP,width:"100%",padding:"8px",marginTop:10,background:"transparent",color:acTx,border:`1px solid ${ac}`,fontSize:fs-2}}>↩️ {lang==="tr"?"Önceki sürüme dön":"Restore previous revision"}</button>
-    <div style={{fontSize:fs-5,color:mt,marginTop:4,lineHeight:1.4}}>{lang==="tr"?"Her kayıttan önce bir önceki sürüm saklanır. Bir şey yanlış giderse buradan geri alabilirsiniz.":"One previous revision is kept before each save."}</div>
+    }} style={{...BP,width:"100%",padding:"8px",marginTop:10,background:"transparent",color:acTx,border:`1px solid ${ac}`,fontSize:fs-2}}>↩️ {lang==="tr"?"Önceki sürüme dön":TL("Restore previous revision",lang)}</button>
+    <div style={{fontSize:fs-5,color:mt,marginTop:4,lineHeight:1.4}}>{lang==="tr"?"Her kayıttan önce bir önceki sürüm saklanır. Bir şey yanlış giderse buradan geri alabilirsiniz.":TL("One previous revision is kept before each save.",lang)}</div>
     <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Veriler yalnızca bu cihazda saklanır (IndexedDB) ve sunucuya gönderilmez; cihazlar arası senkron yoktur. Yedekleriniz AES-256 ile parolayla şifrelenebilir.":"Data stored on this device only (IndexedDB). No cloud sync. Backups can be AES-256 encrypted."}</div>
   </div>;
 };
@@ -681,7 +682,7 @@ useEffect(()=>{(async()=>{let raw=null;try{raw=await idbGet("ailvie_notemedia");
   noteMediaLoadedRef.current=true;})();},[]);
 useEffect(()=>{if(!noteMediaLoadedRef.current)return;const tm=setTimeout(()=>{const p=JSON.stringify(noteMedia);(async()=>{let ok=false;
   try{await idbSet("ailvie_notemedia",p);ok=true;}catch(e){}
-  try{localStorage.setItem("ailvie_notemedia",p);}catch(e){if(!ok)setStorageWarn(lang==="tr"?"⚠️ Depolama dolu — çizim/fotoğraf kaydedilemiyor. Yedek alın veya eski medyaları silin.":"⚠️ Storage full — drawings not saved.");}
+  try{localStorage.setItem("ailvie_notemedia",p);}catch(e){if(!ok)setStorageWarn(lang==="tr"?"⚠️ Depolama dolu — çizim/fotoğraf kaydedilemiyor. Yedek alın veya eski medyaları silin.":TL("⚠️ Storage full — drawings not saved.",lang));}
 })();},700);return()=>clearTimeout(tm);},[noteMedia,lang]);
 const editableRef=useRef(null);
 const noteHistRef=useRef({stack:[],idx:-1,nid:null});
@@ -761,17 +762,17 @@ const loadWeather=useCallback((manual)=>{ // location -> Open-Meteo (no API key)
   const fetchWx=(lat,lon,src)=>{
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=7`).then(r=>r.ok?r.json():null).then(j=>{if(j){if(src==="gps"){try{localStorage.setItem("ailvie_geo","1");}catch(e){}}setWeather({cur:j.current,hourly:j.hourly,daily:j.daily,approx:src==="ip"});}else setWeather({err:"net"});}).catch(()=>setWeather({err:"net"}));
   };
-  const fail=()=>{setWeather({err:"loc"});if(manual)notify(lang==="tr"?"Konum alınamadı. Telefon konum servisini açıp tekrar deneyin.":"Couldn't get location. Turn on device location services and retry.");};
+  const fail=()=>{setWeather({err:"loc"});if(manual)notify(lang==="tr"?"Konum alınamadı. Telefon konum servisini açıp tekrar deneyin.":TL("Couldn't get location. Turn on device location services and retry.",lang));};
   const ipFallback=()=>{ // approximate (city-level) location by IP, keyless
     fetch("https://ipwho.is/").then(r=>r.ok?r.json():null).then(j=>{if(j&&j.success&&j.latitude!=null)fetchWx(j.latitude,j.longitude,"ip");else throw 0;}).catch(()=>{fetch("https://get.geojs.io/v1/ip/geo.json").then(r=>r.ok?r.json():null).then(j=>{if(j&&j.latitude!=null)fetchWx(j.latitude,j.longitude,"ip");else fail();}).catch(fail);});
   };
   if(!navigator.geolocation){ipFallback();return;}
   navigator.geolocation.getCurrentPosition(p=>{
-    if(manual)notify(lang==="tr"?"✓ Konum açık — hava durumu yükleniyor":"✓ Location on — loading weather");
+    if(manual)notify(lang==="tr"?"✓ Konum açık — hava durumu yükleniyor":TL("✓ Location on — loading weather",lang));
     fetchWx(p.coords.latitude.toFixed(3),p.coords.longitude.toFixed(3),"gps");
   },(err)=>{ // GPS denied/timeout/unavailable -> approximate by IP so weather still loads
     if(err&&err.code===1){try{localStorage.removeItem("ailvie_geo");}catch(e){}}
-    if(manual)notify(lang==="tr"?"📍 Kesin konum yok — yaklaşık konumla getiriliyor…":"📍 Using approximate location…");
+    if(manual)notify(lang==="tr"?"📍 Kesin konum yok — yaklaşık konumla getiriliyor…":TL("📍 Using approximate location…",lang));
     ipFallback();
   },{timeout:12000,maximumAge:600000,enableHighAccuracy:false});
 },[lang]);
@@ -1751,11 +1752,11 @@ const startScanner=async()=>{
       },500);
     }else{
       // Fallback: manual code entry hint
-      setScanError(lang==="tr"?"Tarayıcınız otomatik barkod algılamayı desteklemiyor. Barkod numarasını manuel girebilirsiniz.":"Your browser doesn't support automatic barcode detection. You can enter the barcode number manually.");
+      setScanError(lang==="tr"?"Tarayıcınız otomatik barkod algılamayı desteklemiyor. Barkod numarasını manuel girebilirsiniz.":TL("Your browser doesn't support automatic barcode detection. You can enter the barcode number manually.",lang));
     }
   }catch(e){
     setCamOn(false);
-    setScanError(lang==="tr"?"📷 Kamera erişilemedi. Fotoğraftan okuyabilir veya barkodu manuel girebilirsiniz.":"📷 Camera unavailable. Read from a photo or enter the barcode manually.");
+    setScanError(lang==="tr"?"📷 Kamera erişilemedi. Fotoğraftan okuyabilir veya barkodu manuel girebilirsiniz.":TL("📷 Camera unavailable. Read from a photo or enter the barcode manually.",lang));
   }
 };
 
@@ -1769,14 +1770,14 @@ const imgToB64=(file,maxDim=1280,q=0.82)=>new Promise((res)=>{
 
 // Shared AI vision recognition from a base64 image (reads the medication box; works any drug/language)
 const aiRecognize=async(im)=>{
-  if(!im){setScanError(lang==="tr"?"Görüntü okunamadı. Tekrar deneyin.":"Couldn't read image. Try again.");return;}
-  if(typeof navigator!=="undefined"&&!navigator.onLine){setScanError(lang==="tr"?"İnternet yok. Bağlanınca tekrar deneyin veya manuel girin.":"No internet. Try again when connected, or enter manually.");return;}
-  setScanError(lang==="tr"?"🔎 Yapay zeka inceliyor...":"🔎 Analyzing with AI...");
+  if(!im){setScanError(lang==="tr"?"Görüntü okunamadı. Tekrar deneyin.":TL("Couldn't read image. Try again.",lang));return;}
+  if(typeof navigator!=="undefined"&&!navigator.onLine){setScanError(lang==="tr"?"İnternet yok. Bağlanınca tekrar deneyin veya manuel girin.":TL("No internet. Try again when connected, or enter manually.",lang));return;}
+  setScanError(lang==="tr"?"🔎 Yapay zeka inceliyor...":TL("🔎 Analyzing with AI...",lang));
   try{
     const sys=lang==="tr"
       ?"Sen bir ilaç tanıma asistanısın. Görseldeki ilaç kutusu/şeridi/etiketini incele. SADECE geçerli JSON döndür, başka metin yazma: {\"found\":boolean,\"name\":\"ticari ad\",\"ingredient\":\"etken madde\",\"dose\":\"doz örn 5 mg\",\"form\":\"tablet/şurup/kapsül/...\"}. Görselde bir ilaç yoksa veya yazı okunamıyorsa {\"found\":false} döndür."
       :"You are a medication recognition assistant. Examine the medicine box/strip/label in the image. Return ONLY valid JSON, no other text: {\"found\":boolean,\"name\":\"brand name\",\"ingredient\":\"active ingredient\",\"dose\":\"dose e.g. 5 mg\",\"form\":\"tablet/syrup/capsule/...\"}. If there is no medication or text is unreadable, return {\"found\":false}.";
-    const body={model:"claude-sonnet-4-6",max_tokens:400,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:im.mime,data:im.data}},{type:"text",text:lang==="tr"?"Bu ilacı tanı.":"Identify this medication."}]}]};
+    const body={model:"claude-sonnet-4-6",max_tokens:400,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:im.mime,data:im.data}},{type:"text",text:lang==="tr"?"Bu ilacı tanı.":TL("Identify this medication.",lang)}]}]};
     const d=await callAI(body,apiKey);
     const txt=((d&&d.content)||[]).map(c=>c.text||"").join("").trim();
     let p=null;try{p=JSON.parse(txt.replace(/```json|```/g,"").trim());}catch(e){const m=txt.match(/\{[\s\S]*\}/);if(m){try{p=JSON.parse(m[0]);}catch(_){}}}
@@ -1787,12 +1788,12 @@ const aiRecognize=async(im)=>{
       setRecog({name:p.name||"",ingredient:p.ingredient||"",dose:p.dose||"",form:p.form||"",verifying:true});
       try{const api=await lookupDrugAPIs(p.ingredient||p.name);setRecog(r=>r?{...r,verifying:false,verified:!!api,inn:api?api.inn:null,dbClass:api?api.class:null}:r);}catch(e){setRecog(r=>r?{...r,verifying:false,verified:false}:r);} // validate against global DBs
     }else{
-      setScanError(lang==="tr"?"İlaç tanınamadı. Kutuyu net ve yakın çekip tekrar deneyin ya da manuel girin.":"Could not recognize. Take a clear, close photo of the box and retry, or enter manually.");
+      setScanError(lang==="tr"?"İlaç tanınamadı. Kutuyu net ve yakın çekip tekrar deneyin ya da manuel girin.":TL("Could not recognize. Take a clear, close photo of the box and retry, or enter manually.",lang));
     }
   }catch(e){
     const msg=String((e&&e.message)||e);
-    if(msg.includes("NO_KEY"))setScanError(lang==="tr"?"Yapay zeka tanıma için API anahtarı gerekli. Ayarlar > AI API Anahtarı'ndan ekleyin (veya sunucuda yapılandırın).":"AI recognition needs an API key. Add it in Settings > AI API Key (or configure on the server).");
-    else setScanError(lang==="tr"?"Tanıma başarısız. Tekrar deneyin veya manuel girin.":"Recognition failed. Try again or enter manually.");
+    if(msg.includes("NO_KEY"))setScanError(lang==="tr"?"Yapay zeka tanıma için API anahtarı gerekli. Ayarlar > AI API Anahtarı'ndan ekleyin (veya sunucuda yapılandırın).":TL("AI recognition needs an API key. Add it in Settings > AI API Key (or configure on the server).",lang));
+    else setScanError(lang==="tr"?"Tanıma başarısız. Tekrar deneyin veya manuel girin.":TL("Recognition failed. Try again or enter manually.",lang));
   }
 };
 
@@ -1818,7 +1819,7 @@ const scanFromPhoto=async(file)=>{
 // Live camera: capture current frame and recognize with AI
 const captureFrameAndRecognize=async()=>{
   const v=videoRef.current;
-  if(!v||!v.videoWidth){setScanError(lang==="tr"?"Kamera hazır değil, bir an bekleyin.":"Camera not ready, wait a moment.");return;}
+  if(!v||!v.videoWidth){setScanError(lang==="tr"?"Kamera hazır değil, bir an bekleyin.":TL("Camera not ready, wait a moment.",lang));return;}
   const maxDim=1280;const scl=Math.min(1,maxDim/Math.max(v.videoWidth,v.videoHeight));
   const cw=Math.round(v.videoWidth*scl),ch=Math.round(v.videoHeight*scl);
   let im=null;
@@ -1847,7 +1848,7 @@ const handleBarcodeScan=async(code)=>{
     // Auto-analyze from local DB
     const db=DR[match.drug];
     if(db){const raw=db[lang]||db.tr||db.en;if(raw)setDrugRes(pD(raw));}
-    notify(`✅ ${lang==="tr"?"İlaç tanındı":"Drug recognized"}: ${match.name}`);
+    notify(`✅ ${lang==="tr"?"İlaç tanındı":TL("Drug recognized",lang)}: ${match.name}`);
     setShowAddMed(true);
   }else{
     setScanResult({code,found:false,checking:true});
@@ -1856,11 +1857,11 @@ const handleBarcodeScan=async(code)=>{
       setScanResult({code,found:true,name:ndc.name,dose:"",drug:ndc.inn||ndc.name,source:"OpenFDA"});
       setNewMed(p=>({...p,name:ndc.name,dose:""}));
       setDrugQ(ndc.inn||ndc.name);
-      notify(`✅ ${lang==="tr"?"İlaç tanındı (OpenFDA)":"Recognized (OpenFDA)"}: ${ndc.name}`);
+      notify(`✅ ${lang==="tr"?"İlaç tanındı (OpenFDA)":TL("Recognized (OpenFDA)",lang)}: ${ndc.name}`);
       setShowAddMed(true);
     }else{
       setScanResult({code,found:false});
-      notify(`⚠️ ${lang==="tr"?"Barkod bulunamadı. '🖼️ Fotoğraf' ile kutuyu çekip yapay zekayla tanıyın.":"Barcode not found. Use '🖼️ Photo' to capture the box for AI recognition."}`);
+      notify(`⚠️ ${lang==="tr"?"Barkod bulunamadı. '🖼️ Fotoğraf' ile kutuyu çekip yapay zekayla tanıyın.":TL("Barcode not found. Use '🖼️ Photo' to capture the box for AI recognition.",lang)}`);
     }
   }
 };
@@ -2025,7 +2026,7 @@ IMPORTANT: All values MUST be in ${langName} language. Keep each field concise (
     const isNoKey=e.message==="NO_KEY";
     const isAIErr=e.message?.startsWith("AI_ERROR:");
     const errText=isNoKey
-      ?(lang==="tr"?"AI analizi için API anahtarı gerekli. Ayarlar → AI API Key":"AI analysis requires API key. Settings → AI API Key")
+      ?(lang==="tr"?"AI analizi için API anahtarı gerekli. Ayarlar → AI API Key":TL("AI analysis requires API key. Settings → AI API Key",lang))
       :isAIErr
       ?(lang==="tr"?"AI hatası: "+e.message.replace("AI_ERROR: ",""):"AI error: "+e.message.replace("AI_ERROR: ",""))
       :(lang==="tr"?"Analiz edilemedi: "+e.message:"Analysis failed: "+e.message);
@@ -2246,7 +2247,7 @@ const[tmpH,setTmpH]=useState("");
 const[wellness,setWellness]=useState({water:0,sleep:0,mood:0,steps:0,exercise:0,waterGoal:8,sleepGoal:8,stepsGoal:10000});
 const[diet,setDiet]=useState({meals:[],done:{},water:{},goalWater:8}); // dietitian-prescribed program tracker
 const[glucose,setGlucose]=useState([]); // blood glucose readings [{id,ts,val,type}]
-const[dietSlot,setDietSlot]=useState(lang==="tr"?"Kahvaltı":"Breakfast");
+const[dietSlot,setDietSlot]=useState(lang==="tr"?"Kahvaltı":TL("Breakfast",lang));
 const[dietText,setDietText]=useState("");
 const[gluVal,setGluVal]=useState("");
 const[gluType,setGluType]=useState("fasting");
@@ -2288,7 +2289,7 @@ const tryUnlockPIN=async()=>{
     try{dataKeyRef.current=await deriveDataKey(pinIn);}catch(e){dataKeyRef.current=null;}
     if(pendingEncRef.current!=null){
       try{const payload=await unpackData(pendingEncRef.current);const d=JSON.parse(payload||"{}");latestPayloadRef.current=payload||"{}";applyLoadedData(d);pendingEncRef.current=null;dataLoadedRef.current=true;}
-      catch(e){setLockErr(lang==="tr"?"Veri çözülemedi":"Could not decrypt");setStorageWarn(lang==="tr"?"⚠️ Veriler çözülemedi. Kayıt durduruldu — verileriniz silinmedi.":"⚠️ Could not decrypt data. Saving paused; nothing deleted.");return;}
+      catch(e){setLockErr(lang==="tr"?"Veri çözülemedi":TL("Could not decrypt",lang));setStorageWarn(lang==="tr"?"⚠️ Veriler çözülemedi. Kayıt durduruldu — verileriniz silinmedi.":TL("⚠️ Could not decrypt data. Saving paused; nothing deleted.",lang));return;}
     }
     setLocked(false);setPinIn("");setLockErr("");setLockTries(0);lastActiveRef.current=Date.now();
   }
@@ -2297,9 +2298,9 @@ const tryUnlockPIN=async()=>{
 const tryUnlockBio=async()=>{
   if(!lockCfg||!lockCfg.credId)return;
   try{const ok=await biometricVerify(lockCfg.credId);if(ok){
-    if(pendingEncRef.current!=null&&!dataKeyRef.current){setLockErr(lang==="tr"?"Şifreli veriyi açmak için PIN gerekli":"Enter PIN to unlock encrypted data");return;}
+    if(pendingEncRef.current!=null&&!dataKeyRef.current){setLockErr(lang==="tr"?"Şifreli veriyi açmak için PIN gerekli":TL("Enter PIN to unlock encrypted data",lang));return;}
     setLocked(false);setLockErr("");setLockTries(0);lastActiveRef.current=Date.now();}}
-  catch(e){setLockErr(lang==="tr"?"Biyometrik doğrulama başarısız — PIN girin":"Biometric failed — enter PIN");}
+  catch(e){setLockErr(lang==="tr"?"Biyometrik doğrulama başarısız — PIN girin":TL("Biometric failed — enter PIN",lang));}
 };
 
 const[persisted,setPersisted]=useState(false);
@@ -2385,7 +2386,7 @@ const exportReportPDF=()=>{
 };
 const[sleepTimes,setSleepTimes]=useState(()=>{try{return JSON.parse(localStorage.getItem("ailvie_sleep_times"))||{bed:"",wake:""};}catch{return {bed:"",wake:""};}});
 const[tests,setTests]=useState({}); // last screening results: {balSway,balBand,balAt,rxAvg,rxBest,rxAt,postAngle,postAt}
-const ago=(ts)=>{if(!ts)return"";const m=Math.round((Date.now()-ts)/60000);if(m<1)return lang==="tr"?"az önce":"just now";if(m<60)return lang==="tr"?`${m} dk önce`:`${m}m ago`;const h=Math.round(m/60);if(h<24)return lang==="tr"?`${h} saat önce`:`${h}h ago`;return lang==="tr"?`${Math.round(h/24)} gün önce`:`${Math.round(h/24)}d ago`;};
+const ago=(ts)=>{if(!ts)return"";const m=Math.round((Date.now()-ts)/60000);if(m<1)return lang==="tr"?"az önce":TL("just now",lang);if(m<60)return lang==="tr"?`${m} dk önce`:`${m}m ago`;const h=Math.round(m/60);if(h<24)return lang==="tr"?`${h} saat önce`:`${h}h ago`;return lang==="tr"?`${Math.round(h/24)} gün önce`:`${Math.round(h/24)}d ago`;};
 const[moodLog,setMoodLog]=useState([]);
 const[stepAuto,setStepAuto]=useState(()=>{try{return localStorage.getItem("ailvie_step_auto")==="1";}catch{return false;}});
 const stepRef=React.useRef({last:0,baseSteps:0,count:0,lastMag:0});
@@ -2644,7 +2645,7 @@ useEffect(()=>{(async()=>{
   requestPersistentStorage().then(ok=>setPersisted(!!ok));
   let payload;
   try{payload=await unpackData(raw);}
-  catch(e){ if(e&&e.code==="locked"){pendingEncRef.current=raw;return;} setStorageWarn(lang==="tr"?"⚠️ Veriler çözülemedi. Güvenlik için kayıt durduruldu — verileriniz silinmedi.":"⚠️ Could not decrypt your data. Saving paused; nothing was deleted.");return; }
+  catch(e){ if(e&&e.code==="locked"){pendingEncRef.current=raw;return;} setStorageWarn(lang==="tr"?"⚠️ Veriler çözülemedi. Güvenlik için kayıt durduruldu — verileriniz silinmedi.":TL("⚠️ Could not decrypt your data. Saving paused; nothing was deleted.",lang));return; }
   latestPayloadRef.current=payload||"{}";
   try{const d=JSON.parse(payload||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
@@ -2682,14 +2683,14 @@ useEffect(()=>{if(!dataLoadedRef.current)return;const tm=setTimeout(()=>{const p
     let idbOk=false;
     let toStore;
     try{toStore=await packData(payload);}
-    catch(e){ setStorageWarn(lang==="tr"?"⚠️ Şifreleme hatası — bu değişiklik henüz diske yazılmadı, tekrar denenecek.":"⚠️ Encryption error — change not written yet; will retry.");return; }
+    catch(e){ setStorageWarn(lang==="tr"?"⚠️ Şifreleme hatası — bu değişiklik henüz diske yazılmadı, tekrar denenecek.":TL("⚠️ Encryption error — change not written yet; will retry.",lang));return; }
     try{
       // keep one previous revision so a bad write is recoverable
       const prev=await idbGet("ailvie_data");
       if(prev&&prev!==toStore)await idbSet("ailvie_data_prev",prev).catch(()=>{});
     }catch(e){}
     try{await idbSet("ailvie_data",toStore);idbOk=true;setStorageWarn(null);}catch(e){idbOk=false;}
-    try{localStorage.setItem("ailvie_data",toStore);}catch(e){ if(!idbOk){ setStorageWarn(lang==="tr"?"⚠️ Cihaz depolaması dolu — yeni kayıtlar SAKLANAMIYOR. Ayarlar > Yedekle ile verilerinizi dışa aktarın.":"⚠️ Device storage full — new data is NOT being saved. Export a backup."); } }
+    try{localStorage.setItem("ailvie_data",toStore);}catch(e){ if(!idbOk){ setStorageWarn(lang==="tr"?"⚠️ Cihaz depolaması dolu — yeni kayıtlar SAKLANAMIYOR. Ayarlar > Yedekle ile verilerinizi dışa aktarın.":TL("⚠️ Device storage full — new data is NOT being saved. Export a backup.",lang)); } }
     if(!idbOk){
       try{localStorage.getItem("ailvie_data");}catch(e){}
     }
@@ -2698,7 +2699,7 @@ useEffect(()=>{(async()=>{let raw=null;try{raw=await idbGet("ailvie_medimg");}ca
   if(raw==null){try{raw=localStorage.getItem("ailvie_medimg");if(raw)await idbSet("ailvie_medimg",raw);}catch(e){}}
   try{if(raw){const a=JSON.parse(raw);if(Array.isArray(a))setMedImages(a);}}catch(e){}})();},[]);
 useEffect(()=>{const tm=setTimeout(()=>{const p=JSON.stringify(medImages);(async()=>{let ok=false;try{await idbSet("ailvie_medimg",p);ok=true;}catch(e){}
-    try{localStorage.setItem("ailvie_medimg",p);}catch(e){if(!ok)setStorageWarn(lang==="tr"?"⚠️ Depolama dolu — görüntüler saklanamıyor. Yedek alın veya eski görüntüleri silin.":"⚠️ Storage full — images not saved.");}})();},800);return()=>clearTimeout(tm);},[medImages]);
+    try{localStorage.setItem("ailvie_medimg",p);}catch(e){if(!ok)setStorageWarn(lang==="tr"?"⚠️ Depolama dolu — görüntüler saklanamıyor. Yedek alın veya eski görüntüleri silin.":TL("⚠️ Storage full — images not saved.",lang));}})();},800);return()=>clearTimeout(tm);},[medImages]);
 // Auto-cleanup empty notes that are not being edited
 useEffect(()=>{
   // DATA-LOSS GUARD: never prune before noteMedia has loaded from IndexedDB,
@@ -2788,13 +2789,13 @@ const signInWith=async(provider)=>{
     const v=(emailIn||"").trim();
     const isEmail=/.+@.+\..+/.test(v);
     const isPhone=/^[+\d][\d\s().-]*$/.test(v)&&v.replace(/\D/g,"").length>=7;
-    if(!v||!(isEmail||isPhone)){notify(lang==="tr"?"Geçerli bir e-posta veya telefon girin":"Enter a valid email or phone");return;}
+    if(!v||!(isEmail||isPhone)){notify(lang==="tr"?"Geçerli bir e-posta veya telefon girin":TL("Enter a valid email or phone",lang));return;}
     setAcctEmail(v);try{localStorage.setItem("ailvie_account_email",v);}catch(e){}
-    notify(lang==="tr"?"✅ Giriş yapıldı":"✅ Signed in");
+    notify(lang==="tr"?"✅ Giriş yapıldı":TL("✅ Signed in",lang));
     return;
   }
   const hasFb=FIREBASE_CONFIG&&FIREBASE_CONFIG.apiKey;
-  if(!hasFb){notify(lang==="tr"?"Google/Apple girişi için Firebase yapılandırması gerekir (yakında).":"Google/Apple sign-in needs Firebase configuration (coming soon).");return;}
+  if(!hasFb){notify(lang==="tr"?"Google/Apple girişi için Firebase yapılandırması gerekir (yakında).":TL("Google/Apple sign-in needs Firebase configuration (coming soon).",lang));return;}
   try{
     const appMod=await import(/* @vite-ignore */ `https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app.js`);
     const authMod=await import(/* @vite-ignore */ `https://www.gstatic.com/firebasejs/${FB_VER}/firebase-auth.js`);
@@ -2804,26 +2805,26 @@ const signInWith=async(provider)=>{
     const res=await authMod.signInWithPopup(auth,prov);
     const u=res&&res.user;
     if(u){const em=u.email||"";if(em){setAcctEmail(em);setEmailIn(em);try{localStorage.setItem("ailvie_account_email",em);localStorage.setItem("ailvie_uid",u.uid||"");}catch(e){}}notify(lang==="tr"?"✅ Giriş başarılı: "+(u.displayName||em):"✅ Signed in: "+(u.displayName||em));}
-  }catch(e){notify(lang==="tr"?"Giriş iptal edildi veya başarısız oldu.":"Sign-in cancelled or failed.");}
+  }catch(e){notify(lang==="tr"?"Giriş iptal edildi veya başarısız oldu.":TL("Sign-in cancelled or failed.",lang));}
 };
-const signOutAcct=()=>{setAcctEmail("");try{localStorage.removeItem("ailvie_account_email");localStorage.removeItem("ailvie_uid");}catch(e){}notify(lang==="tr"?"Çıkış yapıldı":"Signed out");};
+const signOutAcct=()=>{setAcctEmail("");try{localStorage.removeItem("ailvie_account_email");localStorage.removeItem("ailvie_uid");}catch(e){}notify(lang==="tr"?"Çıkış yapıldı":TL("Signed out",lang));};
 
 const readData=(kind)=>{
   let txt="";
   if(kind==="meds"){
-    if(!meds.length)txt=lang==="tr"?"Kayıtlı ilacın yok.":"You have no medications.";
-    else txt=(lang==="tr"?`${meds.length} ilacın var. `:`You have ${meds.length} medications. `)+meds.slice(0,8).map(m=>`${m.name}${m.time?" "+m.time:""}${m.taken?(lang==="tr"?" alındı":" taken"):""}`).join(", ")+".";
+    if(!meds.length)txt=lang==="tr"?"Kayıtlı ilacın yok.":TL("You have no medications.",lang);
+    else txt=(lang==="tr"?`${meds.length} ilacın var. `:`You have ${meds.length} medications. `)+meds.slice(0,8).map(m=>`${m.name}${m.time?" "+m.time:""}${m.taken?(lang==="tr"?" alındı":TL(" taken",lang)):""}`).join(", ")+".";
   }else if(kind==="appts"){
     const up=[...appts].filter(a=>a.date).sort((x,y)=>(x.date>y.date?1:-1));
-    if(!up.length)txt=lang==="tr"?"Yaklaşan randevun yok.":"You have no upcoming appointments.";
-    else txt=(lang==="tr"?"Randevuların: ":"Your appointments: ")+up.slice(0,3).map(a=>`${a.date}${a.time?" "+a.time:""}${a.doctor?" "+a.doctor:""}${a.hospital?" "+a.hospital:""}`).join("; ")+".";
+    if(!up.length)txt=lang==="tr"?"Yaklaşan randevun yok.":TL("You have no upcoming appointments.",lang);
+    else txt=(lang==="tr"?"Randevuların: ":TL("Your appointments: ",lang))+up.slice(0,3).map(a=>`${a.date}${a.time?" "+a.time:""}${a.doctor?" "+a.doctor:""}${a.hospital?" "+a.hospital:""}`).join("; ")+".";
   }else if(kind==="health"){
     const parts=[];
-    if(hd.pulse)parts.push((lang==="tr"?"nabız ":"pulse ")+hd.pulse);
-    if(hd.bpS&&hd.bpD)parts.push((lang==="tr"?"tansiyon ":"blood pressure ")+hd.bpS+"/"+hd.bpD);
-    if(hd.weight)parts.push((lang==="tr"?"kilo ":"weight ")+hd.weight);
+    if(hd.pulse)parts.push((lang==="tr"?"nabız ":TL("pulse ",lang))+hd.pulse);
+    if(hd.bpS&&hd.bpD)parts.push((lang==="tr"?"tansiyon ":TL("blood pressure ",lang))+hd.bpS+"/"+hd.bpD);
+    if(hd.weight)parts.push((lang==="tr"?"kilo ":TL("weight ",lang))+hd.weight);
     if(hd.spo2)parts.push("SpO2 "+hd.spo2);
-    txt=parts.length?(lang==="tr"?"Sağlık verilerin: ":"Your health data: ")+parts.join(", ")+".":(lang==="tr"?"Henüz sağlık verin yok.":"No health data yet.");
+    txt=parts.length?(lang==="tr"?"Sağlık verilerin: ":TL("Your health data: ",lang))+parts.join(", ")+".":(lang==="tr"?"Henüz sağlık verin yok.":TL("No health data yet.",lang));
   }else return;
   setChatM(p=>[...p,{role:"assistant",text:"🔊 "+txt}]);
   try{speak(txt,lang);}catch(e){}
@@ -2847,7 +2848,7 @@ const startVoiceMode=(greet=true)=>{
   // AILVIE speaks IMMEDIATELY (no waiting, no extra prompts). The mic only opens AFTER she has
   // finished the greeting, so she never hears her own voice — that was the "interrupting sound".
   // If the user previously DENIED the mic, don't start a silent dead dialog — say so once.
-  micPermission().then(st=>{ if(st==="denied"&&voiceActiveRef.current){ notify("🎤 "+(lang==="tr"?"Mikrofon izni kapalı. Adres çubuğundaki kilit simgesinden açabilirsiniz.":"Microphone is blocked. Enable it from the lock icon in the address bar.")); } });
+  micPermission().then(st=>{ if(st==="denied"&&voiceActiveRef.current){ notify("🎤 "+(lang==="tr"?"Mikrofon izni kapalı. Adres çubuğundaki kilit simgesinden açabilirsiniz.":TL("Microphone is blocked. Enable it from the lock icon in the address bar.",lang))); } });
   const beginListening=()=>{setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current&&!isSpeakRef.current)startVoice((txt)=>{sendChat(txt);},true);},250);};
   if(!greet){beginListening();return;}
   const greetings={tr:"Merhaba, ben AILVIE. Sizi dinliyorum.",en:"Hello, I'm AILVIE. I'm listening.",de:"Hallo, ich bin AILVIE. Ich höre zu.",ru:"Здравствуйте, я AILVIE. Я вас слушаю.",zh:"你好，我是 AILVIE。我在听。",hi:"नमस्ते, मैं AILVIE हूँ। मैं सुन रही हूँ।",nl:"Hallo, ik ben AILVIE. Ik luister.",es:"Hola, soy AILVIE. Te escucho.",ar:"مرحبا، أنا AILVIE. أنا أستمع إليك."};
@@ -2865,7 +2866,7 @@ const sendChat=async(text)=>{
   const q=text||chatIn;if(!q.trim())return;
   // Offline guard — clear message + retry, without consuming a daily message
   if(typeof navigator!=="undefined"&&!navigator.onLine){
-    setChatM(p=>[...p,{role:"user",text:q},{role:"assistant",text:lang==="tr"?"📡 İnternet bağlantısı yok. Bağlantınızı kontrol edip tekrar deneyin.":"📡 No internet connection. Check your connection and try again.",error:true,retry:q}]);
+    setChatM(p=>[...p,{role:"user",text:q},{role:"assistant",text:lang==="tr"?"📡 İnternet bağlantısı yok. Bağlantınızı kontrol edip tekrar deneyin.":TL("📡 No internet connection. Check your connection and try again.",lang),error:true,retry:q}]);
     setChatIn("");
     return;
   }
@@ -2966,13 +2967,13 @@ SESLİ KOMUTLAR / GEZİNME (kullanıcı özellikle bir yere gitmek/okumak isters
 - Kullanıcı ilk yardım isterse [[ILKYARDIM]] ekle (İlk Yardım ekranını açar).
 - NAVİGASYON: Kullanıcı yakında bir sağlık yeri bulmak/yol tarifi isterse (hastane, acil servis, eczane, nöbetçi eczane, klinik, diş hekimi, laboratuvar, görüntüleme, aile sağlığı merkezi, psikolog, göz/optik, kan bağışı, ya da kardiyoloji/fizyoterapi gibi bir branş) yanıtının EN SONUNA ayrı satırda [[NAV:arama]] ekle. "arama" kısmına haritada aranacak yeri KULLANICININ DİLİNDE yaz (ör. [[NAV:nöbetçi eczane]] veya [[NAV:cardiologist]]). Uygulama kullanıcının konumunu kullanıp harita uygulamasında yol tarifini açar. Kullanıcı bir yakınma/ihtiyaç belirtirse (ör. "dişim ağrıyor") uygun yeri nazikçe öner ve isterse [[NAV:diş hekimi]] ekle.
 - Bu direktifleri YALNIZCA kullanıcı gerçekten isterse kullan; uydurma bilgi verme.`},{type:"text",text:(ctxStr+voiceNote)}],messages:history},apiKey);
-    let reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":"No response.");
+    let reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":TL("No response.",lang));
     const wantsPulse=/\[\[\s*(OLC:NABIZ|MEASURE:PULSE)\s*\]\]/i.test(reply);
     const navM=reply.match(/\[\[\s*GIT:(\w+)\s*\]\]/i);
     const readM=reply.match(/\[\[\s*OKU:(\w+)\s*\]\]/i);
     const wantsFA=/\[\[\s*(ILKYARDIM|FIRSTAID)\s*\]\]/i.test(reply);
     const navGo=reply.match(/\[\[\s*NAV:([^\]]+?)\s*\]\]/i);
-    reply=reply.replace(/\[\[[^\]]*\]\]/g,"").trim()||(lang==="tr"?"Tamamdır.":"Done.");
+    reply=reply.replace(/\[\[[^\]]*\]\]/g,"").trim()||(lang==="tr"?"Tamamdır.":TL("Done.",lang));
     if(quotaNote&&!voiceActiveRef.current)reply+=quotaNote;
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
     if(wantsPulse)setTimeout(()=>startPulseMeasure(true),500);
@@ -3197,7 +3198,7 @@ const prosody=(v)=>({pitch:isMale(v.name)?1.4:1.12,rate:isMale(v.name)?0.95:0.9}
     }else{
       // No voice for this language at all. Do NOT borrow a voice from another language:
       // set the language and let the platform pick, otherwise the words come out garbled.
-      setTtsInfo({engine:"browser",voice:(lang==="tr"?"sistem varsayılanı":"system default")});
+      setTtsInfo({engine:"browser",voice:(lang==="tr"?"sistem varsayılanı":TL("system default",lang))});
       u.lang=useLc;
       u.pitch=1.15;
       u.rate=0.95;
@@ -3235,7 +3236,7 @@ const prosody=(v)=>({pitch:isMale(v.name)?1.4:1.12,rate:isMale(v.name)?0.95:0.9}
 // Voice — improved with continuous mode
 const startVoice=(cb,continuous=false)=>{
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){notify("⚠️ "+(lang==="tr"?"Bu tarayıcı ses tanımayı desteklemiyor. Chrome kullanın.":"Browser doesn't support voice. Use Chrome."));return;}
+  if(!SR){notify("⚠️ "+(lang==="tr"?"Bu tarayıcı ses tanımayı desteklemiyor. Chrome kullanın.":TL("Browser doesn't support voice. Use Chrome.",lang)));return;}
   // If already listening, pressing again STOPS it (use ref — always current, no stale closure)
   if(recRef.current){
     try{recRef.current.onend=null;recRef.current.onerror=null;recRef.current.abort();}catch(e){}
@@ -3271,16 +3272,16 @@ const startVoice=(cb,continuous=false)=>{
       if(e.error==="not-allowed"||e.error==="service-not-allowed"){
         // Permission denied — stop the dialog and tell the user once (this is the ONE place we ask).
         voiceActiveRef.current=false;setVoiceActive(false);
-        notify("🎤 "+(lang==="tr"?"Mikrofon izni gerekli. Tarayıcı adres çubuğundaki kilit simgesinden izin verin.":"Microphone permission needed. Allow it from the lock icon in the address bar."));
+        notify("🎤 "+(lang==="tr"?"Mikrofon izni gerekli. Tarayıcı adres çubuğundaki kilit simgesinden izin verin.":TL("Microphone permission needed. Allow it from the lock icon in the address bar.",lang)));
       }else if(e.error==="no-speech"){
         // In a live dialog just quietly resume listening; don't nag with a toast.
         if(continuous&&voiceActiveRef.current){setTimeout(()=>{if(voiceActiveRef.current&&!recRef.current&&!isSpeakRef.current)startVoice(cb,true);},400);}
       }else if(e.error==="network"){
-        notify("⚠️ "+(lang==="tr"?"Ses tanıma ağ hatası. İnternet bağlantınızı kontrol edin.":"Voice recognition network error. Check your connection."));
+        notify("⚠️ "+(lang==="tr"?"Ses tanıma ağ hatası. İnternet bağlantınızı kontrol edin.":TL("Voice recognition network error. Check your connection.",lang)));
       }else if(e.error==="aborted"){
         // user cancelled, no message
       }else{
-        notify("⚠️ "+(lang==="tr"?"Ses tanıma hatası: ":"Voice error: ")+e.error);
+        notify("⚠️ "+(lang==="tr"?"Ses tanıma hatası: ":TL("Voice error: ",lang))+e.error);
       }
     };
     r.onend=()=>{
@@ -3306,7 +3307,7 @@ const startVoice=(cb,continuous=false)=>{
     },20000);
   }catch(e){
     setIsListen(false);recRef.current=null;
-    notify("⚠️ "+(lang==="tr"?"Mikrofon başlatılamadı. Chrome kullanın ve izin verin.":"Could not start mic. Use Chrome and allow permission."));
+    notify("⚠️ "+(lang==="tr"?"Mikrofon başlatılamadı. Chrome kullanın ve izin verin.":TL("Could not start mic. Use Chrome and allow permission.",lang)));
   }
 };
 
@@ -3320,7 +3321,7 @@ const navTo=(query)=>{
   const q=encodeURIComponent(query);
   const open=u=>{try{window.open(u,"_blank","noopener");}catch(e){}};
   haptic(12);
-  notify(lang==="tr"?"🧭 Harita açılıyor…":"🧭 Opening map…");
+  notify(lang==="tr"?"🧭 Harita açılıyor…":TL("🧭 Opening map…",lang));
   if(!navigator.geolocation){open(`https://www.google.com/maps/search/${q}`);return;}
   navigator.geolocation.getCurrentPosition(
     p=>{const la=p.coords.latitude,lo=p.coords.longitude;open(`https://www.google.com/maps/search/${q}/@${la},${lo},14z`);},
@@ -3375,7 +3376,7 @@ const DictateBtn=({value,onChange,size=16})=>{
   return <button type="button"
     onClick={()=>startVoice((txt)=>{const cur=typeof value==="string"?value:"";onChange((cur+(cur&&!cur.endsWith(" ")?" ":"")+txt).trimStart());})}
     aria-label={lang==="tr"?(listening?"Dinleniyor — durdur":"Sesli yazma"):(listening?"Listening — stop":"Voice typing")}
-    title={lang==="tr"?"Sesli yazma":"Voice typing"}
+    title={lang==="tr"?"Sesli yazma":TL("Voice typing",lang)}
     style={{background:listening?`${dg}22`:"transparent",border:`1px solid ${listening?dg:bd}`,borderRadius:8,padding:"5px 8px",cursor:"pointer",fontSize:size,flexShrink:0,lineHeight:1,color:listening?dg:acTx,animation:listening?"micPulse 2s infinite":"none"}}>
     {listening?"🔴":"🎤"}</button>;
 };
@@ -3439,36 +3440,36 @@ const renderHome=()=>{
       <div onClick={()=>{if(weather&&weather.cur)setShowWx(true);else{setPerms(p=>({...p,loc:true}));loadWeather(true);}}} style={{...CS,flex:1,padding:"10px 12px",display:"flex",alignItems:"center",gap:9,cursor:"pointer"}}>
         <span style={{fontSize:28,lineHeight:1}}>{weather&&weather.cur?wxIcon(weather.cur.weather_code):"🌡️"}</span>
         <div style={{minWidth:0}}>
-          {weather&&weather.cur?<><div style={{fontSize:fs+5,fontWeight:800,color:tc,lineHeight:1}}>{Math.round(weather.cur.temperature_2m)}°</div><div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Hava · detay":"Weather · details"}</div></>:<div style={{fontSize:fs-2,color:mt}}>{weather&&weather.err?(lang==="tr"?"Hava · konum için dokun":"Weather · tap for location"):(lang==="tr"?"Yükleniyor…":"Loading…")}</div>}
+          {weather&&weather.cur?<><div style={{fontSize:fs+5,fontWeight:800,color:tc,lineHeight:1}}>{Math.round(weather.cur.temperature_2m)}°</div><div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Hava · detay":TL("Weather · details",lang)}</div></>:<div style={{fontSize:fs-2,color:mt}}>{weather&&weather.err?(lang==="tr"?"Hava · konum için dokun":TL("Weather · tap for location",lang)):(lang==="tr"?"Yükleniyor…":TL("Loading…",lang))}</div>}
         </div>
       </div>
       <div onClick={heading==null?startCompass:undefined} style={{...CS,flex:1,padding:"10px 12px",display:"flex",alignItems:"center",gap:9,cursor:heading==null?"pointer":"default"}}>
         <Compass heading={heading} dark={dark} ac={ac} dg={dg} tc={tc} mt={mt}/>
         <div style={{minWidth:0}}>
-          {heading!=null?<><div style={{fontSize:fs+2,fontWeight:800,color:tc,lineHeight:1}}>{Math.round(heading)}° {dirLabel(heading)}</div><div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Pusula":"Compass"}</div></>:<div style={{fontSize:fs-3,color:mt}}>{compassErr==="unsupported"?(lang==="tr"?"Pusula desteklenmiyor":"No compass"):(lang==="tr"?"Pusula · dokun":"Compass · tap")}</div>}
+          {heading!=null?<><div style={{fontSize:fs+2,fontWeight:800,color:tc,lineHeight:1}}>{Math.round(heading)}° {dirLabel(heading)}</div><div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Pusula":TL("Compass",lang)}</div></>:<div style={{fontSize:fs-3,color:mt}}>{compassErr==="unsupported"?(lang==="tr"?"Pusula desteklenmiyor":TL("No compass",lang)):(lang==="tr"?"Pusula · dokun":TL("Compass · tap",lang))}</div>}
         </div>
       </div>
     </div>
     {showWx&&<div style={{position:"fixed",inset:0,zIndex:360,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowWx(false)}>
       <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:520,maxHeight:"82vh",overflow:"auto",borderRadius:"16px 16px 0 0",padding:16}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><b style={{fontSize:fs+2,color:tc}}>{lang==="tr"?"Hava Durumu":"Weather"}</b><button onClick={()=>setShowWx(false)} style={{background:"none",border:"none",color:mt,fontSize:20,cursor:"pointer"}}>✕</button></div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><b style={{fontSize:fs+2,color:tc}}>{lang==="tr"?"Hava Durumu":TL("Weather",lang)}</b><button onClick={()=>setShowWx(false)} style={{background:"none",border:"none",color:mt,fontSize:20,cursor:"pointer"}}>✕</button></div>
         {weather&&weather.cur?<>
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}><span style={{fontSize:46}}>{wxIcon(weather.cur.weather_code)}</span><div><div style={{fontSize:fs+18,fontWeight:800,color:tc,lineHeight:1}}>{Math.round(weather.cur.temperature_2m)}°</div><div style={{fontSize:fs-2,color:mt,marginTop:3}}>{lang==="tr"?"Şu an":"Now"}{weather.cur.wind_speed_10m!=null?` · 💨 ${Math.round(weather.cur.wind_speed_10m)} km/s`:""}</div></div></div>
-          <div style={{fontSize:fs-1,fontWeight:700,color:tc,margin:"6px 0 4px"}}>{lang==="tr"?"Saatlik (24 saat)":"Hourly (24h)"}</div>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}><span style={{fontSize:46}}>{wxIcon(weather.cur.weather_code)}</span><div><div style={{fontSize:fs+18,fontWeight:800,color:tc,lineHeight:1}}>{Math.round(weather.cur.temperature_2m)}°</div><div style={{fontSize:fs-2,color:mt,marginTop:3}}>{lang==="tr"?"Şu an":TL("Now",lang)}{weather.cur.wind_speed_10m!=null?` · 💨 ${Math.round(weather.cur.wind_speed_10m)} km/s`:""}</div></div></div>
+          <div style={{fontSize:fs-1,fontWeight:700,color:tc,margin:"6px 0 4px"}}>{lang==="tr"?"Saatlik (24 saat)":TL("Hourly (24h)",lang)}</div>
           <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6}}>{(()=>{const H=weather.hourly;const nk=new Date().toISOString().slice(0,13);let st=H.time.findIndex(x=>x.slice(0,13)>=nk);if(st<0)st=0;return H.time.slice(st,st+24).map((x,i)=>{const idx=st+i;return <div key={x} style={{flex:"0 0 auto",textAlign:"center",minWidth:44}}><div style={{fontSize:fs-3,color:mt}}>{x.slice(11,16)}</div><div style={{fontSize:20,margin:"2px 0"}}>{wxIcon(H.weather_code[idx])}</div><div style={{fontSize:fs-2,fontWeight:700,color:tc}}>{Math.round(H.temperature_2m[idx])}°</div></div>;});})()}</div>
-          <div style={{fontSize:fs-1,fontWeight:700,color:tc,margin:"12px 0 4px"}}>{lang==="tr"?"7 Günlük (haftalık)":"7-Day (weekly)"}</div>
-          <div>{weather.daily.time.map((x,i)=>{const d=new Date(x+"T00:00");const wd=d.toLocaleDateString(lc,{weekday:"long"});return <div key={x} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 0",borderBottom:`1px solid ${bd}`}}><span style={{fontSize:fs-1,color:tc,flex:1,textTransform:"capitalize"}}>{i===0?(lang==="tr"?"Bugün":"Today"):wd}</span><span style={{fontSize:20,width:36,textAlign:"center"}}>{wxIcon(weather.daily.weather_code[i])}</span><span style={{fontSize:fs-1,color:mt,width:88,textAlign:"right"}}>{Math.round(weather.daily.temperature_2m_min[i])}° / <b style={{color:tc}}>{Math.round(weather.daily.temperature_2m_max[i])}°</b></span></div>;})}</div>
-        </>:<div style={{color:mt,fontSize:fs-1,padding:"24px 0",textAlign:"center"}}>{weather&&weather.err?(<><div>{lang==="tr"?"Hava durumu için konum gerekiyor.":"Weather needs your location."}</div><button onClick={()=>loadWeather(true)} style={{marginTop:12,padding:"10px 18px",borderRadius:12,border:"none",background:ac,color:onAc,fontWeight:700,fontSize:fs,cursor:"pointer"}}>📍 {lang==="tr"?"Konumu Etkinleştir":"Enable Location"}</button></>):(lang==="tr"?"Yükleniyor…":"Loading…")}</div>}
-        <div style={{fontSize:fs-4,color:mt,marginTop:12,textAlign:"center"}}>{weather&&weather.approx?(lang==="tr"?"📍 yaklaşık konum · ":"📍 approximate · "):""}Open-Meteo</div>
+          <div style={{fontSize:fs-1,fontWeight:700,color:tc,margin:"12px 0 4px"}}>{lang==="tr"?"7 Günlük (haftalık)":TL("7-Day (weekly)",lang)}</div>
+          <div>{weather.daily.time.map((x,i)=>{const d=new Date(x+"T00:00");const wd=d.toLocaleDateString(lc,{weekday:"long"});return <div key={x} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 0",borderBottom:`1px solid ${bd}`}}><span style={{fontSize:fs-1,color:tc,flex:1,textTransform:"capitalize"}}>{i===0?(lang==="tr"?"Bugün":TL("Today",lang)):wd}</span><span style={{fontSize:20,width:36,textAlign:"center"}}>{wxIcon(weather.daily.weather_code[i])}</span><span style={{fontSize:fs-1,color:mt,width:88,textAlign:"right"}}>{Math.round(weather.daily.temperature_2m_min[i])}° / <b style={{color:tc}}>{Math.round(weather.daily.temperature_2m_max[i])}°</b></span></div>;})}</div>
+        </>:<div style={{color:mt,fontSize:fs-1,padding:"24px 0",textAlign:"center"}}>{weather&&weather.err?(<><div>{lang==="tr"?"Hava durumu için konum gerekiyor.":TL("Weather needs your location.",lang)}</div><button onClick={()=>loadWeather(true)} style={{marginTop:12,padding:"10px 18px",borderRadius:12,border:"none",background:ac,color:onAc,fontWeight:700,fontSize:fs,cursor:"pointer"}}>📍 {lang==="tr"?"Konumu Etkinleştir":TL("Enable Location",lang)}</button></>):(lang==="tr"?"Yükleniyor…":TL("Loading…",lang))}</div>}
+        <div style={{fontSize:fs-4,color:mt,marginTop:12,textAlign:"center"}}>{weather&&weather.approx?(lang==="tr"?"📍 yaklaşık konum · ":TL("📍 approximate · ",lang)):""}Open-Meteo</div>
       </div>
     </div>}
     {/* Live Health summary (auto, timestamped, instant sync) */}
     {(()=>{
-      const mm=[["weight",lang==="tr"?"Kilo":"Weight","kg","⚖️"],["pulse",lang==="tr"?"Nabız":"Pulse","bpm","❤️"],["bp",lang==="tr"?"Tansiyon":"BP","mmHg","🩸"],["spo2","SpO₂","%","🫁"],["glucose",lang==="tr"?"Şeker":"Glucose","mg/dL","🍬"],["hba1c","HbA1c","%","🧪"]];
+      const mm=[["weight",lang==="tr"?"Kilo":TL("Weight",lang),"kg","⚖️"],["pulse",lang==="tr"?"Nabız":TL("Pulse",lang),"bpm","❤️"],["bp",lang==="tr"?"Tansiyon":TL("BP",lang),"mmHg","🩸"],["spo2","SpO₂","%","🫁"],["glucose",lang==="tr"?"Şeker":TL("Glucose",lang),"mg/dL","🍬"],["hba1c","HbA1c","%","🧪"]];
       const rows=mm.map(([k,lbl,u,ic])=>{const ser=(k==="glucose"?(glucose||[]).map(r=>({ts:r.ts,val:r.val})):(healthLog||[]).filter(x=>x.type===k).map(x=>({ts:x.ts,val:x.val,meta:x.meta}))).slice().sort((a,b)=>a.ts-b.ts);if(!ser.length)return null;return {k,lbl,u,ic,last:ser[ser.length-1],spark:ser.slice(-8).map(x=>x.val)};}).filter(Boolean);
       if(!rows.length)return null;
       return <div style={{...CS}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}><b style={{fontSize:fs,color:tc}}>📈 {lang==="tr"?"Canlı Sağlık":"Live Health"}</b><button onClick={()=>goTo("health")} style={{background:"none",border:"none",color:acTx,fontSize:fs-2,cursor:"pointer",fontWeight:700}}>{lang==="tr"?"Rapor →":"Report →"}</button></div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}><b style={{fontSize:fs,color:tc}}>📈 {lang==="tr"?"Canlı Sağlık":TL("Live Health",lang)}</b><button onClick={()=>goTo("health")} style={{background:"none",border:"none",color:acTx,fontSize:fs-2,cursor:"pointer",fontWeight:700}}>{lang==="tr"?"Rapor →":TL("Report →",lang)}</button></div>
         {rows.map(r=>{const mn=Math.min(...r.spark),mx=Math.max(...r.spark);const vv=r.k==="bp"?`${r.last.val}/${(r.last.meta&&r.last.meta.d)||"?"}`:r.last.val;const dt=new Date(r.last.ts);
           return <div key={r.k} style={{display:"flex",alignItems:"center",gap:9,padding:"6px 0",borderBottom:`1px solid ${bd}`}}>
             <span style={{fontSize:17,width:20,flexShrink:0}}>{r.ic}</span>
@@ -3476,7 +3477,7 @@ const renderHome=()=>{
             {r.spark.length>=2?<svg width="56" height="20" viewBox="0 0 56 20" preserveAspectRatio="none" style={{flex:1,maxWidth:80}}><polyline fill="none" stroke={ac} strokeWidth="1.6" points={r.spark.map((v,i,a)=>`${(i/(a.length-1))*56},${18-((v-mn)/((mx-mn)||1))*16}`).join(" ")}/></svg>:<div style={{flex:1}}/>}
             <span style={{flexShrink:0,fontWeight:800,color:tc,fontSize:fs+1}}>{vv} <span style={{fontSize:fs-4,color:mt,fontWeight:400}}>{r.u}</span></span>
           </div>;})}
-        <div style={{fontSize:fs-4,color:mt,marginTop:6,textAlign:"center"}}>{lang==="tr"?"Otomatik tarihlenir · anlık güncellenir":"Auto-timestamped · live"}</div>
+        <div style={{fontSize:fs-4,color:mt,marginTop:6,textAlign:"center"}}>{lang==="tr"?"Otomatik tarihlenir · anlık güncellenir":TL("Auto-timestamped · live",lang)}</div>
       </div>;})()}
     {/* Health + Med Progress strip */}
     {/* Comprehensive Health Score Card — matches Health page */}
@@ -3488,7 +3489,7 @@ const renderHome=()=>{
       <div style={{textAlign:"center",marginBottom:10}}>
         <div style={{fontSize:fs+20,fontWeight:800,color:hscore>70?sc:hscore>40?acTx:hscore>0?dg:mt,lineHeight:1}}>{hscore||"—"}<span style={{fontSize:fs-1,color:mt,fontWeight:400}}>/100</span></div>
         <div style={{fontSize:fs,fontWeight:600,color:hscore>80?sc:hscore>60?acTx:hscore>40?"#f0a030":hscore>0?dg:mt,marginTop:4}}>
-          {hscore>80?(lang==="tr"?"Mükemmel 🌟":"Excellent 🌟"):hscore>60?(lang==="tr"?"İyi 💪":"Good 💪"):hscore>40?(lang==="tr"?"Orta ⚠️":"Average ⚠️"):hscore>0?(lang==="tr"?"Dikkat! 🔴":"Attention! 🔴"):(lang==="tr"?"Veri girin":"Enter data")}
+          {hscore>80?(lang==="tr"?"Mükemmel 🌟":TL("Excellent 🌟",lang)):hscore>60?(lang==="tr"?"İyi 💪":TL("Good 💪",lang)):hscore>40?(lang==="tr"?"Orta ⚠️":TL("Average ⚠️",lang)):hscore>0?(lang==="tr"?"Dikkat! 🔴":TL("Attention! 🔴",lang)):(lang==="tr"?"Veri girin":TL("Enter data",lang))}
         </div>
       </div>
       {hscore>0&&<div style={{display:"flex",flexDirection:"column",gap:6}}>
@@ -3510,22 +3511,22 @@ const renderHome=()=>{
           </div>
         ):null)}
         {(allergyCount>0||chronicCount>0)&&<div style={{marginTop:6,padding:"6px 8px",borderRadius:6,background:`${dg}08`,fontSize:fs-3,color:mt,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:4}}>
-          <span>⚠️ {lang==="tr"?"Risk":"Risk"}: {allergyCount>0&&`${allergyCount} ${lang==="tr"?"alerji":"allergies"}`}{allergyCount>0&&chronicCount>0&&", "}{chronicCount>0&&`${chronicCount} ${lang==="tr"?"kronik":"chronic"}`}</span>
+          <span>⚠️ {lang==="tr"?"Risk":TL("Risk",lang)}: {allergyCount>0&&`${allergyCount} ${lang==="tr"?"alerji":TL("allergies",lang)}`}{allergyCount>0&&chronicCount>0&&", "}{chronicCount>0&&`${chronicCount} ${lang==="tr"?"kronik":TL("chronic",lang)}`}</span>
           <span style={{color:dg,fontWeight:700}}>−{riskPenalty}</span>
         </div>}
         {wellnessBonus>0&&<div style={{padding:"6px 8px",borderRadius:6,background:`${sc}08`,fontSize:fs-3,color:mt,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span>✨ {lang==="tr"?"Wellness":"Wellness"}: {lang==="tr"?"su, uyku, adım":"water, sleep, steps"}</span>
+          <span>✨ {lang==="tr"?"Wellness":TL("Wellness",lang)}: {lang==="tr"?"su, uyku, adım":TL("water, sleep, steps",lang)}</span>
           <span style={{color:sc,fontWeight:700}}>+{wellnessBonus}</span>
         </div>}
       </div>}
-      {hscore===0&&<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:"8px 0"}}>{lang==="tr"?"Sağlık verilerinizi girin":"Enter your health data"}</div>}
+      {hscore===0&&<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:"8px 0"}}>{lang==="tr"?"Sağlık verilerinizi girin":TL("Enter your health data",lang)}</div>}
     </div>
     {/* Next Med + Next Appt — only if data exists */}
     {<div style={{display:"grid",gridTemplateColumns:nextMed&&nextAppt?"1fr 1fr":"1fr",gap:6}}>
       {<div onClick={()=>goTo("medTime")} style={{...CS,cursor:"pointer",padding:"12px",border:`1px solid ${ac}33`,background:`${ac}06`}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <span style={{fontWeight:800,fontSize:fs,color:acTx}}>💊 {lang==="tr"?"İlaç Zamanı":"Med Time"}</span>
-          <span style={{fontSize:fs-2,color:sc,fontWeight:700}}>{meds.filter(m=>m.taken).length}/{meds.length} {lang==="tr"?"Alındı":"Taken"}</span>
+          <span style={{fontWeight:800,fontSize:fs,color:acTx}}>💊 {lang==="tr"?"İlaç Zamanı":TL("Med Time",lang)}</span>
+          <span style={{fontSize:fs-2,color:sc,fontWeight:700}}>{meds.filter(m=>m.taken).length}/{meds.length} {lang==="tr"?"Alındı":TL("Taken",lang)}</span>
         </div>
         <div style={{height:6,background:`${mt}30`,borderRadius:3,overflow:"hidden",marginBottom:6}}>
           <div style={{height:"100%",background:`linear-gradient(90deg,${ac},${sc})`,borderRadius:3,width:`${meds.length?(meds.filter(m=>m.taken).length/meds.length)*100:0}%`,transition:"width 0.5s"}}/>
@@ -3534,14 +3535,14 @@ const renderHome=()=>{
           <span style={{fontSize:22,animation:"pulse 2s infinite"}}>⏰</span>
           <div style={{flex:1}}>
             <div style={{fontWeight:700,fontSize:fs-1}}>{nextMed.name} — {nextMed.dose}</div>
-            <div style={{fontSize:fs-3,color:mt}}>{pat.name?pat.name.split(" ")[0]+", ":""}{nextMed.name} {(()=>{const[mH,mM]=(nextMed.time||"00:00").split(":").map(Number);const nowM=now.getHours()*60+now.getMinutes();const medM=mH*60+mM;const diff=nowM-medM;if(diff>0&&diff<120)return lang==="tr"?`${diff} dk geçti. İlacını aldıysan onay ver.`:`${diff} min passed. Confirm if taken.`;if(diff>=120)return lang==="tr"?`${Math.floor(diff/60)} saat ${diff%60} dk geçti!`:`${Math.floor(diff/60)}h ${diff%60}m passed!`;return lang==="tr"?"saatin yaklaşıyor!":"time approaching!";})()}</div>
+            <div style={{fontSize:fs-3,color:mt}}>{pat.name?pat.name.split(" ")[0]+", ":""}{nextMed.name} {(()=>{const[mH,mM]=(nextMed.time||"00:00").split(":").map(Number);const nowM=now.getHours()*60+now.getMinutes();const medM=mH*60+mM;const diff=nowM-medM;if(diff>0&&diff<120)return lang==="tr"?`${diff} dk geçti. İlacını aldıysan onay ver.`:`${diff} min passed. Confirm if taken.`;if(diff>=120)return lang==="tr"?`${Math.floor(diff/60)} saat ${diff%60} dk geçti!`:`${Math.floor(diff/60)}h ${diff%60}m passed!`;return lang==="tr"?"saatin yaklaşıyor!":TL("time approaching!",lang);})()}</div>
           </div>
           <div style={{textAlign:"right"}}>
             <div style={{fontWeight:800,fontSize:fs+1,color:acTx}}>{nextMed.time}</div>
-            {nextMed.count>0&&<div style={{fontSize:fs-3,color:nextMed.count<=5?dg:sc}}>📦 {nextMed.count} {lang==="tr"?"kaldı":"left"}</div>}
+            {nextMed.count>0&&<div style={{fontSize:fs-3,color:nextMed.count<=5?dg:sc}}>📦 {nextMed.count} {lang==="tr"?"kaldı":TL("left",lang)}</div>}
           </div>
         </div>
-        :<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:4}}>{meds.length===0?(lang==="tr"?"İlaç eklemek için tıklayın":"Tap to add medicine"):(lang==="tr"?"Tüm ilaçlar alındı! ✅":"All meds taken! ✅")}</div>}
+        :<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:4}}>{meds.length===0?(lang==="tr"?"İlaç eklemek için tıklayın":TL("Tap to add medicine",lang)):(lang==="tr"?"Tüm ilaçlar alındı! ✅":TL("All meds taken! ✅",lang))}</div>}
       </div>}
       {nextAppt&&<div onClick={()=>goTo("appts")} style={{...CS,cursor:"pointer",padding:"10px",display:"flex",alignItems:"center",gap:8}}>
         <span style={{fontSize:20}}>📅</span>
@@ -3575,11 +3576,11 @@ const renderHome=()=>{
       </div>
       <div style={{marginBottom:6}}>
         <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>📝 {t.notes||"Not"}</div>
-        <div style={{display:"flex",gap:6,alignItems:"flex-start"}}><textarea value={calNoteText} onChange={e=>setCalNoteText(e.target.value)} onInput={autoResize} onBlur={()=>{if(calNoteText.trim())setCalNotes(p=>({...p,[selDate]:calNoteText}));else{const n={...calNotes};delete n[selDate];setCalNotes(n);}}} placeholder={lang==="tr"?"Not ekle...":"Add note..."} rows={2} style={{...IS,fontSize:fs-1,resize:"none",minHeight:36,maxHeight:100}}/><DictateBtn value={calNoteText} onChange={v=>setCalNoteText(v)}/></div>
+        <div style={{display:"flex",gap:6,alignItems:"flex-start"}}><textarea value={calNoteText} onChange={e=>setCalNoteText(e.target.value)} onInput={autoResize} onBlur={()=>{if(calNoteText.trim())setCalNotes(p=>({...p,[selDate]:calNoteText}));else{const n={...calNotes};delete n[selDate];setCalNotes(n);}}} placeholder={lang==="tr"?"Not ekle...":TL("Add note...",lang)} rows={2} style={{...IS,fontSize:fs-1,resize:"none",minHeight:36,maxHeight:100}}/><DictateBtn value={calNoteText} onChange={v=>setCalNoteText(v)}/></div>
       </div>
       <div style={{display:"flex",gap:6,alignItems:"center"}}>
         <span style={{fontSize:fs-2,color:mt}}>⏰</span>
-        <input type="time" aria-label={lang==="tr"?"Saat":"Time"} value={calAlarmTime} onChange={e=>{setCalAlarmTime(e.target.value);if(e.target.value)setCalAlarms(p=>({...p,[selDate]:e.target.value}));else{const a={...calAlarms};delete a[selDate];setCalAlarms(a);}}} style={{...IS,width:100,padding:"4px 8px"}}/>
+        <input type="time" aria-label={lang==="tr"?"Saat":TL("Time",lang)} value={calAlarmTime} onChange={e=>{setCalAlarmTime(e.target.value);if(e.target.value)setCalAlarms(p=>({...p,[selDate]:e.target.value}));else{const a={...calAlarms};delete a[selDate];setCalAlarms(a);}}} style={{...IS,width:100,padding:"4px 8px"}}/>
         {calAlarms[selDate]&&<span style={{fontSize:fs-3,color:sc}}>✓ {t.alarmSet||"Alarm"}</span>}
       </div>
       {appts.filter(a=>a.date===selDate).map(a=><div key={a.id} style={{marginTop:6,padding:"6px 8px",borderRadius:8,background:`${dg}11`,fontSize:fs-2}}>🏥 {a.doctor} — {a.time}</div>)}
@@ -3587,7 +3588,7 @@ const renderHome=()=>{
     {/* Word Learning */}
     <div style={{...CS,padding:"10px 12px",background:`linear-gradient(135deg,${ac}08,${sc}08)`,border:`1px solid ${ac}22`}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-        <span style={{fontWeight:700,fontSize:fs-1}}>📚 {lang==="tr"?"Günün Kelimesi":"Word of the Day"}</span>
+        <span style={{fontWeight:700,fontSize:fs-1}}>📚 {lang==="tr"?"Günün Kelimesi":TL("Word of the Day",lang)}</span>
         <div style={{display:"flex",gap:3}}>{Object.entries(TOPIC_NAMES).map(([k,v])=><button key={k} onClick={()=>setWordTopic(k)} style={{padding:"2px 6px",borderRadius:6,fontSize:fs-3,border:wordTopic===k?`1px solid ${ac}`:`1px solid ${bd}`,background:wordTopic===k?`${ac}15`:"transparent",color:wordTopic===k?acTx:mt,cursor:"pointer",fontWeight:wordTopic===k?700:400}}>{v[lang]||v.en}</button>)}</div>
         <div style={{display:"flex",gap:4,alignItems:"center"}}>
           <div style={{position:"relative"}}>
@@ -3614,7 +3615,7 @@ const renderHome=()=>{
     <div style={{...CS,padding:10,position:"relative"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
         <div style={{fontWeight:700,fontSize:fs,display:"flex",alignItems:"center",gap:6}}><img src={GLOBE_IMG} alt="" aria-hidden="true" style={{width:20,height:20,borderRadius:10}}/> {lang==="tr"?"Çeviri":lang==="en"?"Translator":lang==="de"?"Übersetzer":lang==="ru"?"Переводчик":lang==="zh"?"翻译":lang==="hi"?"अनुवादक":lang==="nl"?"Vertaler":lang==="es"?"Traductor":lang==="ar"?"مترجم":"Translator"}</div>
-        <span style={{fontSize:fs-3,color:acTx,fontWeight:500}}>60+ {lang==="tr"?"Dil":"Lang"}</span>
+        <span style={{fontSize:fs-3,color:acTx,fontWeight:500}}>60+ {lang==="tr"?"Dil":TL("Lang",lang)}</span>
       </div>
       {/* Language selector bar — src ↔ tgt */}
       <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
@@ -3624,7 +3625,7 @@ const renderHome=()=>{
           <span style={{color:mt,fontSize:fs-2}}>▾</span>
         </button>
         {/* Swap button */}
-        <button onClick={()=>{const nSrc=trTgt,nTgt=trSrc;setTrSrc(nSrc);setTrTgt(nTgt);setTrIn(trResult||"");setTrResult(trIn||"");}} style={{padding:"8px 10px",borderRadius:10,border:`1px solid ${ac}44`,background:`${ac}11`,color:acTx,cursor:"pointer",fontSize:16,flexShrink:0}} title={lang==="tr"?"Dilleri Değiştir":"Swap languages"}>⇄</button>
+        <button onClick={()=>{const nSrc=trTgt,nTgt=trSrc;setTrSrc(nSrc);setTrTgt(nTgt);setTrIn(trResult||"");setTrResult(trIn||"");}} style={{padding:"8px 10px",borderRadius:10,border:`1px solid ${ac}44`,background:`${ac}11`,color:acTx,cursor:"pointer",fontSize:16,flexShrink:0}} title={lang==="tr"?"Dilleri Değiştir":TL("Swap languages",lang)}>⇄</button>
         {/* Target selector */}
         <button onClick={()=>{setTrShowTgtPick(!trShowTgtPick);setTrShowSrcPick(false);setTrSearch("");}} style={{flex:1,padding:"9px 10px",borderRadius:10,border:`1px solid ${trShowTgtPick?ac:bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:fs-2,minWidth:0}}>
           {(()=>{const s=EXT_LANGS.find(l=>l.k===trTgt);return s?<><Flag code={s.flag} size={20}/><span style={{flex:1,textAlign:"left",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",fontWeight:600}}>{s.n}</span></>:null;})()}
@@ -3633,7 +3634,7 @@ const renderHome=()=>{
       </div>
       {/* Language picker dropdown */}
       {(trShowSrcPick||trShowTgtPick)&&<div style={{position:"absolute",top:88,left:10,right:10,background:cd,border:`1px solid ${ac}`,borderRadius:10,boxShadow:"0 8px 24px rgba(0,0,0,.3)",zIndex:200,padding:6,maxHeight:340,overflow:"hidden",display:"flex",flexDirection:"column"}}>
-        <input autoFocus placeholder={lang==="tr"?"Dil ara...":"Search language..."} value={trSearch} onChange={e=>setTrSearch(e.target.value)} style={{...IS,marginBottom:6,fontSize:fs-1}}/>
+        <input autoFocus placeholder={lang==="tr"?"Dil ara...":TL("Search language...",lang)} value={trSearch} onChange={e=>setTrSearch(e.target.value)} style={{...IS,marginBottom:6,fontSize:fs-1}}/>
         <div style={{overflowY:"auto",maxHeight:270}}>
           {EXT_LANGS.filter(l=>{
             const q=trSearch.toLowerCase().trim();
@@ -3654,11 +3655,11 @@ const renderHome=()=>{
             <Flag code={(EXT_LANGS.find(l=>l.k===trSrc)||{}).flag} size={14}/>
             <span style={{fontWeight:600}}>{(EXT_LANGS.find(l=>l.k===trSrc)||{n:trSrc}).n}</span>
           </div>
-          <div style={{display:"flex",gap:6,alignItems:"flex-start"}}><textarea value={trIn} onChange={e=>{setTrIn(e.target.value);setTrResult("");}} placeholder={lang==="tr"?"Metin girin...":"Enter text..."} style={{flex:1,border:"none",background:"transparent",color:tc,fontSize:fs-1,outline:"none",resize:"none",minHeight:80,fontFamily:"inherit",wordBreak:"break-word",direction:trSrc==="ar"||trSrc==="he"||trSrc==="fa"||trSrc==="ur"?"rtl":"ltr"}}/><DictateBtn value={trIn} onChange={v=>{setTrIn(v);setTrResult("");}}/></div>
+          <div style={{display:"flex",gap:6,alignItems:"flex-start"}}><textarea value={trIn} onChange={e=>{setTrIn(e.target.value);setTrResult("");}} placeholder={lang==="tr"?"Metin girin...":TL("Enter text...",lang)} style={{flex:1,border:"none",background:"transparent",color:tc,fontSize:fs-1,outline:"none",resize:"none",minHeight:80,fontFamily:"inherit",wordBreak:"break-word",direction:trSrc==="ar"||trSrc==="he"||trSrc==="fa"||trSrc==="ur"?"rtl":"ltr"}}/><DictateBtn value={trIn} onChange={v=>{setTrIn(v);setTrResult("");}}/></div>
           {trIn&&<div style={{display:"flex",gap:4,marginTop:4}}>
             <SpeakBtn text={trIn}/>
-            <button onClick={()=>copyTxt(trIn)} title={lang==="tr"?"Kopyala":"Copy"} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:12,color:tc}}>📋</button>
-            <button onClick={()=>{setTrIn("");setTrResult("");}} title={lang==="tr"?"Temizle":"Clear"} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:12,color:mt,marginLeft:"auto"}}>✕</button>
+            <button onClick={()=>copyTxt(trIn)} title={lang==="tr"?"Kopyala":TL("Copy",lang)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:12,color:tc}}>📋</button>
+            <button onClick={()=>{setTrIn("");setTrResult("");}} title={lang==="tr"?"Temizle":TL("Clear",lang)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:12,color:mt,marginLeft:"auto"}}>✕</button>
           </div>}
         </div>
         {/* Target panel */}
@@ -3668,11 +3669,11 @@ const renderHome=()=>{
             <span style={{fontWeight:700}}>{(EXT_LANGS.find(l=>l.k===trTgt)||{n:trTgt}).n}</span>
           </div>
           <div style={{flex:1,fontSize:fs-1,color:tc,whiteSpace:"pre-wrap",wordBreak:"break-word",direction:trTgt==="ar"||trTgt==="he"||trTgt==="fa"||trTgt==="ur"?"rtl":"ltr"}}>
-            {trLoad?<span style={{color:mt,fontStyle:"italic"}}>⏳ {lang==="tr"?"Çevriliyor...":"Translating..."}</span>:(trResult||<span style={{color:mt,fontStyle:"italic"}}>{lang==="tr"?"Çeviri burada görünecek":"Translation appears here"}</span>)}
+            {trLoad?<span style={{color:mt,fontStyle:"italic"}}>⏳ {lang==="tr"?"Çevriliyor...":TL("Translating...",lang)}</span>:(trResult||<span style={{color:mt,fontStyle:"italic"}}>{lang==="tr"?"Çeviri burada görünecek":TL("Translation appears here",lang)}</span>)}
           </div>
           {trResult&&<div style={{display:"flex",gap:4,marginTop:4}}>
             <SpeakBtn text={trResult} langCode={(EXT_LANGS.find(l=>l.k===trTgt)||{code:"en"}).code}/>
-            <button onClick={()=>copyTxt(trResult)} title={lang==="tr"?"Kopyala":"Copy"} style={{background:"none",border:`1px solid ${ac}44`,borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:12,color:acTx}}>📋</button>
+            <button onClick={()=>copyTxt(trResult)} title={lang==="tr"?"Kopyala":TL("Copy",lang)} style={{background:"none",border:`1px solid ${ac}44`,borderRadius:6,padding:"3px 6px",cursor:"pointer",fontSize:12,color:acTx}}>📋</button>
           </div>}
         </div>
       </div>
@@ -3700,18 +3701,18 @@ const renderHome=()=>{
           if(tx&&!up.includes("PLEASE SELECT")&&!up.includes("INVALID")&&!up.includes("MYMEMORY WARNING")&&!up.includes("USED ALL")){
             setTrResult(tx);
           }else if(up.includes("MYMEMORY WARNING")||up.includes("USED ALL")){
-            setTrResult(lang==="tr"?"⚠️ Ücretsiz çeviri günlük limiti doldu. Sınırsız çeviri için Ayarlar'dan AI API anahtarı ekleyin.":"⚠️ Free translation daily limit reached. Add an AI API key in Settings for unlimited translation.");
+            setTrResult(lang==="tr"?"⚠️ Ücretsiz çeviri günlük limiti doldu. Sınırsız çeviri için Ayarlar'dan AI API anahtarı ekleyin.":TL("⚠️ Free translation daily limit reached. Add an AI API key in Settings for unlimited translation.",lang));
           }else{
-            setTrResult(lang==="tr"?"⚠️ Çeviri başarısız. Dil kombinasyonu desteklenmeyebilir.":"⚠️ Translation failed. Language pair may not be supported.");
+            setTrResult(lang==="tr"?"⚠️ Çeviri başarısız. Dil kombinasyonu desteklenmeyebilir.":TL("⚠️ Translation failed. Language pair may not be supported.",lang));
           }
         }catch(err){
-          setTrResult(lang==="tr"?"⚠️ Çeviri servisi şu an kullanılamıyor.":"⚠️ Translation service unavailable.");
+          setTrResult(lang==="tr"?"⚠️ Çeviri servisi şu an kullanılamıyor.":TL("⚠️ Translation service unavailable.",lang));
         }
         setTrLoad(false);
       }} disabled={trLoad||!trIn.trim()} style={{...BP,width:"100%",padding:"10px",fontSize:fs,fontWeight:700,opacity:(trLoad||!trIn.trim())?0.6:1}}>
-        {trLoad?"⏳ "+(lang==="tr"?"Çevriliyor...":"Translating..."):"🌐 "+(lang==="tr"?"Çevir":lang==="en"?"Translate":lang==="de"?"Übersetzen":lang==="ru"?"Перевести":lang==="zh"?"翻译":lang==="hi"?"अनुवाद":lang==="nl"?"Vertalen":lang==="es"?"Traducir":lang==="ar"?"ترجمة":"Translate")}
+        {trLoad?"⏳ "+(lang==="tr"?"Çevriliyor...":TL("Translating...",lang)):"🌐 "+(lang==="tr"?"Çevir":lang==="en"?"Translate":lang==="de"?"Übersetzen":lang==="ru"?"Перевести":lang==="zh"?"翻译":lang==="hi"?"अनुवाद":lang==="nl"?"Vertalen":lang==="es"?"Traducir":lang==="ar"?"ترجمة":"Translate")}
       </button>
-      <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:4}}>{lang==="tr"?"60+ dilde anında çeviri • MyMemory + AILVIE AI":"60+ languages • MyMemory + AILVIE AI"}</div>
+      <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:4}}>{lang==="tr"?"60+ dilde anında çeviri • MyMemory + AILVIE AI":TL("60+ languages • MyMemory + AILVIE AI",lang)}</div>
     </div>
     {/* Emergency + Location */}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
@@ -3748,13 +3749,13 @@ const renderAppts=()=>{
       <input placeholder={t.dr} value={newAppt.doctor} onChange={e=>setNewAppt({...newAppt,doctor:e.target.value})} style={{...IS,marginBottom:6}}/>
       <input placeholder={t.hosp} value={newAppt.hospital} onChange={e=>setNewAppt({...newAppt,hospital:e.target.value})} style={{...IS,marginBottom:6}}/>
       <input placeholder={t.clin} value={newAppt.clinic} onChange={e=>setNewAppt({...newAppt,clinic:e.target.value})} style={{...IS,marginBottom:6}}/>
-      <div style={{display:"flex",gap:6,marginBottom:6}}><input type="date" aria-label={lang==="tr"?"Tarih":"Date"} value={newAppt.date} onChange={e=>setNewAppt({...newAppt,date:e.target.value})} style={{...IS,flex:1}}/><input type="time" aria-label={lang==="tr"?"Saat":"Time"} value={newAppt.time} onChange={e=>setNewAppt({...newAppt,time:e.target.value})} style={{...IS,flex:1}}/></div>
-      <div style={{display:"flex",gap:6}}><button onClick={()=>{apptDraftIdRef.current=null;setNewAppt(EMPTY_APPT);setEditApptId(null);setShowAddAppt(false);}} style={BP}>{lang==="tr"?"Bitti":"Done"}</button><button onClick={()=>{if(!editApptId&&apptDraftIdRef.current!=null){const id=apptDraftIdRef.current;setAppts(p=>p.filter(x=>x.id!==id));}apptDraftIdRef.current=null;setNewAppt(EMPTY_APPT);setEditApptId(null);setShowAddAppt(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div>
+      <div style={{display:"flex",gap:6,marginBottom:6}}><input type="date" aria-label={lang==="tr"?"Tarih":TL("Date",lang)} value={newAppt.date} onChange={e=>setNewAppt({...newAppt,date:e.target.value})} style={{...IS,flex:1}}/><input type="time" aria-label={lang==="tr"?"Saat":TL("Time",lang)} value={newAppt.time} onChange={e=>setNewAppt({...newAppt,time:e.target.value})} style={{...IS,flex:1}}/></div>
+      <div style={{display:"flex",gap:6}}><button onClick={()=>{apptDraftIdRef.current=null;setNewAppt(EMPTY_APPT);setEditApptId(null);setShowAddAppt(false);}} style={BP}>{lang==="tr"?"Bitti":TL("Done",lang)}</button><button onClick={()=>{if(!editApptId&&apptDraftIdRef.current!=null){const id=apptDraftIdRef.current;setAppts(p=>p.filter(x=>x.id!==id));}apptDraftIdRef.current=null;setNewAppt(EMPTY_APPT);setEditApptId(null);setShowAddAppt(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div>
     </div>}
     {/* 3. Upcoming / Past */}
     <div style={{display:"flex",gap:6}}>{["up","past"].map(tab=><button key={tab} onClick={()=>goTo(tab==="up"?"appts":"appts")} style={pill(true)}>{t[tab]}</button>)}</div>
     {appts.filter(a=>a.date>=today).length===0&&<div style={{textAlign:"center",color:mt,padding:16}}>{t.noA}</div>}
-    {appts.filter(a=>a.date>=today).map(a=>(<div key={a.id} style={CS}><div style={{fontWeight:700,fontSize:fs+1}}>{a.doctor}</div><div style={{fontSize:fs-1,color:mt}}>🏥 {a.hospital} • {a.clinic}</div><div style={{color:acTx}}>📅 {a.date} ⏰ {a.time}</div><div style={{fontSize:fs-3,color:sc,marginTop:2}}>🔔 1 gün + 6 saat önce alarm</div><div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.hospital)}`} target="_blank" rel="noopener noreferrer" aria-label={`${t.dir} ${a.hospital}`} style={{...BP,padding:"6px 12px",textDecoration:"none"}}>🗺️ {t.dir}</a><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.hospital)}&travelmode=transit`} target="_blank" rel="noopener noreferrer" style={{...BP,padding:"6px 12px",background:sc,color:onSc,textDecoration:"none"}}>🚌</a><button onClick={()=>{setEditApptId(a.id);setNewAppt({doctor:a.doctor||"",hospital:a.hospital||"",clinic:a.clinic||"",date:a.date||"",time:a.time||""});setShowAddAppt(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:acTx,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button><button onClick={()=>toTrash("appt",a)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>🗑️</button></div></div>))}
+    {appts.filter(a=>a.date>=today).map(a=>(<div key={a.id} style={CS}><div style={{fontWeight:700,fontSize:fs+1}}>{a.doctor}</div><div style={{fontSize:fs-1,color:mt}}>🏥 {a.hospital} • {a.clinic}</div><div style={{color:acTx}}>📅 {a.date} ⏰ {a.time}</div><div style={{fontSize:fs-3,color:sc,marginTop:2}}>🔔 1 gün + 6 saat önce alarm</div><div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.hospital)}`} target="_blank" rel="noopener noreferrer" aria-label={`${t.dir} ${a.hospital}`} style={{...BP,padding:"6px 12px",textDecoration:"none"}}>🗺️ {t.dir}</a><a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.hospital)}&travelmode=transit`} target="_blank" rel="noopener noreferrer" style={{...BP,padding:"6px 12px",background:sc,color:onSc,textDecoration:"none"}}>🚌</a><button onClick={()=>{setEditApptId(a.id);setNewAppt({doctor:a.doctor||"",hospital:a.hospital||"",clinic:a.clinic||"",date:a.date||"",time:a.time||""});setShowAddAppt(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:acTx,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>✏️ {lang==="tr"?"Düzenle":TL("Edit",lang)}</button><button onClick={()=>toTrash("appt",a)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,borderRadius:8,padding:"6px 12px",cursor:"pointer"}}>🗑️</button></div></div>))}
     {/* 4. AI Location + Transit */}
     <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
       <button onClick={getLoc} style={{...BP,padding:"6px 12px"}}>📍 {t.loc}</button>
@@ -3775,14 +3776,14 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   {/* Header */}
   <div style={{textAlign:"center",padding:"10px 0"}}>
     <div style={{fontSize:40,marginBottom:4,animation:"pulse 2s infinite"}}>⏰</div>
-    <div style={{fontWeight:800,fontSize:fs+4,color:acTx}}>{lang==="tr"?"İlaç Zamanı":"Med Time"}</div>
-    <div style={{fontSize:fs-2,color:mt}}>{pat.name?pat.name+", ":""}{pending.length>0?(lang==="tr"?`${pending.length} ilaç bekliyor`:`${pending.length} meds pending`):(lang==="tr"?"Tüm ilaçlar alındı! ✅":"All meds taken! ✅")}</div>
+    <div style={{fontWeight:800,fontSize:fs+4,color:acTx}}>{lang==="tr"?"İlaç Zamanı":TL("Med Time",lang)}</div>
+    <div style={{fontSize:fs-2,color:mt}}>{pat.name?pat.name+", ":""}{pending.length>0?(lang==="tr"?`${pending.length} ilaç bekliyor`:`${pending.length} meds pending`):(lang==="tr"?"Tüm ilaçlar alındı! ✅":TL("All meds taken! ✅",lang))}</div>
   </div>
 
   {/* Progress */}
   <div style={{...CS,padding:"12px"}}>
     <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-      <span style={{fontWeight:700,fontSize:fs-1}}>{lang==="tr"?"Günlük İlerleme":"Daily Progress"}</span>
+      <span style={{fontWeight:700,fontSize:fs-1}}>{lang==="tr"?"Günlük İlerleme":TL("Daily Progress",lang)}</span>
       <span style={{fontWeight:800,color:sc}}>{taken.length}/{meds.length}</span>
     </div>
     <div style={{height:10,background:`${mt}25`,borderRadius:5,overflow:"hidden"}}>
@@ -3791,7 +3792,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   </div>
 
   {/* Pending Meds — Timer Cards */}
-  {pending.length>0&&<div style={{fontWeight:700,fontSize:fs,color:dg,marginTop:4}}>🔴 {lang==="tr"?"Bekleyen İlaçlar":"Pending Meds"}</div>}
+  {pending.length>0&&<div style={{fontWeight:700,fontSize:fs,color:dg,marginTop:4}}>🔴 {lang==="tr"?"Bekleyen İlaçlar":TL("Pending Meds",lang)}</div>}
   {pending.sort((a,b)=>getMinLeft(a.time)-getMinLeft(b.time)).map(m=>{
     const minLeft=getMinLeft(m.time);
     const isNear=minLeft>=0&&minLeft<=30;
@@ -3803,13 +3804,13 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
           <div style={{fontWeight:800,fontSize:fs+1}}>{m.name}</div>
           <div style={{fontSize:fs-2,color:mt}}>{m.dose} — {m.alarmType==="ring"?"🔔":m.alarmType==="vibrate"?"📳":"🔔📳"}</div>
           <div style={{display:"flex",gap:8,marginTop:3}}>
-            <span style={{fontSize:fs-3,color:acTx,fontWeight:600}}>📦 {m.count||30} {lang==="tr"?"kaldı":"left"}</span>
+            <span style={{fontSize:fs-3,color:acTx,fontWeight:600}}>📦 {m.count||30} {lang==="tr"?"kaldı":TL("left",lang)}</span>
           </div>
         </div>
         <div style={{textAlign:"right"}}>
           <div style={{fontWeight:800,fontSize:fs+4,color:isNear?dg:ac}}>{m.time}</div>
           <div style={{fontSize:fs-2,fontWeight:700,color:isNear?dg:isPast?"#f97316":sc}}>
-            {isPast?(lang==="tr"?"GEÇTİ!":"OVERDUE!"):minLeft<=0?(lang==="tr"?"ŞİMDİ!":"NOW!"):`${minLeft} ${lang==="tr"?"dk":"min"}`}
+            {isPast?(lang==="tr"?"GEÇTİ!":TL("OVERDUE!",lang)):minLeft<=0?(lang==="tr"?"ŞİMDİ!":TL("NOW!",lang)):`${minLeft} ${lang==="tr"?"dk":TL("min",lang)}`}
           </div>
         </div>
       </div>
@@ -3832,16 +3833,16 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
             if(sameMed){return{...x,count:newCount};}
             return x;
           }));
-          notify("✅ "+m.name+" "+(lang==="tr"?"alındı":"taken")+" ("+(lang==="tr"?"Kalan":"Left")+": "+newCount+")");
-          speakAlarm(m.name+" "+(lang==="tr"?"alındı":"taken"));
-        }} style={{...BP,flex:1,padding:"10px",fontSize:fs,fontWeight:700}}>✅ {lang==="tr"?"Aldım":"Taken"}</button>
-        <button onClick={()=>speakAlarm((pat.name||"")+", "+m.name+" "+m.dose+" "+(lang==="tr"?"saatin yaklaşıyor!":"time is near!"))} style={{background:`${ac}15`,border:`1px solid ${ac}`,borderRadius:10,padding:"10px 14px",cursor:"pointer",fontSize:16}}>🔊</button>
+          notify("✅ "+m.name+" "+(lang==="tr"?"alındı":TL("taken",lang))+" ("+(lang==="tr"?"Kalan":TL("Left",lang))+": "+newCount+")");
+          speakAlarm(m.name+" "+(lang==="tr"?"alındı":TL("taken",lang)));
+        }} style={{...BP,flex:1,padding:"10px",fontSize:fs,fontWeight:700}}>✅ {lang==="tr"?"Aldım":TL("Taken",lang)}</button>
+        <button onClick={()=>speakAlarm((pat.name||"")+", "+m.name+" "+m.dose+" "+(lang==="tr"?"saatin yaklaşıyor!":TL("time is near!",lang)))} style={{background:`${ac}15`,border:`1px solid ${ac}`,borderRadius:10,padding:"10px 14px",cursor:"pointer",fontSize:16}}>🔊</button>
       </div>
     </div>);
   })}
 
   {/* Taken Meds */}
-  {taken.length>0&&<div style={{fontWeight:700,fontSize:fs,color:sc,marginTop:4}}>✅ {lang==="tr"?"Alınan İlaçlar":"Taken Meds"}</div>}
+  {taken.length>0&&<div style={{fontWeight:700,fontSize:fs,color:sc,marginTop:4}}>✅ {lang==="tr"?"Alınan İlaçlar":TL("Taken Meds",lang)}</div>}
   {taken.map(m=>(<div key={m.id} style={{...CS,opacity:0.5,display:"flex",alignItems:"center",gap:10}}>
     <span style={{fontSize:20}}>✅</span>
     <div style={{flex:1}}>
@@ -3853,7 +3854,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
 
   {/* Add Med shortcut */}
   <button onClick={()=>goTo("meds")} style={{...CS,border:`2px dashed ${ac}33`,cursor:"pointer",textAlign:"center",padding:"14px",color:acTx,fontWeight:600}}>
-    💊 {lang==="tr"?"İlaç Ekle / Düzenle":"Add / Edit Meds"} →
+    💊 {lang==="tr"?"İlaç Ekle / Düzenle":TL("Add / Edit Meds",lang)} →
   </button>
 </div>);};
 
@@ -3870,8 +3871,8 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
   {meds.some(m=>!m.taken)&&<div style={{...CS,background:`${dg}12`,border:`1px solid ${dg}33`,display:"flex",alignItems:"center",gap:10,padding:"10px 12px"}}>
     <span style={{fontSize:28,animation:"pulse 1.5s infinite"}}>⏰</span>
     <div>
-      <div style={{fontWeight:700,fontSize:fs,color:dg}}>{lang==="tr"?"İlaç Zamanı":"Med Time"}</div>
-      <div style={{fontSize:fs-2,color:mt}}>{meds.filter(m=>!m.taken).length} {lang==="tr"?"bekliyor":"pending"}</div>
+      <div style={{fontWeight:700,fontSize:fs,color:dg}}>{lang==="tr"?"İlaç Zamanı":TL("Med Time",lang)}</div>
+      <div style={{fontSize:fs-2,color:mt}}>{meds.filter(m=>!m.taken).length} {lang==="tr"?"bekliyor":TL("pending",lang)}</div>
     </div>
   </div>}
   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:fs+2}}>💊 {t.meds}</span><button onClick={()=>setShowAddChooser(true)} style={{...BP,padding:"8px 16px"}}>+ {t.addMed}</button></div>
@@ -3882,12 +3883,12 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
       <div style={{width:38,height:4,borderRadius:2,background:bd,margin:"0 auto 14px"}}/>
       <div style={{fontWeight:700,fontSize:fs+2,marginBottom:12}}>💊 {t.addMed}</div>
       <button onClick={()=>{setShowAddChooser(false);setEditMedId(null);setNewMed(EMPTY_MED);medDraftIdRef.current=null;setShowAddMed(true);}} style={{...CS,display:"flex",alignItems:"center",gap:12,width:"100%",cursor:"pointer",border:`1px solid ${bd}`,marginBottom:10,textAlign:"left"}}>
-        <span style={{fontSize:24}}>✏️</span><div><div style={{fontWeight:600,color:tc}}>{lang==="tr"?"Manuel Ekle":"Add Manually"}</div><div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Bilgileri elle girin":"Enter details by hand"}</div></div>
+        <span style={{fontSize:24}}>✏️</span><div><div style={{fontWeight:600,color:tc}}>{lang==="tr"?"Manuel Ekle":TL("Add Manually",lang)}</div><div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Bilgileri elle girin":TL("Enter details by hand",lang)}</div></div>
       </button>
       <div style={{fontSize:fs-2,color:mt,fontWeight:600,margin:"4px 0 8px"}}>📷 {t.scanAdd}</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <button onClick={()=>{setShowAddChooser(false);photoInputRef.current&&photoInputRef.current.click();}} style={{...CS,display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",border:`1px solid ${bd}`,padding:"16px 6px"}}><span style={{fontSize:28}}>🖼️</span><span style={{fontSize:fs-1,fontWeight:600,color:tc}}>{lang==="tr"?"Fotoğraf":"Photo"}</span><span style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"AI ile tanı":"AI recognize"}</span></button>
-        <button onClick={()=>{setShowAddChooser(false);startScanner();}} style={{...CS,display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",border:`1px solid ${bd}`,padding:"16px 6px"}}><span style={{fontSize:28}}>📷</span><span style={{fontSize:fs-1,fontWeight:600,color:tc}}>{lang==="tr"?"Kamera":"Camera"}</span><span style={{fontSize:fs-3,color:mt}}>QR / {lang==="tr"?"Barkod":"Barcode"}</span></button>
+        <button onClick={()=>{setShowAddChooser(false);photoInputRef.current&&photoInputRef.current.click();}} style={{...CS,display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",border:`1px solid ${bd}`,padding:"16px 6px"}}><span style={{fontSize:28}}>🖼️</span><span style={{fontSize:fs-1,fontWeight:600,color:tc}}>{lang==="tr"?"Fotoğraf":TL("Photo",lang)}</span><span style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"AI ile tanı":TL("AI recognize",lang)}</span></button>
+        <button onClick={()=>{setShowAddChooser(false);startScanner();}} style={{...CS,display:"flex",flexDirection:"column",alignItems:"center",gap:6,cursor:"pointer",border:`1px solid ${bd}`,padding:"16px 6px"}}><span style={{fontSize:28}}>📷</span><span style={{fontSize:fs-1,fontWeight:600,color:tc}}>{lang==="tr"?"Kamera":TL("Camera",lang)}</span><span style={{fontSize:fs-3,color:mt}}>QR / {lang==="tr"?"Barkod":TL("Barcode",lang)}</span></button>
       </div>
       <button onClick={()=>setShowAddChooser(false)} style={{...BP,width:"100%",marginTop:14,background:"transparent",border:`1px solid ${bd}`,color:mt}}>{t.cancel}</button>
     </div>
@@ -3895,22 +3896,22 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
   {/* AI recognition review — confirm/edit before adding */}
   {recog&&<div style={{position:"fixed",inset:0,zIndex:345,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setRecog(null)}>
     <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:420,borderRadius:16,padding:18,border:`1px solid ${ac}`,boxShadow:"0 12px 40px rgba(0,0,0,.45)"}}>
-      <div style={{fontWeight:700,fontSize:fs+2,marginBottom:4}}>✅ {lang==="tr"?"İlaç tanındı":"Medication recognized"}</div>
-      <div style={{fontSize:fs-2,color:mt,marginBottom:14}}>{lang==="tr"?"Bilgileri kontrol edin, gerekirse düzeltin.":"Check the details and correct if needed."}</div>
+      <div style={{fontWeight:700,fontSize:fs+2,marginBottom:4}}>✅ {lang==="tr"?"İlaç tanındı":TL("Medication recognized",lang)}</div>
+      <div style={{fontSize:fs-2,color:mt,marginBottom:14}}>{lang==="tr"?"Bilgileri kontrol edin, gerekirse düzeltin.":TL("Check the details and correct if needed.",lang)}</div>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        <div><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"İlaç adı":"Name"}</div><input value={recog.name} onChange={e=>setRecog(r=>({...r,name:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
+        <div><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"İlaç adı":TL("Name",lang)}</div><input value={recog.name} onChange={e=>setRecog(r=>({...r,name:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
         <div style={{display:"flex",gap:10}}>
-          <div style={{flex:1}}><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"Doz":"Dose"}</div><input value={recog.dose} onChange={e=>setRecog(r=>({...r,dose:e.target.value}))} placeholder={lang==="tr"?"örn 5 mg":"e.g. 5 mg"} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
-          <div style={{flex:1}}><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"Form":"Form"}</div><input value={recog.form} onChange={e=>setRecog(r=>({...r,form:e.target.value}))} placeholder={lang==="tr"?"tablet/şurup":"tablet/syrup"} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
+          <div style={{flex:1}}><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"Doz":TL("Dose",lang)}</div><input value={recog.dose} onChange={e=>setRecog(r=>({...r,dose:e.target.value}))} placeholder={lang==="tr"?"örn 5 mg":TL("e.g. 5 mg",lang)} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
+          <div style={{flex:1}}><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"Form":TL("Form",lang)}</div><input value={recog.form} onChange={e=>setRecog(r=>({...r,form:e.target.value}))} placeholder={lang==="tr"?"tablet/şurup":TL("tablet/syrup",lang)} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
         </div>
-        <div><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"Etken madde":"Active ingredient"}</div><input value={recog.ingredient} onChange={e=>setRecog(r=>({...r,ingredient:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
-        {recog.verifying&&<div style={{fontSize:fs-2,color:mt}}>🔎 {lang==="tr"?"Küresel veritabanında doğrulanıyor…":"Verifying in global database…"}</div>}
-        {recog.verified&&<div style={{fontSize:fs-2,color:sc,lineHeight:1.4}}>✓ {lang==="tr"?"RxNav/OpenFDA doğrulandı":"Verified via RxNav/OpenFDA"}{recog.inn?` · INN: ${recog.inn}`:""}</div>}
-        {recog.verified===false&&!recog.verifying&&<div style={{fontSize:fs-3,color:mt,lineHeight:1.4}}>ℹ️ {lang==="tr"?"Küresel veritabanında bulunamadı (yerel ilaç olabilir)":"Not in global database (may be a local drug)"}</div>}
+        <div><div style={{fontSize:fs-2,color:mt,marginBottom:3}}>{lang==="tr"?"Etken madde":TL("Active ingredient",lang)}</div><input value={recog.ingredient} onChange={e=>setRecog(r=>({...r,ingredient:e.target.value}))} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"#0d1520":"#f8fafc",color:tc,fontSize:fs}}/></div>
+        {recog.verifying&&<div style={{fontSize:fs-2,color:mt}}>🔎 {lang==="tr"?"Küresel veritabanında doğrulanıyor…":TL("Verifying in global database…",lang)}</div>}
+        {recog.verified&&<div style={{fontSize:fs-2,color:sc,lineHeight:1.4}}>✓ {lang==="tr"?"RxNav/OpenFDA doğrulandı":TL("Verified via RxNav/OpenFDA",lang)}{recog.inn?` · INN: ${recog.inn}`:""}</div>}
+        {recog.verified===false&&!recog.verifying&&<div style={{fontSize:fs-3,color:mt,lineHeight:1.4}}>ℹ️ {lang==="tr"?"Küresel veritabanında bulunamadı (yerel ilaç olabilir)":TL("Not in global database (may be a local drug)",lang)}</div>}
       </div>
       <div style={{display:"flex",gap:10,marginTop:16}}>
-        <button onClick={()=>{const rc=recog;setRecog(null);photoInputRef.current&&photoInputRef.current.click();}} style={{...BP,flexShrink:0,background:"transparent",border:`1px solid ${bd}`,color:mt,padding:"11px 14px"}}>🔄 {lang==="tr"?"Yeniden":"Retry"}</button>
-        <button onClick={()=>{const rc=recog;setNewMed(pr=>({...pr,name:rc.name,dose:rc.dose}));setDrugQ(rc.inn||rc.ingredient||rc.name);const db=DR[(rc.ingredient||"").toLowerCase()];if(db){const raw=db[lang]||db.tr||db.en;if(raw)setDrugRes(pD(raw));}setRecog(null);notify(`✅ ${lang==="tr"?"İlaç eklendi":"Added"}: ${rc.name}`);setShowAddMed(true);}} disabled={!recog.name.trim()} style={{...BP,flex:1,padding:"11px",opacity:recog.name.trim()?1:.5}}>{lang==="tr"?"Ekle":"Add"} →</button>
+        <button onClick={()=>{const rc=recog;setRecog(null);photoInputRef.current&&photoInputRef.current.click();}} style={{...BP,flexShrink:0,background:"transparent",border:`1px solid ${bd}`,color:mt,padding:"11px 14px"}}>🔄 {lang==="tr"?"Yeniden":TL("Retry",lang)}</button>
+        <button onClick={()=>{const rc=recog;setNewMed(pr=>({...pr,name:rc.name,dose:rc.dose}));setDrugQ(rc.inn||rc.ingredient||rc.name);const db=DR[(rc.ingredient||"").toLowerCase()];if(db){const raw=db[lang]||db.tr||db.en;if(raw)setDrugRes(pD(raw));}setRecog(null);notify(`✅ ${lang==="tr"?"İlaç eklendi":TL("Added",lang)}: ${rc.name}`);setShowAddMed(true);}} disabled={!recog.name.trim()} style={{...BP,flex:1,padding:"11px",opacity:recog.name.trim()?1:.5}}>{lang==="tr"?"Ekle":TL("Add",lang)} →</button>
       </div>
       <button onClick={()=>setRecog(null)} style={{...BP,width:"100%",marginTop:8,background:"transparent",border:"none",color:mt,fontSize:fs-1}}>{t.cancel}</button>
     </div>
@@ -3939,7 +3940,7 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
         </div>
       </div>
     </div>}
-    <div style={{fontSize:fs-2,color:mt,textAlign:"center",marginTop:6}}>{camOn?(lang==="tr"?"Barkod/QR'ı çerçeveye getirin • tanınmazsa 🔎 AI ile kutuyu okutun":"Frame the barcode/QR • if not found, tap 🔎 AI to read the box"):(lang==="tr"?"📷 Kamera: canlı tara • 🖼️ Foto: galeriden/çekerek • ⌨️ aşağıdan manuel":"📷 Camera: live scan • 🖼️ Photo: gallery/capture • ⌨️ manual below")}</div>
+    <div style={{fontSize:fs-2,color:mt,textAlign:"center",marginTop:6}}>{camOn?(lang==="tr"?"Barkod/QR'ı çerçeveye getirin • tanınmazsa 🔎 AI ile kutuyu okutun":TL("Frame the barcode/QR • if not found, tap 🔎 AI to read the box",lang)):(lang==="tr"?"📷 Kamera: canlı tara • 🖼️ Foto: galeriden/çekerek • ⌨️ aşağıdan manuel":TL("📷 Camera: live scan • 🖼️ Photo: gallery/capture • ⌨️ manual below",lang))}</div>
     {scanError&&<div style={{fontSize:fs-2,color:dg,textAlign:"center",marginTop:4}}>{scanError}</div>}
   </div>}
   {/* Manual Barcode Entry */}
@@ -3962,19 +3963,19 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
     {scanResult.found&&<div style={{padding:"8px 10px",borderRadius:8,background:cd,border:`1px solid ${bd}`}}>
       <div style={{fontWeight:700,fontSize:fs+1}}>{scanResult.name}</div>
       <div style={{fontSize:fs-1,color:acTx}}>{t.dose}: {scanResult.dose}</div>
-      <div style={{fontSize:fs-2,color:mt,marginTop:4}}>{lang==="tr"?"↓ İlaç bilgileri aşağıda gösteriliyor":"↓ Drug info shown below"}</div>
+      <div style={{fontSize:fs-2,color:mt,marginTop:4}}>{lang==="tr"?"↓ İlaç bilgileri aşağıda gösteriliyor":TL("↓ Drug info shown below",lang)}</div>
     </div>}
-    {!scanResult.found&&<div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Bu barkod veritabanımızda yok. İlaç adını manuel olarak aratabilirsiniz.":"This barcode is not in our database. You can search the drug name manually."}</div>}
-    <button onClick={()=>setScanResult(null)} style={{background:"none",border:"none",color:mt,cursor:"pointer",fontSize:fs-2,marginTop:6}}>✕ {lang==="tr"?"Kapat":"Close"}</button>
+    {!scanResult.found&&<div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Bu barkod veritabanımızda yok. İlaç adını manuel olarak aratabilirsiniz.":TL("This barcode is not in our database. You can search the drug name manually.",lang)}</div>}
+    <button onClick={()=>setScanResult(null)} style={{background:"none",border:"none",color:mt,cursor:"pointer",fontSize:fs-2,marginTop:6}}>✕ {lang==="tr"?"Kapat":TL("Close",lang)}</button>
   </div>}
   {meds.length===0&&!showScanner&&<div style={{textAlign:"center",color:mt,padding:24}}>{t.noM}</div>}
   {meds.map(m=>(<div key={m.id} style={{...CS,display:"flex",alignItems:"center",gap:10,opacity:m.taken?0.5:1}}>
     <div style={{textAlign:"center"}}><span style={{fontSize:22}}>{m.taken?"✅":"💊"}</span>{m.count>0&&!m.taken&&<div style={{fontSize:fs-4,color:m.count<=5?dg:sc,fontWeight:700,marginTop:1}}>{m.count}</div>}
       {guideForMed(m.name)&&<button onClick={(e)=>{e.stopPropagation();startGuide(guideForMed(m.name));}}
         aria-label={lang==="tr"?`${m.name} kullanım rehberi`:`${m.name} technique guide`}
-        title={lang==="tr"?"Nasıl kullanılır?":"How to use"}
+        title={lang==="tr"?"Nasıl kullanılır?":TL("How to use",lang)}
         style={{marginTop:4,background:"transparent",border:`1px solid ${acTx}`,color:acTx,borderRadius:7,padding:"1px 5px",fontSize:fs-4,cursor:"pointer",lineHeight:1.4}}>🔊</button>}</div>
-    <div style={{flex:1,minWidth:0}}><div style={{fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</div><div style={{fontSize:fs-2,color:mt}}>{m.dose} — ⏰ {m.time}</div><div style={{fontSize:fs-3,color:sc}}>{m.alarmType==="ring"?"🔔":m.alarmType==="vibrate"?"📳":"🔔📳"} {m.count>0&&<span style={{color:m.count<=5?dg:mt}}>({lang==="tr"?"Kalan":"Left"}: {m.count})</span>}</div></div>
+    <div style={{flex:1,minWidth:0}}><div style={{fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</div><div style={{fontSize:fs-2,color:mt}}>{m.dose} — ⏰ {m.time}</div><div style={{fontSize:fs-3,color:sc}}>{m.alarmType==="ring"?"🔔":m.alarmType==="vibrate"?"📳":"🔔📳"} {m.count>0&&<span style={{color:m.count<=5?dg:mt}}>({lang==="tr"?"Kalan":TL("Left",lang)}: {m.count})</span>}</div></div>
     {!m.taken&&<button onClick={()=>{
       const nm=m.name?.trim().toLowerCase();
       const allSame=meds.filter(x=>x.name?.trim().toLowerCase()===nm);
@@ -3986,7 +3987,7 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
         if(sameMed){return{...x,count:newCount};}
         return x;
       }));
-      notify(`✅ ${m.name} ${t.taken} (${lang==="tr"?"Kalan":"Left"}: ${newCount})`);
+      notify(`✅ ${m.name} ${t.taken} (${lang==="tr"?"Kalan":TL("Left",lang)}: ${newCount})`);
     }} style={{...BP,padding:"6px 12px"}}>✓</button>}
     <button onClick={()=>{setEditMedId(m.id);setNewMed({name:m.name||"",dose:m.dose||"",time:m.time||"",startDate:m.startDate||"",alarmType:m.alarmType||"both",count:m.count||30,timesPerDay:m.timesPerDay||1,recurring:m.recurring!==false});setShowAddMed(true);}} style={{background:"none",border:`1px solid ${ac}33`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14,color:acTx}}>✏️</button>
     <button onClick={()=>toTrash("med",m)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:16}}>🗑️</button>
@@ -3995,18 +3996,18 @@ const renderMeds=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}
     <input placeholder={t.nm} value={newMed.name} onChange={e=>setNewMed({...newMed,name:e.target.value})} style={{...IS,marginBottom:6}}/>
     <input placeholder={t.dose} value={newMed.dose} onChange={e=>setNewMed({...newMed,dose:e.target.value})} style={{...IS,marginBottom:6}}/>
     <div style={{display:"flex",gap:6,marginBottom:6}}>
-      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>📅 {lang==="tr"?"Başlangıç":"Start"}</div><input type="date" aria-label={lang==="tr"?"Tarih":"Date"} value={newMed.startDate} onChange={e=>setNewMed({...newMed,startDate:e.target.value})} style={IS}/></div>
-      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>⏰ {t.time}</div><input type="time" aria-label={lang==="tr"?"Saat":"Time"} value={newMed.time} onChange={e=>setNewMed({...newMed,time:e.target.value})} style={IS}/></div>
+      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>📅 {lang==="tr"?"Başlangıç":TL("Start",lang)}</div><input type="date" aria-label={lang==="tr"?"Tarih":TL("Date",lang)} value={newMed.startDate} onChange={e=>setNewMed({...newMed,startDate:e.target.value})} style={IS}/></div>
+      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>⏰ {t.time}</div><input type="time" aria-label={lang==="tr"?"Saat":TL("Time",lang)} value={newMed.time} onChange={e=>setNewMed({...newMed,time:e.target.value})} style={IS}/></div>
     </div>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,padding:"8px 10px",borderRadius:8,background:newMed.recurring?`${sc}12`:`${mt}08`,border:`1px solid ${newMed.recurring?sc:bd}`,cursor:"pointer"}} onClick={()=>setNewMed({...newMed,recurring:!newMed.recurring})}>
       <button style={{width:36,height:20,borderRadius:10,background:newMed.recurring?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:14,height:14,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:newMed.recurring?19:3,transition:"left .2s"}}/></button>
-      <div><div style={{fontSize:fs-1,fontWeight:600,color:newMed.recurring?sc:mt}}>🔁 {lang==="tr"?"Her gün tekrarla":"Repeat daily"}</div>
-      <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"İlaç bitene kadar her gün aynı saatte alarm":"Alarm at same time every day until finished"}</div></div>
+      <div><div style={{fontSize:fs-1,fontWeight:600,color:newMed.recurring?sc:mt}}>🔁 {lang==="tr"?"Her gün tekrarla":TL("Repeat daily",lang)}</div>
+      <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"İlaç bitene kadar her gün aynı saatte alarm":TL("Alarm at same time every day until finished",lang)}</div></div>
     </div>
     <div style={{marginBottom:6}}><div style={{fontSize:fs-2,color:mt,marginBottom:4}}>⏰ {t.alarmType}</div><div style={{display:"flex",gap:6}}>{["ring","vibrate","both"].map(at=><button key={at} onClick={()=>setNewMed({...newMed,alarmType:at})} style={pill(newMed.alarmType===at)}>{at==="ring"?"🔔 "+t.ring:at==="vibrate"?"📳 "+t.vibrate:"🔔📳 "+t.both}</button>)}</div></div>
-    <div style={{display:"flex",gap:6,marginBottom:6,alignItems:"center",flexWrap:"wrap"}}><span style={{fontSize:fs-2,color:mt}}>💊 {lang==="tr"?"Kutu adedi":"Box count"}:</span><input type="number" min="1" value={newMed.count} onChange={e=>setNewMed({...newMed,count:Number(e.target.value)})} style={{...IS,width:65,textAlign:"center",fontWeight:700}}/><span style={{fontSize:fs-2,color:mt}}>🔁 {lang==="tr"?"Günde":"Per day"}:</span><input type="number" min="1" max="6" value={newMed.timesPerDay||1} onChange={e=>setNewMed({...newMed,timesPerDay:Number(e.target.value)})} style={{...IS,width:50,textAlign:"center",fontWeight:700}}/></div>
+    <div style={{display:"flex",gap:6,marginBottom:6,alignItems:"center",flexWrap:"wrap"}}><span style={{fontSize:fs-2,color:mt}}>💊 {lang==="tr"?"Kutu adedi":TL("Box count",lang)}:</span><input type="number" min="1" value={newMed.count} onChange={e=>setNewMed({...newMed,count:Number(e.target.value)})} style={{...IS,width:65,textAlign:"center",fontWeight:700}}/><span style={{fontSize:fs-2,color:mt}}>🔁 {lang==="tr"?"Günde":TL("Per day",lang)}:</span><input type="number" min="1" max="6" value={newMed.timesPerDay||1} onChange={e=>setNewMed({...newMed,timesPerDay:Number(e.target.value)})} style={{...IS,width:50,textAlign:"center",fontWeight:700}}/></div>
     {(newMed.timesPerDay||1)>1&&<div style={{fontSize:fs-3,color:acTx,marginBottom:6,padding:"4px 8px",background:`${ac}08`,borderRadius:6}}>💡 {lang==="tr"?`Günde ${newMed.timesPerDay} doz: Her doz için ayrı saat girerek ekleyin.`:`${newMed.timesPerDay} doses/day: Add each dose with a different time.`}</div>}
-    <div style={{display:"flex",gap:8}}><button onClick={()=>{medDraftIdRef.current=null;setNewMed(EMPTY_MED);setEditMedId(null);setShowAddMed(false);}} style={BP}>{lang==="tr"?"Bitti":"Done"}</button><button onClick={()=>{if(!editMedId&&medDraftIdRef.current!=null){const id=medDraftIdRef.current;setMeds(p=>p.filter(x=>x.id!==id));}medDraftIdRef.current=null;setNewMed(EMPTY_MED);setEditMedId(null);setShowAddMed(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div>
+    <div style={{display:"flex",gap:8}}><button onClick={()=>{medDraftIdRef.current=null;setNewMed(EMPTY_MED);setEditMedId(null);setShowAddMed(false);}} style={BP}>{lang==="tr"?"Bitti":TL("Done",lang)}</button><button onClick={()=>{if(!editMedId&&medDraftIdRef.current!=null){const id=medDraftIdRef.current;setMeds(p=>p.filter(x=>x.id!==id));}medDraftIdRef.current=null;setNewMed(EMPTY_MED);setEditMedId(null);setShowAddMed(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div>
   </div>}
   <div style={{...CS,border:`2px dashed ${ac}33`}}><div style={{fontWeight:700,marginBottom:8}}>🔍 {t.drugR}</div><div style={{display:"flex",gap:8}}><input placeholder={t.drugN} value={drugQ} onChange={e=>setDrugQ(e.target.value)} style={{...IS,flex:1}} onKeyDown={e=>{if(e.key==="Enter")analyzeDrug();}}/><button onClick={analyzeDrug} disabled={drugLoad} style={BP}>{drugLoad?"⏳":t.anlz}</button></div>{drugRes&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:5}}>{[[t.cls,"class"],[t.usg,"usage"],[t.dose,"dose"],[t.sEff,"sideEffects"],[t.wrn,"warnings"],[t.intr,"interactions"]].map(([l,k])=><div key={k} style={{fontSize:fs-1}}><span style={{fontWeight:700,color:acTx}}>{l}: </span><span>{drugRes[k]}</span></div>)}</div>}</div>
 </div>);
@@ -4016,42 +4017,42 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   {!all&&<button onClick={()=>setSettingsTab("all")} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:fs,textAlign:"left",padding:0}}>← {t.settings}</button>}
   {all&&<span style={{fontWeight:700,fontSize:fs+2}}>⚙️ {t.settings}</span>}
   {(all||s==="all")&&<div style={{...CS,borderLeft:`3px solid ${ac}`}}>
-    <div style={{fontWeight:700,marginBottom:4}}>♿ {lang==="tr"?"Erişilebilirlik":"Accessibility"}</div>
-    <div style={{fontSize:fs-2,color:mt,lineHeight:1.5}}>{lang==="tr"?"Görme güçlüğü yaşıyorsan: sağ üstteki 🎙️ ile AILVIE'yle konuşabilir, sesli diyaloğu açtığında AILVIE yanıtları sesli okur. Aşağıdan yüksek kontrast, büyük yazı ve ekran yakınlaştırma (+/−) seçeneklerini kullanabilirsin. Uygulama TalkBack/VoiceOver ekran okuyucularıyla uyumludur.":"If you have low vision: use the 🎙️ button (top right) to talk to AILVIE; with voice dialog on, AILVIE reads answers aloud. Below you'll find high contrast, large text and screen zoom (+/−). The app works with TalkBack/VoiceOver screen readers."}</div>
+    <div style={{fontWeight:700,marginBottom:4}}>♿ {lang==="tr"?"Erişilebilirlik":TL("Accessibility",lang)}</div>
+    <div style={{fontSize:fs-2,color:mt,lineHeight:1.5}}>{lang==="tr"?"Görme güçlüğü yaşıyorsan: sağ üstteki 🎙️ ile AILVIE'yle konuşabilir, sesli diyaloğu açtığında AILVIE yanıtları sesli okur. Aşağıdan yüksek kontrast, büyük yazı ve ekran yakınlaştırma (+/−) seçeneklerini kullanabilirsin. Uygulama TalkBack/VoiceOver ekran okuyucularıyla uyumludur.":TL("If you have low vision: use the 🎙️ button (top right) to talk to AILVIE; with voice dialog on, AILVIE reads answers aloud. Below you'll find high contrast, large text and screen zoom (+/−). The app works with TalkBack/VoiceOver screen readers.",lang)}</div>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:10}}>
-      <span style={{fontSize:fs-1}}>🗣️ {lang==="tr"?"Sesli-öncelikli mod":"Voice-first mode"}<div style={{fontSize:fs-4,color:mt}}>{lang==="tr"?"Sayfa değişince adını sesli söyler + titreşim":"Announces each screen aloud + haptic"}</div></span>
-      <button onClick={()=>{const nv=!voiceFirst;setVoiceFirst(nv);haptic(15);if(nv)speak(lang==="tr"?"Sesli-öncelikli mod açık":"Voice-first mode on",lang);}} aria-label={lang==="tr"?"Sesli-öncelikli mod":"Voice-first mode"} style={{width:48,height:26,borderRadius:13,background:voiceFirst?ac:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:20,height:20,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:voiceFirst?25:3,transition:"left .2s"}}/></button>
+      <span style={{fontSize:fs-1}}>🗣️ {lang==="tr"?"Sesli-öncelikli mod":TL("Voice-first mode",lang)}<div style={{fontSize:fs-4,color:mt}}>{lang==="tr"?"Sayfa değişince adını sesli söyler + titreşim":TL("Announces each screen aloud + haptic",lang)}</div></span>
+      <button onClick={()=>{const nv=!voiceFirst;setVoiceFirst(nv);haptic(15);if(nv)speak(lang==="tr"?"Sesli-öncelikli mod açık":TL("Voice-first mode on",lang),lang);}} aria-label={lang==="tr"?"Sesli-öncelikli mod":TL("Voice-first mode",lang)} style={{width:48,height:26,borderRadius:13,background:voiceFirst?ac:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:20,height:20,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:voiceFirst?25:3,transition:"left .2s"}}/></button>
     </div>
   </div>}
   {(all||s==="all")&&<>{[{l:`🌙 ${t.dark}`,v:dark,f:()=>setDark(!dark)},{l:`🔆 ${t.hc}`,v:hc,f:()=>setHc(!hc)}].map(x=>(<div key={x.l} style={{...CS,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span>{x.l}</span><button onClick={x.f} aria-label={x.l} style={{width:48,height:26,borderRadius:13,background:x.v?ac:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:20,height:20,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:x.v?25:3,transition:"left .2s"}}/></button></div>))}
   <div style={CS}><div style={{marginBottom:6}}>📝 {t.fSize}: {fs}</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[12,13,14,16,18,20,22].map(sz=><button key={sz} onClick={()=>setFs(sz)} aria-label={`${t.fSize} ${sz}`} style={pill(fs===sz)}>{sz}</button>)}</div></div>
   <div style={CS}><div style={{marginBottom:6}}>🌍 {t.lang}</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4}}>{Object.entries(LL).map(([k,v])=>{const emj={tr:"🇹🇷",en:"🇬🇧",de:"🇩🇪",ru:"🇷🇺",zh:"🇨🇳",hi:"🇮🇳",nl:"🇳🇱",es:"🇪🇸",ar:"🇸🇦",fr:"🇫🇷",pt:"🇵🇹",id:"🇮🇩",bn:"🇧🇩"};return<button key={k} onClick={()=>setLang(k)} style={pill(lang===k)}>{emj[k]||""} {v}</button>;})}</div></div>
-  <div style={CS}><div style={{marginBottom:6}}>🤖 AI API Key <span style={{fontSize:fs-3,color:mt}}>(Anthropic)</span></div><div style={{display:"flex",gap:6}}><input type="password" value={apiKey} onChange={e=>{setApiKey(e.target.value);try{localStorage.setItem("ailvie_api_key",e.target.value);}catch(ex){}}} placeholder="sk-ant-..." style={{...IS,flex:1,fontFamily:"monospace",fontSize:fs-2}}/>{apiKey&&<button onClick={()=>{setApiKey("");try{localStorage.removeItem("ailvie_api_key");}catch(ex){}}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",color:dg,cursor:"pointer"}}>✕</button>}</div><div style={{fontSize:fs-3,color:apiKey?sc:mt,marginTop:4}}>{apiKey?(lang==="tr"?"✓ API anahtarı ayarlandı":"✓ API key set"):(lang==="tr"?"AI Sohbet, çeviri ve ilaç analizi için gerekli":"Required for AI Chat, translation & drug analysis")}</div></div>
-  <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>{toTrash("emergency",en);notify(lang==="tr"?"Çöp kutusuna taşındı":"Moved to Trash");}} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
-  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🛡️ {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button aria-label={lang==="tr"?"Aç/Kapat":"Toggle"} onClick={()=>{const willOn=!perms[k];setPerms(p=>({...p,[k]:willOn}));if(k==="loc"){if(willOn){notify(lang==="tr"?"📍 Konum açılıyor…":"📍 Enabling location…");loadWeather(true);}else setWeather({err:"off"});return;}if(k==="notif"){if(willOn&&('Notification'in window)){if(Notification.permission==="denied")notify(lang==="tr"?"⚠️ Bildirim tarayıcıda engelli. Tarayıcı > Site izinleri > Bildirim'i açın.":"⚠️ Notifications blocked in browser settings.");else Notification.requestPermission().then(st=>{if(st!=="granted")notify(lang==="tr"?"Bildirim izni verilmedi — tarayıcı ayarlarından açabilirsiniz.":"Notification permission not granted.");}).catch(()=>{});}return;}}} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
-  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🧹 {lang==="tr"?"İçerik Filtresi":"Content Filter"}</div>
+  <div style={CS}><div style={{marginBottom:6}}>🤖 AI API Key <span style={{fontSize:fs-3,color:mt}}>(Anthropic)</span></div><div style={{display:"flex",gap:6}}><input type="password" value={apiKey} onChange={e=>{setApiKey(e.target.value);try{localStorage.setItem("ailvie_api_key",e.target.value);}catch(ex){}}} placeholder="sk-ant-..." style={{...IS,flex:1,fontFamily:"monospace",fontSize:fs-2}}/>{apiKey&&<button onClick={()=>{setApiKey("");try{localStorage.removeItem("ailvie_api_key");}catch(ex){}}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",color:dg,cursor:"pointer"}}>✕</button>}</div><div style={{fontSize:fs-3,color:apiKey?sc:mt,marginTop:4}}>{apiKey?(lang==="tr"?"✓ API anahtarı ayarlandı":TL("✓ API key set",lang)):(lang==="tr"?"AI Sohbet, çeviri ve ilaç analizi için gerekli":TL("Required for AI Chat, translation & drug analysis",lang))}</div></div>
+  <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>{toTrash("emergency",en);notify(lang==="tr"?"Çöp kutusuna taşındı":TL("Moved to Trash",lang));}} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
+  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🛡️ {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button aria-label={lang==="tr"?"Aç/Kapat":TL("Toggle",lang)} onClick={()=>{const willOn=!perms[k];setPerms(p=>({...p,[k]:willOn}));if(k==="loc"){if(willOn){notify(lang==="tr"?"📍 Konum açılıyor…":TL("📍 Enabling location…",lang));loadWeather(true);}else setWeather({err:"off"});return;}if(k==="notif"){if(willOn&&('Notification'in window)){if(Notification.permission==="denied")notify(lang==="tr"?"⚠️ Bildirim tarayıcıda engelli. Tarayıcı > Site izinleri > Bildirim'i açın.":TL("⚠️ Notifications blocked in browser settings.",lang));else Notification.requestPermission().then(st=>{if(st!=="granted")notify(lang==="tr"?"Bildirim izni verilmedi — tarayıcı ayarlarından açabilirsiniz.":TL("Notification permission not granted.",lang));}).catch(()=>{});}return;}}} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
+  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🧹 {lang==="tr"?"İçerik Filtresi":TL("Content Filter",lang)}</div>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",gap:8}}>
-      <span style={{flex:1}}>🔊 {lang==="tr"?"Sesli yönlendirme":"Voice guidance"}<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Ölçüm ve ilaç tekniklerinde adım adım sesli anlatım":"Step-by-step spoken coaching for measurements and drug technique"}</div></span>
-      <button onClick={()=>setVoiceGuide(v=>!v)} aria-label={lang==="tr"?"Sesli yönlendirme":"Voice guidance"} style={{width:40,height:22,borderRadius:11,background:voiceGuide?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:voiceGuide?21:3,transition:"left .2s"}}/></button>
+      <span style={{flex:1}}>🔊 {lang==="tr"?"Sesli yönlendirme":TL("Voice guidance",lang)}<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Ölçüm ve ilaç tekniklerinde adım adım sesli anlatım":TL("Step-by-step spoken coaching for measurements and drug technique",lang)}</div></span>
+      <button onClick={()=>setVoiceGuide(v=>!v)} aria-label={lang==="tr"?"Sesli yönlendirme":TL("Voice guidance",lang)} style={{width:40,height:22,borderRadius:11,background:voiceGuide?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:voiceGuide?21:3,transition:"left .2s"}}/></button>
     </div>
     {voiceGuide&&<div style={{fontSize:fs-4,color:mt,padding:"2px 0 4px",lineHeight:1.5}}>
       {ttsInfo.engine==="azure"
-        ? <span style={{color:sc}}>🎙️ {lang==="tr"?"AILVIE doğal sesi (Azure Neural)":"AILVIE natural voice (Azure Neural)"}</span>
+        ? <span style={{color:sc}}>🎙️ {lang==="tr"?"AILVIE doğal sesi (Azure Neural)":TL("AILVIE natural voice (Azure Neural)",lang)}</span>
         : ttsInfo.engine==="browser"
           ? <span>⚠️ {lang==="tr"?`Cihaz sesi kullanılıyor: ${ttsInfo.voice}. Doğal AILVIE sesi için sunucuda Azure anahtarı gerekir.`:`Using device voice: ${ttsInfo.voice}.`}</span>
-          : <span>{lang==="tr"?"Ses motoru ilk konuşmada belirlenir.":"Voice engine is detected on first speech."}</span>}
+          : <span>{lang==="tr"?"Ses motoru ilk konuşmada belirlenir.":TL("Voice engine is detected on first speech.",lang)}</span>}
     </div>}
 
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",gap:8}}>
-      <span style={{flex:1}}>🚫 {lang==="tr"?"Küfür / argo maskeleme":"Profanity masking"}<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Toplulukta uygunsuz kelimeler *** ile gizlenir":"Hides inappropriate words with *** in Community"}</div></span>
+      <span style={{flex:1}}>🚫 {lang==="tr"?"Küfür / argo maskeleme":TL("Profanity masking",lang)}<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Toplulukta uygunsuz kelimeler *** ile gizlenir":TL("Hides inappropriate words with *** in Community",lang)}</div></span>
       <button onClick={()=>setProfanityFilter(v=>!v)} aria-label="profanity" style={{width:40,height:22,borderRadius:11,background:profanityFilter?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:profanityFilter?21:3,transition:"left .2s"}}/></button>
     </div>
   </div>}
-  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>☁️ {lang==="tr"?"Cihazlar Arası Senkron":"Cross-device Sync"}</div>
+  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>☁️ {lang==="tr"?"Cihazlar Arası Senkron":TL("Cross-device Sync",lang)}</div>
     {!syncCfg
       ? <>
-        <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.45}}>{lang==="tr"?"Varsayılan olarak KAPALIDIR. Açarsanız verileriniz CİHAZINIZDA AES-256 ile şifrelenir ve sunucuya yalnızca şifreli hâli gider. Parolanız cihazdan çıkmaz; sunucu (ve biz) verilerinizi okuyamaz.":"OFF by default. Data is encrypted on-device; the server cannot read it."}</div>
-        <div style={{background:`${dg}0d`,border:`1px solid ${dg}33`,borderRadius:9,padding:"8px 10px",fontSize:fs-4,color:tc,marginBottom:8,lineHeight:1.45}}>{lang==="tr"?"⚠️ Parolanızı kaybederseniz sunucudaki veriler ÇÖZÜLEMEZ (kurtarma yolu yoktur). Sağlık verisi buluta yüklenir — devam etmeden önce onaylamanız gerekir.":"⚠️ No recovery if you lose the password."}</div>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.45}}>{lang==="tr"?"Varsayılan olarak KAPALIDIR. Açarsanız verileriniz CİHAZINIZDA AES-256 ile şifrelenir ve sunucuya yalnızca şifreli hâli gider. Parolanız cihazdan çıkmaz; sunucu (ve biz) verilerinizi okuyamaz.":TL("OFF by default. Data is encrypted on-device; the server cannot read it.",lang)}</div>
+        <div style={{background:`${dg}0d`,border:`1px solid ${dg}33`,borderRadius:9,padding:"8px 10px",fontSize:fs-4,color:tc,marginBottom:8,lineHeight:1.45}}>{lang==="tr"?"⚠️ Parolanızı kaybederseniz sunucudaki veriler ÇÖZÜLEMEZ (kurtarma yolu yoktur). Sağlık verisi buluta yüklenir — devam etmeden önce onaylamanız gerekir.":TL("⚠️ No recovery if you lose the password.",lang)}</div>
         <button disabled={syncBusy} onClick={async()=>{
           const L=lang==="tr";
           if(!window.confirm(L?"Sağlık verilerinizin ŞİFRELENMİŞ hâlinin sunucuda saklanmasını onaylıyor musunuz?\n\n• Şifreleme cihazınızda yapılır (AES-256-GCM)\n• Parolanız hiçbir zaman gönderilmez\n• Sunucu içeriği okuyamaz\n• İstediğiniz zaman silebilirsiniz":"Consent to store an encrypted copy on the server?"))return;
@@ -4073,12 +4074,12 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
             notify(L?"☁️ Senkron etkin — 'Yükle' ile başlayın":"☁️ Sync enabled");
           }catch(e){notify(L?"Senkron kurulamadı":"Sync setup failed");}
           finally{setSyncBusy(false);}
-        }} style={{...BP,width:"100%",padding:"9px",opacity:syncBusy?0.6:1}}>☁️ {lang==="tr"?"Senkronu Aç (isteğe bağlı)":"Enable sync (optional)"}</button>
+        }} style={{...BP,width:"100%",padding:"9px",opacity:syncBusy?0.6:1}}>☁️ {lang==="tr"?"Senkronu Aç (isteğe bağlı)":TL("Enable sync (optional)",lang)}</button>
       </>
       : <>
-        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2,color:tc,marginBottom:4}}><span>{lang==="tr"?"Durum":"Status"}</span><b style={{color:sc}}>✓ {lang==="tr"?"Etkin":"Enabled"}</b></div>
-        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-3,color:mt,marginBottom:4}}><span>{lang==="tr"?"Kimlik":"Identifier"}</span><span>{syncCfg.identifier}</span></div>
-        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-3,color:mt,marginBottom:8}}><span>{lang==="tr"?"Son senkron":"Last sync"}</span><span>{syncCfg.lastSync?new Date(syncCfg.lastSync).toLocaleString(lc):(lang==="tr"?"hiç":"never")}</span></div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2,color:tc,marginBottom:4}}><span>{lang==="tr"?"Durum":TL("Status",lang)}</span><b style={{color:sc}}>✓ {lang==="tr"?"Etkin":TL("Enabled",lang)}</b></div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-3,color:mt,marginBottom:4}}><span>{lang==="tr"?"Kimlik":TL("Identifier",lang)}</span><span>{syncCfg.identifier}</span></div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-3,color:mt,marginBottom:8}}><span>{lang==="tr"?"Son senkron":TL("Last sync",lang)}</span><span>{syncCfg.lastSync?new Date(syncCfg.lastSync).toLocaleString(lc):(lang==="tr"?"hiç":TL("never",lang))}</span></div>
         {!syncKeysRef.current&&<button disabled={syncBusy} onClick={async()=>{
           const L=lang==="tr";
           const pw=window.prompt(L?"Senkron parolanızı girin (bu oturum için):":"Enter sync password:","");
@@ -4087,10 +4088,10 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
           try{syncKeysRef.current=await deriveSyncKeys(pw.trim(),syncCfg.syncId);setSyncMsg(L?"🔓 Senkron kilidi açıldı":"🔓 Unlocked");}
           catch(e){setSyncMsg(L?"Parola işlenemedi":"Failed");}
           finally{setSyncBusy(false);}
-        }} style={{...BP,width:"100%",padding:"8px",marginBottom:6,background:"transparent",color:acTx,border:`1px solid ${ac}`,opacity:syncBusy?0.6:1}}>🔓 {lang==="tr"?"Parolayı gir (senkron kilidini aç)":"Unlock sync"}</button>}
+        }} style={{...BP,width:"100%",padding:"8px",marginBottom:6,background:"transparent",color:acTx,border:`1px solid ${ac}`,opacity:syncBusy?0.6:1}}>🔓 {lang==="tr"?"Parolayı gir (senkron kilidini aç)":TL("Unlock sync",lang)}</button>}
         <div style={{display:"flex",gap:6,marginBottom:6}}>
-          <button disabled={syncBusy} onClick={()=>syncPush(false)} style={{...BP,flex:1,padding:"8px",fontSize:fs-2,opacity:syncBusy?0.6:1}}>⬆️ {lang==="tr"?"Yükle":"Push"}</button>
-          <button disabled={syncBusy} onClick={syncPull} style={{...BP,flex:1,padding:"8px",fontSize:fs-2,background:"transparent",color:acTx,border:`1px solid ${ac}`,opacity:syncBusy?0.6:1}}>⬇️ {lang==="tr"?"İndir":"Pull"}</button>
+          <button disabled={syncBusy} onClick={()=>syncPush(false)} style={{...BP,flex:1,padding:"8px",fontSize:fs-2,opacity:syncBusy?0.6:1}}>⬆️ {lang==="tr"?"Yükle":TL("Push",lang)}</button>
+          <button disabled={syncBusy} onClick={syncPull} style={{...BP,flex:1,padding:"8px",fontSize:fs-2,background:"transparent",color:acTx,border:`1px solid ${ac}`,opacity:syncBusy?0.6:1}}>⬇️ {lang==="tr"?"İndir":TL("Pull",lang)}</button>
         </div>
         {syncMsg&&<div style={{fontSize:fs-3,color:/❌|başarısız|failed|değil/i.test(syncMsg)?dg:sc,marginBottom:6}}>{syncMsg}</div>}
         <button disabled={syncBusy} onClick={async()=>{
@@ -4104,14 +4105,14 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
             notify(L?"Senkron kapatıldı":"Sync disabled");
           }catch(e){notify(L?"Sunucu kopyası silinemedi — yerelde kapatıldı":"Server copy not deleted");}
           finally{setSyncBusy(false);}
-        }} style={{...BP,width:"100%",padding:"8px",background:dgBg,color:"#fff",fontSize:fs-2,opacity:syncBusy?0.6:1}}>{lang==="tr"?"Senkronu Kapat ve Sunucudan Sil":"Disable & delete"}</button>
-        <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{lang==="tr"?"Sunucu yalnızca şifreli veriyi görür (kimlik özeti, şifreli blok, zaman damgası). Parolanız ve anahtarlarınız cihazınızdan çıkmaz.":"The server only sees ciphertext."}</div>
+        }} style={{...BP,width:"100%",padding:"8px",background:dgBg,color:"#fff",fontSize:fs-2,opacity:syncBusy?0.6:1}}>{lang==="tr"?"Senkronu Kapat ve Sunucudan Sil":TL("Disable & delete",lang)}</button>
+        <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{lang==="tr"?"Sunucu yalnızca şifreli veriyi görür (kimlik özeti, şifreli blok, zaman damgası). Parolanız ve anahtarlarınız cihazınızdan çıkmaz.":TL("The server only sees ciphertext.",lang)}</div>
       </>}
   </div>}
-  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🔒 {lang==="tr"?"Uygulama Kilidi":"App Lock"}</div>
+  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🔒 {lang==="tr"?"Uygulama Kilidi":TL("App Lock",lang)}</div>
     {!lockCfg
       ? <>
-        <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonunuz başkasının eline geçerse sağlık verileriniz göz önünde olmasın diye bir ekran kilidi ekler. Not: veriyi cihazda şifrelemez; PIN düz metin değil, PBKDF2 özeti olarak saklanır.":"Adds a screen lock so your health data isn't in plain view if your phone is taken. Note: it doesn't encrypt data on the device; the PIN is stored as a PBKDF2 hash, not plaintext."}</div>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonunuz başkasının eline geçerse sağlık verileriniz göz önünde olmasın diye bir ekran kilidi ekler. Not: veriyi cihazda şifrelemez; PIN düz metin değil, PBKDF2 özeti olarak saklanır.":TL("Adds a screen lock so your health data isn't in plain view if your phone is taken. Note: it doesn't encrypt data on the device; the PIN is stored as a PBKDF2 hash, not plaintext.",lang)}</div>
         <button onClick={async()=>{
           const L=lang==="tr";
           const p1=window.prompt(L?"Yeni PIN (en az 4 rakam):":"New PIN (min 4 digits):","");
@@ -4131,17 +4132,17 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
           try{dataKeyRef.current=await deriveDataKey(p1,cfg);}catch(e){dataKeyRef.current=null;}
           setPat(pp=>({...pp}));
           notify(L?"🔒 Uygulama kilidi etkin — verileriniz artık cihazda şifreleniyor":"🔒 App lock enabled — your data is now encrypted on device");
-        }} style={{...BP,width:"100%",padding:"9px"}}>🔒 {lang==="tr"?"PIN Belirle":"Set PIN"}</button>
+        }} style={{...BP,width:"100%",padding:"9px"}}>🔒 {lang==="tr"?"PIN Belirle":TL("Set PIN",lang)}</button>
       </>
       : <>
-        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2,color:tc,marginBottom:6}}><span>{lang==="tr"?"Durum":"Status"}</span><b style={{color:sc}}>✓ {lang==="tr"?"Etkin":"Enabled"}</b></div>
-        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2,color:tc,marginBottom:6}}><span>{lang==="tr"?"Biyometrik":"Biometrics"}</span><b style={{color:lockCfg.credId?sc:mt}}>{lockCfg.credId?(lang==="tr"?"Açık":"On"):(lang==="tr"?"Kapalı":"Off")}</b></div>
-        <div style={{fontSize:fs-3,color:mt,marginBottom:6}}>{lang==="tr"?"Kilitlenme süresi (arka planda)":"Auto-lock delay"}</div>
-        <div style={{display:"flex",gap:6,marginBottom:8}}>{[[0,lang==="tr"?"Hemen":"Instant"],[60,"1 dk"],[300,"5 dk"],[900,"15 dk"]].map(([v,l])=>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2,color:tc,marginBottom:6}}><span>{lang==="tr"?"Durum":TL("Status",lang)}</span><b style={{color:sc}}>✓ {lang==="tr"?"Etkin":TL("Enabled",lang)}</b></div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:fs-2,color:tc,marginBottom:6}}><span>{lang==="tr"?"Biyometrik":TL("Biometrics",lang)}</span><b style={{color:lockCfg.credId?sc:mt}}>{lockCfg.credId?(lang==="tr"?"Açık":TL("On",lang)):(lang==="tr"?"Kapalı":TL("Off",lang))}</b></div>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:6}}>{lang==="tr"?"Kilitlenme süresi (arka planda)":TL("Auto-lock delay",lang)}</div>
+        <div style={{display:"flex",gap:6,marginBottom:8}}>{[[0,lang==="tr"?"Hemen":TL("Instant",lang)],[60,"1 dk"],[300,"5 dk"],[900,"15 dk"]].map(([v,l])=>
           <button key={v} onClick={()=>{const c={...lockCfg,graceSec:v};try{localStorage.setItem("ailvie_lock",JSON.stringify(c));}catch(e){}setLockCfg(c);}}
             style={{flex:1,padding:"6px 2px",borderRadius:8,border:`1px solid ${lockCfg.graceSec===v?ac:bd}`,background:lockCfg.graceSec===v?`${ac}22`:"transparent",color:lockCfg.graceSec===v?acTx:mt,fontSize:fs-3,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
         <div style={{display:"flex",gap:6}}>
-          <button onClick={()=>setLocked(true)} style={{...BP,flex:1,padding:"8px",background:"transparent",color:acTx,border:`1px solid ${ac}`,fontSize:fs-2}}>{lang==="tr"?"Şimdi Kilitle":"Lock now"}</button>
+          <button onClick={()=>setLocked(true)} style={{...BP,flex:1,padding:"8px",background:"transparent",color:acTx,border:`1px solid ${ac}`,fontSize:fs-2}}>{lang==="tr"?"Şimdi Kilitle":TL("Lock now",lang)}</button>
           <button onClick={async()=>{
             const L=lang==="tr";
             const p=window.prompt(L?"Kilidi kaldırmak için mevcut PIN:":"Enter current PIN to remove lock:","");
@@ -4150,77 +4151,77 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
             try{dataKeyRef.current=null;const plain=latestPayloadRef.current;if(plain!=null){await idbSet("ailvie_data",plain).catch(()=>{});try{localStorage.setItem("ailvie_data",plain);}catch(e){}}}catch(e){}
             try{localStorage.removeItem("ailvie_lock");}catch(e){}
             setLockCfg(null);setLocked(false);notify(L?"Kilit kaldırıldı — veriler artık şifresiz":"Lock removed — data no longer encrypted");
-          }} style={{...BP,flex:1,padding:"8px",background:dgBg,color:"#fff",fontSize:fs-2}}>{lang==="tr"?"Kilidi Kaldır":"Remove lock"}</button>
+          }} style={{...BP,flex:1,padding:"8px",background:dgBg,color:"#fff",fontSize:fs-2}}>{lang==="tr"?"Kilidi Kaldır":TL("Remove lock",lang)}</button>
         </div>
       </>}
   </div>}
-  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>💾 {lang==="tr"?"Depolama":"Storage"}</div>
+  {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>💾 {lang==="tr"?"Depolama":TL("Storage",lang)}</div>
     <StorageHealth lang={lang} fs={fs} tc={tc} mt={mt} sc={sc} ac={ac} acTx={acTx} bd={bd} dg={dg} t={t} BP={BP} lastBackup={lastBackup} idbGet={idbGet} idbSet={idbSet} notify={notify}/>
   </div>}
   
   {(all||s==="subs")&&<div style={CS}>
-    <div style={{fontWeight:700,marginBottom:6}}>{acctEmail.trim()?(lang==="tr"?"👤 Hesap":"👤 Account"):(lang==="tr"?"🔑 Giriş Yap / Abone Ol":"🔑 Sign in / Subscribe")}</div>
+    <div style={{fontWeight:700,marginBottom:6}}>{acctEmail.trim()?(lang==="tr"?"👤 Hesap":TL("👤 Account",lang)):(lang==="tr"?"🔑 Giriş Yap / Abone Ol":TL("🔑 Sign in / Subscribe",lang))}</div>
     {acctEmail.trim()
       ? <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,background:`${sc}11`,border:`1px solid ${sc}44`,marginBottom:8}}>
           <span style={{fontSize:22}}>✅</span>
-          <div style={{flex:1,minWidth:0}}><div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Giriş yapıldı":"Signed in"}</div><div style={{fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{acctEmail}</div></div>
+          <div style={{flex:1,minWidth:0}}><div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Giriş yapıldı":TL("Signed in",lang)}</div><div style={{fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{acctEmail}</div></div>
           <button onClick={signOutAcct} style={{...BP,padding:"6px 12px",background:"transparent",border:`1px solid ${bd}`,color:mt,fontSize:fs-2}}>{t.logout}</button>
         </div>
       : <>
-          <div style={{fontSize:fs-2,color:mt,marginBottom:10}}>{lang==="tr"?"Bir yöntemle giriş yapın — aboneliğiniz ve (yakında) verileriniz hesabınıza bağlanır.":"Sign in with a method — your subscription and (soon) your data link to your account."}</div>
-          <button onClick={()=>signInWith("google")} style={{...BP,width:"100%",marginBottom:8,background:"#fff",color:"#1a2332",border:`1px solid ${bd}`,fontWeight:600}}>🔵 {lang==="tr"?"Google ile devam et":"Continue with Google"}</button>
-          <button onClick={()=>signInWith("apple")} style={{...BP,width:"100%",marginBottom:8,background:"#000",color:"#fff",fontWeight:600}}> {lang==="tr"?"Apple ile devam et":"Continue with Apple"}</button>
-          <div style={{display:"flex",alignItems:"center",gap:8,margin:"6px 0",color:mt,fontSize:fs-3}}><div style={{flex:1,height:1,background:bd}}/>{lang==="tr"?"veya e-posta/telefon ile":"or with email/phone"}<div style={{flex:1,height:1,background:bd}}/></div>
+          <div style={{fontSize:fs-2,color:mt,marginBottom:10}}>{lang==="tr"?"Bir yöntemle giriş yapın — aboneliğiniz ve (yakında) verileriniz hesabınıza bağlanır.":TL("Sign in with a method — your subscription and (soon) your data link to your account.",lang)}</div>
+          <button onClick={()=>signInWith("google")} style={{...BP,width:"100%",marginBottom:8,background:"#fff",color:"#1a2332",border:`1px solid ${bd}`,fontWeight:600}}>🔵 {lang==="tr"?"Google ile devam et":TL("Continue with Google",lang)}</button>
+          <button onClick={()=>signInWith("apple")} style={{...BP,width:"100%",marginBottom:8,background:"#000",color:"#fff",fontWeight:600}}> {lang==="tr"?"Apple ile devam et":TL("Continue with Apple",lang)}</button>
+          <div style={{display:"flex",alignItems:"center",gap:8,margin:"6px 0",color:mt,fontSize:fs-3}}><div style={{flex:1,height:1,background:bd}}/>{lang==="tr"?"veya e-posta/telefon ile":TL("or with email/phone",lang)}<div style={{flex:1,height:1,background:bd}}/></div>
           <div style={{display:"flex",gap:8}}>
-            <input type="text" inputMode="email" autoComplete="email" placeholder={lang==="tr"?"E-posta veya telefon":"Email or phone"} value={emailIn} onChange={e=>setEmailIn(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")signInWith("email");}} style={{...IS,flex:1}}/>
-            <button onClick={()=>signInWith("email")} style={{...BP}}>{lang==="tr"?"Devam":"Continue"}</button>
+            <input type="text" inputMode="email" autoComplete="email" placeholder={lang==="tr"?"E-posta veya telefon":TL("Email or phone",lang)} value={emailIn} onChange={e=>setEmailIn(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")signInWith("email");}} style={{...IS,flex:1}}/>
+            <button onClick={()=>signInWith("email")} style={{...BP}}>{lang==="tr"?"Devam":TL("Continue",lang)}</button>
           </div>
         </>}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 10px",borderRadius:8,background:`${mt}11`,marginTop:8}}>
-      <span style={{fontSize:fs-1}}>{lang==="tr"?"Geçerli plan":"Current plan"}</span>
+      <span style={{fontSize:fs-1}}>{lang==="tr"?"Geçerli plan":TL("Current plan",lang)}</span>
       {(()=>{const pro=(()=>{try{const pl=localStorage.getItem("ailvie_active_plan")||"";return pl.includes("PRO")||pl.includes("Enterprise");}catch(e){return false;}})();return <span style={{fontSize:fs-2,fontWeight:700,padding:"2px 10px",borderRadius:8,background:pro?`${ac}22`:`${mt}22`,color:pro?acTx:mt}}>{pro?"PRO ✓":t.free}</span>;})()}
     </div>
   </div>}
   {(all||s==="subs")&&<div style={CS}>
-    <div style={{fontWeight:700,marginBottom:6}}>🔐 {lang==="tr"?"Doğrulama & Güvenlik":"Verification & Security"}</div>
-    <div style={{fontSize:fs-2,color:mt,marginBottom:10}}>{lang==="tr"?"Hesabını ve verilerini koru. Cihazın yüz/parmak izi ile kilit hazır; diğer yöntemler sunucu kurulduğunda eklenecek.":"Protect your account and data. Device face/fingerprint lock is ready; other methods arrive once a server is set up."}</div>
+    <div style={{fontWeight:700,marginBottom:6}}>🔐 {lang==="tr"?"Doğrulama & Güvenlik":TL("Verification & Security",lang)}</div>
+    <div style={{fontSize:fs-2,color:mt,marginBottom:10}}>{lang==="tr"?"Hesabını ve verilerini koru. Cihazın yüz/parmak izi ile kilit hazır; diğer yöntemler sunucu kurulduğunda eklenecek.":TL("Protect your account and data. Device face/fingerprint lock is ready; other methods arrive once a server is set up.",lang)}</div>
     {/* Biometric — AVAILABLE (WebAuthn) */}
     <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px",borderRadius:10,border:`1px solid ${appLockEnabled?sc:bd}`,background:appLockEnabled?`${sc}10`:"transparent",marginBottom:8}}>
       <span style={{fontSize:22}}>{appLockEnabled?"🔒":"🫆"}</span>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontWeight:600,fontSize:fs-1}}>{lang==="tr"?"Yüz / Parmak İzi (biyometrik)":"Face / Fingerprint (biometric)"}</div>
-        <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Bu cihazın kilidiyle açılır — sunucu gerekmez":"Unlocks with this device — no server needed"}</div>
+        <div style={{fontWeight:600,fontSize:fs-1}}>{lang==="tr"?"Yüz / Parmak İzi (biyometrik)":TL("Face / Fingerprint (biometric)",lang)}</div>
+        <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Bu cihazın kilidiyle açılır — sunucu gerekmez":TL("Unlocks with this device — no server needed",lang)}</div>
       </div>
       {appLockEnabled
-        ? <button onClick={disableAppLock} style={{...BP,padding:"6px 12px",fontSize:fs-2,background:"transparent",border:`1px solid ${bd}`,color:mt}}>{lang==="tr"?"Kapat":"Disable"}</button>
-        : <button onClick={enableAppLock} style={{...BP,padding:"6px 12px",fontSize:fs-2,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>{lang==="tr"?"Kur":"Set up"}</button>}
+        ? <button onClick={disableAppLock} style={{...BP,padding:"6px 12px",fontSize:fs-2,background:"transparent",border:`1px solid ${bd}`,color:mt}}>{lang==="tr"?"Kapat":TL("Disable",lang)}</button>
+        : <button onClick={enableAppLock} style={{...BP,padding:"6px 12px",fontSize:fs-2,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>{lang==="tr"?"Kur":TL("Set up",lang)}</button>}
     </div>
     {/* Backend-dependent methods — honest "coming soon" */}
     {[
-      {ic:"💬",name:lang==="tr"?"SMS ile kod":"SMS code",note:lang==="tr"?"Telefon doğrulama":"Phone verification"},
-      {ic:"🟢",name:lang==="tr"?"WhatsApp ile kod":"WhatsApp code",note:lang==="tr"?"WhatsApp Business":"WhatsApp Business"},
-      {ic:"✅",name:lang==="tr"?"Onaylı bildirim (Evet'e dokun / sayı eşleştir)":"Push approval (tap-yes / number match)",note:lang==="tr"?"Anlık bildirim onayı":"Push notification approval"},
-      {ic:"🔢",name:lang==="tr"?"Kod üreteci (Authenticator)":"Authenticator (code generator)",note:lang==="tr"?"TOTP 2FA":"TOTP 2FA"},
+      {ic:"💬",name:lang==="tr"?"SMS ile kod":TL("SMS code",lang),note:lang==="tr"?"Telefon doğrulama":TL("Phone verification",lang)},
+      {ic:"🟢",name:lang==="tr"?"WhatsApp ile kod":TL("WhatsApp code",lang),note:lang==="tr"?"WhatsApp Business":TL("WhatsApp Business",lang)},
+      {ic:"✅",name:lang==="tr"?"Onaylı bildirim (Evet'e dokun / sayı eşleştir)":TL("Push approval (tap-yes / number match)",lang),note:lang==="tr"?"Anlık bildirim onayı":TL("Push notification approval",lang)},
+      {ic:"🔢",name:lang==="tr"?"Kod üreteci (Authenticator)":TL("Authenticator (code generator)",lang),note:lang==="tr"?"TOTP 2FA":TL("TOTP 2FA",lang)},
     ].map(m=><div key={m.name} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 10px",borderRadius:10,border:`1px dashed ${bd}`,marginBottom:6,opacity:.75}}>
       <span style={{fontSize:20}}>{m.ic}</span>
       <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:fs-1}}>{m.name}</div><div style={{fontSize:fs-3,color:mt}}>{m.note}</div></div>
-      <span style={{fontSize:fs-3,padding:"2px 8px",borderRadius:8,background:`${mt}22`,color:mt,fontWeight:600,whiteSpace:"nowrap"}}>{lang==="tr"?"Yakında":"Soon"}</span>
+      <span style={{fontSize:fs-3,padding:"2px 8px",borderRadius:8,background:`${mt}22`,color:mt,fontWeight:600,whiteSpace:"nowrap"}}>{lang==="tr"?"Yakında":TL("Soon",lang)}</span>
     </div>)}
-    <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"SMS/WhatsApp/onaylı bildirim ve authenticator için güvenli sunucu (Firebase/Stripe benzeri) yapılandırması gerekir.":"SMS/WhatsApp/push approval and authenticator need a secure server (like Firebase) configured."}</div>
+    <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"SMS/WhatsApp/onaylı bildirim ve authenticator için güvenli sunucu (Firebase/Stripe benzeri) yapılandırması gerekir.":TL("SMS/WhatsApp/push approval and authenticator need a secure server (like Firebase) configured.",lang)}</div>
   </div>}
   {(all||s==="subs")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>💎 {t.subscription}</div>
     {/* Promo Code Redemption */}
     <div style={{padding:"10px 12px",borderRadius:10,background:`${ac}10`,border:`1px solid ${ac}44`,marginBottom:10}}>
-      <div style={{fontWeight:700,marginBottom:6,color:acTx,fontSize:fs-1}}>🎁 {lang==="tr"?"PRO Kodu Kullan":"Redeem PRO Code"}</div>
+      <div style={{fontWeight:700,marginBottom:6,color:acTx,fontSize:fs-1}}>🎁 {lang==="tr"?"PRO Kodu Kullan":TL("Redeem PRO Code",lang)}</div>
       <div style={{display:"flex",gap:6}}>
-        <input placeholder={lang==="tr"?"AILVIE-XXXX-XXXX":"AILVIE-XXXX-XXXX"} value={promoIn||""} onChange={e=>setPromoIn(e.target.value.toUpperCase())} style={{...IS,flex:1,fontFamily:"monospace",letterSpacing:1}}/>
+        <input placeholder={lang==="tr"?"AILVIE-XXXX-XXXX":TL("AILVIE-XXXX-XXXX",lang)} value={promoIn||""} onChange={e=>setPromoIn(e.target.value.toUpperCase())} style={{...IS,flex:1,fontFamily:"monospace",letterSpacing:1}}/>
         <button onClick={()=>{
           const code=(promoIn||"").trim().toUpperCase();
-          if(!code){notify("⚠️ "+(lang==="tr"?"Kod girin":"Enter a code"));return;}
+          if(!code){notify("⚠️ "+(lang==="tr"?"Kod girin":TL("Enter a code",lang)));return;}
           try{
             const codes=JSON.parse(localStorage.getItem("ailvie_pro_codes")||"{}");
             const used=JSON.parse(localStorage.getItem("ailvie_pro_codes_used")||"[]");
-            if(used.includes(code)){notify("⚠️ "+(lang==="tr"?"Bu kod zaten kullanılmış":"Code already used"));return;}
+            if(used.includes(code)){notify("⚠️ "+(lang==="tr"?"Bu kod zaten kullanılmış":TL("Code already used",lang)));return;}
             if(codes[code]){
               const plan=codes[code];
               localStorage.setItem("ailvie_active_plan",plan);
@@ -4228,18 +4229,18 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
               notify("✅ "+(lang==="tr"?`${plan} aktif edildi!`:`${plan} activated!`));
               setPromoIn("");
             }else{
-              notify("❌ "+(lang==="tr"?"Geçersiz kod":"Invalid code"));
+              notify("❌ "+(lang==="tr"?"Geçersiz kod":TL("Invalid code",lang)));
             }
-          }catch(err){notify("❌ "+(lang==="tr"?"Hata":"Error"));}
+          }catch(err){notify("❌ "+(lang==="tr"?"Hata":TL("Error",lang)));}
         }} style={{...BP,padding:"8px 14px"}}>✓</button>
       </div>
-      <div style={{fontSize:fs-3,color:mt,marginTop:4}}>{lang==="tr"?"Geçerli bir promosyon kodu girerek PRO özelliklerine erişin":"Enter a valid promo code to unlock PRO features"}</div>
+      <div style={{fontSize:fs-3,color:mt,marginTop:4}}>{lang==="tr"?"Geçerli bir promosyon kodu girerek PRO özelliklerine erişin":TL("Enter a valid promo code to unlock PRO features",lang)}</div>
     </div>
     {[
-{n:t.free,p:"$0",d:(lang==="tr"?"Kişisel sağlık merkezin — kalıcı ücretsiz":"Your health hub — free forever"),c:sc,active:true,features:lang==="tr"?["Sınırsız ilaç, randevu & not","Temel ilaç etkileşim & güvenlik uyarıları","Kamera ile nabız ölçümü","Sağlık takibi & hasta karnesi","İlk yardım & acil rehber","PIN/biyometrik kilit + AES-256 şifreleme","13 dil, cihaz sesi","Günde 5 · ayda 100 AI mesajı"]:["Unlimited meds, appointments & notes","Basic drug interaction & safety alerts","Camera-based pulse measurement","Health tracking & patient card","First aid & emergency contacts","PIN/biometric lock + AES-256 encryption","13 languages, device voice","5/day · 100/month AI messages"]},
-{n:"Plus",p:"$4.99/"+t.monthly,d:(lang==="tr"?"$39.99/yıl (%33 indirim) • 7 gün deneme":"$39.99/yr (save 33%) • 7-day trial"),c:ac,active:false,features:lang==="tr"?["Ücretsiz'in tamamı +","Ayda 300 AI mesajı","Doğal AILVIE sesi (Azure)","AI çeviri (63 dil)","AI ilaç analizi (kişiye özel)","Reklamsız"]:["Everything in Free +","300 AI messages/month","Natural AILVIE voice (Azure)","AI translation (63 langs)","Personalized AI drug analysis","Ad-free"]},
-{n:"PRO",p:"$8.99/"+t.monthly,d:(lang==="tr"?"$69.99/yıl • 7 gün deneme":"$69.99/yr • 7-day trial"),c:"#e8a817",active:false,badge:lang==="tr"?"EN POPÜLER":"BEST VALUE",features:lang==="tr"?["Plus'ın tamamı +","Yoğun AI kullanımı (ayda 1.500 mesaj)","Röntgen/tahlil için AI ön açıklama (ayda 30) — tanı değil","Kapsamlı AI sağlık raporu (ayda 10)","Öncelikli yanıt hızı","Cihazlar arası senkron — Yakında","Apple Health / Health Connect — Yakında"]:["Everything in Plus +","Heavy AI usage (1,500 msgs/month)","AI preliminary explanation for X-ray/labs (30/mo) — not a diagnosis","Comprehensive AI health reports (10/mo)","Priority response speed","Cross-device sync — Coming soon","Apple Health / Health Connect — Coming soon"]},
-{n:(lang==="tr"?"Kurumsal":"Enterprise"),p:lang==="tr"?"Bize Ulaşın":"Contact Us",d:(lang==="tr"?"Klinik, eczane & bakım kuruluşları için":"For clinics, pharmacies & care organizations"),c:a2,active:false,features:lang==="tr"?["Yönetim paneli & rol bazlı erişim","Özel marka (white-label)","FHIR/API entegrasyonuna hazır mimari","Öncelikli destek & SLA","KVKK/GDPR uyum paketi"]:["Admin panel & role-based access","Custom branding (white-label)","FHIR/API-ready architecture","Priority support & SLA","KVKK/GDPR compliance package"]}
+{n:t.free,p:"$0",d:(lang==="tr"?"Kişisel sağlık merkezin — kalıcı ücretsiz":TL("Your health hub — free forever",lang)),c:sc,active:true,features:lang==="tr"?["Sınırsız ilaç, randevu & not","Temel ilaç etkileşim & güvenlik uyarıları","Kamera ile nabız ölçümü","Sağlık takibi & hasta karnesi","İlk yardım & acil rehber","PIN/biyometrik kilit + AES-256 şifreleme","13 dil, cihaz sesi","Günde 5 · ayda 100 AI mesajı"]:["Unlimited meds, appointments & notes","Basic drug interaction & safety alerts","Camera-based pulse measurement","Health tracking & patient card","First aid & emergency contacts","PIN/biometric lock + AES-256 encryption","13 languages, device voice","5/day · 100/month AI messages"]},
+{n:"Plus",p:"$4.99/"+t.monthly,d:(lang==="tr"?"$39.99/yıl (%33 indirim) • 7 gün deneme":TL("$39.99/yr (save 33%) • 7-day trial",lang)),c:ac,active:false,features:lang==="tr"?["Ücretsiz'in tamamı +","Ayda 300 AI mesajı","Doğal AILVIE sesi (Azure)","AI çeviri (63 dil)","AI ilaç analizi (kişiye özel)","Reklamsız"]:["Everything in Free +","300 AI messages/month","Natural AILVIE voice (Azure)","AI translation (63 langs)","Personalized AI drug analysis","Ad-free"]},
+{n:"PRO",p:"$8.99/"+t.monthly,d:(lang==="tr"?"$69.99/yıl • 7 gün deneme":TL("$69.99/yr • 7-day trial",lang)),c:"#e8a817",active:false,badge:lang==="tr"?"EN POPÜLER":TL("BEST VALUE",lang),features:lang==="tr"?["Plus'ın tamamı +","Yoğun AI kullanımı (ayda 1.500 mesaj)","Röntgen/tahlil için AI ön açıklama (ayda 30) — tanı değil","Kapsamlı AI sağlık raporu (ayda 10)","Öncelikli yanıt hızı","Cihazlar arası senkron — Yakında","Apple Health / Health Connect — Yakında"]:["Everything in Plus +","Heavy AI usage (1,500 msgs/month)","AI preliminary explanation for X-ray/labs (30/mo) — not a diagnosis","Comprehensive AI health reports (10/mo)","Priority response speed","Cross-device sync — Coming soon","Apple Health / Health Connect — Coming soon"]},
+{n:(lang==="tr"?"Kurumsal":TL("Enterprise",lang)),p:lang==="tr"?"Bize Ulaşın":TL("Contact Us",lang),d:(lang==="tr"?"Klinik, eczane & bakım kuruluşları için":TL("For clinics, pharmacies & care organizations",lang)),c:a2,active:false,features:lang==="tr"?["Yönetim paneli & rol bazlı erişim","Özel marka (white-label)","FHIR/API entegrasyonuna hazır mimari","Öncelikli destek & SLA","KVKK/GDPR uyum paketi"]:["Admin panel & role-based access","Custom branding (white-label)","FHIR/API-ready architecture","Priority support & SLA","KVKK/GDPR compliance package"]}
     ].map(plan=>{
       const isPaid=/\$/.test(plan.p);
       const canWeb=isPaid&&!!CHECKOUT_URL;
@@ -4247,46 +4248,46 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
       return (<div key={plan.n} style={{padding:"10px 12px",borderRadius:10,border:`1px solid ${plan.c}44`,marginBottom:8,background:`${plan.c}08`}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
         <span style={{fontWeight:700,color:plan.c}}>{plan.n}{plan.badge&&<span style={{marginLeft:6,fontSize:fs-4,padding:"1px 6px",borderRadius:4,background:plan.c,color:"#fff",fontWeight:700}}>{plan.badge}</span>}</span>
-        <div style={{display:"flex",alignItems:"center",gap:6}}>{!plan.active&&!canWeb&&!canContact&&<span style={{fontSize:fs-3,padding:"2px 8px",borderRadius:8,background:`${mt}22`,color:mt,fontWeight:600}}>{lang==="tr"?"Yakında":"Soon"}</span>}<span style={{fontWeight:700,fontSize:fs}}>{plan.p}</span></div>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>{!plan.active&&!canWeb&&!canContact&&<span style={{fontSize:fs-3,padding:"2px 8px",borderRadius:8,background:`${mt}22`,color:mt,fontWeight:600}}>{lang==="tr"?"Yakında":TL("Soon",lang)}</span>}<span style={{fontWeight:700,fontSize:fs}}>{plan.p}</span></div>
       </div>
       <div style={{fontSize:fs-2,color:mt,marginBottom:6}}>{plan.d}</div>
       {plan.features&&<ul style={{margin:"4px 0 0 0",padding:"0 0 0 18px",fontSize:fs-2,color:tc}}>
         {plan.features.map((f,i)=><li key={i} style={{marginBottom:2}}>{f}</li>)}
       </ul>}
-      {plan.active&&<div style={{fontSize:fs-3,color:sc,marginTop:4,fontWeight:600}}>✓ {lang==="tr"?"Aktif Plan":"Active Plan"}</div>}
-      {!plan.active&&isPaid&&<button onClick={()=>{if(CHECKOUT_URL){const em=acctEmail.trim();window.open(CHECKOUT_URL+(CHECKOUT_URL.includes("?")?"&":"?")+"plan="+encodeURIComponent(plan.n)+(em?"&email="+encodeURIComponent(em):""),"_blank","noopener");}else{notify(lang==="tr"?"💎 Web ödemesi yakında. Şimdilik yukarıdaki kutudan PRO kodu ile etkinleştirebilirsiniz.":"💎 Web checkout coming soon. For now, activate with a PRO code in the box above.");}}} style={{...BP,width:"100%",marginTop:8,background:`linear-gradient(135deg,${plan.c},${plan.c}bb)`}}>{CHECKOUT_URL?(lang==="tr"?"💳 Web'de Yükselt":"💳 Upgrade on web"):(lang==="tr"?"🎁 PRO Kodu ile Etkinleştir":"🎁 Activate with PRO code")}</button>}
-      {!plan.active&&!isPaid&&<button onClick={()=>{if(CONTACT_EMAIL){window.location.href="mailto:"+CONTACT_EMAIL+"?subject="+encodeURIComponent("AILVIE "+(lang==="tr"?"Kurumsal Talep":"Enterprise Inquiry"));}else{notify(lang==="tr"?"Kurumsal görüşme yakında eklenecek.":"Enterprise contact coming soon.");}}} style={{...BP,width:"100%",marginTop:8,background:`linear-gradient(135deg,${plan.c},${plan.c}bb)`}}>{lang==="tr"?"✉️ Bize Ulaşın":"✉️ Contact Us"}</button>}
+      {plan.active&&<div style={{fontSize:fs-3,color:sc,marginTop:4,fontWeight:600}}>✓ {lang==="tr"?"Aktif Plan":TL("Active Plan",lang)}</div>}
+      {!plan.active&&isPaid&&<button onClick={()=>{if(CHECKOUT_URL){const em=acctEmail.trim();window.open(CHECKOUT_URL+(CHECKOUT_URL.includes("?")?"&":"?")+"plan="+encodeURIComponent(plan.n)+(em?"&email="+encodeURIComponent(em):""),"_blank","noopener");}else{notify(lang==="tr"?"💎 Web ödemesi yakında. Şimdilik yukarıdaki kutudan PRO kodu ile etkinleştirebilirsiniz.":TL("💎 Web checkout coming soon. For now, activate with a PRO code in the box above.",lang));}}} style={{...BP,width:"100%",marginTop:8,background:`linear-gradient(135deg,${plan.c},${plan.c}bb)`}}>{CHECKOUT_URL?(lang==="tr"?"💳 Web'de Yükselt":TL("💳 Upgrade on web",lang)):(lang==="tr"?"🎁 PRO Kodu ile Etkinleştir":TL("🎁 Activate with PRO code",lang))}</button>}
+      {!plan.active&&!isPaid&&<button onClick={()=>{if(CONTACT_EMAIL){window.location.href="mailto:"+CONTACT_EMAIL+"?subject="+encodeURIComponent("AILVIE "+(lang==="tr"?"Kurumsal Talep":TL("Enterprise Inquiry",lang)));}else{notify(lang==="tr"?"Kurumsal görüşme yakında eklenecek.":TL("Enterprise contact coming soon.",lang));}}} style={{...BP,width:"100%",marginTop:8,background:`linear-gradient(135deg,${plan.c},${plan.c}bb)`}}>{lang==="tr"?"✉️ Bize Ulaşın":TL("✉️ Contact Us",lang)}</button>}
     </div>);})}
     <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:4,padding:"8px 10px",borderRadius:8,background:`${mt}11`,lineHeight:1.5}}>
-      🌍 {lang==="tr"?"Fiyatlar ülkenize göre uyarlanır. Yıllık planlar 7 gün ücretsiz deneme içerir, istediğiniz zaman iptal edebilirsiniz.":"Prices are adapted to your region. Annual plans include a 7-day free trial, cancel anytime."}
+      🌍 {lang==="tr"?"Fiyatlar ülkenize göre uyarlanır. Yıllık planlar 7 gün ücretsiz deneme içerir, istediğiniz zaman iptal edebilirsiniz.":TL("Prices are adapted to your region. Annual plans include a 7-day free trial, cancel anytime.",lang)}
     </div>
   </div>}
   {all&&<div style={CS}>
-    <div style={{fontWeight:700,marginBottom:6}}>💾 {lang==="tr"?"Veri Yedekleme":"Data Backup"}</div>
-    <div style={{fontSize:fs-2,color:mt,marginBottom:8}}>{lang==="tr"?"Tüm sağlık verilerinizi (ilaç, randevu, not, hasta karnesi) bir dosyaya yedekleyin veya geri yükleyin. Buluta gerek yok — cihaz değiştirirken de kullanışlı.":"Back up or restore all your health data (meds, appointments, notes, patient card) to a file. No cloud needed — also handy when switching devices."}</div>
+    <div style={{fontWeight:700,marginBottom:6}}>💾 {lang==="tr"?"Veri Yedekleme":TL("Data Backup",lang)}</div>
+    <div style={{fontSize:fs-2,color:mt,marginBottom:8}}>{lang==="tr"?"Tüm sağlık verilerinizi (ilaç, randevu, not, hasta karnesi) bir dosyaya yedekleyin veya geri yükleyin. Buluta gerek yok — cihaz değiştirirken de kullanışlı.":TL("Back up or restore all your health data (meds, appointments, notes, patient card) to a file. No cloud needed — also handy when switching devices.",lang)}</div>
     <div style={{display:"flex",gap:8}}>
-      <button onClick={exportData} style={{...BP,flex:1}}>⬇️ {lang==="tr"?"Dışa Aktar":"Export"}</button>
-      <button onClick={()=>backupInputRef.current&&backupInputRef.current.click()} style={{...BP,flex:1,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>⬆️ {lang==="tr"?"İçe Aktar":"Import"}</button>
+      <button onClick={exportData} style={{...BP,flex:1}}>⬇️ {lang==="tr"?"Dışa Aktar":TL("Export",lang)}</button>
+      <button onClick={()=>backupInputRef.current&&backupInputRef.current.click()} style={{...BP,flex:1,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>⬆️ {lang==="tr"?"İçe Aktar":TL("Import",lang)}</button>
     </div>
     <input ref={backupInputRef} type="file" accept="application/json,.json" style={{display:"none"}} onChange={e=>{const f=e.target.files&&e.target.files[0];importData(f);e.target.value="";}}/>
   </div>}
   {(all||s==="trash")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🗑️ {t.trash}</div><div style={{display:"flex",gap:8,marginBottom:8}}>{[30,60,90].map(d=><button key={d} onClick={()=>setTrashDays(d)} style={pill(trashDays===d)}>{d} {t.trD}</button>)}</div>{trashItems.length===0&&<div style={{color:mt,textAlign:"center",padding:12}}>🗑️ {t.trE}</div>}{trashItems.map((item,ix)=>{const days=Math.max(0,trashDays-Math.floor((Date.now()-(item._d||Date.now()))/864e5));const tl=lang==="tr"?{med:"İlaç",appt:"Randevu",note:"Not",contact:"Kişi",record:"Kayıt",lab:"Tahlil",image:"Görüntü",message:"Mesaj",group:"Grup",emergency:"Acil No"}:{med:"Med",appt:"Appt",note:"Note",contact:"Contact",record:"Record",lab:"Lab",image:"Image",message:"Message",group:"Group",emergency:"Emergency"};const _thumb=(item._t==="note"&&Array.isArray(item._media))?item._media.find(x=>(x.type==="drawing"||x.type==="photo"||x.type==="image")&&x.data):null;
               return (<div key={item._d+"_"+ix} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${bd}`}}>{_thumb&&<img src={_thumb.data} alt="" style={{width:40,height:40,borderRadius:6,objectFit:"cover",flexShrink:0,background:"#fff",border:`1px solid ${bd}`}}/>}<div style={{minWidth:0,flex:1}}><div style={{fontSize:fs-1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{(()=>{
                 if(item._t==="lab"){const ti=LAB_TESTS.find(x=>x.k===item.test);return `${ti?(lang==="tr"?ti.tr:ti.en):item.test}: ${item.value} ${item.unit||""}`;}
-                if(item._t==="image")return (item.label||item.kind||(lang==="tr"?"Tıbbi görüntü":"Medical image"))+(item.date?` · ${item.date}`:"");
-                if(item._t==="message")return (item.text||"").substring(0,30)||(lang==="tr"?"Mesaj":"Message");
+                if(item._t==="image")return (item.label||item.kind||(lang==="tr"?"Tıbbi görüntü":TL("Medical image",lang)))+(item.date?` · ${item.date}`:"");
+                if(item._t==="message")return (item.text||"").substring(0,30)||(lang==="tr"?"Mesaj":TL("Message",lang));
                 if(item._t==="note"){
                   const txt=(item.title||"").trim()||(item.content?item.content.replace(/<[^>]+>/g,"").trim().substring(0,24):"");
                   if(txt)return txt;
                   const md=item._media||[];
-                  if(md.some(x=>x.type==="drawing"))return lang==="tr"?"🎨 Çizim":"🎨 Drawing";
-                  if(md.some(x=>x.type==="photo"||x.type==="image"))return lang==="tr"?"🖼️ Fotoğraf":"🖼️ Photo";
-                  if(md.some(x=>x.type==="audio"))return lang==="tr"?"🎤 Ses kaydı":"🎤 Voice note";
-                  if(item.checklist&&item.checklist.length)return lang==="tr"?"☑️ Liste":"☑️ Checklist";
-                  return lang==="tr"?"Boş not":"Empty note";
+                  if(md.some(x=>x.type==="drawing"))return lang==="tr"?"🎨 Çizim":TL("🎨 Drawing",lang);
+                  if(md.some(x=>x.type==="photo"||x.type==="image"))return lang==="tr"?"🖼️ Fotoğraf":TL("🖼️ Photo",lang);
+                  if(md.some(x=>x.type==="audio"))return lang==="tr"?"🎤 Ses kaydı":TL("🎤 Voice note",lang);
+                  if(item.checklist&&item.checklist.length)return lang==="tr"?"☑️ Liste":TL("☑️ Checklist",lang);
+                  return lang==="tr"?"Boş not":TL("Empty note",lang);
                 }
                 return item.name||item.title||item.doctor||(item.content?item.content.replace(/<[^>]+>/g,"").substring(0,24):"")||"—";
-              })()}</div><div style={{fontSize:fs-3,color:mt}}>{tl[item._t]||"—"} · {days} {lang==="tr"?"gün sonra silinir":"days left"}</div></div><div style={{display:"flex",gap:6,flexShrink:0}}><button onClick={()=>restoreItem(item)} style={{...BP,padding:"4px 10px",fontSize:fs-2}}>{t.rest}</button><button onClick={()=>setTrashItems(p=>p.filter(x=>x!==item))} aria-label={lang==="tr"?"Kalıcı sil":"Delete forever"} style={{background:"none",border:`1px solid ${dg}33`,color:dg,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:fs-2}}>✕</button></div></div>);})}{trashItems.length>0&&<button onClick={()=>setTrashItems([])} style={{...BD,width:"100%",marginTop:8}}>{t.empT}</button>}</div>}
+              })()}</div><div style={{fontSize:fs-3,color:mt}}>{tl[item._t]||"—"} · {days} {lang==="tr"?"gün sonra silinir":TL("days left",lang)}</div></div><div style={{display:"flex",gap:6,flexShrink:0}}><button onClick={()=>restoreItem(item)} style={{...BP,padding:"4px 10px",fontSize:fs-2}}>{t.rest}</button><button onClick={()=>setTrashItems(p=>p.filter(x=>x!==item))} aria-label={lang==="tr"?"Kalıcı sil":TL("Delete forever",lang)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:fs-2}}>✕</button></div></div>);})}{trashItems.length>0&&<button onClick={()=>setTrashItems([])} style={{...BD,width:"100%",marginTop:8}}>{t.empT}</button>}</div>}
   {(all||s==="legal")&&<div style={CS}><div style={{fontWeight:700,marginBottom:6}}>⚖️ {t.legal}</div><div style={{fontSize:fs-2,color:mt,lineHeight:1.4}}>{t.legalText}</div></div>}
   {all&&<div style={CS}><div style={{fontWeight:700,marginBottom:4}}>ℹ️ {t.about}</div><div style={{fontSize:fs-2,color:mt}}>{t.version}: 9.0.0</div><div style={{fontSize:fs-2,color:mt}}>© 2025-2026 AILVIE Health Technologies</div></div>}
 </div>);};
@@ -4305,7 +4306,7 @@ const finishPulse=(samples)=>{
     const hrvNote=(wantHrv&&res.hrvRmssd==null)?(res.durationMs<45000?"short":"unstable"):null;
     setHd(p=>({...p,pulse:res.bpm,hrvRmssd:res.hrvRmssd!=null?res.hrvRmssd:p.hrvRmssd,hrvSdnn:res.hrvSdnn!=null?res.hrvSdnn:p.hrvSdnn,resp:res.respRate!=null?res.respRate:p.resp}));logMetric("pulse",res.bpm);setPulseM({phase:"done",bpm:res.bpm,quality:res.quality,conf:res.conf,fps:res.fps,hrvRmssd:res.hrvRmssd,hrvSdnn:res.hrvSdnn,beats:res.beats,respRate:res.respRate,wantHrv,hrvNote});haptic([40,60,40]);
     notify(lang==="tr"?`❤️ Nabız: ${res.bpm} bpm`:`❤️ Pulse: ${res.bpm} bpm`);
-    if(fromChat){const q=res.quality==="excellent"?(lang==="tr"?"mükemmel":"excellent"):res.quality==="good"?(lang==="tr"?"iyi":"good"):res.quality==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük":"poor");setTimeout(()=>{setPulseM(null);goTo("chat");sendChat(lang==="tr"?`(Ölçüm tamamlandı) Nabzım ${res.bpm} bpm ölçüldü (sinyal kalitesi: ${q}). Bunu benim için yorumlar mısın?`:`(Measurement done) My pulse measured ${res.bpm} bpm (signal quality: ${q}). Can you interpret this for me?`);},700);}
+    if(fromChat){const q=res.quality==="excellent"?(lang==="tr"?"mükemmel":TL("excellent",lang)):res.quality==="good"?(lang==="tr"?"iyi":TL("good",lang)):res.quality==="fair"?(lang==="tr"?"orta":TL("fair",lang)):(lang==="tr"?"düşük":TL("poor",lang));setTimeout(()=>{setPulseM(null);goTo("chat");sendChat(lang==="tr"?`(Ölçüm tamamlandı) Nabzım ${res.bpm} bpm ölçüldü (sinyal kalitesi: ${q}). Bunu benim için yorumlar mısın?`:`(Measurement done) My pulse measured ${res.bpm} bpm (signal quality: ${q}). Can you interpret this for me?`);},700);}
   }else{
     const reason=res&&res.reason;
     const M=lang==="tr"?{
@@ -4323,7 +4324,7 @@ const finishPulse=(samples)=>{
       noisy:"Signal too noisy — no reliable pulse found. Hold still and try again.",
       out_of_range:"No valid pulse range found. Please try again."
     };
-    setPulseM({phase:"error",reason,msg:M[reason]||(lang==="tr"?"Sinyal kalitesi yetersiz — ölçüm alınamadı. Parmağını arka kameraya (ve flaşa) tam kapat, sabit tut ve tekrar dene.":"Signal quality insufficient — measurement failed. Cover the rear camera (and flash) fully, hold still, and try again.")});
+    setPulseM({phase:"error",reason,msg:M[reason]||(lang==="tr"?"Sinyal kalitesi yetersiz — ölçüm alınamadı. Parmağını arka kameraya (ve flaşa) tam kapat, sabit tut ve tekrar dene.":TL("Signal quality insufficient — measurement failed. Cover the rear camera (and flash) fully, hold still, and try again.",lang))});
   }
 };
 const startPulseMeasure=async(fromChat,hrvMode)=>{
@@ -4332,7 +4333,7 @@ const startPulseMeasure=async(fromChat,hrvMode)=>{
   setPulseM({phase:"init",progress:0,hrv:!!hrvMode});
   let stream;
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:320},height:{ideal:240}},audio:false});}
-  catch(e){setPulseM({phase:"error",msg:lang==="tr"?"Kamera izni gerekli. İzin verip tekrar deneyin.":"Camera permission needed. Allow it and retry."});return;}
+  catch(e){setPulseM({phase:"error",msg:lang==="tr"?"Kamera izni gerekli. İzin verip tekrar deneyin.":TL("Camera permission needed. Allow it and retry.",lang)});return;}
   pulseStreamRef.current=stream;
   const track=stream.getVideoTracks()[0];
   let torchOn=false;
@@ -4353,10 +4354,10 @@ const startPulseMeasure=async(fromChat,hrvMode)=>{
 const closePulse=()=>{stopPulseStream();setPulseM(null);};
 // ---- External device: Web Bluetooth heart-rate monitor (standard Heart Rate Service 0x180D) ----
 const connectBleHr=async()=>{
-  if(typeof navigator==="undefined"||!navigator.bluetooth){setBleHr({error:lang==="tr"?"Bu tarayıcı/cihaz Web Bluetooth desteklemiyor (ör. iPhone Safari). Chrome/Android'de deneyin.":"This browser/device doesn't support Web Bluetooth (e.g. iPhone Safari). Try Chrome on Android."});return;}
+  if(typeof navigator==="undefined"||!navigator.bluetooth){setBleHr({error:lang==="tr"?"Bu tarayıcı/cihaz Web Bluetooth desteklemiyor (ör. iPhone Safari). Chrome/Android'de deneyin.":TL("This browser/device doesn't support Web Bluetooth (e.g. iPhone Safari). Try Chrome on Android.",lang)});return;}
   try{
     const dev=await navigator.bluetooth.requestDevice({filters:[{services:["heart_rate"]}]});
-    bleRef.current=dev;setBleHr({connecting:true,name:dev.name||(lang==="tr"?"Cihaz":"Device")});
+    bleRef.current=dev;setBleHr({connecting:true,name:dev.name||(lang==="tr"?"Cihaz":TL("Device",lang))});
     dev.addEventListener("gattserverdisconnected",()=>setBleHr(b=>(b&&!b.error)?{...b,connected:false,connecting:false}:b));
     const server=await dev.gatt.connect();
     const svc=await server.getPrimaryService("heart_rate");
@@ -4364,10 +4365,10 @@ const connectBleHr=async()=>{
     await ch.startNotifications();
     ch.addEventListener("characteristicvaluechanged",(e)=>{
       const v=e.target.value;const flags=v.getUint8(0);const bpm=(flags&0x1)?v.getUint16(1,true):v.getUint8(1); // real device reading
-      if(bpm>0&&bpm<250){setBleHr({connected:true,bpm,name:dev.name||(lang==="tr"?"Cihaz":"Device")});setHd(p=>({...p,pulse:bpm}));}
+      if(bpm>0&&bpm<250){setBleHr({connected:true,bpm,name:dev.name||(lang==="tr"?"Cihaz":TL("Device",lang))});setHd(p=>({...p,pulse:bpm}));}
     });
-    setBleHr({connected:true,bpm:null,name:dev.name||(lang==="tr"?"Cihaz":"Device")});
-  }catch(e){setBleHr({error:(e&&e.name==="NotFoundError")?(lang==="tr"?"Cihaz seçilmedi.":"No device selected."):(lang==="tr"?"Bağlanılamadı. Cihazın açık ve eşleşme modunda olduğundan emin olun.":"Couldn't connect. Make sure the device is on and in pairing mode.")});}
+    setBleHr({connected:true,bpm:null,name:dev.name||(lang==="tr"?"Cihaz":TL("Device",lang))});
+  }catch(e){setBleHr({error:(e&&e.name==="NotFoundError")?(lang==="tr"?"Cihaz seçilmedi.":TL("No device selected.",lang)):(lang==="tr"?"Bağlanılamadı. Cihazın açık ve eşleşme modunda olduğundan emin olun.":TL("Couldn't connect. Make sure the device is on and in pairing mode.",lang))});}
 };
 const disconnectBle=()=>{try{if(bleRef.current&&bleRef.current.gatt&&bleRef.current.gatt.connected)bleRef.current.gatt.disconnect();}catch(e){}bleRef.current=null;setBleHr(null);};
 // ---- Cough/snore: on-device audio session (foreground only, no recording/upload; rough heuristic) ----
@@ -4381,10 +4382,10 @@ const stopSoundSession=()=>{
 };
 const startSoundSession=async()=>{
   if(soundSess&&soundSess.active)return;
-  if(typeof navigator==="undefined"||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!(window.AudioContext||window.webkitAudioContext)){setSoundSess({error:lang==="tr"?"Bu tarayıcı ses analizini desteklemiyor.":"This browser doesn't support audio analysis."});return;}
+  if(typeof navigator==="undefined"||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!(window.AudioContext||window.webkitAudioContext)){setSoundSess({error:lang==="tr"?"Bu tarayıcı ses analizini desteklemiyor.":TL("This browser doesn't support audio analysis.",lang)});return;}
   let stream;
   try{stream=await navigator.mediaDevices.getUserMedia({audio:true});}
-  catch(e){setSoundSess({error:lang==="tr"?"Mikrofon izni gerekli. İzin verip tekrar deneyin.":"Microphone permission needed. Allow it and retry."});return;}
+  catch(e){setSoundSess({error:lang==="tr"?"Mikrofon izni gerekli. İzin verip tekrar deneyin.":TL("Microphone permission needed. Allow it and retry.",lang)});return;}
   const Ctx=window.AudioContext||window.webkitAudioContext;const ctx=new Ctx();
   const src=ctx.createMediaStreamSource(stream);const an=ctx.createAnalyser();an.fftSize=2048;src.connect(an);
   const binHz=ctx.sampleRate/an.fftSize;const loBin=Math.round(500/binHz),hiBin=Math.round(4000/binHz);
@@ -4414,14 +4415,14 @@ useEffect(()=>()=>{const S=soundRef.current;try{if(S.raf)cancelAnimationFrame(S.
 const stopBalance=()=>{const B=balanceRef.current;try{if(B.handler)window.removeEventListener("devicemotion",B.handler);}catch(e){}try{if(B.timer)clearTimeout(B.timer);}catch(e){}try{if(B.prog)clearInterval(B.prog);}catch(e){}B.handler=null;B.timer=null;B.prog=null;};
 const finishBalance=()=>{
   stopBalance();const r=swayIndex(balanceRef.current.samples);
-  if(!r){setBalanceM({phase:"error",msg:lang==="tr"?"Yeterli sensör verisi alınamadı. Telefonu göğsünüze tutup sabit durun, tekrar deneyin.":"Not enough sensor data. Hold the phone to your chest, stand still and retry."});return;}
+  if(!r){setBalanceM({phase:"error",msg:lang==="tr"?"Yeterli sensör verisi alınamadı. Telefonu göğsünüze tutup sabit durun, tekrar deneyin.":TL("Not enough sensor data. Hold the phone to your chest, stand still and retry.",lang)});return;}
   setBalanceM({phase:"done",sway:r.idx,band:r.band});setTests(t=>({...t,balSway:r.idx,balBand:r.band,balAt:Date.now()}));
 };
 const startBalance=async()=>{
   if(balanceM&&balanceM.phase==="active")return;
-  if(typeof window==="undefined"||!window.DeviceMotionEvent){setBalanceM({phase:"error",msg:lang==="tr"?"Bu cihaz/tarayıcı hareket sensörünü desteklemiyor.":"This device/browser doesn't support motion sensors."});return;}
+  if(typeof window==="undefined"||!window.DeviceMotionEvent){setBalanceM({phase:"error",msg:lang==="tr"?"Bu cihaz/tarayıcı hareket sensörünü desteklemiyor.":TL("This device/browser doesn't support motion sensors.",lang)});return;}
   if(typeof DeviceMotionEvent.requestPermission==="function"){
-    try{const perm=await DeviceMotionEvent.requestPermission();if(perm!=="granted"){setBalanceM({phase:"error",msg:lang==="tr"?"Hareket sensörü izni gerekli.":"Motion sensor permission needed."});return;}}catch(e){setBalanceM({phase:"error",msg:lang==="tr"?"Hareket sensörü izni gerekli.":"Motion sensor permission needed."});return;}
+    try{const perm=await DeviceMotionEvent.requestPermission();if(perm!=="granted"){setBalanceM({phase:"error",msg:lang==="tr"?"Hareket sensörü izni gerekli.":TL("Motion sensor permission needed.",lang)});return;}}catch(e){setBalanceM({phase:"error",msg:lang==="tr"?"Hareket sensörü izni gerekli.":TL("Motion sensor permission needed.",lang)});return;}
   }
   const B=balanceRef.current;B.samples=[];B.start=Date.now();const dur=20000;
   const handler=(e)=>{const a=(e.acceleration&&e.acceleration.x!=null)?e.acceleration:e.accelerationIncludingGravity;if(!a)return;B.samples.push({t:Date.now(),x:a.x||0,y:a.y||0,z:a.z||0});};
@@ -4435,16 +4436,16 @@ useEffect(()=>()=>stopBalance(),[]);
 const stopPosture=()=>{const P=postureRef.current;try{if(P.handler)window.removeEventListener("devicemotion",P.handler);}catch(e){}try{if(P.timer)clearTimeout(P.timer);}catch(e){}try{if(P.tick)clearInterval(P.tick);}catch(e){}P.handler=null;P.timer=null;P.tick=null;};
 const startPosture=async()=>{
   if(postureM&&(postureM.phase==="live"||postureM.phase==="calibrating"))return;
-  if(typeof window==="undefined"||!window.DeviceMotionEvent){setPostureM({phase:"error",msg:lang==="tr"?"Bu cihaz/tarayıcı hareket sensörünü desteklemiyor.":"This device/browser doesn't support motion sensors."});return;}
+  if(typeof window==="undefined"||!window.DeviceMotionEvent){setPostureM({phase:"error",msg:lang==="tr"?"Bu cihaz/tarayıcı hareket sensörünü desteklemiyor.":TL("This device/browser doesn't support motion sensors.",lang)});return;}
   if(typeof DeviceMotionEvent.requestPermission==="function"){
-    try{const perm=await DeviceMotionEvent.requestPermission();if(perm!=="granted"){setPostureM({phase:"error",msg:lang==="tr"?"Hareket sensörü izni gerekli.":"Motion sensor permission needed."});return;}}catch(e){setPostureM({phase:"error",msg:lang==="tr"?"Hareket sensörü izni gerekli.":"Motion sensor permission needed."});return;}
+    try{const perm=await DeviceMotionEvent.requestPermission();if(perm!=="granted"){setPostureM({phase:"error",msg:lang==="tr"?"Hareket sensörü izni gerekli.":TL("Motion sensor permission needed.",lang)});return;}}catch(e){setPostureM({phase:"error",msg:lang==="tr"?"Hareket sensörü izni gerekli.":TL("Motion sensor permission needed.",lang)});return;}
   }
   const P=postureRef.current;Object.assign(P,{ref:null,g:[0,0,0],phase:"calibrating",calibSum:[0,0,0],calibN:0});
   const handler=(e)=>{const a=e.accelerationIncludingGravity;if(!a||a.x==null)return;const g=[a.x,a.y,a.z];P.g=P.g.map((v,i)=>v*0.8+g[i]*0.2);if(P.phase==="calibrating"){P.calibSum=P.calibSum.map((v,i)=>v+g[i]);P.calibN++;}};
   P.handler=handler;window.addEventListener("devicemotion",handler);
   setPostureM({phase:"calibrating"});
   P.timer=setTimeout(()=>{
-    if(!P.calibN){setPostureM({phase:"error",msg:lang==="tr"?"Sensör verisi alınamadı. Telefonu dik tutup tekrar deneyin.":"No sensor data. Hold the phone upright and retry."});stopPosture();return;}
+    if(!P.calibN){setPostureM({phase:"error",msg:lang==="tr"?"Sensör verisi alınamadı. Telefonu dik tutup tekrar deneyin.":TL("No sensor data. Hold the phone upright and retry.",lang)});stopPosture();return;}
     P.ref=P.calibSum.map(v=>v/P.calibN);P.phase="live";setPostureM({phase:"live",angle:0,band:"good"});
     P.tick=setInterval(()=>{const r=postureAngle(P.g,P.ref);if(r)setPostureM(m=>m&&m.phase==="live"?{...m,angle:r.angle,band:r.band}:m);},200);
   },1300);
@@ -4469,15 +4470,15 @@ const sleepPct=Math.min(100,(wellness.sleep/wellness.sleepGoal)*100);
 const computeSleepDur=(bed,wake)=>{if(!bed||!wake)return null;const[bh,bm]=bed.split(":").map(Number),[wh,wm]=wake.split(":").map(Number);let mins=(wh*60+wm)-(bh*60+bm);if(mins<=0)mins+=1440;return Math.round(mins/30)/2;};
 const setSleepTime=(field,val)=>{const nt={...sleepTimes,[field]:val};setSleepTimes(nt);try{localStorage.setItem("ailvie_sleep_times",JSON.stringify(nt));}catch(e){}const d=computeSleepDur(nt.bed,nt.wake);if(d!=null)setWellness(w=>({...w,sleep:d}));};
 const stepsPct=Math.min(100,(wellness.steps/wellness.stepsGoal)*100);
-const moods=[{v:1,e:"😢",l:lang==="tr"?"Çok Kötü":"Very Bad"},{v:2,e:"😕",l:lang==="tr"?"Kötü":"Bad"},{v:3,e:"😐",l:lang==="tr"?"Normal":"Normal"},{v:4,e:"🙂",l:lang==="tr"?"İyi":"Good"},{v:5,e:"😄",l:lang==="tr"?"Harika":"Great"}];
+const moods=[{v:1,e:"😢",l:lang==="tr"?"Çok Kötü":TL("Very Bad",lang)},{v:2,e:"😕",l:lang==="tr"?"Kötü":TL("Bad",lang)},{v:3,e:"😐",l:lang==="tr"?"Normal":TL("Normal",lang)},{v:4,e:"🙂",l:lang==="tr"?"İyi":TL("Good",lang)},{v:5,e:"😄",l:lang==="tr"?"Harika":TL("Great",lang)}];
 return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <span style={{fontWeight:700,fontSize:fs+2}}>📊 {t.health}</span>
   {/* Info Banner */}
   <div style={{padding:"8px 12px",borderRadius:10,background:`${ac}10`,border:`1px solid ${ac}33`,fontSize:fs-2,color:dark?acTx:tc,display:"flex",alignItems:"center",gap:6}}>
-    <span>💡</span><span>{lang==="tr"?"Verileriniz Hasta Karnesi ile otomatik senkronize":"Data auto-syncs with Patient Card"}</span>
+    <span>💡</span><span>{lang==="tr"?"Verileriniz Hasta Karnesi ile otomatik senkronize":TL("Data auto-syncs with Patient Card",lang)}</span>
   </div>
   {/* Body Measurements */}
-  <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>📏 {lang==="tr"?"Vücut Ölçümleri":"Body Measurements"}</div>
+  <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>📏 {lang==="tr"?"Vücut Ölçümleri":TL("Body Measurements",lang)}</div>
   <div style={{...CS,display:"flex",alignItems:"center",gap:10}}>
     <span style={{fontSize:22}}>🎂</span>
     <div style={{flex:1}}>
@@ -4495,26 +4496,26 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{height:8,borderRadius:4,background:`linear-gradient(90deg,${ac},${sc},#e9c46a,${dg})`,marginTop:8,position:"relative"}}>
       <div style={{position:"absolute",left:`${Math.min(100,Math.max(0,((bmi-10)/35)*100))}%`,top:-4,width:16,height:16,borderRadius:"50%",background:"#fff",border:`3px solid ${ac}`,transform:"translateX(-50%)"}}/>
     </div>
-    <div style={{fontSize:fs-3,color:mt,marginTop:6,textAlign:"center"}}>{bmi<18.5?(lang==="tr"?"Zayıf — Kilo almanız önerilir":"Underweight — weight gain recommended"):bmi<25?(lang==="tr"?"✓ Normal":"✓ Normal"):bmi<30?(lang==="tr"?"Fazla kilolu":"Overweight"):(lang==="tr"?"Obez — Doktora başvurun":"Obese — Consult doctor")}</div>
+    <div style={{fontSize:fs-3,color:mt,marginTop:6,textAlign:"center"}}>{bmi<18.5?(lang==="tr"?"Zayıf — Kilo almanız önerilir":TL("Underweight — weight gain recommended",lang)):bmi<25?(lang==="tr"?"✓ Normal":TL("✓ Normal",lang)):bmi<30?(lang==="tr"?"Fazla kilolu":TL("Overweight",lang)):(lang==="tr"?"Obez — Doktora başvurun":TL("Obese — Consult doctor",lang))}</div>
   </div>}
   {/* Diet Program (dietitian tracker) */}
   {(()=>{const tk=new Date().toISOString().split('T')[0];const meals=diet.meals||[];const doneToday=meals.filter(m=>diet.done&&diet.done[tk+'_'+m.id]).length;const water=(diet.water&&diet.water[tk])||0;const gw=diet.goalWater||8;
   return <div style={{...CS}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><b style={{fontSize:fs+1,color:tc}}>🥗 {lang==="tr"?"Diyet Programı":"Diet Program"}</b>{meals.length>0&&<span style={{fontSize:fs-2,color:doneToday===meals.length?sc:mt,fontWeight:700}}>{lang==="tr"?"bugün":"today"} {doneToday}/{meals.length} ✓</span>}</div>
-    <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{lang==="tr"?"Diyetisyeninizin verdiği programı girin. AILVIE diyet oluşturmaz, yalnızca takip eder.":"Enter the program your dietitian gave you. AILVIE doesn't create diets, only tracks."}</div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><b style={{fontSize:fs+1,color:tc}}>🥗 {lang==="tr"?"Diyet Programı":TL("Diet Program",lang)}</b>{meals.length>0&&<span style={{fontSize:fs-2,color:doneToday===meals.length?sc:mt,fontWeight:700}}>{lang==="tr"?"bugün":TL("today",lang)} {doneToday}/{meals.length} ✓</span>}</div>
+    <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{lang==="tr"?"Diyetisyeninizin verdiği programı girin. AILVIE diyet oluşturmaz, yalnızca takip eder.":TL("Enter the program your dietitian gave you. AILVIE doesn't create diets, only tracks.",lang)}</div>
     {meals.map(m=>{const dk=tk+'_'+m.id;const on=diet.done&&diet.done[dk];return <div key={m.id} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 0",borderBottom:`1px solid ${bd}`}}>
       <button onClick={()=>setDiet(d=>({...d,done:{...(d.done||{}),[dk]:!on}}))} style={{flexShrink:0,width:24,height:24,borderRadius:7,border:`2px solid ${on?sc:bd}`,background:on?sc:"transparent",color:"#fff",cursor:"pointer",fontSize:14,lineHeight:1}}>{on?"✓":""}</button>
       <div style={{flex:1,minWidth:0}}><div style={{fontSize:fs-2,fontWeight:700,color:acTx}}>{m.slot}</div><div style={{fontSize:fs-1,color:tc,opacity:on?0.55:1,textDecoration:on?"line-through":"none"}}>{m.text}</div></div>
       <button onClick={()=>setDiet(d=>({...d,meals:d.meals.filter(x=>x.id!==m.id)}))} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:fs}}>✕</button>
     </div>;})}
-    {meals.length===0&&<div style={{color:mt,fontSize:fs-2,padding:"6px 0"}}>{lang==="tr"?"Henüz öğün eklenmedi.":"No meals added yet."}</div>}
+    {meals.length===0&&<div style={{color:mt,fontSize:fs-2,padding:"6px 0"}}>{lang==="tr"?"Henüz öğün eklenmedi.":TL("No meals added yet.",lang)}</div>}
     <div style={{display:"flex",gap:6,marginTop:8}}>
-      <select aria-label={lang==="tr"?"Öğün seçin":"Select meal"} value={dietSlot} onChange={e=>setDietSlot(e.target.value)} style={{...IS,flex:"0 0 36%",padding:"9px 6px"}}>{(lang==="tr"?["Kahvaltı","Ara Öğün","Öğle","İkindi","Akşam","Gece"]:["Breakfast","Snack","Lunch","Afternoon","Dinner","Night"]).map(x=><option key={x} value={x}>{x}</option>)}</select>
-      <input value={dietText} onChange={e=>setDietText(e.target.value)} placeholder={lang==="tr"?"Ne yenecek…":"What to eat…"} style={{...IS,flex:1}}/>
+      <select aria-label={lang==="tr"?"Öğün seçin":TL("Select meal",lang)} value={dietSlot} onChange={e=>setDietSlot(e.target.value)} style={{...IS,flex:"0 0 36%",padding:"9px 6px"}}>{(lang==="tr"?["Kahvaltı","Ara Öğün","Öğle","İkindi","Akşam","Gece"]:["Breakfast","Snack","Lunch","Afternoon","Dinner","Night"]).map(x=><option key={x} value={x}>{x}</option>)}</select>
+      <input value={dietText} onChange={e=>setDietText(e.target.value)} placeholder={lang==="tr"?"Ne yenecek…":TL("What to eat…",lang)} style={{...IS,flex:1}}/>
     </div>
-    <button onClick={()=>{if(dietText.trim()){setDiet(d=>({...d,meals:[...(d.meals||[]),{id:Date.now(),slot:dietSlot,text:dietText.trim()}]}));setDietText("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Öğün Ekle":"Add Meal"}</button>
+    <button onClick={()=>{if(dietText.trim()){setDiet(d=>({...d,meals:[...(d.meals||[]),{id:Date.now(),slot:dietSlot,text:dietText.trim()}]}));setDietText("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Öğün Ekle":TL("Add Meal",lang)}</button>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:12,paddingTop:10,borderTop:`1px solid ${bd}`}}>
-      <span style={{fontSize:fs-1,color:tc}}>💧 {lang==="tr"?"Su":"Water"} <b style={{color:water>=gw?sc:ac}}>{water}</b>/{gw} {lang==="tr"?"bardak":"cups"}</span>
+      <span style={{fontSize:fs-1,color:tc}}>💧 {lang==="tr"?"Su":TL("Water",lang)} <b style={{color:water>=gw?sc:ac}}>{water}</b>/{gw} {lang==="tr"?"bardak":TL("cups",lang)}</span>
       <div style={{display:"flex",gap:6}}>
         <button onClick={()=>setDiet(d=>({...d,water:{...(d.water||{}),[tk]:Math.max(0,water-1)}}))} style={{...BP,background:mt,width:36,padding:"6px 0"}}>−</button>
         <button onClick={()=>setDiet(d=>({...d,water:{...(d.water||{}),[tk]:water+1}}))} style={{...BP,width:36,padding:"6px 0"}}>+</button>
@@ -4536,24 +4537,24 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       return{c:dg,l:L?"diyabet eşiği":"diabetes range"};
     };
     const readings=[...glucose].sort((a,b)=>a.ts-b.ts);const recent=readings.slice(-8);
-    const typeLbl=(t)=>t==="fasting"?(lang==="tr"?"Açlık":"Fasting"):t==="postmeal"?(lang==="tr"?"Tokluk":"Post-meal"):(lang==="tr"?"Rastgele":"Random");
+    const typeLbl=(t)=>t==="fasting"?(lang==="tr"?"Açlık":TL("Fasting",lang)):t==="postmeal"?(lang==="tr"?"Tokluk":TL("Post-meal",lang)):(lang==="tr"?"Rastgele":TL("Random",lang));
     const vals=recent.map(r=>r.val);const mn=Math.min(70,...vals),mx=Math.max(200,...vals);const yy=v=>78-((v-mn)/(mx-mn||1))*74-2;
     return <div style={{...CS}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
-        <b style={{fontSize:fs+1,color:tc}}>🩸 {lang==="tr"?"Şeker (Glikoz) Takibi":"Blood Glucose"}</b>
-        <button onClick={()=>startGuide("glucose")} aria-label={lang==="tr"?"Kan şekeri ölçüm rehberi":"Blood glucose measurement guide"} title={lang==="tr"?"Nasıl ölçülür?":"How to measure"} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${bd}`,color:acTx,borderRadius:8,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,flexShrink:0}}>🔊 {lang==="tr"?"Rehber":"Guide"}</button>
+        <b style={{fontSize:fs+1,color:tc}}>🩸 {lang==="tr"?"Şeker (Glikoz) Takibi":TL("Blood Glucose",lang)}</b>
+        <button onClick={()=>startGuide("glucose")} aria-label={lang==="tr"?"Kan şekeri ölçüm rehberi":TL("Blood glucose measurement guide",lang)} title={lang==="tr"?"Nasıl ölçülür?":TL("How to measure",lang)} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${bd}`,color:acTx,borderRadius:8,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,flexShrink:0}}>🔊 {lang==="tr"?"Rehber":TL("Guide",lang)}</button>
       </div>
       {(()=>{const c=patCtx();const L=lang==="tr";let msg=null;
         if(!c.band)msg=L?"⚠️ Doğum tarihi girilmemiş — değerler sınıflandırılmıyor. Hasta Karnesi'nden yaş/cinsiyet ekleyin.":"⚠️ No birth date — values are not classified. Add age/sex in Patient Card.";
         else if(c.pregnant)msg=L?"⚠️ Gebelikte şeker eşikleri farklıdır (ör. gestasyonel diyabet). Uygulama sınıflandırma yapmaz; değerleriniz yalnızca kaydedilir. Doktorunuz/kadın doğum uzmanınız değerlendirmelidir.":"⚠️ Pregnancy thresholds differ. Values are recorded but not classified.";
         else if(c.band!=="adult"&&c.band!=="older")msg=L?"⚠️ Çocuk/adölesan referansları yetişkinden farklıdır ve yaşa/yönteme göre değişir. Uygulama sınıflandırma yapmaz; değerler yalnızca kaydedilir.":"⚠️ Pediatric references differ. Values are recorded but not classified.";
         return msg?<div style={{background:`${dg}12`,border:`1px solid ${dg}44`,borderRadius:9,padding:"8px 10px",fontSize:fs-3,color:tc,lineHeight:1.4,marginTop:6}}>{msg}</div>:null;})()}
-      <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{lang==="tr"?"Ölçüm cihazınızın değerini girin. Tarama amaçlıdır, tıbbi tanı değildir — doktorunuza danışın.":"Enter your meter reading. Screening only, not a diagnosis — consult your doctor."}</div>
+      <div style={{fontSize:fs-3,color:mt,marginTop:2,marginBottom:8}}>{lang==="tr"?"Ölçüm cihazınızın değerini girin. Tarama amaçlıdır, tıbbi tanı değildir — doktorunuza danışın.":TL("Enter your meter reading. Screening only, not a diagnosis — consult your doctor.",lang)}</div>
       <div style={{display:"flex",gap:6}}>
-        <input type="number" inputMode="numeric" value={gluVal} onFocus={()=>{if(voiceGuide&&!guide)startGuide("glucose");}} onChange={e=>setGluVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric("glucose",v,gluType);if(v<54||v>=300)setActiveAlert({icon:"🩸",title:lang==="tr"?"KRİTİK ŞEKER":"CRITICAL GLUCOSE",msg:v+" mg/dL — "+(lang==="tr"?"acil kontrol edin / doktorunuza danışın":"seek medical attention")});setGluVal("");}}}} placeholder="mg/dL" style={{...IS,flex:"0 0 32%"}}/>
-        <select aria-label={lang==="tr"?"Ölçüm zamanı (açlık/tokluk)":"Measurement timing"} value={gluType} onChange={e=>setGluType(e.target.value)} style={{...IS,flex:1}}><option value="fasting">{lang==="tr"?"Açlık":"Fasting"}</option><option value="postmeal">{lang==="tr"?"Tokluk (2 saat)":"Post-meal (2h)"}</option><option value="random">{lang==="tr"?"Rastgele":"Random"}</option></select>
+        <input type="number" inputMode="numeric" value={gluVal} onFocus={()=>{if(voiceGuide&&!guide)startGuide("glucose");}} onChange={e=>setGluVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric("glucose",v,gluType);if(v<54||v>=300)setActiveAlert({icon:"🩸",title:lang==="tr"?"KRİTİK ŞEKER":TL("CRITICAL GLUCOSE",lang),msg:v+" mg/dL — "+(lang==="tr"?"acil kontrol edin / doktorunuza danışın":TL("seek medical attention",lang))});setGluVal("");}}}} placeholder="mg/dL" style={{...IS,flex:"0 0 32%"}}/>
+        <select aria-label={lang==="tr"?"Ölçüm zamanı (açlık/tokluk)":TL("Measurement timing",lang)} value={gluType} onChange={e=>setGluType(e.target.value)} style={{...IS,flex:1}}><option value="fasting">{lang==="tr"?"Açlık":TL("Fasting",lang)}</option><option value="postmeal">{lang==="tr"?"Tokluk (2 saat)":TL("Post-meal (2h)",lang)}</option><option value="random">{lang==="tr"?"Rastgele":TL("Random",lang)}</option></select>
       </div>
-      <button onClick={()=>{const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric('glucose',v,gluType);if(v<54||v>=300)setActiveAlert({icon:"🩸",title:lang==="tr"?"KRİTİK ŞEKER":"CRITICAL GLUCOSE",msg:v+" mg/dL — "+(lang==="tr"?"acil kontrol edin / doktorunuza danışın":"seek medical attention")});setGluVal("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Ölçüm Ekle":"Add Reading"}</button>
+      <button onClick={()=>{const v=parseInt(gluVal,10);if(v>0){setGlucose(g=>[...g,{id:Date.now(),ts:Date.now(),val:v,type:gluType}]);logMetric('glucose',v,gluType);if(v<54||v>=300)setActiveAlert({icon:"🩸",title:lang==="tr"?"KRİTİK ŞEKER":TL("CRITICAL GLUCOSE",lang),msg:v+" mg/dL — "+(lang==="tr"?"acil kontrol edin / doktorunuza danışın":TL("seek medical attention",lang))});setGluVal("");}}} style={{...BP,marginTop:6,padding:"9px"}}>+ {lang==="tr"?"Ölçüm Ekle":TL("Add Reading",lang)}</button>
       {recent.length>=2&&<div style={{marginTop:12}}>
         <svg width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none">
           <polyline fill="none" stroke={ac} strokeWidth="2" points={recent.map((r,i)=>`${(i/(recent.length-1))*300},${yy(r.val)}`).join(" ")}/>
@@ -4566,9 +4567,9 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         <div style={{flex:1,textAlign:"right",minWidth:0}}><span style={{fontSize:fs-2,color:cl.c,fontWeight:700}}>{cl.l}</span> <span style={{fontSize:fs-3,color:mt}}>· {typeLbl(r.type)} · {dt.toLocaleDateString(lc,{day:"2-digit",month:"2-digit"})} {dt.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</span></div>
         <button onClick={()=>setGlucose(g=>g.filter(x=>x.id!==r.id))} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:fs-1,marginLeft:6,flexShrink:0}}>✕</button>
       </div>;})}
-      {readings.length===0&&<div style={{color:mt,fontSize:fs-2,marginTop:8}}>{lang==="tr"?"Henüz ölçüm yok.":"No readings yet."}</div>}
-      <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{lang==="tr"?"Referans (yaklaşık): Açlık 70–99 normal, 100–125 sınırda, ≥126 yüksek · Tokluk <140 normal. Kişisel hedefler için doktorunuza danışın.":"Ref (approx): Fasting 70–99 normal, 100–125 borderline, ≥126 high · Post-meal <140 normal. Ask your doctor for personal targets."}</div>
-      <div style={{display:"flex",gap:6,alignItems:"center",marginTop:10,paddingTop:8,borderTop:`1px solid ${bd}`}}><span style={{fontSize:fs-1,color:tc,flex:1}}>🧪 HbA1c <span style={{fontSize:fs-3,color:mt}}>(%)</span></span><input type="number" step="0.1" inputMode="decimal" value={hba1cVal} onChange={e=>setHba1cVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){const v=parseFloat(hba1cVal);if(v>0){logMetric("hba1c",v);setHba1cVal("");notify(lang==="tr"?"✓ HbA1c kaydedildi":"✓ HbA1c logged");}}}} placeholder="5.6" style={{...IS,width:74,textAlign:"center"}}/><button onClick={()=>{const v=parseFloat(hba1cVal);if(v>0){logMetric("hba1c",v);setHba1cVal("");notify(lang==="tr"?"✓ HbA1c kaydedildi":"✓ HbA1c logged");}}} style={{...BP,padding:"8px 14px"}}>+</button></div>
+      {readings.length===0&&<div style={{color:mt,fontSize:fs-2,marginTop:8}}>{lang==="tr"?"Henüz ölçüm yok.":TL("No readings yet.",lang)}</div>}
+      <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{lang==="tr"?"Referans (yaklaşık): Açlık 70–99 normal, 100–125 sınırda, ≥126 yüksek · Tokluk <140 normal. Kişisel hedefler için doktorunuza danışın.":TL("Ref (approx): Fasting 70–99 normal, 100–125 borderline, ≥126 high · Post-meal <140 normal. Ask your doctor for personal targets.",lang)}</div>
+      <div style={{display:"flex",gap:6,alignItems:"center",marginTop:10,paddingTop:8,borderTop:`1px solid ${bd}`}}><span style={{fontSize:fs-1,color:tc,flex:1}}>🧪 HbA1c <span style={{fontSize:fs-3,color:mt}}>(%)</span></span><input type="number" step="0.1" inputMode="decimal" value={hba1cVal} onChange={e=>setHba1cVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){const v=parseFloat(hba1cVal);if(v>0){logMetric("hba1c",v);setHba1cVal("");notify(lang==="tr"?"✓ HbA1c kaydedildi":TL("✓ HbA1c logged",lang));}}}} placeholder="5.6" style={{...IS,width:74,textAlign:"center"}}/><button onClick={()=>{const v=parseFloat(hba1cVal);if(v>0){logMetric("hba1c",v);setHba1cVal("");notify(lang==="tr"?"✓ HbA1c kaydedildi":TL("✓ HbA1c logged",lang));}}} style={{...BP,padding:"8px 14px"}}>+</button></div>
     </div>;})()}
   {/* Health Report & History */}
   {(()=>{
@@ -4604,52 +4605,52 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     const yy=v=>78-((v-mn)/((mx-mn)||1))*72-3;
     return <div style={{...CS}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6}}>
-        <b style={{fontSize:fs+1,color:tc}}>📊 {lang==="tr"?"Sağlık Raporu & Geçmiş":"Health Report & History"}</b>
-        <button onClick={()=>{const t=Date.now();const add=[];if(hd.weight>0)add.push({type:"weight",val:hd.weight});if(hd.pulse>0)add.push({type:"pulse",val:hd.pulse});if(hd.bpS>0)add.push({type:"bp",val:hd.bpS,meta:{d:hd.bpD||0}});if(hd.spo2>0)add.push({type:"spo2",val:hd.spo2});if(!add.length){notify(lang==="tr"?"Önce Yaşamsal Değerler'e değer girin.":"Enter vitals first.");return;}setHealthLog(l=>[...l,...add.map((a,i)=>({id:t+"_"+i,ts:t,...a,meta:a.meta||null}))]);notify(lang==="tr"?`✓ ${add.length} değer geçmişe kaydedildi`:`✓ ${add.length} values logged`);if(hd.bpS>=180||hd.bpD>=120)setActiveAlert({icon:"🩺",title:lang==="tr"?"YÜKSEK TANSİYON":"HIGH BLOOD PRESSURE",msg:hd.bpS+"/"+hd.bpD+" — "+(lang==="tr"?"doktorunuza danışın":"consult your doctor")});}} style={{...BP,padding:"6px 12px",fontSize:fs-2}}>📌 {lang==="tr"?"Bugünü Kaydet":"Log Today"}</button><button onClick={exportReportPDF} style={{...BP,background:sc,padding:"6px 12px",fontSize:fs-2}}>📄 PDF</button><button onClick={exportCSV} style={{...BP,background:a2,padding:"6px 12px",fontSize:fs-2}}>📊 Excel/CSV</button><button onClick={exportFHIR} style={{...BP,background:mt,padding:"6px 12px",fontSize:fs-2}}>🔗 FHIR</button>
+        <b style={{fontSize:fs+1,color:tc}}>📊 {lang==="tr"?"Sağlık Raporu & Geçmiş":TL("Health Report & History",lang)}</b>
+        <button onClick={()=>{const t=Date.now();const add=[];if(hd.weight>0)add.push({type:"weight",val:hd.weight});if(hd.pulse>0)add.push({type:"pulse",val:hd.pulse});if(hd.bpS>0)add.push({type:"bp",val:hd.bpS,meta:{d:hd.bpD||0}});if(hd.spo2>0)add.push({type:"spo2",val:hd.spo2});if(!add.length){notify(lang==="tr"?"Önce Yaşamsal Değerler'e değer girin.":TL("Enter vitals first.",lang));return;}setHealthLog(l=>[...l,...add.map((a,i)=>({id:t+"_"+i,ts:t,...a,meta:a.meta||null}))]);notify(lang==="tr"?`✓ ${add.length} değer geçmişe kaydedildi`:`✓ ${add.length} values logged`);if(hd.bpS>=180||hd.bpD>=120)setActiveAlert({icon:"🩺",title:lang==="tr"?"YÜKSEK TANSİYON":TL("HIGH BLOOD PRESSURE",lang),msg:hd.bpS+"/"+hd.bpD+" — "+(lang==="tr"?"doktorunuza danışın":TL("consult your doctor",lang))});}} style={{...BP,padding:"6px 12px",fontSize:fs-2}}>📌 {lang==="tr"?"Bugünü Kaydet":TL("Log Today",lang)}</button><button onClick={exportReportPDF} style={{...BP,background:sc,padding:"6px 12px",fontSize:fs-2}}>📄 PDF</button><button onClick={exportCSV} style={{...BP,background:a2,padding:"6px 12px",fontSize:fs-2}}>📊 Excel/CSV</button><button onClick={exportFHIR} style={{...BP,background:mt,padding:"6px 12px",fontSize:fs-2}}>🔗 FHIR</button>
       </div>
       <div style={{display:"flex",gap:6,overflowX:"auto",margin:"10px 0",paddingBottom:2}}>{M2.map(m=><button key={m.k} onClick={()=>setRepMetric(m.k)} style={{flex:"0 0 auto",padding:"6px 12px",borderRadius:20,border:`1px solid ${sel===m.k?ac:bd}`,background:sel===m.k?ac:"transparent",color:sel===m.k?onAc:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{m.ic} {m.lbl}</button>)}</div>
-      <div style={{display:"flex",gap:6,marginBottom:8}}>{[[7,lang==="tr"?"7 gün":"7d"],[30,lang==="tr"?"30 gün":"30d"],[90,lang==="tr"?"90 gün":"90d"],[0,lang==="tr"?"Tümü":"All"]].map(([d,l])=><button key={d} onClick={()=>setRepRange(d)} style={{flex:1,padding:"5px 0",borderRadius:8,border:`1px solid ${repRange===d?ac:bd}`,background:repRange===d?`${ac}22`:"transparent",color:repRange===d?acTx:mt,fontSize:fs-3,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
-      {n===0?<div style={{color:mt,fontSize:fs-2,padding:"14px 0",textAlign:"center"}}>{lang==="tr"?"Bu metrik için henüz kayıt yok. Değer girip 'Bugünü Kaydet' ile geçmişe ekleyin.":"No records yet. Enter a value and tap 'Log Today'."}</div>:<>
+      <div style={{display:"flex",gap:6,marginBottom:8}}>{[[7,lang==="tr"?"7 gün":TL("7d",lang)],[30,lang==="tr"?"30 gün":TL("30d",lang)],[90,lang==="tr"?"90 gün":TL("90d",lang)],[0,lang==="tr"?"Tümü":TL("All",lang)]].map(([d,l])=><button key={d} onClick={()=>setRepRange(d)} style={{flex:1,padding:"5px 0",borderRadius:8,border:`1px solid ${repRange===d?ac:bd}`,background:repRange===d?`${ac}22`:"transparent",color:repRange===d?acTx:mt,fontSize:fs-3,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
+      {n===0?<div style={{color:mt,fontSize:fs-2,padding:"14px 0",textAlign:"center"}}>{lang==="tr"?"Bu metrik için henüz kayıt yok. Değer girip 'Bugünü Kaydet' ile geçmişe ekleyin.":TL("No records yet. Enter a value and tap 'Log Today'.",lang)}</div>:<>
         {n>=2&&<div style={{marginTop:4}}><svg width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none"><polyline fill="none" stroke={ac} strokeWidth="2" points={series.slice(-12).map((s,i,a)=>`${(i/(a.length-1||1))*300},${yy(s.val)}`).join(" ")}/>{series.slice(-12).map((s,i,a)=><circle key={i} cx={(i/(a.length-1||1))*300} cy={yy(s.val)} r="3" fill={ac}/>)}</svg><div style={{display:"flex",justifyContent:"space-between",fontSize:fs-4,color:mt}}><span>{mn}</span><span>{mi.u}</span><span>{mx}</span></div></div>}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,margin:"10px 0"}}>
-          {[[lang==="tr"?"Son":"Latest",fmt(cur),tc],[lang==="tr"?"Önceki":"Prev",prev?fmt(prev):"—",mt],[lang==="tr"?"Değişim":"Change",(delta>0?"▲ +":delta<0?"▼ ":"")+ (sel==="bp"?delta:delta),delta>0?dg:delta<0?sc:mt],[lang==="tr"?"Ortalama":"Avg",avg,tc],[lang==="tr"?"En düşük":"Min",mn,tc],[lang==="tr"?"En yüksek":"Max",mx,tc]].map(([l,v,c],i)=><div key={i} style={{background:dark?"#0e1620":"#f4f7fa",borderRadius:10,padding:"8px 6px",textAlign:"center"}}><div style={{fontSize:fs-4,color:mt}}>{l}</div><div style={{fontSize:fs+1,fontWeight:800,color:c}}>{v}</div></div>)}
+          {[[lang==="tr"?"Son":TL("Latest",lang),fmt(cur),tc],[lang==="tr"?"Önceki":TL("Prev",lang),prev?fmt(prev):"—",mt],[lang==="tr"?"Değişim":TL("Change",lang),(delta>0?"▲ +":delta<0?"▼ ":"")+ (sel==="bp"?delta:delta),delta>0?dg:delta<0?sc:mt],[lang==="tr"?"Ortalama":TL("Avg",lang),avg,tc],[lang==="tr"?"En düşük":TL("Min",lang),mn,tc],[lang==="tr"?"En yüksek":TL("Max",lang),mx,tc]].map(([l,v,c],i)=><div key={i} style={{background:dark?"#0e1620":"#f4f7fa",borderRadius:10,padding:"8px 6px",textAlign:"center"}}><div style={{fontSize:fs-4,color:mt}}>{l}</div><div style={{fontSize:fs+1,fontWeight:800,color:c}}>{v}</div></div>)}
         </div>
         {concl&&<div style={{background:`${ac}14`,border:`1px solid ${ac}33`,borderRadius:10,padding:"9px 11px",fontSize:fs-1,color:tc,lineHeight:1.4,marginBottom:8}}>🧭 {concl}</div>}
-        {pAvg!=null&&n>0&&<div style={{fontSize:fs-2,color:mt,marginBottom:8}}>{lang==="tr"?"Önceki döneme göre:":"vs previous period:"} {pAvg} → <b style={{color:tc}}>{avg}</b> {mi.u} <span style={{color:avg>pAvg?"#e9a23b":avg<pAvg?acTx:mt,fontWeight:700}}>({avg>pAvg?"+":""}{Math.round((avg-pAvg)*10)/10})</span></div>}
-        {sel==="weight"&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}><span style={{fontSize:fs-2,color:mt}}>🎯 {lang==="tr"?"Hedef kilo":"Goal weight"}:</span><input type="number" value={goals.weight} onChange={e=>setGoals(g=>({...g,weight:e.target.value}))} placeholder="kg" style={{...IS,width:70,textAlign:"center",padding:"5px 6px"}}/>{goals.weight>0&&cur&&<span style={{fontSize:fs-2,color:tc,fontWeight:600}}>{(()=>{const diff=Math.round((cur.val-parseFloat(goals.weight))*10)/10;return diff===0?(lang==="tr"?"🎉 hedefte!":"🎉 reached!"):(lang==="tr"?`${Math.abs(diff)} kg ${diff>0?"vermeniz":"almanız"} gerek`:`${Math.abs(diff)} kg to ${diff>0?"lose":"gain"}`);})()}</span>}</div>}
-        <div style={{fontSize:fs-2,fontWeight:700,color:mt,margin:"4px 0"}}>{lang==="tr"?"Kayıtlar (tarih · saat)":"Records (date · time)"}</div>
-        {[...series].reverse().slice(0,10).map((s,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span style={{fontSize:fs-2,color:mt}}>{dstr(s.ts)}</span><b style={{fontSize:fs,color:tc}}>{fmt(s)} {mi.u}{sel==="glucose"&&s.meta?` · ${s.meta==="fasting"?(lang==="tr"?"Açlık":"Fast"):s.meta==="postmeal"?(lang==="tr"?"Tokluk":"Post"):(lang==="tr"?"Rastgele":"Rand")}`:""}</b></div>)}
-        <div style={{fontSize:fs-4,color:mt,marginTop:8}}>{lang==="tr"?"Değerler tarama amaçlıdır; tıbbi karar için doktorunuza danışın.":"Values are for screening; consult your doctor for medical decisions."}</div>
+        {pAvg!=null&&n>0&&<div style={{fontSize:fs-2,color:mt,marginBottom:8}}>{lang==="tr"?"Önceki döneme göre:":TL("vs previous period:",lang)} {pAvg} → <b style={{color:tc}}>{avg}</b> {mi.u} <span style={{color:avg>pAvg?"#e9a23b":avg<pAvg?acTx:mt,fontWeight:700}}>({avg>pAvg?"+":""}{Math.round((avg-pAvg)*10)/10})</span></div>}
+        {sel==="weight"&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}><span style={{fontSize:fs-2,color:mt}}>🎯 {lang==="tr"?"Hedef kilo":TL("Goal weight",lang)}:</span><input type="number" value={goals.weight} onChange={e=>setGoals(g=>({...g,weight:e.target.value}))} placeholder="kg" style={{...IS,width:70,textAlign:"center",padding:"5px 6px"}}/>{goals.weight>0&&cur&&<span style={{fontSize:fs-2,color:tc,fontWeight:600}}>{(()=>{const diff=Math.round((cur.val-parseFloat(goals.weight))*10)/10;return diff===0?(lang==="tr"?"🎉 hedefte!":TL("🎉 reached!",lang)):(lang==="tr"?`${Math.abs(diff)} kg ${diff>0?"vermeniz":"almanız"} gerek`:`${Math.abs(diff)} kg to ${diff>0?"lose":"gain"}`);})()}</span>}</div>}
+        <div style={{fontSize:fs-2,fontWeight:700,color:mt,margin:"4px 0"}}>{lang==="tr"?"Kayıtlar (tarih · saat)":TL("Records (date · time)",lang)}</div>
+        {[...series].reverse().slice(0,10).map((s,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span style={{fontSize:fs-2,color:mt}}>{dstr(s.ts)}</span><b style={{fontSize:fs,color:tc}}>{fmt(s)} {mi.u}{sel==="glucose"&&s.meta?` · ${s.meta==="fasting"?(lang==="tr"?"Açlık":TL("Fast",lang)):s.meta==="postmeal"?(lang==="tr"?"Tokluk":TL("Post",lang)):(lang==="tr"?"Rastgele":TL("Rand",lang))}`:""}</b></div>)}
+        <div style={{fontSize:fs-4,color:mt,marginTop:8}}>{lang==="tr"?"Değerler tarama amaçlıdır; tıbbi karar için doktorunuza danışın.":TL("Values are for screening; consult your doctor for medical decisions.",lang)}</div>
       </>}
     </div>;})()}
   <div style={{...CS}}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
       <span style={{fontSize:20}}>🩺</span>
-      <div style={{fontWeight:700,color:acTx}}>e-Nabız {lang==="tr"?"Bağlantısı":"Connection"}</div>
+      <div style={{fontWeight:700,color:acTx}}>e-Nabız {lang==="tr"?"Bağlantısı":TL("Connection",lang)}</div>
     </div>
-    <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"T.C. Sağlık Bakanlığı kişisel sağlık kaydın: muayene, tahlil, reçete ve radyoloji raporların tek yerde.":"Turkey's Ministry of Health personal health record: visits, labs, prescriptions and radiology reports."}</div>
+    <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"T.C. Sağlık Bakanlığı kişisel sağlık kaydın: muayene, tahlil, reçete ve radyoloji raporların tek yerde.":TL("Turkey's Ministry of Health personal health record: visits, labs, prescriptions and radiology reports.",lang)}</div>
     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-      <a href="https://enabiz.gov.tr" target="_blank" rel="noopener noreferrer" style={{...BP,flex:"1 1 45%",textAlign:"center",textDecoration:"none",padding:"8px",fontSize:fs-2}}>🌐 {lang==="tr"?"e-Nabız'ı Aç":"Open e-Nabız"}</a>
-      <button onClick={connectENabiz} style={{...BP,flex:"1 1 45%",padding:"8px",fontSize:fs-2,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>🔗 {lang==="tr"?"Hesabımı Bağla":"Connect account"}</button>
+      <a href="https://enabiz.gov.tr" target="_blank" rel="noopener noreferrer" style={{...BP,flex:"1 1 45%",textAlign:"center",textDecoration:"none",padding:"8px",fontSize:fs-2}}>🌐 {lang==="tr"?"e-Nabız'ı Aç":TL("Open e-Nabız",lang)}</a>
+      <button onClick={connectENabiz} style={{...BP,flex:"1 1 45%",padding:"8px",fontSize:fs-2,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>🔗 {lang==="tr"?"Hesabımı Bağla":TL("Connect account",lang)}</button>
     </div>
     <div style={{fontSize:fs-3,color:tc,background:`${mt}12`,borderRadius:8,padding:"8px 10px",lineHeight:1.5}}>
-      <b>{lang==="tr"?"Şimdi nasıl aktarırım?":"How to import now?"}</b><br/>
+      <b>{lang==="tr"?"Şimdi nasıl aktarırım?":TL("How to import now?",lang)}</b><br/>
       {lang==="tr"?"1) e-Nabız'ı aç, e-Devlet ile gir · 2) Rapor/görüntüyü indir · 3) Aşağıdaki \"Tıbbi Görüntüleme\" bölümüne yükle — AILVIE okuyup yorumlar.":"1) Open e-Nabız, sign in with e-Devlet · 2) Download the report/image · 3) Upload it in \"Medical Imaging\" below — AILVIE reads & interprets."}
     </div>
     <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.5}}>ℹ️ {lang==="tr"?"Uygulama içinden otomatik veri çekme; Sağlık Bakanlığı resmi API izni (OAuth2/FHIR) + güvenli sunucu + KVKK uyumu gerektirir. Bu onay alınınca \"Hesabımı Bağla\" tek dokunuşla çalışacak (sahte bağlantı göstermiyoruz).":"Automatic in-app data pull requires official Ministry of Health API approval (OAuth2/FHIR) + a secure server + data-protection compliance. Once approved, \"Connect account\" works in one tap (we don't show a fake connection)."}</div>
   </div>
   <div style={{...CS}}>
-    <div style={{fontWeight:700,marginBottom:4,color:acTx}}>🩻 {lang==="tr"?"Tıbbi Görüntüleme & Belgeler":"Medical Imaging & Documents"}</div>
-    <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"Röntgen, tomografi, MR, ultrason, tahlil… Pencereden seç, sürükle-bırak, fotoğraf çek ya da QR/barkod ile yükle. AILVIE görüntüyü okuyup genel yorum yapar.":"X-ray, CT, MRI, ultrasound, labs… Pick, drag & drop, take a photo, or upload via QR/barcode. AILVIE reads and gives a general interpretation."}</div>
-    <select aria-label={lang==="tr"?"Görüntüleme türü":"Imaging type"} value={imgType} onChange={e=>setImgType(e.target.value)} style={{...IS,marginBottom:8}}>{[["xray","Röntgen"],["ct","Tomografi (BT)"],["mri","MR"],["ultra","Ultrason"],["lab","Tahlil/Rapor"],["other","Diğer"]].map(([v,l])=><option key={v} value={v}>{t[v]||l}</option>)}</select>
+    <div style={{fontWeight:700,marginBottom:4,color:acTx}}>🩻 {lang==="tr"?"Tıbbi Görüntüleme & Belgeler":TL("Medical Imaging & Documents",lang)}</div>
+    <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"Röntgen, tomografi, MR, ultrason, tahlil… Pencereden seç, sürükle-bırak, fotoğraf çek ya da QR/barkod ile yükle. AILVIE görüntüyü okuyup genel yorum yapar.":TL("X-ray, CT, MRI, ultrasound, labs… Pick, drag & drop, take a photo, or upload via QR/barcode. AILVIE reads and gives a general interpretation.",lang)}</div>
+    <select aria-label={lang==="tr"?"Görüntüleme türü":TL("Imaging type",lang)} value={imgType} onChange={e=>setImgType(e.target.value)} style={{...IS,marginBottom:8}}>{[["xray","Röntgen"],["ct","Tomografi (BT)"],["mri","MR"],["ultra","Ultrason"],["lab","Tahlil/Rapor"],["other","Diğer"]].map(([v,l])=><option key={v} value={v}>{t[v]||l}</option>)}</select>
     <div onDragOver={e=>{e.preventDefault();setImgDrag(true);}} onDragLeave={()=>setImgDrag(false)} onDrop={e=>{e.preventDefault();setImgDrag(false);addMedFiles(e.dataTransfer.files,imgType);}} style={{border:`2px dashed ${imgDrag?ac:bd}`,borderRadius:12,padding:"14px 10px",textAlign:"center",background:imgDrag?`${ac}12`:"transparent",marginBottom:8,transition:"all .15s"}}>
       <div style={{fontSize:26,marginBottom:2}}>📥</div>
-      <div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Dosyaları buraya sürükleyip bırakın":"Drag & drop files here"}</div>
+      <div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Dosyaları buraya sürükleyip bırakın":TL("Drag & drop files here",lang)}</div>
     </div>
     <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-      <button onClick={()=>imgFileRef.current&&imgFileRef.current.click()} style={{...BP,flex:"1 1 45%",padding:"8px",fontSize:fs-2}}>🗂️ {lang==="tr"?"Pencereden Seç":"Choose files"}</button>
-      <button onClick={()=>imgCamRef.current&&imgCamRef.current.click()} style={{...BP,flex:"1 1 45%",padding:"8px",fontSize:fs-2}}>📷 {lang==="tr"?"Fotoğraf Çek":"Take photo"}</button>
-      <button onClick={()=>imgBarRef.current&&imgBarRef.current.click()} style={{...BP,flex:"1 1 100%",padding:"8px",fontSize:fs-2,background:`linear-gradient(135deg,${a2},${ac})`}}>🔳 {lang==="tr"?"QR / Barkod ile Yükle":"Upload via QR / Barcode"}</button>
+      <button onClick={()=>imgFileRef.current&&imgFileRef.current.click()} style={{...BP,flex:"1 1 45%",padding:"8px",fontSize:fs-2}}>🗂️ {lang==="tr"?"Pencereden Seç":TL("Choose files",lang)}</button>
+      <button onClick={()=>imgCamRef.current&&imgCamRef.current.click()} style={{...BP,flex:"1 1 45%",padding:"8px",fontSize:fs-2}}>📷 {lang==="tr"?"Fotoğraf Çek":TL("Take photo",lang)}</button>
+      <button onClick={()=>imgBarRef.current&&imgBarRef.current.click()} style={{...BP,flex:"1 1 100%",padding:"8px",fontSize:fs-2,background:`linear-gradient(135deg,${a2},${ac})`}}>🔳 {lang==="tr"?"QR / Barkod ile Yükle":TL("Upload via QR / Barcode",lang)}</button>
     </div>
     <input ref={imgFileRef} type="file" accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.dcm" multiple style={{display:"none"}} onChange={e=>{addMedFiles(e.target.files,imgType);e.target.value="";}}/>
     <input ref={imgCamRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={e=>{addMedFiles(e.target.files,imgType);e.target.value="";}}/>
@@ -4658,27 +4659,27 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       {medImages.map(im=><div key={im.id} style={{border:`1px solid ${bd}`,borderRadius:10,overflow:"hidden",background:cd}}>
         <img src={im.dataUrl} alt="" onClick={()=>setImgView(im)} style={{width:"100%",height:70,objectFit:"cover",cursor:"pointer",display:"block"}}/>
         <div style={{padding:"4px 5px"}}>
-          <div style={{fontSize:fs-4,fontWeight:700,color:acTx,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t[im.type]||({ct:lang==="tr"?"Tomografi":"CT",other:lang==="tr"?"Diğer":"Other"}[im.type])||im.type}{im.aiNote?" ✓":""}</div>
+          <div style={{fontSize:fs-4,fontWeight:700,color:acTx,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t[im.type]||({ct:lang==="tr"?"Tomografi":TL("CT",lang),other:lang==="tr"?"Diğer":TL("Other",lang)}[im.type])||im.type}{im.aiNote?" ✓":""}</div>
           <div style={{display:"flex",gap:4,marginTop:3}}>
-            <button onClick={()=>interpretImage(im)} disabled={imgBusy===im.id} title={lang==="tr"?"AI Yorumla":"AI interpret"} style={{flex:1,background:imgBusy===im.id?mt:`linear-gradient(135deg,${ac},${a2})`,border:"none",color:"#fff",borderRadius:6,padding:"3px 0",fontSize:fs-4,cursor:"pointer"}}>{imgBusy===im.id?"…":"🤖"}</button>
+            <button onClick={()=>interpretImage(im)} disabled={imgBusy===im.id} title={lang==="tr"?"AI Yorumla":TL("AI interpret",lang)} style={{flex:1,background:imgBusy===im.id?mt:`linear-gradient(135deg,${ac},${a2})`,border:"none",color:"#fff",borderRadius:6,padding:"3px 0",fontSize:fs-4,cursor:"pointer"}}>{imgBusy===im.id?"…":"🤖"}</button>
             <button onClick={()=>setImgView(im)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 6px",fontSize:fs-4,cursor:"pointer",color:tc}}>👁️</button>
-            <button onClick={()=>{toTrash("image",im);notify(lang==="tr"?"Çöp kutusuna taşındı":"Moved to Trash");}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:6,padding:"3px 6px",fontSize:fs-4,cursor:"pointer",color:dg}}>🗑️</button>
+            <button onClick={()=>{toTrash("image",im);notify(lang==="tr"?"Çöp kutusuna taşındı":TL("Moved to Trash",lang));}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:6,padding:"3px 6px",fontSize:fs-4,cursor:"pointer",color:dg}}>🗑️</button>
           </div>
         </div>
       </div>)}
     </div>}
-    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.5}}>⚠️ {lang==="tr"?"AI yorumu bilgilendirme amaçlıdır, tıbbi tanı değildir. Kesin değerlendirme için radyolog/hekiminize danışın.":"AI interpretation is informational, not a diagnosis. Consult your radiologist/doctor. (Requires the server key set in Cloudflare.)"}</div>
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.5}}>⚠️ {lang==="tr"?"AI yorumu bilgilendirme amaçlıdır, tıbbi tanı değildir. Kesin değerlendirme için radyolog/hekiminize danışın.":TL("AI interpretation is informational, not a diagnosis. Consult your radiologist/doctor. (Requires the server key set in Cloudflare.)",lang)}</div>
   </div>
   {imgView&&<div onClick={()=>setImgView(null)} style={{position:"fixed",inset:0,zIndex:360,background:"rgba(0,0,0,.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
     <img src={imgView.dataUrl} alt="" onClick={e=>e.stopPropagation()} style={{maxWidth:"100%",maxHeight:"52vh",objectFit:"contain",borderRadius:8}}/>
     <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,borderRadius:12,padding:14,marginTop:12,maxWidth:460,width:"100%",maxHeight:"34vh",overflowY:"auto"}}>
-      <div style={{fontWeight:700,color:acTx,marginBottom:6}}>{t[imgView.type]||({ct:lang==="tr"?"Tomografi":"CT",other:lang==="tr"?"Diğer":"Other"}[imgView.type])||imgView.type} · {imgView.date}</div>
+      <div style={{fontWeight:700,color:acTx,marginBottom:6}}>{t[imgView.type]||({ct:lang==="tr"?"Tomografi":TL("CT",lang),other:lang==="tr"?"Diğer":TL("Other",lang)}[imgView.type])||imgView.type} · {imgView.date}</div>
       {imgView.aiNote
         ? <div style={{fontSize:fs-1,whiteSpace:"pre-wrap",lineHeight:1.5}}>{imgView.aiNote}</div>
-        : <div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Henüz AI yorumu yok. 🤖 ile yorumlatabilirsiniz.":"No AI interpretation yet. Use 🤖 to interpret."}</div>}
+        : <div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Henüz AI yorumu yok. 🤖 ile yorumlatabilirsiniz.":TL("No AI interpretation yet. Use 🤖 to interpret.",lang)}</div>}
       <div style={{display:"flex",gap:8,marginTop:10}}>
-        <button onClick={()=>interpretImage(imgView)} disabled={imgBusy===imgView.id} style={{...BP,flex:1,padding:"7px",fontSize:fs-2}}>{imgBusy===imgView.id?"…":"🤖 "+(lang==="tr"?"Yorumla":"Interpret")}</button>
-        <button onClick={()=>setImgView(null)} style={{...BP,flex:1,padding:"7px",fontSize:fs-2,background:mt}}>{lang==="tr"?"Kapat":"Close"}</button>
+        <button onClick={()=>interpretImage(imgView)} disabled={imgBusy===imgView.id} style={{...BP,flex:1,padding:"7px",fontSize:fs-2}}>{imgBusy===imgView.id?"…":"🤖 "+(lang==="tr"?"Yorumla":TL("Interpret",lang))}</button>
+        <button onClick={()=>setImgView(null)} style={{...BP,flex:1,padding:"7px",fontSize:fs-2,background:mt}}>{lang==="tr"?"Kapat":TL("Close",lang)}</button>
       </div>
     </div>
   </div>}
@@ -4846,8 +4847,8 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
           const ti2=LAB_TESTS.find(x=>x.k===row.test);
           return <div key={row.id} style={{borderTop:`1px solid ${bd}`,paddingTop:6,marginTop:6}}>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <input aria-label={lang==="tr"?"Bu satırı kaydet":"Include this row"} type="checkbox" checked={row.include} onChange={e=>upd("include",e.target.checked)} style={{width:16,height:16,flexShrink:0}}/>
-              <select aria-label={lang==="tr"?"Okunan test":"Parsed test"} value={row.test} onChange={e=>{const nt=LAB_TESTS.find(x=>x.k===e.target.value);upd("test",e.target.value);if(nt&&!nt.units.includes(row.unit))upd("unit",nt.units[0]);}} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}>
+              <input aria-label={lang==="tr"?"Bu satırı kaydet":TL("Include this row",lang)} type="checkbox" checked={row.include} onChange={e=>upd("include",e.target.checked)} style={{width:16,height:16,flexShrink:0}}/>
+              <select aria-label={lang==="tr"?"Okunan test":TL("Parsed test",lang)} value={row.test} onChange={e=>{const nt=LAB_TESTS.find(x=>x.k===e.target.value);upd("test",e.target.value);if(nt&&!nt.units.includes(row.unit))upd("unit",nt.units[0]);}} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}>
                 <option value="">{L?"— eşleşmedi —":"— unmatched —"}</option>
                 {LAB_TESTS.map(x=><option key={x.k} value={x.k}>{L?x.tr:x.en}</option>)}
               </select>
@@ -4855,10 +4856,10 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
             </div>
             {row.rawName&&<div style={{fontSize:fs-5,color:mt,marginLeft:22}}>{L?"raporda":"as printed"}: {row.rawName}{row.flag?` · ${row.flag}`:""}</div>}
             <div style={{display:"flex",gap:5,marginTop:4,marginLeft:22}}>
-              <input aria-label={lang==="tr"?"Değer":"Value"} value={row.value} onChange={e=>upd("value",e.target.value)} placeholder={L?"değer":"value"} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}/>
-              <select aria-label={lang==="tr"?"Okunan birim":"Parsed unit"} value={row.unit} onChange={e=>upd("unit",e.target.value)} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}>{(ti2?ti2.units:[row.unit]).map(u=><option key={u} value={u}>{u||"—"}</option>)}</select>
-              <input aria-label={lang==="tr"?"Alt sınır":"Lower bound"} value={row.low} onChange={e=>upd("low",e.target.value)} placeholder={L?"alt":"low"} style={{...IS,width:52,padding:"5px 4px",fontSize:fs-3}}/>
-              <input aria-label={lang==="tr"?"Üst sınır":"Upper bound"} value={row.high} onChange={e=>upd("high",e.target.value)} placeholder={L?"üst":"high"} style={{...IS,width:52,padding:"5px 4px",fontSize:fs-3}}/>
+              <input aria-label={lang==="tr"?"Değer":TL("Value",lang)} value={row.value} onChange={e=>upd("value",e.target.value)} placeholder={L?"değer":"value"} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}/>
+              <select aria-label={lang==="tr"?"Okunan birim":TL("Parsed unit",lang)} value={row.unit} onChange={e=>upd("unit",e.target.value)} style={{...IS,flex:1,padding:"5px 6px",fontSize:fs-3}}>{(ti2?ti2.units:[row.unit]).map(u=><option key={u} value={u}>{u||"—"}</option>)}</select>
+              <input aria-label={lang==="tr"?"Alt sınır":TL("Lower bound",lang)} value={row.low} onChange={e=>upd("low",e.target.value)} placeholder={L?"alt":"low"} style={{...IS,width:52,padding:"5px 4px",fontSize:fs-3}}/>
+              <input aria-label={lang==="tr"?"Üst sınır":TL("Upper bound",lang)} value={row.high} onChange={e=>upd("high",e.target.value)} placeholder={L?"üst":"high"} style={{...IS,width:52,padding:"5px 4px",fontSize:fs-3}}/>
             </div>
           </div>;})}
         <button onClick={()=>{
@@ -4873,16 +4874,16 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
           notify(L?`✓ ${n} tahlil kaydedildi${skipped?` · ${skipped} atlandı (birim tanınmadı)`:""}`:`✓ ${n} labs saved`);
         }} style={{...BP,width:"100%",marginTop:8,padding:"8px"}}>✓ {L?"Seçilenleri Kaydet":"Save selected"}</button>
       </div>}
-      <select aria-label={lang==="tr"?"Tahlil testi seçin":"Select lab test"} value={labForm.test} onChange={e=>{const nt=LAB_TESTS.find(x=>x.k===e.target.value);setLabForm(f=>({...f,test:e.target.value,unit:nt.units[0],value:"",low:"",high:""}));}} style={{...IS,width:"100%",marginBottom:6}}>{LAB_TESTS.map(x=><option key={x.k} value={x.k}>{L?x.tr:x.en}</option>)}</select>
+      <select aria-label={lang==="tr"?"Tahlil testi seçin":TL("Select lab test",lang)} value={labForm.test} onChange={e=>{const nt=LAB_TESTS.find(x=>x.k===e.target.value);setLabForm(f=>({...f,test:e.target.value,unit:nt.units[0],value:"",low:"",high:""}));}} style={{...IS,width:"100%",marginBottom:6}}>{LAB_TESTS.map(x=><option key={x.k} value={x.k}>{L?x.tr:x.en}</option>)}</select>
       <div style={{display:"flex",gap:6,marginBottom:6}}>
-        <input aria-label={lang==="tr"?"Tahlil değeri":"Lab value"} type="number" step="0.01" inputMode="decimal" value={labForm.value} onChange={e=>setLabForm(f=>({...f,value:e.target.value}))} placeholder={L?"Değer":"Value"} style={{...IS,flex:1}}/>
-        <select aria-label={lang==="tr"?"Birim seçin":"Select unit"} value={labForm.unit} onChange={e=>setLabForm(f=>({...f,unit:e.target.value}))} style={{...IS,flex:"0 0 42%"}}>{tInfo.units.map(u=><option key={u} value={u}>{u}</option>)}</select>
+        <input aria-label={lang==="tr"?"Tahlil değeri":TL("Lab value",lang)} type="number" step="0.01" inputMode="decimal" value={labForm.value} onChange={e=>setLabForm(f=>({...f,value:e.target.value}))} placeholder={L?"Değer":"Value"} style={{...IS,flex:1}}/>
+        <select aria-label={lang==="tr"?"Birim seçin":TL("Select unit",lang)} value={labForm.unit} onChange={e=>setLabForm(f=>({...f,unit:e.target.value}))} style={{...IS,flex:"0 0 42%"}}>{tInfo.units.map(u=><option key={u} value={u}>{u}</option>)}</select>
       </div>
       <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
         <span style={{fontSize:fs-3,color:mt,flex:"0 0 auto"}}>📄 {L?"Raporun aralığı":"Report range"}</span>
-        <input aria-label={lang==="tr"?"Raporun alt sınırı":"Report lower bound"} type="number" step="0.01" value={labForm.low} onChange={e=>setLabForm(f=>({...f,low:e.target.value}))} placeholder={L?"alt":"low"} style={{...IS,flex:1,padding:"6px 8px"}}/>
+        <input aria-label={lang==="tr"?"Raporun alt sınırı":TL("Report lower bound",lang)} type="number" step="0.01" value={labForm.low} onChange={e=>setLabForm(f=>({...f,low:e.target.value}))} placeholder={L?"alt":"low"} style={{...IS,flex:1,padding:"6px 8px"}}/>
         <span style={{color:mt}}>–</span>
-        <input aria-label={lang==="tr"?"Raporun üst sınırı":"Report upper bound"} type="number" step="0.01" value={labForm.high} onChange={e=>setLabForm(f=>({...f,high:e.target.value}))} placeholder={L?"üst":"high"} style={{...IS,flex:1,padding:"6px 8px"}}/>
+        <input aria-label={lang==="tr"?"Raporun üst sınırı":TL("Report upper bound",lang)} type="number" step="0.01" value={labForm.high} onChange={e=>setLabForm(f=>({...f,high:e.target.value}))} placeholder={L?"üst":"high"} style={{...IS,flex:1,padding:"6px 8px"}}/>
       </div>
       {preview&&(!preview.ok
         ? <div style={{background:`${dg}12`,border:`1px solid ${dg}44`,borderRadius:9,padding:"8px 10px",fontSize:fs-3,color:tc,marginBottom:6}}>⚠️ {L?"Birim tanınmadı — değerlendirme yapılamaz.":"Unknown unit — cannot evaluate."}</div>
@@ -4898,7 +4899,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         {[...labs].reverse().slice(0,8).map(x=>{const ti=LAB_TESTS.find(y=>y.k===x.test);const d=new Date(x.ts);return <div key={x.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:`1px solid ${bd}`,gap:8}}>
           <div style={{minWidth:0,flex:1}}><div style={{fontSize:fs-1,color:tc,fontWeight:600}}>{ti?(L?ti.tr:ti.en):x.test}</div><div style={{fontSize:fs-4,color:mt}}>{d.toLocaleDateString(lc,{day:"2-digit",month:"2-digit",year:"numeric"})} {d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}{x.source==="lab-reported"?` · ${L?"raporun aralığı":"report range"}`:""}</div></div>
           <div style={{textAlign:"right",flexShrink:0}}><b style={{fontSize:fs,color:x.level?lvlColor(x.level):tc}}>{x.value} <span style={{fontSize:fs-4,fontWeight:400,color:mt}}>{x.unit}</span></b><div style={{fontSize:fs-4,color:x.level?lvlColor(x.level):mt}}>{x.level?lvlLabel(x.level):(L?"sınıflandırılmadı":"not classified")}</div></div>
-          <button onClick={()=>{toTrash("lab",x);notify(lang==="tr"?"Çöp kutusuna taşındı":"Moved to Trash");}} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:fs-1,flexShrink:0}}>✕</button>
+          <button onClick={()=>{toTrash("lab",x);notify(lang==="tr"?"Çöp kutusuna taşındı":TL("Moved to Trash",lang));}} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:fs-1,flexShrink:0}}>✕</button>
         </div>;})}
       </div>}
       <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Referans aralıkları laboratuvara/yönteme/yaşa göre değişir. Bu değerlendirme tarama amaçlıdır, tıbbi tanı değildir — raporunuzu doktorunuz yorumlamalıdır.":"Reference ranges vary by lab/method/age. Screening only, not a diagnosis."}</div>
@@ -4907,17 +4908,17 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <div style={{...CS}}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
       <span style={{fontSize:20}}>🔊</span>
-      <b style={{fontSize:fs+1,color:tc}}>{lang==="tr"?"Ölçüm Rehberleri":"Measurement Guides"}</b>
+      <b style={{fontSize:fs+1,color:tc}}>{lang==="tr"?"Ölçüm Rehberleri":TL("Measurement Guides",lang)}</b>
     </div>
     <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.45}}>
       {voiceGuide
-        ? (lang==="tr"?"Adım adım sesli anlatım açık. Bir ölçüme dokunduğunuzda rehber kendiliğinden başlar.":"Spoken step-by-step coaching is on.")
-        : (lang==="tr"?"Sessiz metin modu. Sesli anlatım için Ayarlar > İçerik Filtresi > Sesli yönlendirme.":"Silent text mode. Enable voice in Settings.")}
+        ? (lang==="tr"?"Adım adım sesli anlatım açık. Bir ölçüme dokunduğunuzda rehber kendiliğinden başlar.":TL("Spoken step-by-step coaching is on.",lang))
+        : (lang==="tr"?"Sessiz metin modu. Sesli anlatım için Ayarlar > İçerik Filtresi > Sesli yönlendirme.":TL("Silent text mode. Enable voice in Settings.",lang))}
     </div>
     <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
       {Object.keys(GUIDES).map(k=>(
         <button key={k} onClick={()=>startGuide(k)}
-          aria-label={(lang==="tr"?GUIDES[k].tr:GUIDES[k].en)+" "+(lang==="tr"?"rehberi":"guide")}
+          aria-label={(lang==="tr"?GUIDES[k].tr:GUIDES[k].en)+" "+(lang==="tr"?"rehberi":TL("guide",lang))}
           style={{...pill(false),fontSize:fs-3,display:"flex",alignItems:"center",gap:5}}>
           <span>{GUIDES[k].icon}</span><span>{lang==="tr"?GUIDES[k].tr:GUIDES[k].en}</span>
         </button>))}
@@ -4925,109 +4926,109 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   </div>
 
   {/* Vital Signs */}
-  <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🫀 {lang==="tr"?"Yaşamsal Değerler":"Vital Signs"}</div>
+  <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🫀 {lang==="tr"?"Yaşamsal Değerler":TL("Vital Signs",lang)}</div>
   <div style={{...CS,display:"flex",alignItems:"center",gap:10}}>
     <span style={{fontSize:22}}>❤️</span>
     <div style={{flex:1}}>
       <div style={{fontSize:fs-2,color:mt}}>{t.pulse}</div>
       {editH==="pulse"?<div style={{display:"flex",gap:6,alignItems:"center",marginTop:3}}><input type="number" autoFocus value={tmpH} onChange={e=>setTmpH(e.target.value)} style={{...IS,width:80,padding:"6px 8px",fontWeight:700}} onKeyDown={e=>{if(e.key==="Enter"){setHd(p=>({...p,pulse:Number(tmpH)}));logMetric("pulse",Number(tmpH));setEditH(null);}}}/><span style={{fontSize:fs-2,color:mt}}>{t.bpm}</span><button onClick={()=>{setHd(p=>({...p,pulse:Number(tmpH)}));logMetric("pulse",Number(tmpH));setEditH(null);}} style={{...BP,padding:"5px 10px"}}>✓</button></div>
       :<div onClick={()=>{setEditH("pulse");setTmpH(hd.pulse>0?String(hd.pulse):"");if(voiceGuide)startGuide("pulse");}} style={{cursor:"pointer",fontWeight:700,fontSize:fs+2,color:hd.pulse>0?tc:mt,marginTop:2}}>{hd.pulse>0?`${hd.pulse} ${t.bpm}`:t.tap}</div>}
-      {hd.pulse>0&&<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Referans":"Ref"}: {pulseRef.label} bpm {patAge?`(${patAge} ${t.age})`:""}</div>}
+      {hd.pulse>0&&<div style={{fontSize:fs-3,color:mt,marginTop:2}}>{lang==="tr"?"Referans":TL("Ref",lang)}: {pulseRef.label} bpm {patAge?`(${patAge} ${t.age})`:""}</div>}
       {hd.hrvRmssd>0&&<div style={{fontSize:fs-3,color:acTx,marginTop:2}}>HRV · RMSSD {hd.hrvRmssd} ms · SDNN {hd.hrvSdnn} ms</div>}
-      {hd.resp>0&&<div style={{fontSize:fs-3,color:acTx,marginTop:2}}>{lang==="tr"?"Solunum":"Resp"}: {hd.resp} {lang==="tr"?"/dk (tahmini)":"/min (est.)"}</div>}
+      {hd.resp>0&&<div style={{fontSize:fs-3,color:acTx,marginTop:2}}>{lang==="tr"?"Solunum":TL("Resp",lang)}: {hd.resp} {lang==="tr"?"/dk (tahmini)":TL("/min (est.)",lang)}</div>}
     </div>
     <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
       {hd.pulse>0&&<span style={{padding:"3px 8px",borderRadius:6,fontSize:fs-3,fontWeight:600,background:pulseOk?`${sc}22`:`${dg}22`,color:pulseOk?sc:dg}}>{pulseOk?t.norm:t.caut}</span>}
-      <button onClick={()=>startPulseMeasure()} style={{...BP,padding:"5px 9px",fontSize:fs-3,whiteSpace:"nowrap",background:`linear-gradient(135deg,${dg},#c0392b)`}}>📷 {lang==="tr"?"Ölç":"Measure"}</button>
+      <button onClick={()=>startPulseMeasure()} style={{...BP,padding:"5px 9px",fontSize:fs-3,whiteSpace:"nowrap",background:`linear-gradient(135deg,${dg},#c0392b)`}}>📷 {lang==="tr"?"Ölç":TL("Measure",lang)}</button>
       <button onClick={()=>startPulseMeasure(false,true)} style={{...BP,padding:"5px 9px",fontSize:fs-3,whiteSpace:"nowrap",background:`linear-gradient(135deg,${a2},${ac})`}}>❤️ HRV<span style={{fontSize:fs-5,opacity:0.8}}> 60s</span></button>
     </div>
   </div>
   <div style={{...CS,display:"flex",alignItems:"center",gap:10}}>
     <span style={{fontSize:22}}>🔗</span>
     <div style={{flex:1,minWidth:0}}>
-      <div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Harici Cihaz — Bluetooth nabız":"External Device — Bluetooth HR"}</div>
+      <div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Harici Cihaz — Bluetooth nabız":TL("External Device — Bluetooth HR",lang)}</div>
       <div style={{fontWeight:700,fontSize:fs+1,marginTop:2,color:(bleHr&&bleHr.connected)?sc:tc}}>
-        {bleHr&&bleHr.connected?(bleHr.bpm?`${bleHr.bpm} ${t.bpm} · ${bleHr.name}`:(lang==="tr"?`Bağlı: ${bleHr.name}`:`Connected: ${bleHr.name}`)):bleHr&&bleHr.connecting?(lang==="tr"?"Bağlanıyor…":"Connecting…"):(lang==="tr"?"Bağlı değil":"Not connected")}
+        {bleHr&&bleHr.connected?(bleHr.bpm?`${bleHr.bpm} ${t.bpm} · ${bleHr.name}`:(lang==="tr"?`Bağlı: ${bleHr.name}`:`Connected: ${bleHr.name}`)):bleHr&&bleHr.connecting?(lang==="tr"?"Bağlanıyor…":TL("Connecting…",lang)):(lang==="tr"?"Bağlı değil":TL("Not connected",lang))}
       </div>
       {bleHr&&bleHr.error&&<div style={{fontSize:fs-3,color:dg,marginTop:2,lineHeight:1.4}}>{bleHr.error}</div>}
     </div>
     {(bleHr&&(bleHr.connected||bleHr.connecting))
-      ?<button onClick={disconnectBle} style={{...BP,padding:"5px 10px",fontSize:fs-3,background:mt}}>{lang==="tr"?"Kes":"Disconnect"}</button>
-      :<button onClick={connectBleHr} style={{...BP,padding:"5px 10px",fontSize:fs-3,background:`linear-gradient(135deg,${ac},${a2})`}}>🔗 {lang==="tr"?"Bağlan":"Connect"}</button>}
+      ?<button onClick={disconnectBle} style={{...BP,padding:"5px 10px",fontSize:fs-3,background:mt}}>{lang==="tr"?"Kes":TL("Disconnect",lang)}</button>
+      :<button onClick={connectBleHr} style={{...BP,padding:"5px 10px",fontSize:fs-3,background:`linear-gradient(135deg,${ac},${a2})`}}>🔗 {lang==="tr"?"Bağlan":TL("Connect",lang)}</button>}
   </div>
   <div style={CS}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:22}}>🩺</span><span style={{fontWeight:700,fontSize:fs+1}}>{t.bp} (SYS / DIA)</span>
-      <button onClick={()=>startGuide("bp")} aria-label={lang==="tr"?"Tansiyon ölçüm rehberi":"BP measurement guide"} title={lang==="tr"?"Nasıl ölçülür?":"How to measure"} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${bd}`,color:acTx,borderRadius:8,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,flexShrink:0}}>🔊 {lang==="tr"?"Rehber":"Guide"}</button></div>
+      <button onClick={()=>startGuide("bp")} aria-label={lang==="tr"?"Tansiyon ölçüm rehberi":TL("BP measurement guide",lang)} title={lang==="tr"?"Nasıl ölçülür?":TL("How to measure",lang)} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${bd}`,color:acTx,borderRadius:8,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,flexShrink:0}}>🔊 {lang==="tr"?"Rehber":TL("Guide",lang)}</button></div>
     <div style={{display:"flex",gap:10,alignItems:"center"}}>
       <input type="number" value={hd.bpS||""} placeholder="SYS" onFocus={()=>{if(voiceGuide&&!guide)startGuide("bp");}} onChange={e=>setHd({...hd,bpS:Number(e.target.value)})} style={{...IS,width:70,textAlign:"center",fontWeight:700}}/>
       <span style={{fontSize:20,color:mt}}>/</span>
       <input type="number" value={hd.bpD||""} placeholder="DIA" onChange={e=>setHd({...hd,bpD:Number(e.target.value)})} style={{...IS,width:70,textAlign:"center",fontWeight:700}}/>
       {hd.bpS>0&&<span style={{padding:"4px 10px",borderRadius:8,fontSize:fs-2,fontWeight:600,background:hd.bpS>=90&&hd.bpS<=140?`${sc}22`:`${dg}22`,color:hd.bpS>=90&&hd.bpS<=140?sc:dg}}>{hd.bpS>=90&&hd.bpS<=140?t.norm:t.caut}</span>}
     </div>
-    {hd.bpS>0&&<div style={{fontSize:fs-3,color:mt,marginTop:4}}>{lang==="tr"?"Referans: 90-120 / 60-80 mmHg":"Ref: 90-120 / 60-80 mmHg"}</div>}
+    {hd.bpS>0&&<div style={{fontSize:fs-3,color:mt,marginTop:4}}>{lang==="tr"?"Referans: 90-120 / 60-80 mmHg":TL("Ref: 90-120 / 60-80 mmHg",lang)}</div>}
   </div>
   <div style={CS}>
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:22}}>🎙️</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Öksürük / Horlama":"Cough / Snore"}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"ses oturumu":"audio session"}</span></span></div>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:22}}>🎙️</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Öksürük / Horlama":TL("Cough / Snore",lang)}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"ses oturumu":TL("audio session",lang)}</span></span></div>
     {soundSess&&soundSess.error&&<div style={{fontSize:fs-3,color:dg,marginBottom:6,lineHeight:1.4}}>{soundSess.error}</div>}
     {soundSess&&(soundSess.active||soundSess.done)&&<div style={{display:"flex",gap:8,justifyContent:"space-around",marginBottom:8}}>
-      {[["cough",dg,lang==="tr"?"öksürük~":"cough~"],["snore",ac,lang==="tr"?"horlama~":"snore~"],["other",mt,lang==="tr"?"diğer ses":"other"]].map(([k,col,lab])=><div key={k} style={{textAlign:"center"}}><div style={{fontWeight:800,fontSize:fs+4,color:col}}>{soundSess[k]||0}</div><div style={{fontSize:fs-3,color:mt}}>{lab}</div></div>)}
+      {[["cough",dg,lang==="tr"?"öksürük~":TL("cough~",lang)],["snore",ac,lang==="tr"?"horlama~":TL("snore~",lang)],["other",mt,lang==="tr"?"diğer ses":TL("other",lang)]].map(([k,col,lab])=><div key={k} style={{textAlign:"center"}}><div style={{fontWeight:800,fontSize:fs+4,color:col}}>{soundSess[k]||0}</div><div style={{fontSize:fs-3,color:mt}}>{lab}</div></div>)}
     </div>}
     {soundSess&&soundSess.active&&<div style={{height:8,borderRadius:4,background:`${mt}33`,overflow:"hidden",marginBottom:8}}><div style={{height:"100%",width:`${Math.min(100,(soundSess.level||0)*1.7)}%`,background:sc,transition:"width .1s"}}/></div>}
-    <button onClick={soundSess&&soundSess.active?stopSoundSession:startSoundSession} style={{...BP,width:"100%",padding:"9px",background:soundSess&&soundSess.active?dg:`linear-gradient(135deg,${ac},${a2})`}}>{soundSess&&soundSess.active?(lang==="tr"?"⏹ Durdur":"⏹ Stop"):(lang==="tr"?"🎙️ Dinlemeyi Başlat":"🎙️ Start Listening")}</button>
-    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>🔒 {lang==="tr"?"Ses yalnızca cihazınızda işlenir; kaydedilmez/gönderilmez. Sadece uygulama ve ekran açıkken çalışır. Kaba bir tahmindir, tıbbi tanı değildir — gün boyu/arka planda güvenilir algılama native uygulama gerektirir.":"Audio is processed only on your device; never recorded or sent. Works only while the app & screen are on. This is a rough estimate, not a medical diagnosis — reliable all-night detection needs a native app."}</div>
+    <button onClick={soundSess&&soundSess.active?stopSoundSession:startSoundSession} style={{...BP,width:"100%",padding:"9px",background:soundSess&&soundSess.active?dg:`linear-gradient(135deg,${ac},${a2})`}}>{soundSess&&soundSess.active?(lang==="tr"?"⏹ Durdur":TL("⏹ Stop",lang)):(lang==="tr"?"🎙️ Dinlemeyi Başlat":TL("🎙️ Start Listening",lang))}</button>
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>🔒 {lang==="tr"?"Ses yalnızca cihazınızda işlenir; kaydedilmez/gönderilmez. Sadece uygulama ve ekran açıkken çalışır. Kaba bir tahmindir, tıbbi tanı değildir — gün boyu/arka planda güvenilir algılama native uygulama gerektirir.":TL("Audio is processed only on your device; never recorded or sent. Works only while the app & screen are on. This is a rough estimate, not a medical diagnosis — reliable all-night detection needs a native app.",lang)}</div>
   </div>
   <div style={CS}>
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:22}}>🧍</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Denge / Yürüyüş":"Balance / Gait"}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"denge testi":"balance test"}</span></span></div>
-    {(!balanceM||balanceM.phase==="error"||balanceM.phase==="done")&&<div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonu göğsünüze tutup 20 sn sabit durun.":"Hold the phone to your chest and stand still for 20s."}</div>}
-    {tests.balAt&&(!balanceM||balanceM.phase==="error")&&<div style={{fontSize:fs-3,color:sc,marginBottom:8}}>{lang==="tr"?"Son sonuç":"Last"}: {tests.balSway} · {ago(tests.balAt)}</div>}
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:22}}>🧍</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Denge / Yürüyüş":TL("Balance / Gait",lang)}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"denge testi":TL("balance test",lang)}</span></span></div>
+    {(!balanceM||balanceM.phase==="error"||balanceM.phase==="done")&&<div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonu göğsünüze tutup 20 sn sabit durun.":TL("Hold the phone to your chest and stand still for 20s.",lang)}</div>}
+    {tests.balAt&&(!balanceM||balanceM.phase==="error")&&<div style={{fontSize:fs-3,color:sc,marginBottom:8}}>{lang==="tr"?"Son sonuç":TL("Last",lang)}: {tests.balSway} · {ago(tests.balAt)}</div>}
     {balanceM&&balanceM.phase==="active"&&<>
-      <div style={{fontSize:fs-2,color:mt,marginBottom:8,textAlign:"center"}}>{lang==="tr"?"Sabit durun…":"Stand still…"}</div>
+      <div style={{fontSize:fs-2,color:mt,marginBottom:8,textAlign:"center"}}>{lang==="tr"?"Sabit durun…":TL("Stand still…",lang)}</div>
       <div style={{height:10,borderRadius:6,background:`${mt}33`,overflow:"hidden",marginBottom:6}}><div style={{height:"100%",width:`${balanceM.progress||0}%`,background:`linear-gradient(90deg,${ac},${a2})`,transition:"width .2s"}}/></div>
-      <div style={{fontSize:fs-2,color:mt,textAlign:"center",marginBottom:8}}>%{balanceM.progress||0} · {Math.max(0,Math.ceil((100-(balanceM.progress||0))/100*20))} {lang==="tr"?"sn":"s"}</div>
+      <div style={{fontSize:fs-2,color:mt,textAlign:"center",marginBottom:8}}>%{balanceM.progress||0} · {Math.max(0,Math.ceil((100-(balanceM.progress||0))/100*20))} {lang==="tr"?"sn":TL("s",lang)}</div>
     </>}
-    {balanceM&&balanceM.phase==="done"&&(()=>{const b=balanceM.band;const L=b==="high"?[lang==="tr"?"İyi denge ✓":"Good balance ✓",sc]:b==="mid"?[lang==="tr"?"Orta":"Moderate",ac]:[lang==="tr"?"Daha az stabil":"Less stable",dg];return <div style={{textAlign:"center",marginBottom:8}}><div style={{fontSize:34,fontWeight:800,color:L[1]}}>{balanceM.sway}</div><div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"sallanma indeksi (düşük = daha stabil)":"sway index (lower = more stable)"}</div><div style={{fontSize:fs,fontWeight:700,color:L[1],marginTop:4}}>{L[0]}</div></div>;})()}
+    {balanceM&&balanceM.phase==="done"&&(()=>{const b=balanceM.band;const L=b==="high"?[lang==="tr"?"İyi denge ✓":TL("Good balance ✓",lang),sc]:b==="mid"?[lang==="tr"?"Orta":TL("Moderate",lang),ac]:[lang==="tr"?"Daha az stabil":TL("Less stable",lang),dg];return <div style={{textAlign:"center",marginBottom:8}}><div style={{fontSize:34,fontWeight:800,color:L[1]}}>{balanceM.sway}</div><div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"sallanma indeksi (düşük = daha stabil)":TL("sway index (lower = more stable)",lang)}</div><div style={{fontSize:fs,fontWeight:700,color:L[1],marginTop:4}}>{L[0]}</div></div>;})()}
     {balanceM&&balanceM.phase==="error"&&<div style={{fontSize:fs-2,color:dg,marginBottom:8,lineHeight:1.4}}>{balanceM.msg}</div>}
-    {(!balanceM||balanceM.phase!=="active")&&<button onClick={startBalance} style={{...BP,width:"100%",padding:"9px",background:`linear-gradient(135deg,${ac},${a2})`}}>🧍 {balanceM&&balanceM.phase==="done"?(lang==="tr"?"Tekrar Test Et":"Test again"):(lang==="tr"?"Denge Testi Başlat":"Start Balance Test")}</button>}
-    {balanceM&&balanceM.phase==="active"&&<button onClick={()=>{stopBalance();setBalanceM(null);}} style={{...BP,width:"100%",padding:"9px",background:mt}}>{lang==="tr"?"İptal":"Cancel"}</button>}
-    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Telefon ivmeölçerinden hesaplanan göreli bir tarama indeksidir (yalnızca uygulama açıkken). Tıbbi denge/nörolojik değerlendirme yerine geçmez. Yürüyüş düzeni için Adım kartındaki canlı cadence'e bakın.":"A relative screening index from the phone accelerometer (app open only). Not a substitute for medical balance/neurological assessment. For gait rhythm see the live cadence in the Steps card."}</div>
+    {(!balanceM||balanceM.phase!=="active")&&<button onClick={startBalance} style={{...BP,width:"100%",padding:"9px",background:`linear-gradient(135deg,${ac},${a2})`}}>🧍 {balanceM&&balanceM.phase==="done"?(lang==="tr"?"Tekrar Test Et":TL("Test again",lang)):(lang==="tr"?"Denge Testi Başlat":TL("Start Balance Test",lang))}</button>}
+    {balanceM&&balanceM.phase==="active"&&<button onClick={()=>{stopBalance();setBalanceM(null);}} style={{...BP,width:"100%",padding:"9px",background:mt}}>{lang==="tr"?"İptal":TL("Cancel",lang)}</button>}
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Telefon ivmeölçerinden hesaplanan göreli bir tarama indeksidir (yalnızca uygulama açıkken). Tıbbi denge/nörolojik değerlendirme yerine geçmez. Yürüyüş düzeni için Adım kartındaki canlı cadence'e bakın.":TL("A relative screening index from the phone accelerometer (app open only). Not a substitute for medical balance/neurological assessment. For gait rhythm see the live cadence in the Steps card.",lang)}</div>
   </div>
   <div style={CS}>
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:22}}>🧍‍♂️</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Postür":"Posture"}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"duruş açısı":"tilt angle"}</span></span></div>
-    {(!postureM||postureM.phase==="error")&&<div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonu göğüs hizasında dik tutun (ekran size dönük); dik durup başlatın, referans alınır.":"Hold the phone upright at chest level (screen facing you); stand upright and start to set the reference."}</div>}
-    {tests.postAt&&(!postureM||postureM.phase==="error")&&<div style={{fontSize:fs-3,color:sc,marginBottom:8}}>{lang==="tr"?"Son sonuç":"Last"}: {tests.postAngle}° · {ago(tests.postAt)}</div>}
-    {postureM&&postureM.phase==="calibrating"&&<div style={{fontSize:fs-1,color:acTx,textAlign:"center",marginBottom:8}}>{lang==="tr"?"Kalibre ediliyor… dik durun":"Calibrating… stand upright"}</div>}
-    {postureM&&postureM.phase==="live"&&(()=>{const b=postureM.band;const L=b==="good"?[lang==="tr"?"Dik ✓":"Upright ✓",sc]:b==="mild"?[lang==="tr"?"Hafif eğim":"Slight lean",ac]:[lang==="tr"?"Belirgin eğim — dikleş":"Notable lean — straighten",dg];return <div style={{textAlign:"center",marginBottom:8}}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}><span style={{fontSize:22}}>🧍‍♂️</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Postür":TL("Posture",lang)}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"duruş açısı":TL("tilt angle",lang)}</span></span></div>
+    {(!postureM||postureM.phase==="error")&&<div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonu göğüs hizasında dik tutun (ekran size dönük); dik durup başlatın, referans alınır.":TL("Hold the phone upright at chest level (screen facing you); stand upright and start to set the reference.",lang)}</div>}
+    {tests.postAt&&(!postureM||postureM.phase==="error")&&<div style={{fontSize:fs-3,color:sc,marginBottom:8}}>{lang==="tr"?"Son sonuç":TL("Last",lang)}: {tests.postAngle}° · {ago(tests.postAt)}</div>}
+    {postureM&&postureM.phase==="calibrating"&&<div style={{fontSize:fs-1,color:acTx,textAlign:"center",marginBottom:8}}>{lang==="tr"?"Kalibre ediliyor… dik durun":TL("Calibrating… stand upright",lang)}</div>}
+    {postureM&&postureM.phase==="live"&&(()=>{const b=postureM.band;const L=b==="good"?[lang==="tr"?"Dik ✓":TL("Upright ✓",lang),sc]:b==="mild"?[lang==="tr"?"Hafif eğim":TL("Slight lean",lang),ac]:[lang==="tr"?"Belirgin eğim — dikleş":TL("Notable lean — straighten",lang),dg];return <div style={{textAlign:"center",marginBottom:8}}>
       <div style={{fontSize:38,fontWeight:800,color:L[1]}}>{postureM.angle}°</div>
-      <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"dik referanstan sapma":"deviation from upright"}</div>
+      <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"dik referanstan sapma":TL("deviation from upright",lang)}</div>
       <div style={{fontSize:fs,fontWeight:700,color:L[1],marginTop:4}}>{L[0]}</div>
       <div style={{height:8,borderRadius:4,background:`${mt}33`,overflow:"hidden",marginTop:8}}><div style={{height:"100%",width:`${Math.min(100,(postureM.angle||0)*3)}%`,background:L[1],transition:"width .2s"}}/></div>
     </div>;})()}
     {postureM&&postureM.phase==="error"&&<div style={{fontSize:fs-2,color:dg,marginBottom:8,lineHeight:1.4}}>{postureM.msg}</div>}
     {postureM&&postureM.phase==="live"
-      ?<button onClick={()=>{const a=postureM&&postureM.angle;stopPosture();if(a!=null)setTests(t=>({...t,postAngle:a,postAt:Date.now()}));setPostureM(null);}} style={{...BP,width:"100%",padding:"9px",background:dg}}>{lang==="tr"?"⏹ Durdur":"⏹ Stop"}</button>
-      :<button onClick={startPosture} style={{...BP,width:"100%",padding:"9px",background:`linear-gradient(135deg,${ac},${a2})`}}>🧍‍♂️ {lang==="tr"?"Duruş Kontrolü Başlat":"Start Posture Check"}</button>}
-    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Telefon eğim açısından hesaplanan göreli bir duruş taramasıdır (yalnızca uygulama açıkken; telefon gövdenizle aynı hizada olmalı). Tıbbi postür/ortopedik değerlendirme yerine geçmez.":"A relative posture screening from the phone's tilt angle (app open only; phone must be aligned with your trunk). Not a substitute for medical/orthopedic posture assessment."}</div>
+      ?<button onClick={()=>{const a=postureM&&postureM.angle;stopPosture();if(a!=null)setTests(t=>({...t,postAngle:a,postAt:Date.now()}));setPostureM(null);}} style={{...BP,width:"100%",padding:"9px",background:dg}}>{lang==="tr"?"⏹ Durdur":TL("⏹ Stop",lang)}</button>
+      :<button onClick={startPosture} style={{...BP,width:"100%",padding:"9px",background:`linear-gradient(135deg,${ac},${a2})`}}>🧍‍♂️ {lang==="tr"?"Duruş Kontrolü Başlat":TL("Start Posture Check",lang)}</button>}
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Telefon eğim açısından hesaplanan göreli bir duruş taramasıdır (yalnızca uygulama açıkken; telefon gövdenizle aynı hizada olmalı). Tıbbi postür/ortopedik değerlendirme yerine geçmez.":TL("A relative posture screening from the phone's tilt angle (app open only; phone must be aligned with your trunk). Not a substitute for medical/orthopedic posture assessment.",lang)}</div>
   </div>
   <div style={CS}>
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:22}}>🎯</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Reaksiyon / Odak":"Reaction / Focus"}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"reaksiyon testi":"reaction test"}</span></span></div>
-    {tests.rxAt&&!reactM&&<div style={{fontSize:fs-3,color:sc,marginBottom:8,textAlign:"center"}}>{lang==="tr"?"Son":"Last"}: {tests.rxAvg} ms ({lang==="tr"?"en iyi":"best"} {tests.rxBest}) · {ago(tests.rxAt)}</div>}
-    {(()=>{const ph=reactM?reactM.phase:"idle";const box=ph==="waiting"?["#c0392b",lang==="tr"?"Bekle…":"Wait…"]:ph==="go"?[sc,lang==="tr"?"DOKUN!":"TAP!"]:ph==="early"?["#e67e22",lang==="tr"?"Çok erken! Dokunup tekrar dene":"Too early! Tap to retry"]:ph==="done"?[dark?"#22303a":"#eef3f6",lang==="tr"?"Bitti ✓":"Done ✓"]:[dark?"#2a2f38":"#e7ebf0",lang==="tr"?"Başlamak için dokun":"Tap to start"];return <div onClick={reactTap} style={{background:box[0],color:(ph==="idle"||ph==="done")?tc:"#fff",borderRadius:12,height:120,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:fs+4,cursor:"pointer",userSelect:"none",WebkitUserSelect:"none",textAlign:"center",padding:8}}>{box[1]}</div>;})()}
-    {reactM&&(reactM.phase==="waiting"||reactM.phase==="go"||reactM.phase==="early")&&<div style={{fontSize:fs-2,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Deneme":"Trial"} {Math.min(5,(reactM.trials||[]).length+1)}/5</div>}
-    {reactM&&reactM.phase==="done"&&(()=>{const a=reactM.avg;const L=a<250?[lang==="tr"?"Çok hızlı ✓✓":"Excellent ✓✓",sc]:a<350?[lang==="tr"?"İyi ✓":"Good ✓",sc]:a<450?[lang==="tr"?"Ortalama":"Average",ac]:[lang==="tr"?"Yavaş":"Slow",dg];return <div style={{textAlign:"center",marginTop:8}}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontSize:22}}>🎯</span><span style={{fontWeight:700,fontSize:fs+1}}>{lang==="tr"?"Reaksiyon / Odak":TL("Reaction / Focus",lang)}<span style={{fontSize:fs-3,color:mt,fontWeight:400}}> · {lang==="tr"?"reaksiyon testi":TL("reaction test",lang)}</span></span></div>
+    {tests.rxAt&&!reactM&&<div style={{fontSize:fs-3,color:sc,marginBottom:8,textAlign:"center"}}>{lang==="tr"?"Son":TL("Last",lang)}: {tests.rxAvg} ms ({lang==="tr"?"en iyi":TL("best",lang)} {tests.rxBest}) · {ago(tests.rxAt)}</div>}
+    {(()=>{const ph=reactM?reactM.phase:"idle";const box=ph==="waiting"?["#c0392b",lang==="tr"?"Bekle…":TL("Wait…",lang)]:ph==="go"?[sc,lang==="tr"?"DOKUN!":TL("TAP!",lang)]:ph==="early"?["#e67e22",lang==="tr"?"Çok erken! Dokunup tekrar dene":TL("Too early! Tap to retry",lang)]:ph==="done"?[dark?"#22303a":"#eef3f6",lang==="tr"?"Bitti ✓":TL("Done ✓",lang)]:[dark?"#2a2f38":"#e7ebf0",lang==="tr"?"Başlamak için dokun":TL("Tap to start",lang)];return <div onClick={reactTap} style={{background:box[0],color:(ph==="idle"||ph==="done")?tc:"#fff",borderRadius:12,height:120,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:fs+4,cursor:"pointer",userSelect:"none",WebkitUserSelect:"none",textAlign:"center",padding:8}}>{box[1]}</div>;})()}
+    {reactM&&(reactM.phase==="waiting"||reactM.phase==="go"||reactM.phase==="early")&&<div style={{fontSize:fs-2,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Deneme":TL("Trial",lang)} {Math.min(5,(reactM.trials||[]).length+1)}/5</div>}
+    {reactM&&reactM.phase==="done"&&(()=>{const a=reactM.avg;const L=a<250?[lang==="tr"?"Çok hızlı ✓✓":TL("Excellent ✓✓",lang),sc]:a<350?[lang==="tr"?"İyi ✓":TL("Good ✓",lang),sc]:a<450?[lang==="tr"?"Ortalama":TL("Average",lang),ac]:[lang==="tr"?"Yavaş":TL("Slow",lang),dg];return <div style={{textAlign:"center",marginTop:8}}>
       <div style={{fontSize:34,fontWeight:800,color:L[1]}}>{reactM.avg} ms</div>
-      <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"ortalama reaksiyon":"average reaction"} · {lang==="tr"?"en iyi":"best"} {reactM.best} ms · ±{reactM.sd}</div>
+      <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"ortalama reaksiyon":TL("average reaction",lang)} · {lang==="tr"?"en iyi":TL("best",lang)} {reactM.best} ms · ±{reactM.sd}</div>
       <div style={{fontSize:fs,fontWeight:700,color:L[1],marginTop:4}}>{L[0]}</div>
-      <button onClick={reactTap} style={{...BP,marginTop:8,padding:"7px 18px"}}>{lang==="tr"?"Tekrar":"Again"}</button>
+      <button onClick={reactTap} style={{...BP,marginTop:8,padding:"7px 18px"}}>{lang==="tr"?"Tekrar":TL("Again",lang)}</button>
     </div>;})()}
-    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Basit bir görsel reaksiyon/uyanıklık taramasıdır; ekran ve dokunma gecikmesinden etkilenir. Tıbbi/nörolojik tanı değildir.":"A simple visual reaction/alertness screening; affected by screen and touch latency. Not a medical/neurological diagnosis."}</div>
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Basit bir görsel reaksiyon/uyanıklık taramasıdır; ekran ve dokunma gecikmesinden etkilenir. Tıbbi/nörolojik tanı değildir.":TL("A simple visual reaction/alertness screening; affected by screen and touch latency. Not a medical/neurological diagnosis.",lang)}</div>
   </div>
   {/* Daily Wellness Tracking */}
-  <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🌱 {lang==="tr"?"Günlük Sağlık Takibi":"Daily Wellness Tracking"}</div>
+  <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>🌱 {lang==="tr"?"Günlük Sağlık Takibi":TL("Daily Wellness Tracking",lang)}</div>
   {/* Water */}
   <div style={{...CS,border:`1px solid ${ac}33`}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>💧 {lang==="tr"?"Su Takibi":"Water Intake"}</span>
-      <span style={{fontSize:fs-2,color:mt}}>{wellness.water}/{wellness.waterGoal} {lang==="tr"?"bardak":"glasses"}</span>
+      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>💧 {lang==="tr"?"Su Takibi":TL("Water Intake",lang)}</span>
+      <span style={{fontSize:fs-2,color:mt}}>{wellness.water}/{wellness.waterGoal} {lang==="tr"?"bardak":TL("glasses",lang)}</span>
     </div>
     <div style={{height:10,background:`${mt}20`,borderRadius:5,overflow:"hidden",marginBottom:8}}>
       <div style={{height:"100%",width:`${waterPct}%`,background:`linear-gradient(90deg,#38bdf8,#0ea5e9)`,borderRadius:5,transition:"width .3s"}}/>
@@ -5041,26 +5042,26 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   {/* Sleep */}
   <div style={{...CS,border:`1px solid #8b5cf633`}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>😴 {lang==="tr"?"Uyku":"Sleep"}</span>
+      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>😴 {lang==="tr"?"Uyku":TL("Sleep",lang)}</span>
       <span style={{fontSize:fs-2,color:mt}}>{wellness.sleep}/{wellness.sleepGoal}h</span>
     </div>
     <div style={{height:10,background:`${mt}20`,borderRadius:5,overflow:"hidden",marginBottom:8}}>
       <div style={{height:"100%",width:`${sleepPct}%`,background:`linear-gradient(90deg,#8b5cf6,#6366f1)`,borderRadius:5,transition:"width .3s"}}/>
     </div>
     <div style={{display:"flex",gap:8,marginBottom:8}}>
-      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>🛏️ {lang==="tr"?"Yatış":"Bedtime"}</div><input type="time" aria-label={lang==="tr"?"Saat":"Time"} value={sleepTimes.bed} onChange={e=>setSleepTime("bed",e.target.value)} style={{...IS,padding:"6px 8px",width:"100%"}}/></div>
-      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>☀️ {lang==="tr"?"Kalkış":"Wake"}</div><input type="time" aria-label={lang==="tr"?"Saat":"Time"} value={sleepTimes.wake} onChange={e=>setSleepTime("wake",e.target.value)} style={{...IS,padding:"6px 8px",width:"100%"}}/></div>
+      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>🛏️ {lang==="tr"?"Yatış":TL("Bedtime",lang)}</div><input type="time" aria-label={lang==="tr"?"Saat":TL("Time",lang)} value={sleepTimes.bed} onChange={e=>setSleepTime("bed",e.target.value)} style={{...IS,padding:"6px 8px",width:"100%"}}/></div>
+      <div style={{flex:1}}><div style={{fontSize:fs-3,color:mt,marginBottom:2}}>☀️ {lang==="tr"?"Kalkış":TL("Wake",lang)}</div><input type="time" aria-label={lang==="tr"?"Saat":TL("Time",lang)} value={sleepTimes.wake} onChange={e=>setSleepTime("wake",e.target.value)} style={{...IS,padding:"6px 8px",width:"100%"}}/></div>
     </div>
-    {sleepTimes.bed&&sleepTimes.wake&&<div style={{fontSize:fs-2,color:acTx,textAlign:"center",marginBottom:6,fontWeight:600}}>{lang==="tr"?"Tahmini süre":"Estimated"}: {computeSleepDur(sleepTimes.bed,sleepTimes.wake)} {lang==="tr"?"saat":"h"} <span style={{color:mt,fontWeight:400}}>({sleepTimes.bed} → {sleepTimes.wake})</span></div>}
-    <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginBottom:4}}>{lang==="tr"?"veya süreyi elle ayarla":"or set duration manually"}</div>
-    <input type="range" aria-label={lang==="tr"?"Değer kaydırıcı":"Value slider"} min="0" max="12" step="0.5" value={wellness.sleep} onChange={e=>setWellness(w=>({...w,sleep:Number(e.target.value)}))} style={{width:"100%"}}/>
-    <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:2}}>{wellness.sleep>=7&&wellness.sleep<=9?(lang==="tr"?"✓ İdeal":"✓ Ideal"):wellness.sleep<6?(lang==="tr"?"⚠️ Yetersiz":"⚠️ Insufficient"):wellness.sleep>10?(lang==="tr"?"⚠️ Çok fazla":"⚠️ Too much"):(lang==="tr"?"Orta":"Average")}</div>
-    <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:6,lineHeight:1.4}}>ℹ️ {lang==="tr"?"Yatış/kalkış saatinden hesaplanan tahmini süredir; gerçek uyku evreleri (derin/REM) için giyilebilir cihaz gerekir.":"Estimated from bed/wake times; real sleep stages (deep/REM) need a wearable."}</div>
+    {sleepTimes.bed&&sleepTimes.wake&&<div style={{fontSize:fs-2,color:acTx,textAlign:"center",marginBottom:6,fontWeight:600}}>{lang==="tr"?"Tahmini süre":TL("Estimated",lang)}: {computeSleepDur(sleepTimes.bed,sleepTimes.wake)} {lang==="tr"?"saat":TL("h",lang)} <span style={{color:mt,fontWeight:400}}>({sleepTimes.bed} → {sleepTimes.wake})</span></div>}
+    <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginBottom:4}}>{lang==="tr"?"veya süreyi elle ayarla":TL("or set duration manually",lang)}</div>
+    <input type="range" aria-label={lang==="tr"?"Değer kaydırıcı":TL("Value slider",lang)} min="0" max="12" step="0.5" value={wellness.sleep} onChange={e=>setWellness(w=>({...w,sleep:Number(e.target.value)}))} style={{width:"100%"}}/>
+    <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:2}}>{wellness.sleep>=7&&wellness.sleep<=9?(lang==="tr"?"✓ İdeal":TL("✓ Ideal",lang)):wellness.sleep<6?(lang==="tr"?"⚠️ Yetersiz":TL("⚠️ Insufficient",lang)):wellness.sleep>10?(lang==="tr"?"⚠️ Çok fazla":TL("⚠️ Too much",lang)):(lang==="tr"?"Orta":TL("Average",lang))}</div>
+    <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:6,lineHeight:1.4}}>ℹ️ {lang==="tr"?"Yatış/kalkış saatinden hesaplanan tahmini süredir; gerçek uyku evreleri (derin/REM) için giyilebilir cihaz gerekir.":TL("Estimated from bed/wake times; real sleep stages (deep/REM) need a wearable.",lang)}</div>
   </div>
   {/* Steps */}
   <div style={{...CS,border:`1px solid ${sc}33`}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>👟 {lang==="tr"?"Adım":"Steps"}{stepAuto&&<span style={{fontSize:fs-3,color:sc,fontWeight:500}}>🔴 {lang==="tr"?"Canlı":"Live"}</span>}</span>
+      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>👟 {lang==="tr"?"Adım":TL("Steps",lang)}{stepAuto&&<span style={{fontSize:fs-3,color:sc,fontWeight:500}}>🔴 {lang==="tr"?"Canlı":TL("Live",lang)}</span>}</span>
       <span style={{fontSize:fs-2,color:mt}}>{wellness.steps.toLocaleString()}/{wellness.stepsGoal.toLocaleString()}</span>
     </div>
     <div style={{height:10,background:`${mt}20`,borderRadius:5,overflow:"hidden",marginBottom:8}}>
@@ -5069,24 +5070,24 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     {/* Auto toggle */}
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,padding:"8px 10px",borderRadius:8,background:stepAuto?`${sc}12`:`${mt}08`,border:`1px solid ${stepAuto?sc:bd}`,cursor:"pointer"}} onClick={()=>{
       if(!stepAuto&&typeof DeviceMotionEvent!=="undefined"&&typeof DeviceMotionEvent.requestPermission==="function"){
-        DeviceMotionEvent.requestPermission().then(p=>{if(p==="granted")setStepAuto(true);else notify("⚠️ "+(lang==="tr"?"Hareket sensörü izni reddedildi":"Motion sensor permission denied"));}).catch(()=>{});
+        DeviceMotionEvent.requestPermission().then(p=>{if(p==="granted")setStepAuto(true);else notify("⚠️ "+(lang==="tr"?"Hareket sensörü izni reddedildi":TL("Motion sensor permission denied",lang)));}).catch(()=>{});
       }else{setStepAuto(!stepAuto);}
     }}>
       <div style={{width:36,height:20,borderRadius:10,background:stepAuto?sc:bd,position:"relative",flexShrink:0,transition:"background .2s"}}>
         <div style={{width:14,height:14,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:stepAuto?19:3,transition:"left .2s"}}/>
       </div>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:fs-1,fontWeight:600,color:stepAuto?sc:mt}}>📱 {lang==="tr"?"Canlı Adım Sayımı":"Live Step Counting"}</div>
-        <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Telefon hareket sensörüyle sayar — yalnızca uygulama açıkken. Gün boyu/arka plan için Apple Health / Health Connect gerekir.":"Counts via phone motion sensor — only while the app is open. All-day/background needs Apple Health / Health Connect."}</div>
+        <div style={{fontSize:fs-1,fontWeight:600,color:stepAuto?sc:mt}}>📱 {lang==="tr"?"Canlı Adım Sayımı":TL("Live Step Counting",lang)}</div>
+        <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Telefon hareket sensörüyle sayar — yalnızca uygulama açıkken. Gün boyu/arka plan için Apple Health / Health Connect gerekir.":TL("Counts via phone motion sensor — only while the app is open. All-day/background needs Apple Health / Health Connect.",lang)}</div>
       </div>
     </div>
-    {stepAuto&&<div style={{fontSize:fs-3,color:sc,textAlign:"center",marginBottom:6}}>{lang==="tr"?"Bu oturum":"This session"}: {stepInfo.sess} {lang==="tr"?"adım":"steps"} · {stepInfo.cadence}/{lang==="tr"?"dk":"min"} · ~{stepInfo.dist} m</div>}
+    {stepAuto&&<div style={{fontSize:fs-3,color:sc,textAlign:"center",marginBottom:6}}>{lang==="tr"?"Bu oturum":TL("This session",lang)}: {stepInfo.sess} {lang==="tr"?"adım":TL("steps",lang)} · {stepInfo.cadence}/{lang==="tr"?"dk":TL("min",lang)} · ~{stepInfo.dist} m</div>}
     <input type="number" value={wellness.steps||""} placeholder="0" onChange={e=>setWellness(w=>({...w,steps:Number(e.target.value)||0}))} disabled={stepAuto} style={{...IS,textAlign:"center",opacity:stepAuto?0.5:1}}/>
-    {stepAuto&&<div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:4}}>{lang==="tr"?"Manuel giriş devre dışı":"Manual entry disabled"}</div>}
+    {stepAuto&&<div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:4}}>{lang==="tr"?"Manuel giriş devre dışı":TL("Manual entry disabled",lang)}</div>}
   </div>
   {/* Mood */}
   <div style={{...CS,border:`1px solid #f59e0b33`}}>
-    <div style={{fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>🧠 {lang==="tr"?"Ruh Hali":"Mood"}</div>
+    <div style={{fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>🧠 {lang==="tr"?"Ruh Hali":TL("Mood",lang)}</div>
     <div style={{display:"flex",justifyContent:"space-between",gap:4}}>
       {moods.map(m=><button key={m.v} onClick={()=>{setWellness(w=>({...w,mood:m.v}));const td=new Date().toISOString().slice(0,10);setMoodLog(p=>[...p.filter(e=>e.date!==td),{date:td,mood:m.v}].slice(-60));}} style={{flex:1,padding:"10px 4px",borderRadius:10,border:wellness.mood===m.v?`2px solid #f59e0b`:`1px solid ${bd}`,background:wellness.mood===m.v?"#f59e0b15":"transparent",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}><span style={{fontSize:24}}>{m.e}</span><span style={{fontSize:fs-4,color:mt}}>{m.l}</span></button>)}
     </div>
@@ -5097,39 +5098,39 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       const persistentLow=recent.length>=3&&recent.every(v=>v<=2);
       const dayLbl=[t.su,t.mo,t.tu,t.we,t.th,t.fr,t.sa];
       return <div style={{marginTop:10}}>
-        <div style={{fontSize:fs-3,color:mt,marginBottom:4}}>{lang==="tr"?"Son 7 gün":"Last 7 days"}</div>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:4}}>{lang==="tr"?"Son 7 gün":TL("Last 7 days",lang)}</div>
         <div style={{display:"flex",gap:4}}>{days.map(d=>{const mv=map[d];const em=mv?(moods.find(x=>x.v===mv)||{}).e:"·";const dd=new Date(d);return <div key={d} style={{flex:1,textAlign:"center"}}><div style={{fontSize:mv?16:13,opacity:mv?1:.3,lineHeight:1.4}}>{em}</div><div style={{fontSize:fs-4,color:mt}}>{dayLbl[dd.getDay()]}</div></div>;})}</div>
-        {persistentLow&&<div style={{marginTop:8,padding:"8px 10px",borderRadius:8,background:`${ac}10`,border:`1px solid ${ac}44`,fontSize:fs-2,color:tc}}>{lang==="tr"?"Birkaç gündür kendini iyi hissetmiyorsun. Güvendiğin biriyle konuşmak ya da bir uzmana danışmak iyi gelebilir — yalnız değilsin. 💙":"You've been feeling low for a few days. Talking to someone you trust or a professional may help — you're not alone. 💙"}</div>}
+        {persistentLow&&<div style={{marginTop:8,padding:"8px 10px",borderRadius:8,background:`${ac}10`,border:`1px solid ${ac}44`,fontSize:fs-2,color:tc}}>{lang==="tr"?"Birkaç gündür kendini iyi hissetmiyorsun. Güvendiğin biriyle konuşmak ya da bir uzmana danışmak iyi gelebilir — yalnız değilsin. 💙":TL("You've been feeling low for a few days. Talking to someone you trust or a professional may help — you're not alone. 💙",lang)}</div>}
       </div>;
     })()}
   </div>
   {/* Exercise Minutes */}
   <div style={{...CS,border:`1px solid ${dg}33`}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>🏃 {lang==="tr"?"Egzersiz":"Exercise"}</span>
-      <span style={{fontSize:fs-2,color:mt}}>{wellness.exercise} {lang==="tr"?"dakika":"min"}</span>
+      <span style={{fontWeight:700,display:"flex",alignItems:"center",gap:6}}>🏃 {lang==="tr"?"Egzersiz":TL("Exercise",lang)}</span>
+      <span style={{fontSize:fs-2,color:mt}}>{wellness.exercise} {lang==="tr"?"dakika":TL("min",lang)}</span>
     </div>
     <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-      {[0,15,30,45,60,90].map(v=><button key={v} onClick={()=>setWellness(w=>({...w,exercise:v}))} style={pill(wellness.exercise===v)}>{v}{lang==="tr"?"dk":"m"}</button>)}
+      {[0,15,30,45,60,90].map(v=><button key={v} onClick={()=>setWellness(w=>({...w,exercise:v}))} style={pill(wellness.exercise===v)}>{v}{lang==="tr"?"dk":TL("m",lang)}</button>)}
     </div>
-    <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Hedef: Günde 30 dakika":"Goal: 30 minutes/day"}</div>
+    <div style={{fontSize:fs-3,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Hedef: Günde 30 dakika":TL("Goal: 30 minutes/day",lang)}</div>
   </div>
   {/* Symptoms Quick Log */}
   <div style={{...CS,border:`1px solid ${bd}`}}>
-    <div style={{fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>🤒 {lang==="tr"?"Hızlı Semptom Kaydı":"Quick Symptom Log"}</div>
+    <div style={{fontWeight:700,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>🤒 {lang==="tr"?"Hızlı Semptom Kaydı":TL("Quick Symptom Log",lang)}</div>
     <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-      {(lang==="tr"?["Baş ağrısı","Mide ağrısı","Yorgunluk","Ateş","Öksürük","Bulantı","Baş dönmesi","Kas ağrısı"]:["Headache","Stomachache","Fatigue","Fever","Cough","Nausea","Dizziness","Muscle pain"]).map(s=><button key={s} onClick={()=>{setNotes(p=>[{id:Date.now(),title:s,content:`${now.toLocaleString(lc)} — ${s}`,color:"default",pinned:false},...p]);notify("📝 "+s+" "+(lang==="tr"?"not olarak eklendi":"added as note"));}} style={pill(false)}>{s}</button>)}
+      {(lang==="tr"?["Baş ağrısı","Mide ağrısı","Yorgunluk","Ateş","Öksürük","Bulantı","Baş dönmesi","Kas ağrısı"]:["Headache","Stomachache","Fatigue","Fever","Cough","Nausea","Dizziness","Muscle pain"]).map(s=><button key={s} onClick={()=>{setNotes(p=>[{id:Date.now(),title:s,content:`${now.toLocaleString(lc)} — ${s}`,color:"default",pinned:false},...p]);notify("📝 "+s+" "+(lang==="tr"?"not olarak eklendi":TL("added as note",lang)));}} style={pill(false)}>{s}</button>)}
     </div>
   </div>
   {/* Reminders */}
   <div style={{...CS,border:`1px solid ${ac}33`,background:`${ac}05`}}>
-    <div style={{fontWeight:700,marginBottom:8,color:acTx}}>🔔 {lang==="tr"?"Sağlık Hatırlatıcıları":"Health Reminders"}</div>
+    <div style={{fontWeight:700,marginBottom:8,color:acTx}}>🔔 {lang==="tr"?"Sağlık Hatırlatıcıları":TL("Health Reminders",lang)}</div>
     <div style={{display:"flex",flexDirection:"column",gap:5,fontSize:fs-2}}>
       <div>💧 {lang==="tr"?`Günde ${wellness.waterGoal} bardak su içmeyi hedefleyin`:`Aim for ${wellness.waterGoal} glasses of water daily`}</div>
-      <div>😴 {lang==="tr"?"7-9 saat kaliteli uyku sağlığınız için kritiktir":"7-9 hours of quality sleep is critical for health"}</div>
-      <div>🏃 {lang==="tr"?"Haftada en az 150 dakika orta düzey egzersiz":"At least 150 min moderate exercise per week"}</div>
-      <div>🥗 {lang==="tr"?"Günde 5 porsiyon meyve ve sebze tüketin":"5 servings of fruit & vegetables daily"}</div>
-      <div>🧘 {lang==="tr"?"Günde 10 dakika meditasyon stres azaltır":"10 min meditation daily reduces stress"}</div>
+      <div>😴 {lang==="tr"?"7-9 saat kaliteli uyku sağlığınız için kritiktir":TL("7-9 hours of quality sleep is critical for health",lang)}</div>
+      <div>🏃 {lang==="tr"?"Haftada en az 150 dakika orta düzey egzersiz":TL("At least 150 min moderate exercise per week",lang)}</div>
+      <div>🥗 {lang==="tr"?"Günde 5 porsiyon meyve ve sebze tüketin":TL("5 servings of fruit & vegetables daily",lang)}</div>
+      <div>🧘 {lang==="tr"?"Günde 10 dakika meditasyon stres azaltır":TL("10 min meditation daily reduces stress",lang)}</div>
     </div>
   </div>
   {/* Health Score */}
@@ -5138,7 +5139,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{textAlign:"center",marginBottom:10}}>
       <div style={{fontSize:fs+16,fontWeight:800,color:hscore>70?sc:hscore>40?acTx:hscore>0?dg:mt}}>{hscore||"—"}<span style={{fontSize:fs-1,color:mt,fontWeight:400}}>/100</span></div>
       <div style={{fontSize:fs,fontWeight:600,color:hscore>80?sc:hscore>60?acTx:hscore>40?"#f0a030":hscore>0?dg:mt,marginTop:2}}>
-        {hscore>80?(lang==="tr"?"Mükemmel 🌟":"Excellent 🌟"):hscore>60?(lang==="tr"?"İyi 💪":"Good 💪"):hscore>40?(lang==="tr"?"Orta ⚠️":"Average ⚠️"):hscore>0?(lang==="tr"?"Dikkat! 🔴":"Attention! 🔴"):(lang==="tr"?"Veri girin":"Enter data")}
+        {hscore>80?(lang==="tr"?"Mükemmel 🌟":TL("Excellent 🌟",lang)):hscore>60?(lang==="tr"?"İyi 💪":TL("Good 💪",lang)):hscore>40?(lang==="tr"?"Orta ⚠️":TL("Average ⚠️",lang)):hscore>0?(lang==="tr"?"Dikkat! 🔴":TL("Attention! 🔴",lang)):(lang==="tr"?"Veri girin":TL("Enter data",lang))}
       </div>
     </div>
     {hscore>0&&<div style={{display:"flex",flexDirection:"column",gap:6}}>
@@ -5161,47 +5162,47 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       ):null)}
     </div>}
     {hscore>0&&hscore<=60&&<div style={{marginTop:8,padding:"8px 10px",borderRadius:8,background:`${ac}08`,fontSize:fs-2,color:acTx}}>
-      💡 {lang==="tr"?"Skorunuzu artırmak için: Değerlerinizi referans aralığına getirin ve ilaçlarınızı düzenli kullanın.":"To improve: Keep values in reference range and take medications regularly."}
+      💡 {lang==="tr"?"Skorunuzu artırmak için: Değerlerinizi referans aralığına getirin ve ilaçlarınızı düzenli kullanın.":TL("To improve: Keep values in reference range and take medications regularly.",lang)}
     </div>}
     {/* Risk factors from history */}
     {(allergyCount>0||chronicCount>0||medsCount>0||recordsCount>0)&&<div style={{marginTop:8,padding:"8px 10px",borderRadius:8,background:`${dg}08`,border:`1px solid ${dg}22`}}>
-      <div style={{fontSize:fs-2,fontWeight:700,color:dg,marginBottom:4}}>⚠️ {lang==="tr"?"Risk Faktörleri (Hasta Karnesinden)":"Risk Factors (from Patient Card)"}</div>
+      <div style={{fontSize:fs-2,fontWeight:700,color:dg,marginBottom:4}}>⚠️ {lang==="tr"?"Risk Faktörleri (Hasta Karnesinden)":TL("Risk Factors (from Patient Card)",lang)}</div>
       <div style={{fontSize:fs-3,color:mt,display:"flex",flexDirection:"column",gap:2}}>
-        {allergyCount>0&&<div>🤧 {lang==="tr"?"Alerji":"Allergies"}: <strong>{allergyCount}</strong> {lang==="tr"?"kayıt":"entries"} (−{allergyCount*1} {lang==="tr"?"puan":"pts"})</div>}
-        {chronicCount>0&&<div>🩺 {lang==="tr"?"Kronik Hastalık":"Chronic Condition"}: <strong>{chronicCount}</strong> {lang==="tr"?"kayıt":"entries"} (−{chronicCount*3} {lang==="tr"?"puan":"pts"})</div>}
-        {medsCount>0&&<div>💊 {lang==="tr"?"Kullanılan İlaç":"Active Medications"}: <strong>{medsCount}</strong></div>}
-        {recordsCount>0&&<div>📋 {lang==="tr"?"Tıbbi Kayıt":"Medical Records"}: <strong>{recordsCount}</strong></div>}
+        {allergyCount>0&&<div>🤧 {lang==="tr"?"Alerji":TL("Allergies",lang)}: <strong>{allergyCount}</strong> {lang==="tr"?"kayıt":TL("entries",lang)} (−{allergyCount*1} {lang==="tr"?"puan":TL("pts",lang)})</div>}
+        {chronicCount>0&&<div>🩺 {lang==="tr"?"Kronik Hastalık":TL("Chronic Condition",lang)}: <strong>{chronicCount}</strong> {lang==="tr"?"kayıt":TL("entries",lang)} (−{chronicCount*3} {lang==="tr"?"puan":TL("pts",lang)})</div>}
+        {medsCount>0&&<div>💊 {lang==="tr"?"Kullanılan İlaç":TL("Active Medications",lang)}: <strong>{medsCount}</strong></div>}
+        {recordsCount>0&&<div>📋 {lang==="tr"?"Tıbbi Kayıt":TL("Medical Records",lang)}: <strong>{recordsCount}</strong></div>}
         <div style={{marginTop:2,color:dg}}>{lang==="tr"?`Toplam risk cezası: −${riskPenalty} puan`:`Total risk penalty: −${riskPenalty} pts`}</div>
       </div>
       {/* Possible health implications */}
       {(pat.allergies||pat.chronic||meds.length>0)&&<div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${dg}22`}}>
-        <div style={{fontSize:fs-3,fontWeight:700,color:dg,marginBottom:4}}>🔍 {lang==="tr"?"Muhtemel Sonuçlar ve Dikkat Edilmesi Gerekenler":"Possible Implications & Warnings"}</div>
+        <div style={{fontSize:fs-3,fontWeight:700,color:dg,marginBottom:4}}>🔍 {lang==="tr"?"Muhtemel Sonuçlar ve Dikkat Edilmesi Gerekenler":TL("Possible Implications & Warnings",lang)}</div>
         <div style={{fontSize:fs-3,color:mt,display:"flex",flexDirection:"column",gap:3}}>
-          {pat.chronic&&/diyabet|diabetes/i.test(pat.chronic)&&<div>• {lang==="tr"?"🩸 Diyabet: Kan şekeri takibi, düzenli HbA1c ölçümü, göz-böbrek kontrolü önerilir.":"🩸 Diabetes: Regular blood sugar monitoring, HbA1c tests, eye/kidney checks recommended."}</div>}
-          {pat.chronic&&/hipertansiyon|tansiyon|hypertension|high.blood/i.test(pat.chronic)&&<div>• {lang==="tr"?"💓 Hipertansiyon: Tuz kısıtlaması, düzenli ölçüm, stres yönetimi önemli.":"💓 Hypertension: Salt restriction, regular monitoring, stress management important."}</div>}
-          {pat.chronic&&/astım|asthma|astim/i.test(pat.chronic)&&<div>• {lang==="tr"?"🫁 Astım: İnhaler taşıyın, polen/toz/duman alerjenlerinden kaçının.":"🫁 Asthma: Carry inhaler, avoid pollen/dust/smoke triggers."}</div>}
-          {pat.chronic&&/kalp|heart|cardiac/i.test(pat.chronic)&&<div>• {lang==="tr"?"❤️ Kalp hastalığı: Ağır egzersizden kaçının, düzenli EKG kontrolü.":"❤️ Heart condition: Avoid strenuous exercise, regular ECG checks."}</div>}
-          {pat.chronic&&/tiroid|thyroid/i.test(pat.chronic)&&<div>• {lang==="tr"?"🦋 Tiroid: TSH/T3/T4 düzenli takip, ilaç saatine dikkat.":"🦋 Thyroid: Regular TSH/T3/T4 monitoring, medication timing matters."}</div>}
-          {pat.allergies&&/penisilin|penicillin/i.test(pat.allergies)&&<div>• {lang==="tr"?"💉 Penisilin alerjisi: Doktora/eczaneye MUTLAKA bildirin.":"💉 Penicillin allergy: ALWAYS inform doctor/pharmacy."}</div>}
-          {pat.allergies&&/arı|bee|arı sokması|bal arısı/i.test(pat.allergies)&&<div>• {lang==="tr"?"🐝 Arı alerjisi: Epipen taşıyın, anafilaksi riski.":"🐝 Bee allergy: Carry EpiPen, anaphylaxis risk."}</div>}
-          {pat.allergies&&/fıstık|peanut|kuruyemiş|nut/i.test(pat.allergies)&&<div>• {lang==="tr"?"🥜 Fıstık/kuruyemiş alerjisi: Gıda etiketlerini okuyun, çapraz kontaminasyona dikkat.":"🥜 Peanut/nut allergy: Read food labels, beware cross-contamination."}</div>}
-          {pat.allergies&&/laktoz|lactose|gluten/i.test(pat.allergies)&&<div>• {lang==="tr"?"🥛 Gıda intoleransı: Uygun beslenme planı, etiket okuma.":"🥛 Food intolerance: Appropriate diet plan, label reading."}</div>}
+          {pat.chronic&&/diyabet|diabetes/i.test(pat.chronic)&&<div>• {lang==="tr"?"🩸 Diyabet: Kan şekeri takibi, düzenli HbA1c ölçümü, göz-böbrek kontrolü önerilir.":TL("🩸 Diabetes: Regular blood sugar monitoring, HbA1c tests, eye/kidney checks recommended.",lang)}</div>}
+          {pat.chronic&&/hipertansiyon|tansiyon|hypertension|high.blood/i.test(pat.chronic)&&<div>• {lang==="tr"?"💓 Hipertansiyon: Tuz kısıtlaması, düzenli ölçüm, stres yönetimi önemli.":TL("💓 Hypertension: Salt restriction, regular monitoring, stress management important.",lang)}</div>}
+          {pat.chronic&&/astım|asthma|astim/i.test(pat.chronic)&&<div>• {lang==="tr"?"🫁 Astım: İnhaler taşıyın, polen/toz/duman alerjenlerinden kaçının.":TL("🫁 Asthma: Carry inhaler, avoid pollen/dust/smoke triggers.",lang)}</div>}
+          {pat.chronic&&/kalp|heart|cardiac/i.test(pat.chronic)&&<div>• {lang==="tr"?"❤️ Kalp hastalığı: Ağır egzersizden kaçının, düzenli EKG kontrolü.":TL("❤️ Heart condition: Avoid strenuous exercise, regular ECG checks.",lang)}</div>}
+          {pat.chronic&&/tiroid|thyroid/i.test(pat.chronic)&&<div>• {lang==="tr"?"🦋 Tiroid: TSH/T3/T4 düzenli takip, ilaç saatine dikkat.":TL("🦋 Thyroid: Regular TSH/T3/T4 monitoring, medication timing matters.",lang)}</div>}
+          {pat.allergies&&/penisilin|penicillin/i.test(pat.allergies)&&<div>• {lang==="tr"?"💉 Penisilin alerjisi: Doktora/eczaneye MUTLAKA bildirin.":TL("💉 Penicillin allergy: ALWAYS inform doctor/pharmacy.",lang)}</div>}
+          {pat.allergies&&/arı|bee|arı sokması|bal arısı/i.test(pat.allergies)&&<div>• {lang==="tr"?"🐝 Arı alerjisi: Epipen taşıyın, anafilaksi riski.":TL("🐝 Bee allergy: Carry EpiPen, anaphylaxis risk.",lang)}</div>}
+          {pat.allergies&&/fıstık|peanut|kuruyemiş|nut/i.test(pat.allergies)&&<div>• {lang==="tr"?"🥜 Fıstık/kuruyemiş alerjisi: Gıda etiketlerini okuyun, çapraz kontaminasyona dikkat.":TL("🥜 Peanut/nut allergy: Read food labels, beware cross-contamination.",lang)}</div>}
+          {pat.allergies&&/laktoz|lactose|gluten/i.test(pat.allergies)&&<div>• {lang==="tr"?"🥛 Gıda intoleransı: Uygun beslenme planı, etiket okuma.":TL("🥛 Food intolerance: Appropriate diet plan, label reading.",lang)}</div>}
           {medsCount>=3&&<div>• {lang==="tr"?`⚠️ ${medsCount} farklı ilaç kullanıyorsunuz — ilaç etkileşimi için doktora danışın.`:`⚠️ You're taking ${medsCount} different medications — consult doctor for drug interactions.`}</div>}
-          {bmi>30&&<div>• {lang==="tr"?"⚖️ Obezite: Diyabet, kalp hastalığı, eklem problemleri riski artar.":"⚖️ Obesity: Increased risk of diabetes, heart disease, joint issues."}</div>}
-          {bmi>0&&bmi<18.5&&<div>• {lang==="tr"?"⚖️ Zayıflık: Bağışıklık zayıflığı, demir eksikliği riski — beslenme uzmanına danışın.":"⚖️ Underweight: Weakened immunity, iron deficiency risk — consult nutritionist."}</div>}
-          {hd.bpS>140&&<div>• {lang==="tr"?"🩺 Yüksek tansiyon: Kalp/inme riski, acil doktor kontrolü gerekli.":"🩺 High blood pressure: Heart/stroke risk, urgent doctor check needed."}</div>}
-          {hd.pulse>100&&<div>• {lang==="tr"?"❤️ Taşikardi (hızlı nabız): Kafein/stresi azaltın, kalp kontrolü önerilir.":"❤️ Tachycardia: Reduce caffeine/stress, cardiac check recommended."}</div>}
-          {hd.pulse>0&&hd.pulse<60&&<div>• {lang==="tr"?"❤️ Bradikardi (yavaş nabız): Kardiyolog kontrolü önerilir.":"❤️ Bradycardia: Cardiologist consultation recommended."}</div>}
+          {bmi>30&&<div>• {lang==="tr"?"⚖️ Obezite: Diyabet, kalp hastalığı, eklem problemleri riski artar.":TL("⚖️ Obesity: Increased risk of diabetes, heart disease, joint issues.",lang)}</div>}
+          {bmi>0&&bmi<18.5&&<div>• {lang==="tr"?"⚖️ Zayıflık: Bağışıklık zayıflığı, demir eksikliği riski — beslenme uzmanına danışın.":TL("⚖️ Underweight: Weakened immunity, iron deficiency risk — consult nutritionist.",lang)}</div>}
+          {hd.bpS>140&&<div>• {lang==="tr"?"🩺 Yüksek tansiyon: Kalp/inme riski, acil doktor kontrolü gerekli.":TL("🩺 High blood pressure: Heart/stroke risk, urgent doctor check needed.",lang)}</div>}
+          {hd.pulse>100&&<div>• {lang==="tr"?"❤️ Taşikardi (hızlı nabız): Kafein/stresi azaltın, kalp kontrolü önerilir.":TL("❤️ Tachycardia: Reduce caffeine/stress, cardiac check recommended.",lang)}</div>}
+          {hd.pulse>0&&hd.pulse<60&&<div>• {lang==="tr"?"❤️ Bradikardi (yavaş nabız): Kardiyolog kontrolü önerilir.":TL("❤️ Bradycardia: Cardiologist consultation recommended.",lang)}</div>}
         </div>
-        <div style={{fontSize:fs-4,color:mt,marginTop:6,fontStyle:"italic"}}>⚕️ {lang==="tr"?"Bu öneriler genel bilgi amaçlıdır. Teşhis/tedavi için doktorunuza danışın.":"These are general suggestions. Consult your doctor for diagnosis/treatment."}</div>
+        <div style={{fontSize:fs-4,color:mt,marginTop:6,fontStyle:"italic"}}>⚕️ {lang==="tr"?"Bu öneriler genel bilgi amaçlıdır. Teşhis/tedavi için doktorunuza danışın.":TL("These are general suggestions. Consult your doctor for diagnosis/treatment.",lang)}</div>
       </div>}
     </div>}
     {/* Wellness bonus */}
     {wellnessBonus>0&&<div style={{marginTop:6,padding:"8px 10px",borderRadius:8,background:`${sc}08`,border:`1px solid ${sc}22`}}>
-      <div style={{fontSize:fs-2,fontWeight:700,color:sc,marginBottom:4}}>✨ {lang==="tr"?"Wellness Bonusu":"Wellness Bonus"}</div>
-      <div style={{fontSize:fs-3,color:mt}}>+{wellnessBonus} {lang==="tr"?"puan (su, uyku, adım, ruh hali, egzersiz)":"pts (water, sleep, steps, mood, exercise)"}</div>
+      <div style={{fontSize:fs-2,fontWeight:700,color:sc,marginBottom:4}}>✨ {lang==="tr"?"Wellness Bonusu":TL("Wellness Bonus",lang)}</div>
+      <div style={{fontSize:fs-3,color:mt}}>+{wellnessBonus} {lang==="tr"?"puan (su, uyku, adım, ruh hali, egzersiz)":TL("pts (water, sleep, steps, mood, exercise)",lang)}</div>
     </div>}
-    <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Kaynak: acibadem.com.tr referans değerleri":"Source: acibadem.com.tr reference values"}</div>
+    <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Kaynak: acibadem.com.tr referans değerleri":TL("Source: acibadem.com.tr reference values",lang)}</div>
   </div>
   {/* Smart Watch Health Data — manual now, auto-sync in mobile app */}
   <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>⌚ {lang==="tr"?"Akıllı Saat Verileri":lang==="de"?"Smartwatch-Daten":lang==="es"?"Datos del reloj":lang==="ru"?"Данные часов":lang==="ar"?"بيانات الساعة":"Smartwatch Data"}</div>
@@ -5209,7 +5210,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
       {[
         {icon:"👟",field:"steps",label:lang==="tr"?"Adım":lang==="de"?"Schritte":lang==="es"?"Pasos":lang==="ru"?"Шаги":lang==="ar"?"خطوات":"Steps",unit:"",good:v=>v>=7000},
-        {icon:"😴",field:"sleep",label:lang==="tr"?"Uyku":lang==="de"?"Schlaf":lang==="es"?"Sueño":lang==="ru"?"Сон":lang==="ar"?"نوم":"Sleep",unit:lang==="tr"?"saat":"h",good:v=>v>=7&&v<=9},
+        {icon:"😴",field:"sleep",label:lang==="tr"?"Uyku":lang==="de"?"Schlaf":lang==="es"?"Sueño":lang==="ru"?"Сон":lang==="ar"?"نوم":"Sleep",unit:lang==="tr"?"saat":TL("h",lang),good:v=>v>=7&&v<=9},
         {icon:"🫁",field:"spo2",label:lang==="tr"?"Oksijen":lang==="de"?"Sauerstoff":lang==="es"?"Oxígeno":lang==="ru"?"Кислород":lang==="ar"?"أكسجين":"Oxygen",unit:"%",good:v=>v>=95},
         {icon:"🔥",field:"calories",label:lang==="tr"?"Kalori":lang==="de"?"Kalorien":lang==="es"?"Calorías":lang==="ru"?"Калории":lang==="ar"?"سعرات":"Calories",unit:"kcal",good:v=>v>=300},
         {icon:"💗",field:"restPulse",label:lang==="tr"?"Dinlenik Nabız":lang==="de"?"Ruhepuls":lang==="es"?"Pulso reposo":lang==="ru"?"Пульс покоя":lang==="ar"?"نبض الراحة":"Resting HR",unit:"bpm",good:v=>v>=50&&v<=70},
@@ -5241,11 +5242,11 @@ const resizeImage=(file,maxDim=1280,q=0.72)=>new Promise((res,rej)=>{
 });
 const addMedImage=async(file,type)=>{
   if(!file)return;
-  if(!file.type||!file.type.startsWith("image/")){notify(lang==="tr"?"Lütfen bir görüntü dosyası seçin":"Please select an image file");return;}
+  if(!file.type||!file.type.startsWith("image/")){notify(lang==="tr"?"Lütfen bir görüntü dosyası seçin":TL("Please select an image file",lang));return;}
   try{const dataUrl=await resizeImage(file);
     setMedImages(p=>[{id:Date.now()+Math.floor(Math.random()*1000),name:file.name||("goruntu-"+Date.now()),type:type||imgType,dataUrl,date:new Date().toISOString().slice(0,10),aiNote:""},...p]);
-    notify(lang==="tr"?"✅ Görüntü eklendi":"✅ Image added");
-  }catch(e){notify(lang==="tr"?"Görüntü yüklenemedi":"Could not load image");}
+    notify(lang==="tr"?"✅ Görüntü eklendi":TL("✅ Image added",lang));
+  }catch(e){notify(lang==="tr"?"Görüntü yüklenemedi":TL("Could not load image",lang));}
 };
 const addMedFiles=async(files,type)=>{const arr=Array.from(files||[]);for(const f of arr){await addMedImage(f,type);}};
 const scanCodeFromImage=async(file)=>{
@@ -5262,14 +5263,14 @@ const interpretImage=async(img)=>{
     const sys=lang==="tr"
       ?`Sen AILVIE tıbbi asistanısın. Kullanıcı bir tıbbi görüntü (${typeLabel}) yükledi. Görselde NE GÖRÜNDÜĞÜNÜ sade, anlaşılır bir dille betimle ve genel bilgi ver. KESİN TANI KOYMA, kesin ölçüm/derece verme. Ciddi/acil bir bulgu ihtimali görürsen vakit kaybetmeden hekime/acile başvurulmasını söyle. Yanıtı MUTLAKA şu uyarıyla bitir: "⚠️ Bu bir tıbbi tanı değildir. Kesin değerlendirme için mutlaka radyolog/hekiminize danışın." Kısa ve net ol.`
       :`You are AILVIE medical assistant. The user uploaded a medical image (${typeLabel}). Describe in plain language what is VISIBLE and give general info. DO NOT give a definitive diagnosis or exact measurements. If a serious/urgent finding seems possible, advise seeing a doctor/ER promptly. ALWAYS end with: "⚠️ This is not a medical diagnosis. Always consult your radiologist/doctor for a definitive assessment." Be concise.`;
-    const body={model:"claude-sonnet-4-6",max_tokens:1000,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}},{type:"text",text:lang==="tr"?"Bu görüntüde ne görünüyor? Genel olarak yorumla.":"What is visible here? Interpret generally."}]}]};
+    const body={model:"claude-sonnet-4-6",max_tokens:1000,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}},{type:"text",text:lang==="tr"?"Bu görüntüde ne görünüyor? Genel olarak yorumla.":TL("What is visible here? Interpret generally.",lang)}]}]};
     const d=await callAI(body,apiKey);
-    const txt=(d.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("\n").trim()||(lang==="tr"?"Yanıt alınamadı.":"No response.");
+    const txt=(d.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("\n").trim()||(lang==="tr"?"Yanıt alınamadı.":TL("No response.",lang));
     setMedImages(p=>p.map(x=>x.id===img.id?{...x,aiNote:txt}:x));setImgView(v=>v&&v.id===img.id?{...v,aiNote:txt}:v);
   }catch(e){
     const msg=(e.message||"").includes("NO_KEY")
-      ?(lang==="tr"?"AI yorumu için sunucu anahtarı (ANTHROPIC_API_KEY) gerekli — Cloudflare'de ayarlanınca çalışır.":"AI needs a server key (ANTHROPIC_API_KEY) — works once set in Cloudflare.")
-      :(lang==="tr"?"Yorumlama başarısız. Bağlantıyı kontrol edin.":"Interpretation failed. Check connection.");
+      ?(lang==="tr"?"AI yorumu için sunucu anahtarı (ANTHROPIC_API_KEY) gerekli — Cloudflare'de ayarlanınca çalışır.":TL("AI needs a server key (ANTHROPIC_API_KEY) — works once set in Cloudflare.",lang))
+      :(lang==="tr"?"Yorumlama başarısız. Bağlantıyı kontrol edin.":TL("Interpretation failed. Check connection.",lang));
     setMedImages(p=>p.map(x=>x.id===img.id?{...x,aiNote:"⚠️ "+msg}:x));setImgView(v=>v&&v.id===img.id?{...v,aiNote:"⚠️ "+msg}:v);
   }finally{setImgBusy(null);}
 };
@@ -5278,18 +5279,18 @@ const connectENabiz=()=>{
     const u=ENABIZ_CONFIG.authUrl+`?client_id=${encodeURIComponent(ENABIZ_CONFIG.clientId||"")}&response_type=code&scope=${encodeURIComponent(ENABIZ_CONFIG.scope||"patient/*.read")}&redirect_uri=${encodeURIComponent(ENABIZ_CONFIG.redirectUri||(location.origin+"/enabiz/callback"))}`;
     window.open(u,"_blank","noopener");
   }else{
-    notify(lang==="tr"?"Otomatik bağlantı için Sağlık Bakanlığı resmi API izni gerekiyor (yakında). Şimdilik e-Nabız'ı açıp raporunu indirip aşağıya yükleyebilirsin.":"Automatic connection needs official Ministry of Health API approval (soon). For now, open e-Nabız, download your report and upload it below.");
+    notify(lang==="tr"?"Otomatik bağlantı için Sağlık Bakanlığı resmi API izni gerekiyor (yakında). Şimdilik e-Nabız'ı açıp raporunu indirip aşağıya yükleyebilirsin.":TL("Automatic connection needs official Ministry of Health API approval (soon). For now, open e-Nabız, download your report and upload it below.",lang));
   }
 };
 const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   {(()=>{
     const now2=new Date();
     const up=[...(appts||[])].filter(a=>a.date).map(a=>({...a,dt:new Date(a.date+"T"+(a.time||"09:00"))})).filter(a=>a.dt>=now2).sort((a,b)=>a.dt-b.dt)[0];
-    const nextTxt=up?((up.doctor||up.dept||up.title||(lang==="tr"?"Randevu":"Appt"))+" · "+up.dt.toLocaleDateString(lc,{day:"2-digit",month:"2-digit"})):"—";
+    const nextTxt=up?((up.doctor||up.dept||up.title||(lang==="tr"?"Randevu":TL("Appt",lang)))+" · "+up.dt.toLocaleDateString(lc,{day:"2-digit",month:"2-digit"})):"—";
     const lg=(glucose&&glucose.length)?glucose[glucose.length-1]:null;
-    const cells=[["💊",lang==="tr"?"Aktif İlaç":"Meds",(meds||[]).length,"meds"],["🏥",lang==="tr"?"Sıradaki Randevu":"Next Appt",nextTxt,"appts"],["🍬",lang==="tr"?"Son Şeker":"Last Glucose",lg?lg.val+" mg/dL":"—","health"],["⚖️",lang==="tr"?"Kilo":"Weight",hd.weight>0?hd.weight+" "+t.kg:"—","health"]];
+    const cells=[["💊",lang==="tr"?"Aktif İlaç":TL("Meds",lang),(meds||[]).length,"meds"],["🏥",lang==="tr"?"Sıradaki Randevu":TL("Next Appt",lang),nextTxt,"appts"],["🍬",lang==="tr"?"Son Şeker":TL("Last Glucose",lang),lg?lg.val+" mg/dL":"—","health"],["⚖️",lang==="tr"?"Kilo":TL("Weight",lang),hd.weight>0?hd.weight+" "+t.kg:"—","health"]];
     return <div style={{...CS,background:`linear-gradient(135deg,${ac}10,${sc}08)`,border:`1px solid ${ac}33`}}>
-      <b style={{fontSize:fs+1,color:tc,display:"block",marginBottom:8}}>📇 {lang==="tr"?"Canlı Sağlık Özeti":"Live Health Summary"}</b>
+      <b style={{fontSize:fs+1,color:tc,display:"block",marginBottom:8}}>📇 {lang==="tr"?"Canlı Sağlık Özeti":TL("Live Health Summary",lang)}</b>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         {cells.map(([ic,lb,vv,pg],i)=><div key={i} onClick={()=>goTo(pg)} style={{background:cd,borderRadius:10,padding:"8px 10px",cursor:"pointer"}}><div style={{fontSize:fs-3,color:mt}}>{ic} {lb}</div><div style={{fontSize:fs+1,fontWeight:800,color:tc,marginTop:2}}>{vv}</div></div>)}
       </div>
@@ -5298,7 +5299,7 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   <span style={{fontWeight:700,fontSize:fs+2}}>🪪 {t.pCard}</span>
   {/* Kimlik Bilgileri */}
   <div style={{...CS,border:`1px solid ${ac}33`}}>
-    <div style={{fontWeight:700,color:acTx,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>👤 {lang==="tr"?"Kimlik Bilgileri":"Identity Info"}</div>
+    <div style={{fontWeight:700,color:acTx,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>👤 {lang==="tr"?"Kimlik Bilgileri":TL("Identity Info",lang)}</div>
     {[["fName","name","text"],["bDate","birthDate","date"],["bType","bloodType","text"]].map(([label,field,type])=>(
       <div key={field} style={{marginBottom:8}}>
         <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||field}{field==="birthDate"&&patAge?` (${patAge} ${t.age})`:""}</div>
@@ -5306,21 +5307,21 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
       </div>
     ))}
     <div style={{marginBottom:8}}>
-      <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>⚧ {lang==="tr"?"Biyolojik Cinsiyet":"Biological Sex"} <span style={{fontSize:fs-4}}>({lang==="tr"?"referans aralıkları için":"for reference ranges"})</span></div>
-      <div style={{display:"flex",gap:6}}>{[["female",lang==="tr"?"Kadın":"Female"],["male",lang==="tr"?"Erkek":"Male"],["",lang==="tr"?"Belirtme":"Unset"]].map(([v,l])=><button key={v||"none"} onClick={()=>setPat(p=>({...p,sex:v,pregnant:v==="female"?p.pregnant:false}))} style={{flex:1,padding:"7px 4px",borderRadius:9,border:`1px solid ${pat.sex===v?ac:bd}`,background:pat.sex===v?`${ac}22`:"transparent",color:pat.sex===v?acTx:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
+      <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>⚧ {lang==="tr"?"Biyolojik Cinsiyet":TL("Biological Sex",lang)} <span style={{fontSize:fs-4}}>({lang==="tr"?"referans aralıkları için":TL("for reference ranges",lang)})</span></div>
+      <div style={{display:"flex",gap:6}}>{[["female",lang==="tr"?"Kadın":TL("Female",lang)],["male",lang==="tr"?"Erkek":TL("Male",lang)],["",lang==="tr"?"Belirtme":TL("Unset",lang)]].map(([v,l])=><button key={v||"none"} onClick={()=>setPat(p=>({...p,sex:v,pregnant:v==="female"?p.pregnant:false}))} style={{flex:1,padding:"7px 4px",borderRadius:9,border:`1px solid ${pat.sex===v?ac:bd}`,background:pat.sex===v?`${ac}22`:"transparent",color:pat.sex===v?acTx:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
     </div>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8}}>
-      <span style={{flex:1,fontSize:fs-1,color:tc}}>💊 {lang==="tr"?"Kan sulandırıcı kullanıyorum":"On anticoagulant"}<div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Açıkken INR hedefi kişiye özeldir; uygulama INR'yi sınıflandırmaz":"INR target is therapy-specific"}</div></span>
+      <span style={{flex:1,fontSize:fs-1,color:tc}}>💊 {lang==="tr"?"Kan sulandırıcı kullanıyorum":TL("On anticoagulant",lang)}<div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Açıkken INR hedefi kişiye özeldir; uygulama INR'yi sınıflandırmaz":TL("INR target is therapy-specific",lang)}</div></span>
       <button onClick={()=>setPat(p=>({...p,onAnticoag:!p.onAnticoag}))} aria-label="anticoag" style={{width:40,height:22,borderRadius:11,background:pat.onAnticoag?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:pat.onAnticoag?21:3,transition:"left .2s"}}/></button>
     </div>
     {pat.sex==="female"&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8}}>
-      <span style={{flex:1,fontSize:fs-1,color:tc}}>🤰 {lang==="tr"?"Gebelik":"Pregnancy"}<div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Açıkken tahlil eşikleri uygulanmaz (farklıdır)":"Thresholds not applied when on"}</div></span>
+      <span style={{flex:1,fontSize:fs-1,color:tc}}>🤰 {lang==="tr"?"Gebelik":TL("Pregnancy",lang)}<div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Açıkken tahlil eşikleri uygulanmaz (farklıdır)":TL("Thresholds not applied when on",lang)}</div></span>
       <button onClick={()=>setPat(p=>({...p,pregnant:!p.pregnant}))} aria-label="pregnancy" style={{width:40,height:22,borderRadius:11,background:pat.pregnant?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:pat.pregnant?21:3,transition:"left .2s"}}/></button>
     </div>}
   </div>
   {/* Vücut Ölçüleri — Sağlık ile senkronize */}
   <div style={{...CS,border:`1px solid ${sc}33`,background:`${sc}05`}}>
-    <div style={{fontWeight:700,color:sc,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>📏 {lang==="tr"?"Vücut Ölçüleri":"Body Measurements"} <span style={{fontSize:fs-4,color:mt,fontWeight:400}}>↔ {t.health}</span></div>
+    <div style={{fontWeight:700,color:sc,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>📏 {lang==="tr"?"Vücut Ölçüleri":TL("Body Measurements",lang)} <span style={{fontSize:fs-4,color:mt,fontWeight:400}}>↔ {t.health}</span></div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
       <div>
         <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>📏 {t.ht} ({t.cm})</div>
@@ -5328,17 +5329,17 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
       </div>
       <div>
         <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>📊 BMI</div>
-        <div style={{padding:"8px 10px",borderRadius:8,background:bmi>0?(bmi>=18.5&&bmi<25?`${sc}15`:`${dg}15`):"transparent",color:bmi>0?(bmi>=18.5&&bmi<25?sc:dg):mt,fontWeight:700,fontSize:fs-1,border:bmi>0?"none":`1px solid ${bd}`}}>{bmi>0?`${bmi} · ${bmi<18.5?(lang==="tr"?"Zayıf":"Under"):bmi<25?"Normal":bmi<30?(lang==="tr"?"Fazla":"Over"):(lang==="tr"?"Obez":"Obese")}`:"—"}</div>
+        <div style={{padding:"8px 10px",borderRadius:8,background:bmi>0?(bmi>=18.5&&bmi<25?`${sc}15`:`${dg}15`):"transparent",color:bmi>0?(bmi>=18.5&&bmi<25?sc:dg):mt,fontWeight:700,fontSize:fs-1,border:bmi>0?"none":`1px solid ${bd}`}}>{bmi>0?`${bmi} · ${bmi<18.5?(lang==="tr"?"Zayıf":TL("Under",lang)):bmi<25?"Normal":bmi<30?(lang==="tr"?"Fazla":TL("Over",lang)):(lang==="tr"?"Obez":TL("Obese",lang))}`:"—"}</div>
       </div>
     </div>
     <div style={{display:"flex",gap:8,marginBottom:8}}>
       {[["❤️",t.pulse,hd.pulse>0?hd.pulse+" "+t.bpm:"—"],["🩺",t.bp,hd.bpS>0?hd.bpS+"/"+(hd.bpD||"?"):"—"],["⚖️",t.wt,hd.weight>0?hd.weight+" "+t.kg:"—"]].map(([ic,lb,vv],i)=><div key={i} style={{flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,background:dark?"#0e1620":"#f4f7fa"}}><div style={{fontSize:fs-4,color:mt}}>{ic} {lb}</div><div style={{fontSize:fs-1,fontWeight:700,color:tc,marginTop:2}}>{vv}</div></div>)}
     </div>
-    <button onClick={()=>goTo("health")} style={{...BP,width:"100%",padding:"9px",background:"transparent",color:acTx,border:`1px solid ${ac}`}}>📊 {lang==="tr"?"Sağlık'ta Ölç / Güncelle":"Measure / Update in Health"} →</button>
+    <button onClick={()=>goTo("health")} style={{...BP,width:"100%",padding:"9px",background:"transparent",color:acTx,border:`1px solid ${ac}`}}>📊 {lang==="tr"?"Sağlık'ta Ölç / Güncelle":TL("Measure / Update in Health",lang)} →</button>
   </div>
   {/* Sağlık Durumu */}
   <div style={{...CS,border:`1px solid ${dg}33`,background:`${dg}05`}}>
-    <div style={{fontWeight:700,color:dg,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>⚠️ {lang==="tr"?"Sağlık Durumu":"Health Conditions"}</div>
+    <div style={{fontWeight:700,color:dg,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>⚠️ {lang==="tr"?"Sağlık Durumu":TL("Health Conditions",lang)}</div>
     {[["allrg","allergies","text"],["chron","chronic","text"]].map(([label,field,type])=>(
       <div key={field} style={{marginBottom:8}}>
         <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||field}</div>
@@ -5349,7 +5350,7 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   {/* Kullandığı İlaçlar — meds state'den okuyor */}
   <div style={{...CS,border:`1px solid ${ac}33`,background:`${ac}05`}}>
     <div style={{fontWeight:700,color:acTx,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-      <span style={{display:"flex",alignItems:"center",gap:6}}>💊 {lang==="tr"?"Kullandığı İlaçlar":"Current Medications"} <span style={{fontSize:fs-4,color:mt,fontWeight:400}}>↔ {t.meds}</span></span>
+      <span style={{display:"flex",alignItems:"center",gap:6}}>💊 {lang==="tr"?"Kullandığı İlaçlar":TL("Current Medications",lang)} <span style={{fontSize:fs-4,color:mt,fontWeight:400}}>↔ {t.meds}</span></span>
       <button onClick={()=>goTo("meds")} style={{...BP,padding:"4px 10px",fontSize:fs-2}}>+ {t.add}</button>
     </div>
     {meds.length===0?<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:8}}>{t.noM}</div>:
@@ -5365,10 +5366,10 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   </div>
   {/* Sigorta & Acil İletişim */}
   <div style={{...CS,border:`1px solid ${bd}`}}>
-    <div style={{fontWeight:700,color:mt,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>📋 {lang==="tr"?"Sigorta & Acil":"Insurance & Emergency"}</div>
+    <div style={{fontWeight:700,color:mt,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>📋 {lang==="tr"?"Sigorta & Acil":TL("Insurance & Emergency",lang)}</div>
     {[["insu","insu","text"],["emCon","emContact","text"],["","emPhone","tel"]].map(([label,field,type])=>(
       <div key={field} style={{marginBottom:8}}>
-        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||(field==="emPhone"?(lang==="tr"?"Acil Telefon":"Emergency Phone"):field)}</div>
+        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||(field==="emPhone"?(lang==="tr"?"Acil Telefon":TL("Emergency Phone",lang)):field)}</div>
         <input type={type} value={pat[field]||""} onChange={e=>setPat(p=>({...p,[field]:e.target.value}))} placeholder={t[label]||field} style={{...IS,padding:"8px 10px"}}/>
       </div>
     ))}
@@ -5378,8 +5379,8 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
     <span style={{fontWeight:700}}>📋 {t.diag} / {t.lab}</span>
     <button onClick={()=>{setEditRecId(null);setNewRec(EMPTY_REC);recDraftIdRef.current=null;setShowAddRec(true);}} style={{...BP,padding:"6px 14px"}}>+ {t.add}</button>
   </div>
-  {records.map(r=>(<div key={r.id} style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,color:acTx}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-2,color:mt}}>{r.date}</span></div><div style={{fontSize:fs-1,color:mt}}>{r.doctor} — {r.hospital}</div><div style={{marginTop:4,wordBreak:"break-word"}}>{r.content}</div><div style={{display:"flex",gap:6,marginTop:4}}><button onClick={()=>{setEditRecId(r.id);setNewRec({type:r.type||"diag",doctor:r.doctor||"",hospital:r.hospital||"",date:r.date||"",content:r.content||"",notes:r.notes||""});setShowAddRec(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:acTx,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button><button onClick={()=>toTrash("record",r)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>🗑️ {t.del}</button></div></div>))}
-  {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><div style={{fontWeight:700,marginBottom:8,color:acTx}}>{editRecId?"✏️ "+(lang==="tr"?"Kaydı Düzenle":"Edit Record"):"+ "+(lang==="tr"?"Yeni Kayıt":"New Record")}</div><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" aria-label={lang==="tr"?"Tarih":"Date"} value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><div style={{display:"flex",gap:6,alignItems:"flex-start"}}><textarea placeholder={lang==="tr"?"İçerik / Sonuç":"Content / Result"} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><DictateBtn value={newRec.content} onChange={v=>setNewRec(r=>({...r,content:v}))}/></div><div style={{display:"flex",gap:6}}><button onClick={()=>{recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={BP}>{lang==="tr"?"Bitti":"Done"}</button><button onClick={()=>{if(!editRecId&&recDraftIdRef.current!=null){const id=recDraftIdRef.current;setRecords(p=>p.filter(x=>x.id!==id));}recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
+  {records.map(r=>(<div key={r.id} style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,color:acTx}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-2,color:mt}}>{r.date}</span></div><div style={{fontSize:fs-1,color:mt}}>{r.doctor} — {r.hospital}</div><div style={{marginTop:4,wordBreak:"break-word"}}>{r.content}</div><div style={{display:"flex",gap:6,marginTop:4}}><button onClick={()=>{setEditRecId(r.id);setNewRec({type:r.type||"diag",doctor:r.doctor||"",hospital:r.hospital||"",date:r.date||"",content:r.content||"",notes:r.notes||""});setShowAddRec(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:acTx,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>✏️ {lang==="tr"?"Düzenle":TL("Edit",lang)}</button><button onClick={()=>toTrash("record",r)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>🗑️ {t.del}</button></div></div>))}
+  {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><div style={{fontWeight:700,marginBottom:8,color:acTx}}>{editRecId?"✏️ "+(lang==="tr"?"Kaydı Düzenle":TL("Edit Record",lang)):"+ "+(lang==="tr"?"Yeni Kayıt":TL("New Record",lang))}</div><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" aria-label={lang==="tr"?"Tarih":TL("Date",lang)} value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><div style={{display:"flex",gap:6,alignItems:"flex-start"}}><textarea placeholder={lang==="tr"?"İçerik / Sonuç":TL("Content / Result",lang)} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><DictateBtn value={newRec.content} onChange={v=>setNewRec(r=>({...r,content:v}))}/></div><div style={{display:"flex",gap:6}}><button onClick={()=>{recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={BP}>{lang==="tr"?"Bitti":TL("Done",lang)}</button><button onClick={()=>{if(!editRecId&&recDraftIdRef.current!=null){const id=recDraftIdRef.current;setRecords(p=>p.filter(x=>x.id!==id));}recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
 </div>);
 
 const svgPat=(inner,w,h)=>`url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>${inner}</svg>`)}")`;
@@ -5391,19 +5392,19 @@ const setEditableHtml=(nid,html)=>{setNotes(p=>p.map(x=>x.id===nid?{...x,content
 const doUndo=(nid)=>{const h=noteHistRef.current;if(h.nid!==nid||h.idx<=0)return;h.idx--;setEditableHtml(nid,h.stack[h.idx]);haptic(8);};
 const doRedo=(nid)=>{const h=noteHistRef.current;if(h.nid!==nid||h.idx>=h.stack.length-1)return;h.idx++;setEditableHtml(nid,h.stack[h.idx]);haptic(8);};
 const fmt=(cmd,val)=>{try{const el=editableRef.current;if(!el)return;el.focus();document.execCommand(cmd,false,val);const nid=noteHistRef.current.nid;const html=el.innerHTML;setNotes(p=>p.map(x=>x.id===nid?{...x,content:html}:x));pushHist(nid,html);try{setFmtState({b:document.queryCommandState("bold"),i:document.queryCommandState("italic"),u:document.queryCommandState("underline"),block:(document.queryCommandValue("formatBlock")||"").toLowerCase()});}catch(e){}}catch(e){}};
-const addNoteMedia=(nid,item)=>{setNoteMedia(p=>{const next={...p,[nid]:[...(p[nid]||[]),item]};try{if(JSON.stringify(next).length>4200000){notify(lang==="tr"?"Depolama dolu — medya eklenemedi":"Storage full — media not added");return p;}}catch(e){}return next;});haptic(12);};
+const addNoteMedia=(nid,item)=>{setNoteMedia(p=>{const next={...p,[nid]:[...(p[nid]||[]),item]};try{if(JSON.stringify(next).length>4200000){notify(lang==="tr"?"Depolama dolu — medya eklenemedi":TL("Storage full — media not added",lang));return p;}}catch(e){}return next;});haptic(12);};
 const delNoteMedia=(nid,idx)=>setNoteMedia(p=>({...p,[nid]:(p[nid]||[]).filter((_,i)=>i!==idx)}));
-const pickNoteImage=(nid,useCamera)=>{const inp=document.createElement("input");inp.type="file";inp.accept="image/*";if(useCamera)inp.capture="environment";inp.onchange=async()=>{const f=inp.files&&inp.files[0];if(!f)return;try{const data=await resizeImage(f);addNoteMedia(nid,{type:"image",data});}catch(e){notify(lang==="tr"?"Resim eklenemedi":"Could not add image");}};inp.click();setNoteSheet(null);};
-const duplicateNote=(n)=>{const id=Date.now();setNotes(p=>[{...JSON.parse(JSON.stringify(n)),id,pinned:false},...p]);if(noteMedia[n.id])setNoteMedia(p=>({...p,[id]:JSON.parse(JSON.stringify(p[n.id]))}));setEditNote(null);setNoteSheet(null);notify(lang==="tr"?"📋 Kopya oluşturuldu":"📋 Copy created");};
-const shareNote=async(n)=>{const text=(n.title?n.title+"\n":"")+((n.checklist?n.checklist.map(i=>(i.done?"☑ ":"☐ ")+i.text).join("\n"):(n.content||"")).replace(/<br\s*\/?>/gi,"\n").replace(/<[^>]+>/g,""));try{if(navigator.share)await navigator.share({title:n.title||"Not",text});else{await navigator.clipboard.writeText(text);notify(lang==="tr"?"Panoya kopyalandı":"Copied to clipboard");}}catch(e){}setNoteSheet(null);};
+const pickNoteImage=(nid,useCamera)=>{const inp=document.createElement("input");inp.type="file";inp.accept="image/*";if(useCamera)inp.capture="environment";inp.onchange=async()=>{const f=inp.files&&inp.files[0];if(!f)return;try{const data=await resizeImage(f);addNoteMedia(nid,{type:"image",data});}catch(e){notify(lang==="tr"?"Resim eklenemedi":TL("Could not add image",lang));}};inp.click();setNoteSheet(null);};
+const duplicateNote=(n)=>{const id=Date.now();setNotes(p=>[{...JSON.parse(JSON.stringify(n)),id,pinned:false},...p]);if(noteMedia[n.id])setNoteMedia(p=>({...p,[id]:JSON.parse(JSON.stringify(p[n.id]))}));setEditNote(null);setNoteSheet(null);notify(lang==="tr"?"📋 Kopya oluşturuldu":TL("📋 Copy created",lang));};
+const shareNote=async(n)=>{const text=(n.title?n.title+"\n":"")+((n.checklist?n.checklist.map(i=>(i.done?"☑ ":"☐ ")+i.text).join("\n"):(n.content||"")).replace(/<br\s*\/?>/gi,"\n").replace(/<[^>]+>/g,""));try{if(navigator.share)await navigator.share({title:n.title||"Not",text});else{await navigator.clipboard.writeText(text);notify(lang==="tr"?"Panoya kopyalandı":TL("Copied to clipboard",lang));}}catch(e){}setNoteSheet(null);};
 const toggleChecklist=(n)=>{setNotes(p=>p.map(x=>{if(x.id!==n.id)return x;if(x.checklist)return{...x,checklist:null,content:x.checklist.map(i=>i.text).join("<br>")};const items=(x.content||"").replace(/<br\s*\/?>/gi,"\n").replace(/<\/(div|p)>/gi,"\n").replace(/<[^>]+>/g,"").split("\n").filter(l=>l.trim()).map((l,i)=>({id:Date.now()+i,text:l.trim(),done:false}));return{...x,checklist:items.length?items:[{id:Date.now(),text:"",done:false}],content:""};}));setNoteSheet(null);};
 const setCheck=(nid,items)=>setNotes(p=>p.map(x=>x.id===nid?{...x,checklist:items}:x));
 const stopNoteRec=()=>{const r=noteRecRef.current;if(r){try{clearInterval(r.timer);if(r.mr&&r.mr.state!=="inactive")r.mr.stop();}catch(e){}noteRecRef.current=null;}setNoteRec(null);};
 const startNoteRec=async(nid)=>{
-  if(!navigator.mediaDevices||!window.MediaRecorder){notify(lang==="tr"?"Kayıt bu cihazda desteklenmiyor":"Recording not supported");return;}
+  if(!navigator.mediaDevices||!window.MediaRecorder){notify(lang==="tr"?"Kayıt bu cihazda desteklenmiyor":TL("Recording not supported",lang));return;}
   setNoteSheet(null);
   try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});const mr=new MediaRecorder(stream);const chunks=[];mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};mr.onstop=()=>{try{stream.getTracks().forEach(t=>t.stop());}catch(e){}const blob=new Blob(chunks,{type:mr.mimeType||"audio/webm"});const fr=new FileReader();fr.onload=()=>addNoteMedia(nid,{type:"audio",data:fr.result});fr.readAsDataURL(blob);};mr.start();noteRecRef.current={mr,nid,t0:Date.now(),timer:setInterval(()=>{const s=Math.floor((Date.now()-noteRecRef.current.t0)/1000);setNoteRec({id:nid,sec:s});if(s>=120)stopNoteRec();},250)};setNoteRec({id:nid,sec:0});}
-  catch(e){notify(lang==="tr"?"Mikrofon izni gerekli":"Microphone permission needed");}
+  catch(e){notify(lang==="tr"?"Mikrofon izni gerekli":TL("Microphone permission needed",lang));}
 };
 // Google Keep behaviour: a drawing opened on its own becomes its OWN note.
 // Opened from inside a note (editNote set), it is attached to that note instead.
@@ -5418,14 +5419,14 @@ const saveDrawing=(dataUrl)=>{
     const textless=host&&!(host.title||"").trim()
       &&!(host.content||"").replace(/<[^>]+>/g,"").trim()
       &&!(host.checklist&&host.checklist.some(i=>(i.text||"").trim()));
-    if(textless){setEditNote(null);setNoteSheet(null);notify(lang==="tr"?"✓ Çizim not olarak kaydedildi":"✓ Drawing saved as a note");}
+    if(textless){setEditNote(null);setNoteSheet(null);notify(lang==="tr"?"✓ Çizim not olarak kaydedildi":TL("✓ Drawing saved as a note",lang));}
     return;
   }
   const nid=Date.now();
   setNotes(p=>[{id:nid,title:"",content:"",color:"default",pinned:false},...p]);
   addNoteMedia(nid,{type:"drawing",data:dataUrl});
   setNoteDraw(false);
-  notify(lang==="tr"?"✓ Çizim yeni not olarak kaydedildi":"✓ Drawing saved as a new note");
+  notify(lang==="tr"?"✓ Çizim yeni not olarak kaydedildi":TL("✓ Drawing saved as a new note",lang));
 };
 const syncNoteBar=(el)=>{if(!el)return;if(el.scrollHeight>el.clientHeight+3){const h=Math.max(24,el.clientHeight*el.clientHeight/el.scrollHeight);const top=(el.scrollHeight-el.clientHeight)>0?el.scrollTop/(el.scrollHeight-el.clientHeight)*(el.clientHeight-h):0;setNoteBar(p=>(p.show&&Math.abs(p.h-h)<1&&Math.abs(p.top-top)<1)?p:{show:true,h,top});}else setNoteBar(p=>p.show?{show:false,h:0,top:0}:p);};
 const renderNotes=()=>{
@@ -5436,16 +5437,16 @@ const renderNotes=()=>{
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <span style={{fontWeight:700,fontSize:fs+2}}>📝 {t.notes}</span>
       <div style={{display:"flex",gap:6}}>
-        <button onClick={()=>{setEditNote(null);setNoteDraw(true);}} aria-label={lang==="tr"?"Yeni çizim notu":"New drawing note"} title={lang==="tr"?"Çizim notu":"Drawing note"} style={{...BP,padding:"7px 12px",background:"transparent",color:acTx,border:`1px solid ${ac}`}}>✏️</button>
+        <button onClick={()=>{setEditNote(null);setNoteDraw(true);}} aria-label={lang==="tr"?"Yeni çizim notu":TL("New drawing note",lang)} title={lang==="tr"?"Çizim notu":TL("Drawing note",lang)} style={{...BP,padding:"7px 12px",background:"transparent",color:acTx,border:`1px solid ${ac}`}}>✏️</button>
         <button onClick={()=>{const id=Date.now();setNotes(p=>[{id,title:"",content:"",color:"default",pinned:false},...p]);setEditNote(id);}} style={{...BP,padding:"7px 14px"}}>+ {t.nNote}</button>
       </div>
     </div>
     {notes.length>0&&<><div style={{display:"flex",gap:6,alignItems:"center"}}>
-      <input value={noteSearch} onChange={e=>setNoteSearch(e.target.value)} placeholder={lang==="tr"?"🔍 Notlarda ara…":"🔍 Search notes…"} style={{...IS,flex:1,padding:"7px 10px",fontSize:fs-1}}/>
+      <input value={noteSearch} onChange={e=>setNoteSearch(e.target.value)} placeholder={lang==="tr"?"🔍 Notlarda ara…":TL("🔍 Search notes…",lang)} style={{...IS,flex:1,padding:"7px 10px",fontSize:fs-1}}/>
       {noteSearch&&<button onClick={()=>setNoteSearch("")} aria-label="clear" style={{background:"none",border:"none",color:mt,cursor:"pointer",fontSize:16}}>✕</button>}
     </div>
-    <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>{[["all",lang==="tr"?"Tümü":"All"],["pinned",lang==="tr"?"📌 Sabitli":"📌 Pinned"]].map(([k,l])=><button key={k} onClick={()=>setNoteFilter(k)} style={{flexShrink:0,padding:"5px 12px",borderRadius:16,border:`1px solid ${noteFilter===k?ac:bd}`,background:noteFilter===k?ac:"transparent",color:noteFilter===k?onAc:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{l}</button>)}</div></>}
-    {sorted.length===0&&<div style={{textAlign:"center",color:mt,padding:24}}>{notes.length===0?t.noN:(lang==="tr"?"Eşleşen not yok":"No matching notes")}</div>}
+    <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>{[["all",lang==="tr"?"Tümü":TL("All",lang)],["pinned",lang==="tr"?"📌 Sabitli":TL("📌 Pinned",lang)]].map(([k,l])=><button key={k} onClick={()=>setNoteFilter(k)} style={{flexShrink:0,padding:"5px 12px",borderRadius:16,border:`1px solid ${noteFilter===k?ac:bd}`,background:noteFilter===k?ac:"transparent",color:noteFilter===k?onAc:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{l}</button>)}</div></>}
+    {sorted.length===0&&<div style={{textAlign:"center",color:mt,padding:24}}>{notes.length===0?t.noN:(lang==="tr"?"Eşleşen not yok":TL("No matching notes",lang))}</div>}
     <div style={{display:"flex",flexDirection:"column",gap:8}}>
       {sorted.map(n=>{
         const cbg=(n.bg&&noteBg(n.bg))?noteBg(n.bg):(noteColor(n.color)||(dark?"#12151c":"#ffffff"));
@@ -5454,7 +5455,7 @@ const renderNotes=()=>{
           {n.pinned&&<span style={{position:"absolute",top:6,right:8,fontSize:14}}>📌</span>}
           <div onClick={()=>{setEditNote(n.id);setNoteSheet(null);}} style={{cursor:"pointer",width:"100%",maxWidth:"100%",overflow:"hidden"}}>
             {n.title&&<div style={{fontWeight:700,marginBottom:4,color:dark?tc:"#1a1a1a",fontSize:fs+1,wordBreak:"break-word",overflowWrap:"anywhere"}}>{n.title}</div>}
-            {n.checklist?<div style={{display:"flex",flexDirection:"column",gap:2}}>{n.checklist.slice(0,8).map(it=><div key={it.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:fs,color:dark?mt:"#444"}}><span>{it.done?"☑️":"⬜"}</span><span style={{textDecoration:it.done?"line-through":"none",opacity:it.done?0.6:1,wordBreak:"break-word"}}>{it.text}</span></div>)}</div>:<div className="note-view" dangerouslySetInnerHTML={{__html:sanitizeHTML((n.content||"").trim())||(lang==="tr"?"Boş not":"Empty note")}} style={{fontSize:fs,color:dark?mt:"#444",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:180,overflow:"hidden"}}/>}
+            {n.checklist?<div style={{display:"flex",flexDirection:"column",gap:2}}>{n.checklist.slice(0,8).map(it=><div key={it.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:fs,color:dark?mt:"#444"}}><span>{it.done?"☑️":"⬜"}</span><span style={{textDecoration:it.done?"line-through":"none",opacity:it.done?0.6:1,wordBreak:"break-word"}}>{it.text}</span></div>)}</div>:<div className="note-view" dangerouslySetInnerHTML={{__html:sanitizeHTML((n.content||"").trim())||(lang==="tr"?"Boş not":TL("Empty note",lang))}} style={{fontSize:fs,color:dark?mt:"#444",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:180,overflow:"hidden"}}/>}
             {(()=>{const pics=media.filter(m=>m.type!=="audio");const auds=media.length-pics.length;
               if(!media.length)return null;
               return <div style={{marginTop:n.title||n.content?8:0}}>
@@ -5467,11 +5468,11 @@ const renderNotes=()=>{
             {(n.labels||[]).length>0&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>{n.labels.map(l=><span key={l} style={{fontSize:fs-3,background:`${ac}22`,color:acTx,borderRadius:10,padding:"2px 8px"}}>🏷️ {l}</span>)}</div>}
           </div>
           <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
-            <button onClick={()=>{setEditNote(n.id);setNoteSheet(null);}} style={{background:`${ac}22`,border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:fs-2,color:acTx,fontWeight:600}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button>
-            <button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} aria-label={lang==="tr"?"Sabitle":"Pin"} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,opacity:n.pinned?1:0.5}}>📌</button>
-            <button onClick={()=>copyTxt((n.content||"").replace(/<[^>]+>/g,""))} aria-label={lang==="tr"?"Kopyala":"Copy"} style={{background:"none",border:"none",cursor:"pointer",fontSize:14}}>📋</button>
+            <button onClick={()=>{setEditNote(n.id);setNoteSheet(null);}} style={{background:`${ac}22`,border:"none",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:fs-2,color:acTx,fontWeight:600}}>✏️ {lang==="tr"?"Düzenle":TL("Edit",lang)}</button>
+            <button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} aria-label={lang==="tr"?"Sabitle":TL("Pin",lang)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,opacity:n.pinned?1:0.5}}>📌</button>
+            <button onClick={()=>copyTxt((n.content||"").replace(/<[^>]+>/g,""))} aria-label={lang==="tr"?"Kopyala":TL("Copy",lang)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14}}>📋</button>
             <SpeakBtn text={(n.content||"").replace(/<[^>]+>/g,"")}/>
-            <button onClick={()=>toTrash("note",n)} aria-label={lang==="tr"?"Sil":"Delete"} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,color:dg,marginLeft:"auto"}}>🗑️</button>
+            <button onClick={()=>toTrash("note",n)} aria-label={lang==="tr"?"Sil":TL("Delete",lang)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,color:dg,marginLeft:"auto"}}>🗑️</button>
           </div>
         </div>);
       })}
@@ -5485,7 +5486,7 @@ const renderNotes=()=>{
 const renderContacts=()=>{
   const filtered=catF==="all"?contacts:contacts.filter(c=>c.category===catF);
   const currentCC=COUNTRY_CODES.find(c=>c.code===newC.countryCode)||COUNTRY_CODES[0];
-  const catOptions=[["doctor","👨‍⚕️",lang==="tr"?"Doktor":"Doctor"],["taxi","🚕",lang==="tr"?"Taksi":"Taxi"],["special","⭐",lang==="tr"?"Özel":"Special"],["emergency","🚨",lang==="tr"?"Acil":"Emergency"]];
+  const catOptions=[["doctor","👨‍⚕️",lang==="tr"?"Doktor":TL("Doctor",lang)],["taxi","🚕",lang==="tr"?"Taksi":TL("Taxi",lang)],["special","⭐",lang==="tr"?"Özel":TL("Special",lang)],["emergency","🚨",lang==="tr"?"Acil":TL("Emergency",lang)]];
   return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <span style={{fontWeight:700,fontSize:fs+2}}>📞 {t.contacts}</span>
@@ -5503,7 +5504,7 @@ const renderContacts=()=>{
         <div style={{fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.name}</div>
         <div style={{fontSize:fs-2,color:mt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{c.phone}</div>
       </div>
-      <a href={`tel:${(c.phone||"").replace(/[^\d+]/g,"")}`} title={lang==="tr"?"Ara":"Call"} aria-label={lang==="tr"?"Ara":"Call"} style={{display:"flex",alignItems:"center",justifyContent:"center",width:38,height:38,borderRadius:"50%",background:`linear-gradient(135deg,${sc},#1a7a6e)`,color:"#fff",textDecoration:"none",fontSize:18,flexShrink:0,boxShadow:"0 2px 6px rgba(0,0,0,.2)"}}>📞</a>
+      <a href={`tel:${(c.phone||"").replace(/[^\d+]/g,"")}`} title={lang==="tr"?"Ara":TL("Call",lang)} aria-label={lang==="tr"?"Ara":TL("Call",lang)} style={{display:"flex",alignItems:"center",justifyContent:"center",width:38,height:38,borderRadius:"50%",background:`linear-gradient(135deg,${sc},#1a7a6e)`,color:"#fff",textDecoration:"none",fontSize:18,flexShrink:0,boxShadow:"0 2px 6px rgba(0,0,0,.2)"}}>📞</a>
       <button onClick={()=>{
         // Edit — parse phone to countryCode + rest
         const parts=(c.phone||"").split(" ");
@@ -5516,11 +5517,11 @@ const renderContacts=()=>{
       <button onClick={()=>toTrash("contact",c)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:14}}>🗑️</button>
     </div>))}
     {showAddC&&<div style={{...CS,border:`2px solid ${ac}`}}>
-      <div style={{fontWeight:700,marginBottom:8,color:acTx}}>{editContactId?"✏️ "+(lang==="tr"?"Kişiyi Düzenle":"Edit Contact"):"+ "+(lang==="tr"?"Yeni Kişi":"New Contact")}</div>
+      <div style={{fontWeight:700,marginBottom:8,color:acTx}}>{editContactId?"✏️ "+(lang==="tr"?"Kişiyi Düzenle":TL("Edit Contact",lang)):"+ "+(lang==="tr"?"Yeni Kişi":TL("New Contact",lang))}</div>
       <input placeholder={t.nm} value={newC.name} onChange={e=>setNewC({...newC,name:e.target.value})} style={{...IS,marginBottom:6}}/>
       {/* CUSTOM COUNTRY PICKER - real flags */}
       <div style={{marginBottom:6,position:"relative"}}>
-        <div style={{fontSize:fs-3,color:mt,marginBottom:3}}>🌍 {lang==="tr"?"Ülke":"Country"}</div>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:3}}>🌍 {lang==="tr"?"Ülke":TL("Country",lang)}</div>
         <button type="button" onClick={()=>setShowCountryPicker(!showCountryPicker)} style={{...IS,width:"100%",padding:"9px 10px",display:"flex",alignItems:"center",gap:8,cursor:"pointer",background:dark?"#0d1520":"#f8fafc"}}>
           <Flag code={currentCC.flag} size={22}/>
           <span style={{flex:1,fontSize:fs-1,textAlign:"left",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{currentCC.n[lang]||currentCC.n.en}</span>
@@ -5540,7 +5541,7 @@ const renderContacts=()=>{
       </div>
       {/* Phone row - code + number */}
       <div style={{marginBottom:6}}>
-        <div style={{fontSize:fs-3,color:mt,marginBottom:3}}>📞 {lang==="tr"?"Telefon Numarası":"Phone Number"}</div>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:3}}>📞 {lang==="tr"?"Telefon Numarası":TL("Phone Number",lang)}</div>
         <div style={{display:"flex",gap:4,alignItems:"stretch"}}>
           <div style={{...IS,flex:"0 0 70px",textAlign:"center",fontWeight:700,padding:"9px 4px",color:acTx,background:dark?"#0d1520":"#eef2f7",display:"flex",alignItems:"center",justifyContent:"center"}}>{newC.countryCode}</div>
           <input placeholder="5XX XXX XXXX" value={newC.phone} onChange={e=>setNewC({...newC,phone:e.target.value.replace(/[^0-9\s]/g,"")})} type="tel" inputMode="numeric" style={{...IS,flex:1,letterSpacing:1,minWidth:0}}/>
@@ -5550,7 +5551,7 @@ const renderContacts=()=>{
         {catOptions.map(([k,ic,lb])=><option key={k} value={k}>{ic} {lb}</option>)}
       </select>
       <div style={{display:"flex",gap:6}}>
-        <button onClick={()=>{cDraftIdRef.current=null;setNewC(EMPTY_C);setEditContactId(null);setShowAddC(false);}} style={BP}>{lang==="tr"?"Bitti":"Done"}</button><button onClick={()=>{if(!editContactId&&cDraftIdRef.current!=null){const id=cDraftIdRef.current;setContacts(p=>p.filter(x=>x.id!==id));}cDraftIdRef.current=null;setNewC(EMPTY_C);setEditContactId(null);setShowAddC(false);}} style={{...BP,background:mt}}>{t.cancel}</button>
+        <button onClick={()=>{cDraftIdRef.current=null;setNewC(EMPTY_C);setEditContactId(null);setShowAddC(false);}} style={BP}>{lang==="tr"?"Bitti":TL("Done",lang)}</button><button onClick={()=>{if(!editContactId&&cDraftIdRef.current!=null){const id=cDraftIdRef.current;setContacts(p=>p.filter(x=>x.id!==id));}cDraftIdRef.current=null;setNewC(EMPTY_C);setEditContactId(null);setShowAddC(false);}} style={{...BP,background:mt}}>{t.cancel}</button>
       </div>
     </div>}
   </div>);
@@ -5558,12 +5559,12 @@ const renderContacts=()=>{
 
 const createGroup=()=>{
   const nm=(newGroup.name||"").trim();
-  if(!nm){notify(lang==="tr"?"Grup adı girin":"Enter a group name");return;}
+  if(!nm){notify(lang==="tr"?"Grup adı girin":TL("Enter a group name",lang));return;}
   setGroups(p=>[{id:Date.now(),name:nm,emoji:newGroup.emoji||"👥",members:newGroup.members||[],createdAt:new Date().toISOString()},...p]);
   setShowGroupModal(false);setNewGroup({name:"",emoji:"👥",members:[]});
-  notify(lang==="tr"?"✅ Grup oluşturuldu":"✅ Group created");
+  notify(lang==="tr"?"✅ Grup oluşturuldu":TL("✅ Group created",lang));
 };
-const deleteGroup=(g)=>{toTrash("group",g);notify(lang==="tr"?"Çöp kutusuna taşındı":"Moved to Trash");};
+const deleteGroup=(g)=>{toTrash("group",g);notify(lang==="tr"?"Çöp kutusuna taşındı":TL("Moved to Trash",lang));};
 const startCall=async(type,group)=>{
   setCallModal({type,group,status:"requesting"});
   try{
@@ -5584,37 +5585,37 @@ const renderCommunity=()=>{const me=pat.name||"Ben";const q=fold(commSearch.trim
   </div>
   <div style={{flexShrink:0}}>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
-      <span style={{fontWeight:700,fontSize:fs-1}}>{lang==="tr"?"Gruplar":"Groups"}</span>
-      <button onClick={()=>{setNewGroup({name:"",emoji:"👥",members:[]});setShowGroupModal(true);}} style={{...BP,padding:"5px 10px",fontSize:fs-2}}>+ {lang==="tr"?"Grup Oluştur":"Create Group"}</button>
+      <span style={{fontWeight:700,fontSize:fs-1}}>{lang==="tr"?"Gruplar":TL("Groups",lang)}</span>
+      <button onClick={()=>{setNewGroup({name:"",emoji:"👥",members:[]});setShowGroupModal(true);}} style={{...BP,padding:"5px 10px",fontSize:fs-2}}>+ {lang==="tr"?"Grup Oluştur":TL("Create Group",lang)}</button>
     </div>
     {groups.length===0
-      ? <div style={{fontSize:fs-3,color:mt,padding:"2px 0"}}>{lang==="tr"?"Henüz grup yok. WhatsApp gibi grup kurup sesli/görüntülü/konferans araması başlatabilirsin.":"No groups yet. Create one and start voice/video/conference calls like WhatsApp."}</div>
+      ? <div style={{fontSize:fs-3,color:mt,padding:"2px 0"}}>{lang==="tr"?"Henüz grup yok. WhatsApp gibi grup kurup sesli/görüntülü/konferans araması başlatabilirsin.":TL("No groups yet. Create one and start voice/video/conference calls like WhatsApp.",lang)}</div>
       : <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>{groups.map(g=>
           <div key={g.id} style={{flexShrink:0,minWidth:152,border:`1px solid ${bd}`,borderRadius:12,padding:"8px 10px",background:cd}}>
             <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:18}}>{g.emoji}</span><span style={{fontWeight:700,fontSize:fs-1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{g.name}</span></div>
-            <div style={{fontSize:fs-4,color:mt,marginBottom:6}}>{(g.members||[]).length} {lang==="tr"?"üye":"members"}</div>
+            <div style={{fontSize:fs-4,color:mt,marginBottom:6}}>{(g.members||[]).length} {lang==="tr"?"üye":TL("members",lang)}</div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              <button onClick={()=>startCall("voice",g)} aria-label={lang==="tr"?"Sesli arama":"Voice call"} title={lang==="tr"?"Sesli":"Voice"} style={{...BP,padding:"5px 8px",fontSize:14,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>📞</button>
-              <button onClick={()=>startCall("video",g)} aria-label={lang==="tr"?"Görüntülü arama":"Video call"} title={lang==="tr"?"Görüntülü":"Video"} style={{...BP,padding:"5px 8px",fontSize:14}}>📹</button>
-              <button onClick={()=>startCall("conf",g)} aria-label={lang==="tr"?"Konferans araması":"Conference call"} title={lang==="tr"?"Konferans":"Conference"} style={{...BP,padding:"5px 8px",fontSize:14,background:ac}}>👥</button>
+              <button onClick={()=>startCall("voice",g)} aria-label={lang==="tr"?"Sesli arama":TL("Voice call",lang)} title={lang==="tr"?"Sesli":TL("Voice",lang)} style={{...BP,padding:"5px 8px",fontSize:14,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>📞</button>
+              <button onClick={()=>startCall("video",g)} aria-label={lang==="tr"?"Görüntülü arama":TL("Video call",lang)} title={lang==="tr"?"Görüntülü":TL("Video",lang)} style={{...BP,padding:"5px 8px",fontSize:14}}>📹</button>
+              <button onClick={()=>startCall("conf",g)} aria-label={lang==="tr"?"Konferans araması":TL("Conference call",lang)} title={lang==="tr"?"Konferans":TL("Conference",lang)} style={{...BP,padding:"5px 8px",fontSize:14,background:ac}}>👥</button>
               <button onClick={()=>deleteGroup(g)} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:14,marginLeft:"auto"}}>🗑️</button>
             </div>
           </div>)}</div>}
   </div>
   <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
-    <input value={commSearch} onChange={e=>setCommSearch(e.target.value)} placeholder={lang==="tr"?"🔍 Mesajlarda ara…":"🔍 Search messages…"} style={{...IS,flex:1,padding:"7px 10px",fontSize:fs-1}}/>
+    <input value={commSearch} onChange={e=>setCommSearch(e.target.value)} placeholder={lang==="tr"?"🔍 Mesajlarda ara…":TL("🔍 Search messages…",lang)} style={{...IS,flex:1,padding:"7px 10px",fontSize:fs-1}}/>
     {commSearch&&<button onClick={()=>setCommSearch("")} aria-label="clear" style={{background:"none",border:"none",color:mt,cursor:"pointer",fontSize:16}}>✕</button>}
   </div>
-  <div style={{display:"flex",gap:6,flexShrink:0,overflowX:"auto",paddingBottom:2}}>{[["all",lang==="tr"?"Tümü":"All"],["mine",lang==="tr"?"Benim":"Mine"],["liked",lang==="tr"?"❤️ Beğendiklerim":"❤️ Liked"]].map(([k,l])=><button key={k} onClick={()=>setCommFilter(k)} style={{flexShrink:0,padding:"5px 12px",borderRadius:16,border:`1px solid ${commFilter===k?ac:bd}`,background:commFilter===k?ac:"transparent",color:commFilter===k?onAc:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{l}</button>)}</div>
-  {blockedUsers.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",flexShrink:0}}><span style={{fontSize:fs-3,color:mt}}>🚫 {lang==="tr"?"Engelli":"Blocked"}:</span>{blockedUsers.map(u=><button key={u} onClick={()=>setBlockedUsers(p=>p.filter(x=>x!==u))} title={lang==="tr"?"Engeli kaldır":"Unblock"} style={{fontSize:fs-3,padding:"3px 8px",borderRadius:12,border:`1px solid ${bd}`,background:"transparent",color:mt,cursor:"pointer"}}>{u} ✕</button>)}</div>}
+  <div style={{display:"flex",gap:6,flexShrink:0,overflowX:"auto",paddingBottom:2}}>{[["all",lang==="tr"?"Tümü":TL("All",lang)],["mine",lang==="tr"?"Benim":TL("Mine",lang)],["liked",lang==="tr"?"❤️ Beğendiklerim":TL("❤️ Liked",lang)]].map(([k,l])=><button key={k} onClick={()=>setCommFilter(k)} style={{flexShrink:0,padding:"5px 12px",borderRadius:16,border:`1px solid ${commFilter===k?ac:bd}`,background:commFilter===k?ac:"transparent",color:commFilter===k?onAc:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{l}</button>)}</div>
+  {blockedUsers.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",flexShrink:0}}><span style={{fontSize:fs-3,color:mt}}>🚫 {lang==="tr"?"Engelli":TL("Blocked",lang)}:</span>{blockedUsers.map(u=><button key={u} onClick={()=>setBlockedUsers(p=>p.filter(x=>x!==u))} title={lang==="tr"?"Engeli kaldır":TL("Unblock",lang)} style={{fontSize:fs-3,padding:"3px 8px",borderRadius:12,border:`1px solid ${bd}`,background:"transparent",color:mt,cursor:"pointer"}}>{u} ✕</button>)}</div>}
   <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>
-    {msgs.length===0&&<div style={{...CS,textAlign:"center",padding:20,color:mt}}>{lang==="tr"?"Henüz mesaj yok":"No messages yet"}</div>}
-    {msgs.length>0&&fmsgs.length===0&&<div style={{...CS,textAlign:"center",padding:20,color:mt}}>{lang==="tr"?"Eşleşen mesaj yok":"No matching messages"}</div>}
+    {msgs.length===0&&<div style={{...CS,textAlign:"center",padding:20,color:mt}}>{lang==="tr"?"Henüz mesaj yok":TL("No messages yet",lang)}</div>}
+    {msgs.length>0&&fmsgs.length===0&&<div style={{...CS,textAlign:"center",padding:20,color:mt}}>{lang==="tr"?"Eşleşen mesaj yok":TL("No matching messages",lang)}</div>}
     {fmsgs.map(m=>{
       const isMine=m.user===(pat.name||"Ben");
       return(<div key={m.id} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:isMine?"flex-end":"flex-start",background:isMine?`linear-gradient(135deg,${ac},${a2})`:cd,color:isMine?"#fff":tc,animation:"slideD .3s"}}>
         {!isMine&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}><span style={{fontWeight:700,color:acTx,fontSize:fs-2}}>{m.user}</span><span style={{fontSize:fs-3,color:mt}}>{m.time}</span></div>}
-        <div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{profanityFilter?maskProfanity(m.text):m.text}{m.edited&&<span style={{fontSize:fs-4,color:isMine?"rgba(255,255,255,.6)":mt,marginLeft:4}}>({lang==="tr"?"düzenlendi":"edited"})</span>}</div>
+        <div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{profanityFilter?maskProfanity(m.text):m.text}{m.edited&&<span style={{fontSize:fs-4,color:isMine?"rgba(255,255,255,.6)":mt,marginLeft:4}}>({lang==="tr"?"düzenlendi":TL("edited",lang)})</span>}</div>
         <div style={{display:"flex",gap:4,marginTop:4,flexWrap:"wrap"}}>
           <button onClick={()=>{
             const me=pat.name||"Ben";
@@ -5623,12 +5624,12 @@ const renderCommunity=()=>{const me=pat.name||"Ben";const q=fold(commSearch.trim
           <button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${isMine?"rgba(255,255,255,.3)":bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:isMine?"#fff":tc}}>📋</button>
           {!isMine&&<SpeakBtn text={m.text}/>}
           {!isMine&&<>
-            <button onClick={()=>{if(window.confirm(lang==="tr"?"Bu mesajı şikâyet et? Senin görünümünden gizlenecek.":"Report this message? It will be hidden from your view.")){setReportedMsgs(p=>p.includes(m.id)?p:[...p,m.id]);notify(lang==="tr"?"🚩 Mesaj şikâyet edildi ve gizlendi":"🚩 Reported and hidden");}}} title={lang==="tr"?"Şikâyet et":"Report"} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:mt}}>🚩</button>
-            <button onClick={()=>{if(window.confirm(lang==="tr"?("@"+m.user+" engellensin mi? Tüm mesajları gizlenecek."):("Block @"+m.user+"? All their messages will be hidden."))){setBlockedUsers(p=>p.includes(m.user)?p:[...p,m.user]);notify(lang==="tr"?("🚫 "+m.user+" engellendi"):("🚫 "+m.user+" blocked"));}}} title={lang==="tr"?"Engelle":"Block"} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:mt}}>🚫</button>
+            <button onClick={()=>{if(window.confirm(lang==="tr"?"Bu mesajı şikâyet et? Senin görünümünden gizlenecek.":TL("Report this message? It will be hidden from your view.",lang))){setReportedMsgs(p=>p.includes(m.id)?p:[...p,m.id]);notify(lang==="tr"?"🚩 Mesaj şikâyet edildi ve gizlendi":TL("🚩 Reported and hidden",lang));}}} title={lang==="tr"?"Şikâyet et":TL("Report",lang)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:mt}}>🚩</button>
+            <button onClick={()=>{if(window.confirm(lang==="tr"?("@"+m.user+" engellensin mi? Tüm mesajları gizlenecek."):("Block @"+m.user+"? All their messages will be hidden."))){setBlockedUsers(p=>p.includes(m.user)?p:[...p,m.user]);notify(lang==="tr"?("🚫 "+m.user+" engellendi"):("🚫 "+m.user+" blocked"));}}} title={lang==="tr"?"Engelle":TL("Block",lang)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:mt}}>🚫</button>
           </>}
           {isMine&&<>
-            <button onClick={()=>{const nv=prompt(lang==="tr"?"Mesajı düzenle:":"Edit message:",m.text);if(nv!==null&&nv.trim())setMsgs(p=>p.map(x=>x.id===m.id?{...x,text:nv,edited:true}:x));}} style={{background:"none",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>✏️</button>
-            <button onClick={()=>{toTrash("message",m);notify(lang==="tr"?"Çöp kutusuna taşındı":"Moved to Trash");}} style={{background:"none",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>🗑️</button>
+            <button onClick={()=>{const nv=prompt(lang==="tr"?"Mesajı düzenle:":TL("Edit message:",lang),m.text);if(nv!==null&&nv.trim())setMsgs(p=>p.map(x=>x.id===m.id?{...x,text:nv,edited:true}:x));}} style={{background:"none",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>✏️</button>
+            <button onClick={()=>{toTrash("message",m);notify(lang==="tr"?"Çöp kutusuna taşındı":TL("Moved to Trash",lang));}} style={{background:"none",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>🗑️</button>
           </>}
         </div>
         {isMine&&<div style={{fontSize:fs-3,color:"rgba(255,255,255,.7)",marginTop:3,textAlign:"right"}}>{m.time}</div>}
@@ -5644,14 +5645,14 @@ const renderCommunity=()=>{const me=pat.name||"Ben";const q=fold(commSearch.trim
   </div>
   {showGroupModal&&<div style={{position:"fixed",inset:0,zIndex:350,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setShowGroupModal(false)}>
     <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:400,borderRadius:16,padding:18,border:`1px solid ${ac}`,maxHeight:"85vh",overflowY:"auto"}}>
-      <div style={{fontWeight:700,fontSize:fs+2,marginBottom:12}}>👥 {lang==="tr"?"Grup Oluştur":"Create Group"}</div>
+      <div style={{fontWeight:700,fontSize:fs+2,marginBottom:12}}>👥 {lang==="tr"?"Grup Oluştur":TL("Create Group",lang)}</div>
       <div style={{display:"flex",gap:8,marginBottom:10}}>
         <select value={newGroup.emoji} onChange={e=>setNewGroup(g=>({...g,emoji:e.target.value}))} style={{...IS,width:64,fontSize:18}}>{["👥","👨‍👩‍👧","💊","🏥","❤️","🧑‍⚕️","🌸","👴","👪"].map(em=><option key={em} value={em}>{em}</option>)}</select>
-        <input value={newGroup.name} onChange={e=>setNewGroup(g=>({...g,name:e.target.value}))} placeholder={lang==="tr"?"Grup adı":"Group name"} style={{...IS,flex:1}}/>
+        <input value={newGroup.name} onChange={e=>setNewGroup(g=>({...g,name:e.target.value}))} placeholder={lang==="tr"?"Grup adı":TL("Group name",lang)} style={{...IS,flex:1}}/>
       </div>
-      <div style={{fontSize:fs-2,color:mt,marginBottom:6}}>{lang==="tr"?"Üyeler (rehberden seç)":"Members (from contacts)"}</div>
+      <div style={{fontSize:fs-2,color:mt,marginBottom:6}}>{lang==="tr"?"Üyeler (rehberden seç)":TL("Members (from contacts)",lang)}</div>
       <div style={{maxHeight:180,overflowY:"auto",marginBottom:12}}>
-        {contacts.length===0&&<div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Rehberde kişi yok — önce Rehber'e kişi ekleyin":"No contacts — add contacts first"}</div>}
+        {contacts.length===0&&<div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Rehberde kişi yok — önce Rehber'e kişi ekleyin":TL("No contacts — add contacts first",lang)}</div>}
         {contacts.map(c=>{const sel=(newGroup.members||[]).includes(c.id);return <div key={c.id} onClick={()=>setNewGroup(g=>({...g,members:sel?g.members.filter(id=>id!==c.id):[...(g.members||[]),c.id]}))} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 8px",borderRadius:8,cursor:"pointer",background:sel?`${ac}18`:"transparent",marginBottom:2}}>
           <span style={{width:18,height:18,borderRadius:4,border:`1px solid ${sel?ac:bd}`,background:sel?ac:"transparent",color:"#fff",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{sel?"✓":""}</span>
           <span style={{fontSize:fs-1,fontWeight:600}}>{c.name}</span><span style={{fontSize:fs-3,color:mt,marginLeft:"auto"}}>{c.phone}</span>
@@ -5659,35 +5660,35 @@ const renderCommunity=()=>{const me=pat.name||"Ben";const q=fold(commSearch.trim
       </div>
       <div style={{display:"flex",gap:8}}>
         <button onClick={()=>setShowGroupModal(false)} style={{...BP,flex:1,background:"transparent",border:`1px solid ${bd}`,color:mt}}>{t.cancel}</button>
-        <button onClick={createGroup} style={{...BP,flex:1}}>{lang==="tr"?"Oluştur":"Create"}</button>
+        <button onClick={createGroup} style={{...BP,flex:1}}>{lang==="tr"?"Oluştur":TL("Create",lang)}</button>
       </div>
     </div>
   </div>}
   {callModal&&<div style={{position:"fixed",inset:0,zIndex:351,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setCallModal(null)}>
     <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:360,borderRadius:16,padding:20,border:`1px solid ${ac}`,textAlign:"center"}}>
       <div style={{fontSize:40,marginBottom:8}}>{callModal.type==="voice"?"📞":callModal.type==="video"?"📹":"👥"}</div>
-      <div style={{fontWeight:700,fontSize:fs+1,marginBottom:6}}>{callModal.group?.emoji} {callModal.group?.name} · {callModal.type==="voice"?(lang==="tr"?"Sesli":"Voice"):callModal.type==="video"?(lang==="tr"?"Görüntülü":"Video"):(lang==="tr"?"Konferans":"Conference")}</div>
-      {callModal.status==="requesting"&&<div style={{color:mt,fontSize:fs-1}}>{lang==="tr"?"Kamera/mikrofon izni isteniyor...":"Requesting camera/microphone..."}</div>}
-      {callModal.status==="denied"&&<div style={{color:dg,fontSize:fs-1,lineHeight:1.5}}>{lang==="tr"?"Görüşme için kamera/mikrofon izni gerekli. Tarayıcı ayarlarından izin verip tekrar deneyin.":"Camera/microphone permission is required. Allow it in browser settings and try again."}</div>}
-      {callModal.status==="ready"&&<><div style={{color:sc,fontWeight:600,fontSize:fs}}>✓ {lang==="tr"?"Cihazın hazır (kamera/mikrofon erişimi verildi)":"Your device is ready"}</div>
-        <div style={{fontSize:fs-2,color:mt,marginTop:8,lineHeight:1.5}}>{lang==="tr"?"Gerçek zamanlı internet görüşmesi için güvenli bir görüşme sunucusu (WebRTC sinyal + TURN; konferans için medya sunucusu) gerekiyor. Bu altyapı kurulduğunda arama tam buradan başlayacak.":"A real-time call needs a secure server (WebRTC signaling + TURN; a media server for conference). Once it's set up, the call starts right here."}</div>
-        <div style={{fontSize:fs-3,color:mt,marginTop:8,padding:"3px 10px",borderRadius:8,background:`${mt}22`,display:"inline-block"}}>{lang==="tr"?"Yakında":"Coming soon"}</div></>}
-      <button onClick={()=>setCallModal(null)} style={{...BP,width:"100%",marginTop:16}}>{lang==="tr"?"Kapat":"Close"}</button>
+      <div style={{fontWeight:700,fontSize:fs+1,marginBottom:6}}>{callModal.group?.emoji} {callModal.group?.name} · {callModal.type==="voice"?(lang==="tr"?"Sesli":TL("Voice",lang)):callModal.type==="video"?(lang==="tr"?"Görüntülü":TL("Video",lang)):(lang==="tr"?"Konferans":TL("Conference",lang))}</div>
+      {callModal.status==="requesting"&&<div style={{color:mt,fontSize:fs-1}}>{lang==="tr"?"Kamera/mikrofon izni isteniyor...":TL("Requesting camera/microphone...",lang)}</div>}
+      {callModal.status==="denied"&&<div style={{color:dg,fontSize:fs-1,lineHeight:1.5}}>{lang==="tr"?"Görüşme için kamera/mikrofon izni gerekli. Tarayıcı ayarlarından izin verip tekrar deneyin.":TL("Camera/microphone permission is required. Allow it in browser settings and try again.",lang)}</div>}
+      {callModal.status==="ready"&&<><div style={{color:sc,fontWeight:600,fontSize:fs}}>✓ {lang==="tr"?"Cihazın hazır (kamera/mikrofon erişimi verildi)":TL("Your device is ready",lang)}</div>
+        <div style={{fontSize:fs-2,color:mt,marginTop:8,lineHeight:1.5}}>{lang==="tr"?"Gerçek zamanlı internet görüşmesi için güvenli bir görüşme sunucusu (WebRTC sinyal + TURN; konferans için medya sunucusu) gerekiyor. Bu altyapı kurulduğunda arama tam buradan başlayacak.":TL("A real-time call needs a secure server (WebRTC signaling + TURN; a media server for conference). Once it's set up, the call starts right here.",lang)}</div>
+        <div style={{fontSize:fs-3,color:mt,marginTop:8,padding:"3px 10px",borderRadius:8,background:`${mt}22`,display:"inline-block"}}>{lang==="tr"?"Yakında":TL("Coming soon",lang)}</div></>}
+      <button onClick={()=>setCallModal(null)} style={{...BP,width:"100%",marginTop:16}}>{lang==="tr"?"Kapat":TL("Close",lang)}</button>
     </div>
   </div>}
 </div>);};
 
-const q1Dynamic=pat.name?`${pat.name.split(" ")[0]}, ${t.q1.toLowerCase()} ${lang==="tr"?"Umarım iyisindir 💙":"Hope you are well 💙"}`:t.q1;
+const q1Dynamic=pat.name?`${pat.name.split(" ")[0]}, ${t.q1.toLowerCase()} ${lang==="tr"?"Umarım iyisindir 💙":TL("Hope you are well 💙",lang)}`:t.q1;
 const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,flex:"1 1 0",minHeight:0,height:0,position:"relative"}}>
   {voiceActive&&(()=>{
-    const label=isSpeak?(lang==="tr"?"konuşuyor…":"speaking…"):isListen?(lang==="tr"?"dinliyor…":"listening…"):chatThinking?(lang==="tr"?"düşünüyor…":"thinking…"):(lang==="tr"?"hazır":"ready");
+    const label=isSpeak?(lang==="tr"?"konuşuyor…":TL("speaking…",lang)):isListen?(lang==="tr"?"dinliyor…":TL("listening…",lang)):chatThinking?(lang==="tr"?"düşünüyor…":TL("thinking…",lang)):(lang==="tr"?"hazır":TL("ready",lang));
     const ringC=isListen?ac:isSpeak?"#34c3a3":chatThinking?"#e9a23b":ac;
     return <div style={{flexShrink:0,position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
       height:"42vh",minHeight:230,borderRadius:20,marginBottom:4,overflow:"hidden",
       background:dark?"radial-gradient(120% 90% at 50% 22%, #17324a 0%, #0d1a26 70%)":"radial-gradient(120% 90% at 50% 22%, #d9f1fb 0%, #eef6fb 72%)",
       border:`1px solid ${bd}`}}>
       {/* close voice mode */}
-      <button onClick={()=>stopVoiceMode()} aria-label={lang==="tr"?"Sesli sohbeti kapat":"Close voice chat"}
+      <button onClick={()=>stopVoiceMode()} aria-label={lang==="tr"?"Sesli sohbeti kapat":TL("Close voice chat",lang)}
         style={{position:"absolute",top:8,right:10,zIndex:2,background:"rgba(0,0,0,.28)",color:"#fff",border:"none",borderRadius:"50%",width:30,height:30,fontSize:16,cursor:"pointer",lineHeight:1}}>✕</button>
       {/* animated pulse ring behind the face while active */}
       <div style={{position:"absolute",width:220,height:220,borderRadius:"50%",border:`2px solid ${ringC}`,opacity:0.35,
@@ -5701,37 +5702,37 @@ const renderChat=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,f
       </div>
       {/* mic / stop control */}
       <button onClick={()=>{ if(isListen){ if(recRef.current){try{recRef.current.onend=null;recRef.current.abort();}catch(e){} recRef.current=null;setIsListen(false);} } else if(!isSpeak){ startVoice((txt)=>sendChat(txt),true); } }}
-        aria-label={isListen?(lang==="tr"?"Dinlemeyi durdur":"Stop listening"):(lang==="tr"?"Konuş":"Speak")}
+        aria-label={isListen?(lang==="tr"?"Dinlemeyi durdur":TL("Stop listening",lang)):(lang==="tr"?"Konuş":TL("Speak",lang))}
         style={{marginTop:8,display:"flex",alignItems:"center",gap:8,background:isListen?`${dg}`:BP.background,color:"#fff",border:"none",borderRadius:22,padding:"9px 18px",fontSize:fs,cursor:"pointer",boxShadow:`0 4px 14px ${ringC}44`}}>
         <span style={{fontSize:18}}>{isListen?"⏹️":"🎤"}</span>
-        <span>{isListen?(lang==="tr"?"Durdur":"Stop"):isSpeak?(lang==="tr"?"…":"…"):(lang==="tr"?"Konuş":"Speak")}</span>
+        <span>{isListen?(lang==="tr"?"Durdur":TL("Stop",lang)):isSpeak?(lang==="tr"?"…":TL("…",lang)):(lang==="tr"?"Konuş":TL("Speak",lang))}</span>
       </button>
     </div>;
   })()}
-  {chatM.length>2&&<div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}><input value={chatSearch} onChange={e=>setChatSearch(e.target.value)} placeholder={lang==="tr"?"🔍 Sohbette ara…":"🔍 Search chat…"} style={{...IS,flex:1,padding:"6px 10px",fontSize:fs-2}}/>{chatSearch&&<button onClick={()=>setChatSearch("")} aria-label="clear" style={{background:"none",border:"none",color:mt,cursor:"pointer",fontSize:15}}>✕</button>}</div>}
-  <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0,alignItems:"center"}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}<button onClick={()=>sendChat(lang==="tr"?"Nabzımı ölçmek istiyorum":"I want to measure my pulse")} style={{...pill(false),whiteSpace:"nowrap"}}>❤️ {lang==="tr"?"Nabzımı ölç":"Measure pulse"}</button>{chatM.length>0&&<button onClick={()=>{if(confirm(lang==="tr"?"Tüm sohbet geçmişi silinsin mi?":"Clear all chat history?"))setChatM([]);}} style={{...pill(false),marginLeft:"auto",flexShrink:0,color:dg,borderColor:dg+"44",whiteSpace:"nowrap"}}>🗑️ {lang==="tr"?"Temizle":"Clear"}</button>}</div>
+  {chatM.length>2&&<div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}><input value={chatSearch} onChange={e=>setChatSearch(e.target.value)} placeholder={lang==="tr"?"🔍 Sohbette ara…":TL("🔍 Search chat…",lang)} style={{...IS,flex:1,padding:"6px 10px",fontSize:fs-2}}/>{chatSearch&&<button onClick={()=>setChatSearch("")} aria-label="clear" style={{background:"none",border:"none",color:mt,cursor:"pointer",fontSize:15}}>✕</button>}</div>}
+  <div style={{display:"flex",gap:6,overflowX:"auto",flexShrink:0,alignItems:"center"}}>{[q1Dynamic,t.q2,t.q3].map(q=><button key={q} onClick={()=>sendChat(q)} style={pill(false)}>{q}</button>)}<button onClick={()=>sendChat(lang==="tr"?"Nabzımı ölçmek istiyorum":TL("I want to measure my pulse",lang))} style={{...pill(false),whiteSpace:"nowrap"}}>❤️ {lang==="tr"?"Nabzımı ölç":TL("Measure pulse",lang)}</button>{chatM.length>0&&<button onClick={()=>{if(confirm(lang==="tr"?"Tüm sohbet geçmişi silinsin mi?":TL("Clear all chat history?",lang)))setChatM([]);}} style={{...pill(false),marginLeft:"auto",flexShrink:0,color:dg,borderColor:dg+"44",whiteSpace:"nowrap"}}>🗑️ {lang==="tr"?"Temizle":TL("Clear",lang)}</button>}</div>
   {(()=>{
     if(chatNudgeOff)return null;
     const nowMin=new Date().getHours()*60+new Date().getMinutes();
     const overdue=meds.filter(m=>!m.taken&&m.time).filter(m=>{const[h,mm]=(m.time||"00:00").split(":").map(Number);return (h*60+mm)<nowMin;}).sort((a,b)=>((a.time||"")<(b.time||"")?-1:1));
     if(!overdue.length)return null;
-    const m0=overdue[0];const[h,mm]=(m0.time||"00:00").split(":").map(Number);const lateMin=nowMin-(h*60+mm);const lateTxt=lateMin>=60?`${Math.floor(lateMin/60)} ${lang==="tr"?"saat":"h"}`:`${lateMin} ${lang==="tr"?"dk":"min"}`;
+    const m0=overdue[0];const[h,mm]=(m0.time||"00:00").split(":").map(Number);const lateMin=nowMin-(h*60+mm);const lateTxt=lateMin>=60?`${Math.floor(lateMin/60)} ${lang==="tr"?"saat":TL("h",lang)}`:`${lateMin} ${lang==="tr"?"dk":TL("min",lang)}`;
     return <div style={{flexShrink:0,display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:10,background:`${ac}12`,border:`1px solid ${ac}55`}}>
       <span style={{fontSize:18}}>⏰</span>
       <div style={{flex:1,minWidth:0,fontSize:fs-1}}>{lang==="tr"?<>Bu arada <b>{m0.name}</b> ilacın {lateTxt} gecikmiş{overdue.length>1?` (+${overdue.length-1})`:""} — aldın mı?</>:<>By the way, your <b>{m0.name}</b> is {lateTxt} late{overdue.length>1?` (+${overdue.length-1})`:""} — taken it?</>}</div>
-      <button onClick={()=>{setMeds(p=>p.map(x=>x.id===m0.id?{...x,taken:true}:x));notify(lang==="tr"?`✓ ${m0.name} alındı olarak işaretlendi`:`✓ ${m0.name} marked as taken`);}} style={{...BP,padding:"5px 10px",fontSize:fs-2,flexShrink:0,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>✓ {lang==="tr"?"Aldım":"Took it"}</button>
+      <button onClick={()=>{setMeds(p=>p.map(x=>x.id===m0.id?{...x,taken:true}:x));notify(lang==="tr"?`✓ ${m0.name} alındı olarak işaretlendi`:`✓ ${m0.name} marked as taken`);}} style={{...BP,padding:"5px 10px",fontSize:fs-2,flexShrink:0,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>✓ {lang==="tr"?"Aldım":TL("Took it",lang)}</button>
       <button onClick={()=>setChatNudgeOff(true)} style={{background:"none",border:"none",color:mt,fontSize:fs+4,cursor:"pointer",lineHeight:1,padding:"0 2px",flexShrink:0}}>×</button>
     </div>;
   })()}
   <div className="chat-scroll" style={{flex:"1 1 0",minHeight:0,height:0,overflowY:"auto",overflowX:"hidden",display:"flex",flexDirection:"column",gap:8,WebkitOverflowScrolling:"touch",scrollbarWidth:"thin",scrollbarColor:`${ac}66 transparent`}}>
     {chatM.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><Avatar s={48}/><div style={{marginTop:8}}>{t.greet}</div></div>}
-    {chatSearch.trim()&&!chatM.some(m=>fold(m.text||"").includes(fold(chatSearch.trim())))&&<div style={{...CS,textAlign:"center",padding:16,color:mt}}>{lang==="tr"?"Eşleşen mesaj yok":"No matching messages"}</div>}
+    {chatSearch.trim()&&!chatM.some(m=>fold(m.text||"").includes(fold(chatSearch.trim())))&&<div style={{...CS,textAlign:"center",padding:16,color:mt}}>{lang==="tr"?"Eşleşen mesaj yok":TL("No matching messages",lang)}</div>}
     {(chatSearch.trim()?chatM.filter(m=>fold(m.text||"").includes(fold(chatSearch.trim()))):chatM).map((m,i)=>(<div key={i} className="msg-card" style={{...CS,padding:"8px 11px",borderRadius:12,flexShrink:0,maxWidth:"85%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?`linear-gradient(135deg,${ac},${a2})`:cd,color:m.role==="user"?"#fff":tc,animation:i===chatM.length-1?"slideD .3s":"none"}}>
       {m.role==="assistant"&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><Avatar s={22}/><span style={{fontSize:fs-2,color:acTx,fontWeight:700}}>AILVIE</span></div>}
       <div style={{wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.role==="assistant"?<MD text={m.text}/>:<span style={{whiteSpace:"pre-wrap"}}>{m.text}</span>}</div>
       <div style={{display:"flex",gap:4,marginTop:6,flexWrap:"wrap"}}>
         {m.role==="assistant"&&<>
-          {m.error&&m.retry&&<button onClick={()=>{setChatM(p=>p.filter((_,j)=>j!==i&&j!==i-1));sendChat(m.retry);}} style={{background:ac+"1e",border:`1px solid ${ac}`,borderRadius:6,padding:"3px 10px",cursor:"pointer",fontSize:fs-3,color:acTx,fontWeight:600}}>🔄 {lang==="tr"?"Tekrar dene":"Retry"}</button>}
+          {m.error&&m.retry&&<button onClick={()=>{setChatM(p=>p.filter((_,j)=>j!==i&&j!==i-1));sendChat(m.retry);}} style={{background:ac+"1e",border:`1px solid ${ac}`,borderRadius:6,padding:"3px 10px",cursor:"pointer",fontSize:fs-3,color:acTx,fontWeight:600}}>🔄 {lang==="tr"?"Tekrar dene":TL("Retry",lang)}</button>}
           <button onClick={()=>copyTxt(m.text)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:tc}}>📋</button>
           <SpeakBtn text={m.text} langCode={lang}/>
         </>}
@@ -5755,9 +5756,9 @@ const renderPrivacy=()=>(<div style={{display:"flex",flexDirection:"column",gap:
   <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={()=>goTo("settings")} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:20}}>←</button><span style={{fontWeight:700,fontSize:fs+2}}>📜 {t.privPolicy}</span></div>
   <div style={CS}><div style={{fontSize:fs-1,color:tc,lineHeight:1.6}}>
     <p style={{marginBottom:8}}><strong>AILVIE {t.privPolicy}</strong></p>
-    <p style={{marginBottom:8}}>{lang==="tr"?"AILVIE, kullanıcı verilerini gizlilik ve güvenlik çerçevesinde işler. Kişisel sağlık bilgileriniz yalnızca cihazınızda saklanır ve üçüncü taraflarla paylaşılmaz.":"AILVIE processes user data within a privacy and security framework. Your personal health data is stored only on your device and is not shared with third parties."}</p>
+    <p style={{marginBottom:8}}>{lang==="tr"?"AILVIE, kullanıcı verilerini gizlilik ve güvenlik çerçevesinde işler. Kişisel sağlık bilgileriniz yalnızca cihazınızda saklanır ve üçüncü taraflarla paylaşılmaz.":TL("AILVIE processes user data within a privacy and security framework. Your personal health data is stored only on your device and is not shared with third parties.",lang)}</p>
     <p style={{marginBottom:8}}>{lang==="tr"?"• Verileriniz şifrelenerek saklanır\n• Üçüncü taraf veri paylaşımı yapılmaz\n• İstediğiniz zaman verilerinizi silebilirsiniz\n• AI sohbetleri sunucularda saklanmaz\n• Konum verisi yalnızca izninizle kullanılır":"• Your data is stored encrypted\n• No third-party data sharing\n• You can delete your data anytime\n• AI chats are not stored on servers\n• Location data used only with your permission"}</p>
-    <p style={{marginBottom:8}}>{lang==="tr"?"Son güncelleme: Mart 2026":"Last updated: March 2026"}</p>
+    <p style={{marginBottom:8}}>{lang==="tr"?"Son güncelleme: Mart 2026":TL("Last updated: March 2026",lang)}</p>
   </div></div>
 </div>);
 
@@ -5767,7 +5768,7 @@ const renderTerms=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
   <div style={CS}><div style={{fontSize:fs-1,color:tc,lineHeight:1.6}}>
     <p style={{marginBottom:8}}><strong>AILVIE {t.terms}</strong></p>
     <p style={{marginBottom:8}}>{lang==="tr"?"1. AILVIE bir tıbbi teşhis aracı değildir. Verilen bilgiler yalnızca bilgilendirme amaçlıdır.\n2. AI yanıtları hatalı olabilir. Sağlık kararları için mutlaka doktora danışın.\n3. Kullanıcı, girdiği verilerden sorumludur.\n4. AILVIE, AI kaynaklı hatalardan doğan zararlardan hukuken sorumlu tutulamaz.\n5. Uygulama, kullanıcı verilerini üçüncü taraflarla paylaşmaz.\n6. Abonelik iptali istediğiniz zaman yapılabilir.":"1. AILVIE is not a medical diagnosis tool.\n2. AI responses may contain errors. Consult a doctor.\n3. Users are responsible for data they enter.\n4. AILVIE is not legally liable for AI errors.\n5. The app does not share data with third parties.\n6. Subscription can be cancelled anytime."}</p>
-    <p style={{marginBottom:8}}>{lang==="tr"?"Son güncelleme: Mart 2026":"Last updated: March 2026"}</p>
+    <p style={{marginBottom:8}}>{lang==="tr"?"Son güncelleme: Mart 2026":TL("Last updated: March 2026",lang)}</p>
   </div></div>
 </div>);
 
@@ -5781,11 +5782,11 @@ const renderAbout=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
     <div style={{fontSize:fs-1,color:mt,marginTop:8}}>{t.version}: 9.0.0</div>
     <div style={{fontSize:fs-1,color:mt}}>© 2025-2026 AILVIE Health Technologies</div>
     <div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:`${ac}11`,fontSize:fs-2,color:acTx}}>
-      {lang==="tr"?"60+ dil • 60+ ilaç DB • AI sohbet • Hasta karnesi • KVKK/GDPR uyumlu":"60+ languages • 60+ drug DB • AI chat • Patient card • GDPR compliant"}
+      {lang==="tr"?"60+ dil • 60+ ilaç DB • AI sohbet • Hasta karnesi • KVKK/GDPR uyumlu":TL("60+ languages • 60+ drug DB • AI chat • Patient card • GDPR compliant",lang)}
     </div>
   </div>
   <div style={CS}><div style={{fontSize:fs-1,color:tc,lineHeight:1.6}}>
-    {lang==="tr"?"AILVIE, yapay zeka destekli kişisel sağlık asistanı uygulamasıdır. Hastaların günlük sağlık takibini kolaylaştırmak, ilaç hatırlatmaları yapmak ve sağlık bilgilerini güvenli şekilde saklamak amacıyla geliştirilmiştir.":"AILVIE is an AI-powered personal health assistant app designed to help patients manage their daily health, receive medication reminders, and securely store health information."}
+    {lang==="tr"?"AILVIE, yapay zeka destekli kişisel sağlık asistanı uygulamasıdır. Hastaların günlük sağlık takibini kolaylaştırmak, ilaç hatırlatmaları yapmak ve sağlık bilgilerini güvenli şekilde saklamak amacıyla geliştirilmiştir.":TL("AILVIE is an AI-powered personal health assistant app designed to help patients manage their daily health, receive medication reminders, and securely store health information.",lang)}
   </div></div>
 </div>);
 
@@ -5796,25 +5797,25 @@ const renderAdmin=()=>(<div style={{display:"flex",flexDirection:"column",gap:8,
     <div style={{width:36,height:36,borderRadius:12,background:`linear-gradient(135deg,#f59e0b,#f97316)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>💬</div>
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontWeight:700,fontSize:fs+1}}>{t.adminCh}</div>
-      <div style={{fontSize:fs-3,color:sc}}>● Online • 🔒 {lang==="tr"?"Özel Kanal":"Private Channel"}</div>
+      <div style={{fontSize:fs-3,color:sc}}>● Online • 🔒 {lang==="tr"?"Özel Kanal":TL("Private Channel",lang)}</div>
     </div>
   </div>
   {/* Privacy Notice */}
   <div style={{padding:"6px 10px",borderRadius:8,background:`${ac}08`,border:`1px solid ${ac}22`,fontSize:fs-3,color:mt,display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
     <span>🔒</span>
-    <span>{lang==="tr"?"Bu kanaldaki mesajlar sadece size ve AILVIE destek ekibine görünür. Başka kullanıcılar göremez.":"Messages in this channel are visible only to you and AILVIE support. Other users cannot see them."}</span>
+    <span>{lang==="tr"?"Bu kanaldaki mesajlar sadece size ve AILVIE destek ekibine görünür. Başka kullanıcılar göremez.":TL("Messages in this channel are visible only to you and AILVIE support. Other users cannot see them.",lang)}</span>
   </div>
   <div style={{fontSize:fs-4,color:mt,textAlign:"center",flexShrink:0}}>ID: <span style={{fontFamily:"monospace"}}>{userId}</span></div>
   <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:180}}>
-    {adminMsgs.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><span style={{fontSize:40}}>💬</span><div style={{marginTop:8,color:mt}}>{t.adminWelcome||(lang==="tr"?"Merhaba! Size nasıl yardımcı olabilirim?":"Hello! How can I help you?")}</div></div>}
+    {adminMsgs.length===0&&<div style={{...CS,background:`${ac}08`,textAlign:"center",padding:20}}><span style={{fontSize:40}}>💬</span><div style={{marginTop:8,color:mt}}>{t.adminWelcome||(lang==="tr"?"Merhaba! Size nasıl yardımcı olabilirim?":TL("Hello! How can I help you?",lang))}</div></div>}
     {adminMsgs.length>0&&<div style={{display:"flex",justifyContent:"flex-end",flexShrink:0}}>
-      <button onClick={()=>{if(confirm(lang==="tr"?"Tüm mesajları silmek istediğinize emin misiniz?":"Are you sure you want to delete all messages?"))setAdminMsgs([]);}} style={{background:"none",border:`1px solid ${dg}44`,color:dg,borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:fs-2}}>🗑️ {lang==="tr"?"Tümünü Sil":"Clear All"}</button>
+      <button onClick={()=>{if(confirm(lang==="tr"?"Tüm mesajları silmek istediğinize emin misiniz?":TL("Are you sure you want to delete all messages?",lang)))setAdminMsgs([]);}} style={{background:"none",border:`1px solid ${dg}44`,color:dg,borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:fs-2}}>🗑️ {lang==="tr"?"Tümünü Sil":TL("Clear All",lang)}</button>
     </div>}
     {adminMsgs.map((m,i)=>(<div key={i} className="msg-card" style={{...CS,maxWidth:"85%",alignSelf:m.from==="user"?"flex-end":"flex-start",background:m.from==="user"?`linear-gradient(135deg,#f59e0b,#f97316)`:cd,color:m.from==="user"?"#fff":tc,animation:"slideD .3s"}}>
-      <div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.text}{m.edited&&<span style={{fontSize:fs-4,color:m.from==="user"?"rgba(255,255,255,.7)":mt,marginLeft:4,fontStyle:"italic"}}>({lang==="tr"?"düzenlendi":"edited"})</span>}</div>
+      <div style={{whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"anywhere",fontSize:fs}}>{m.text}{m.edited&&<span style={{fontSize:fs-4,color:m.from==="user"?"rgba(255,255,255,.7)":mt,marginLeft:4,fontStyle:"italic"}}>({lang==="tr"?"düzenlendi":TL("edited",lang)})</span>}</div>
       {m.from==="user"&&<div style={{display:"flex",gap:4,marginTop:4,flexWrap:"wrap"}}>
-        <button onClick={()=>{const nv=prompt(lang==="tr"?"Mesajı düzenle:":"Edit message:",m.text);if(nv!==null&&nv.trim())setAdminMsgs(p=>p.map((x,j)=>j===i?{...x,text:nv.trim(),edited:true}:x));}} style={{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>✏️ {lang==="tr"?"Düzenle":"Edit"}</button>
-        <button onClick={()=>setAdminMsgs(p=>p.filter((_,j)=>j!==i))} style={{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>🗑️ {lang==="tr"?"Sil":"Delete"}</button>
+        <button onClick={()=>{const nv=prompt(lang==="tr"?"Mesajı düzenle:":TL("Edit message:",lang),m.text);if(nv!==null&&nv.trim())setAdminMsgs(p=>p.map((x,j)=>j===i?{...x,text:nv.trim(),edited:true}:x));}} style={{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>✏️ {lang==="tr"?"Düzenle":TL("Edit",lang)}</button>
+        <button onClick={()=>setAdminMsgs(p=>p.filter((_,j)=>j!==i))} style={{background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,color:"#fff"}}>🗑️ {lang==="tr"?"Sil":TL("Delete",lang)}</button>
       </div>}
       <div style={{fontSize:fs-3,color:m.from==="user"?"rgba(255,255,255,.7)":mt,marginTop:4,textAlign:m.from==="user"?"right":"left"}}>{m.time}</div>
     </div>))}
@@ -5872,9 +5873,9 @@ const gotoStep=(key,i)=>{
   if(!g)return;
   stopGuideTimer();
   if(i>=g.steps.length){
-    if(voiceGuide)speakNow(lang==="tr"?"Yönlendirme tamamlandı.":"Guidance complete.");
+    if(voiceGuide)speakNow(lang==="tr"?"Yönlendirme tamamlandı.":TL("Guidance complete.",lang));
     setGuide(null);
-    notify(lang==="tr"?"✓ Yönlendirme tamamlandı":"✓ Guidance complete");
+    notify(lang==="tr"?"✓ Yönlendirme tamamlandı":TL("✓ Guidance complete",lang));
     return;
   }
   if(i<0)i=0;
@@ -5953,16 +5954,16 @@ const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:render
     <div style={{position:"fixed",inset:0,zIndex:5000,background:dark?"#0b1117":"#f7fafc",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,gap:14}}>
           <Avatar s={64}/>
           <div style={{fontWeight:800,fontSize:fs+6,color:"#e8a817",WebkitTextStroke:"0.8px #e8a817",fontFamily:"Rajdhani,sans-serif"}}>AILVIE</div>
-          <div style={{color:mt,fontSize:fs-1,textAlign:"center"}}>{lang==="tr"?"Sağlık verileriniz kilitli":"Your health data is locked"}</div>
+          <div style={{color:mt,fontSize:fs-1,textAlign:"center"}}>{lang==="tr"?"Sağlık verileriniz kilitli":TL("Your health data is locked",lang)}</div>
           <input type="password" inputMode="numeric" autoComplete="off" value={pinIn} maxLength={12}
             onChange={e=>{setPinIn(e.target.value.replace(/\D/g,""));setLockErr("");}}
             onKeyDown={e=>{if(e.key==="Enter")tryUnlockPIN();}}
-            placeholder={lang==="tr"?"PIN":"PIN"} autoFocus
+            placeholder={lang==="tr"?"PIN":TL("PIN",lang)} autoFocus
             style={{...IS,width:"100%",maxWidth:260,textAlign:"center",letterSpacing:6,fontSize:fs+4,padding:"12px"}}/>
           {lockErr&&<div style={{color:dg,fontSize:fs-2}}>{lockErr}</div>}
-          <button onClick={tryUnlockPIN} disabled={pinIn.length<4} style={{...BP,width:"100%",maxWidth:260,padding:"11px",opacity:pinIn.length<4?0.5:1}}>{lang==="tr"?"Kilidi Aç":"Unlock"}</button>
-          {lockCfg.credId&&<button onClick={tryUnlockBio} style={{...BP,width:"100%",maxWidth:260,padding:"11px",background:"transparent",color:acTx,border:`1px solid ${ac}`}}>🔐 {lang==="tr"?"Biyometrik ile aç":"Use biometrics"}</button>}
-          <div style={{color:mt,fontSize:fs-4,textAlign:"center",maxWidth:280,lineHeight:1.4,marginTop:6}}>{lang==="tr"?"PIN, sağlık verilerinizi bu cihazda göz önünden gizler (ekran kilidi) — tam şifreleme değildir. Daha güçlü koruma için cihazınızın kendi kilidini/şifrelemesini kullanın ve şifreli bir yedek saklayın.":"The PIN hides your health data on this device (a screen lock), not full encryption. For stronger protection, use your device's own lock/encryption and keep an encrypted backup."}</div>
+          <button onClick={tryUnlockPIN} disabled={pinIn.length<4} style={{...BP,width:"100%",maxWidth:260,padding:"11px",opacity:pinIn.length<4?0.5:1}}>{lang==="tr"?"Kilidi Aç":TL("Unlock",lang)}</button>
+          {lockCfg.credId&&<button onClick={tryUnlockBio} style={{...BP,width:"100%",maxWidth:260,padding:"11px",background:"transparent",color:acTx,border:`1px solid ${ac}`}}>🔐 {lang==="tr"?"Biyometrik ile aç":TL("Use biometrics",lang)}</button>}
+          <div style={{color:mt,fontSize:fs-4,textAlign:"center",maxWidth:280,lineHeight:1.4,marginTop:6}}>{lang==="tr"?"PIN, sağlık verilerinizi bu cihazda göz önünden gizler (ekran kilidi) — tam şifreleme değildir. Daha güçlü koruma için cihazınızın kendi kilidini/şifrelemesini kullanın ve şifreli bir yedek saklayın.":TL("The PIN hides your health data on this device (a screen lock), not full encryption. For stronger protection, use your device's own lock/encryption and keep an encrypted backup.",lang)}</div>
         </div>
   </div>);
 
@@ -6134,22 +6135,22 @@ return (
         {showNav&&<div style={{position:"fixed",inset:0,zIndex:9997,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowNav(false)}>
           <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:520,maxHeight:"88vh",borderRadius:"18px 18px 0 0",display:"flex",flexDirection:"column",overflow:"hidden"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
-              <span style={{fontWeight:800,fontSize:fs+3}}>🧭 {lang==="tr"?"Navigasyon":"Navigation"}</span>
-              <button onClick={()=>setShowNav(false)} aria-label={lang==="tr"?"Kapat":"Close"} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:tc}}>✕</button>
+              <span style={{fontWeight:800,fontSize:fs+3}}>🧭 {lang==="tr"?"Navigasyon":TL("Navigation",lang)}</span>
+              <button onClick={()=>setShowNav(false)} aria-label={lang==="tr"?"Kapat":TL("Close",lang)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:tc}}>✕</button>
             </div>
             <div style={{padding:"12px 16px",overflowY:"auto"}}>
-              <div style={{fontSize:fs-2,color:mt,marginBottom:10,lineHeight:1.5}}>{lang==="tr"?"Konumunu kullanıp yakındaki sağlık yerlerine yol tarifini harita uygulamasında açar.":"Uses your location to open directions to nearby health places in your maps app."}</div>
+              <div style={{fontSize:fs-2,color:mt,marginBottom:10,lineHeight:1.5}}>{lang==="tr"?"Konumunu kullanıp yakındaki sağlık yerlerine yol tarifini harita uygulamasında açar.":TL("Uses your location to open directions to nearby health places in your maps app.",lang)}</div>
               <div style={{display:"flex",gap:6,marginBottom:12}}>
-                <input value={navQuery} onChange={e=>setNavQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&navQuery.trim()){navTo(navQuery.trim());setNavQuery("");}}} placeholder={lang==="tr"?"Ara: kardiyoloji, fizyoterapi, göz…":"Search: cardiology, physio, eye…"} aria-label={lang==="tr"?"Yer ara":"Search place"} style={{...IS,flex:1}}/>
-                <button onClick={()=>{if(navQuery.trim()){navTo(navQuery.trim());setNavQuery("");}}} aria-label={lang==="tr"?"Ara":"Search"} style={{...BP,padding:"0 16px",fontSize:18}}>🔍</button>
+                <input value={navQuery} onChange={e=>setNavQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&navQuery.trim()){navTo(navQuery.trim());setNavQuery("");}}} placeholder={lang==="tr"?"Ara: kardiyoloji, fizyoterapi, göz…":TL("Search: cardiology, physio, eye…",lang)} aria-label={lang==="tr"?"Yer ara":TL("Search place",lang)} style={{...IS,flex:1}}/>
+                <button onClick={()=>{if(navQuery.trim()){navTo(navQuery.trim());setNavQuery("");}}} aria-label={lang==="tr"?"Ara":TL("Search",lang)} style={{...BP,padding:"0 16px",fontSize:18}}>🔍</button>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                 {NAV_PLACES().map(pl=><button key={pl.q} onClick={()=>navTo(pl.q)} aria-label={pl.label} style={{...BP,display:"flex",alignItems:"center",gap:8,padding:"12px 10px",fontSize:fs-2,textAlign:"left",background:"transparent",border:`1px solid ${bd}`,color:tc}}>
                   <span style={{fontSize:22,flexShrink:0}}>{pl.ic}</span><span style={{fontWeight:600}}>{pl.label}</span>
                 </button>)}
               </div>
-              <button onClick={()=>getLoc()} style={{...BP,width:"100%",marginTop:10,padding:"10px"}}>📍 {lang==="tr"?"Konumumu haritada göster":"Show my location"}</button>
-              <div style={{fontSize:fs-4,color:mt,marginTop:10,lineHeight:1.5}}>ℹ️ {lang==="tr"?"Yol tarifi cihazının harita uygulamasında açılır. Konum izni gerekebilir; acil durumda önce 112'yi arayın.":"Directions open in your device's maps app. Location permission may be needed; in an emergency call 112 first."}</div>
+              <button onClick={()=>getLoc()} style={{...BP,width:"100%",marginTop:10,padding:"10px"}}>📍 {lang==="tr"?"Konumumu haritada göster":TL("Show my location",lang)}</button>
+              <div style={{fontSize:fs-4,color:mt,marginTop:10,lineHeight:1.5}}>ℹ️ {lang==="tr"?"Yol tarifi cihazının harita uygulamasında açılır. Konum izni gerekebilir; acil durumda önce 112'yi arayın.":TL("Directions open in your device's maps app. Location permission may be needed; in an emergency call 112 first.",lang)}</div>
             </div>
           </div>
         </div>}
@@ -6169,44 +6170,44 @@ return (
         
   return(<><div style={{position:"fixed",inset:0,zIndex:9990,background:cbg}}/><div style={{position:"fixed",top:vvTop||0,left:0,right:0,height:vvh>0?vvh+"px":"100dvh",zIndex:9991,background:cbg,display:"flex",flexDirection:"column"}}>
             <div style={{display:"flex",alignItems:"center",gap:6,padding:"10px 8px 6px",flexShrink:0}}>
-              <button onClick={saveClose} aria-label={lang==="tr"?"Geri":"Back"} style={{...tbBtn}}>{svgIco(ICO.back,26)}</button>
+              <button onClick={saveClose} aria-label={lang==="tr"?"Geri":TL("Back",lang)} style={{...tbBtn}}>{svgIco(ICO.back,26)}</button>
               <div style={{flex:1}}/>
-              <button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} aria-label={lang==="tr"?"Sabitle":"Pin"} style={{...tbBtn,color:n.pinned?acTx:(dark?tc:"#333")}}>{svgIco(ICO.pin,22)}</button>
+              <button onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,pinned:!x.pinned}:x))} aria-label={lang==="tr"?"Sabitle":TL("Pin",lang)} style={{...tbBtn,color:n.pinned?acTx:(dark?tc:"#333")}}>{svgIco(ICO.pin,22)}</button>
             </div>
             <div onClick={()=>{if(noteSheet)setNoteSheet(null);}} style={{flex:"1 1 0",minHeight:0,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 18px 24px"}}>
               {media.length>0&&<div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:10}}>{media.map((m,mi)=><div key={mi} style={{position:"relative"}}>
               {m.type==="audio"
                 ? <audio controls src={m.data} style={{width:"100%"}}/>
                 : <img alt="" src={m.data} onClick={()=>{if(m.type==="drawing")setNoteDraw(true);}} style={{width:"100%",maxHeight:340,objectFit:"contain",borderRadius:12,display:"block",background:dark?"#0d1520":"#f4f6f9",cursor:m.type==="drawing"?"pointer":"default"}}/>}
-              <button onClick={()=>delNoteMedia(n.id,mi)} aria-label={lang==="tr"?"Kaldır":"Remove"} style={{position:"absolute",top:6,right:6,background:"rgba(0,0,0,.55)",color:"#fff",border:"none",borderRadius:"50%",width:28,height:28,cursor:"pointer",fontSize:15,lineHeight:1}}>✕</button>
+              <button onClick={()=>delNoteMedia(n.id,mi)} aria-label={lang==="tr"?"Kaldır":TL("Remove",lang)} style={{position:"absolute",top:6,right:6,background:"rgba(0,0,0,.55)",color:"#fff",border:"none",borderRadius:"50%",width:28,height:28,cursor:"pointer",fontSize:15,lineHeight:1}}>✕</button>
             </div>)}</div>}
-            <input value={n.title} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,title:e.target.value}:x))} placeholder={lang==="tr"?"Başlık":"Title"} style={{fontWeight:700,background:"transparent",border:"none",padding:"6px 0",color:dark?tc:"#1a1a1a",fontSize:fs+9,outline:"none",width:"100%",boxSizing:"border-box",direction:lang==="ar"?"rtl":"ltr"}}/>
+            <input value={n.title} onChange={e=>setNotes(p=>p.map(x=>x.id===n.id?{...x,title:e.target.value}:x))} placeholder={lang==="tr"?"Başlık":TL("Title",lang)} style={{fontWeight:700,background:"transparent",border:"none",padding:"6px 0",color:dark?tc:"#1a1a1a",fontSize:fs+9,outline:"none",width:"100%",boxSizing:"border-box",direction:lang==="ar"?"rtl":"ltr"}}/>
               {n.checklist?<div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>
                 {n.checklist.map(it=><div key={it.id} style={{display:"flex",alignItems:"center",gap:10}}>
-                  <button onClick={()=>setCheck(n.id,n.checklist.map(x=>x.id===it.id?{...x,done:!x.done}:x))} aria-label={lang==="tr"?"İşaretle":"Toggle"} style={{background:"none",border:"none",cursor:"pointer",fontSize:19,padding:0}}>{it.done?"☑️":"⬜"}</button>
-                  <input value={it.text} onChange={e=>setCheck(n.id,n.checklist.map(x=>x.id===it.id?{...x,text:e.target.value}:x))} placeholder={lang==="tr"?"Öğe":"Item"} style={{flex:1,background:"transparent",border:"none",outline:"none",color:dark?tc:"#333",fontSize:fs+4,textDecoration:it.done?"line-through":"none",opacity:it.done?0.55:1}}/>
-                  <button onClick={()=>setCheck(n.id,n.checklist.filter(x=>x.id!==it.id))} aria-label={lang==="tr"?"Kaldır":"Remove"} style={{background:"none",border:"none",cursor:"pointer",fontSize:15,color:mt}}>✕</button>
+                  <button onClick={()=>setCheck(n.id,n.checklist.map(x=>x.id===it.id?{...x,done:!x.done}:x))} aria-label={lang==="tr"?"İşaretle":TL("Toggle",lang)} style={{background:"none",border:"none",cursor:"pointer",fontSize:19,padding:0}}>{it.done?"☑️":"⬜"}</button>
+                  <input value={it.text} onChange={e=>setCheck(n.id,n.checklist.map(x=>x.id===it.id?{...x,text:e.target.value}:x))} placeholder={lang==="tr"?"Öğe":TL("Item",lang)} style={{flex:1,background:"transparent",border:"none",outline:"none",color:dark?tc:"#333",fontSize:fs+4,textDecoration:it.done?"line-through":"none",opacity:it.done?0.55:1}}/>
+                  <button onClick={()=>setCheck(n.id,n.checklist.filter(x=>x.id!==it.id))} aria-label={lang==="tr"?"Kaldır":TL("Remove",lang)} style={{background:"none",border:"none",cursor:"pointer",fontSize:15,color:mt}}>✕</button>
                 </div>)}
-                <button onClick={()=>setCheck(n.id,[...n.checklist,{id:Date.now(),text:"",done:false}])} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:fs+3,textAlign:"left",padding:"4px 0",display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:22}}>➕</span>{lang==="tr"?"Öğe ekle":"Add item"}</button>
-              </div>:<div contentEditable suppressContentEditableWarning className="note-edit" ref={el=>{editableRef.current=el;if(el&&el.dataset.nid!==String(n.id)){el.dataset.nid=String(n.id);el.innerHTML=n.content||"";noteHistRef.current={stack:[n.content||""],idx:0,nid:n.id};}}} onInput={e=>{const html=e.currentTarget.innerHTML;setNotes(p=>p.map(x=>x.id===n.id?{...x,content:html}:x));pushHist(n.id,html);}} data-ph={lang==="tr"?"Not al...":"Take a note..."} style={{minHeight:"50vh",outline:"none",color:dark?tc:"#333",fontSize:fs+5,lineHeight:1.55,wordBreak:"break-word",overflowWrap:"anywhere",whiteSpace:"pre-wrap",direction:lang==="ar"?"rtl":"ltr",marginTop:4}}/>}
+                <button onClick={()=>setCheck(n.id,[...n.checklist,{id:Date.now(),text:"",done:false}])} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:fs+3,textAlign:"left",padding:"4px 0",display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:22}}>➕</span>{lang==="tr"?"Öğe ekle":TL("Add item",lang)}</button>
+              </div>:<div contentEditable suppressContentEditableWarning className="note-edit" ref={el=>{editableRef.current=el;if(el&&el.dataset.nid!==String(n.id)){el.dataset.nid=String(n.id);el.innerHTML=n.content||"";noteHistRef.current={stack:[n.content||""],idx:0,nid:n.id};}}} onInput={e=>{const html=e.currentTarget.innerHTML;setNotes(p=>p.map(x=>x.id===n.id?{...x,content:html}:x));pushHist(n.id,html);}} data-ph={lang==="tr"?"Not al...":TL("Take a note...",lang)} style={{minHeight:"50vh",outline:"none",color:dark?tc:"#333",fontSize:fs+5,lineHeight:1.55,wordBreak:"break-word",overflowWrap:"anywhere",whiteSpace:"pre-wrap",direction:lang==="ar"?"rtl":"ltr",marginTop:4}}/>}
               
               {(n.labels||[]).length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:12}}>{n.labels.map(l=><span key={l} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,labels:(x.labels||[]).filter(y=>y!==l)}:x))} style={{fontSize:fs-2,background:`${ac}22`,color:acTx,borderRadius:12,padding:"4px 10px",cursor:"pointer"}}>🏷️ {l} ✕</span>)}</div>}
             </div>
-            {noteSheet==="add"&&<div style={sheetBox}>{[["📷",lang==="tr"?"Fotoğraf çek":"Take photo",()=>pickNoteImage(n.id,true)],["🖼️",lang==="tr"?"Resim ekle":"Add image",()=>pickNoteImage(n.id,false)],["🖌️",lang==="tr"?"Çizim":"Drawing",()=>{setNoteSheet(null);setNoteDraw(true);}],["🎤",lang==="tr"?"Kayıt":"Recording",()=>startNoteRec(n.id)],["⌨️",lang==="tr"?"Sesli yazma":"Voice typing",()=>{setNoteSheet(null);startVoice((txt)=>{const el=editableRef.current;if(!el)return;el.focus();
+            {noteSheet==="add"&&<div style={sheetBox}>{[["📷",lang==="tr"?"Fotoğraf çek":TL("Take photo",lang),()=>pickNoteImage(n.id,true)],["🖼️",lang==="tr"?"Resim ekle":TL("Add image",lang),()=>pickNoteImage(n.id,false)],["🖌️",lang==="tr"?"Çizim":TL("Drawing",lang),()=>{setNoteSheet(null);setNoteDraw(true);}],["🎤",lang==="tr"?"Kayıt":TL("Recording",lang),()=>startNoteRec(n.id)],["⌨️",lang==="tr"?"Sesli yazma":TL("Voice typing",lang),()=>{setNoteSheet(null);startVoice((txt)=>{const el=editableRef.current;if(!el)return;el.focus();
   // place the caret at the very end so dictated text is appended, not inserted at a stale caret
   try{const range=document.createRange();range.selectNodeContents(el);range.collapse(false);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);}catch(e){}
   const pad=(el.textContent&&!el.textContent.endsWith(" ")?" ":"");
   try{document.execCommand("insertText",false,pad+txt);}catch(e){el.innerHTML=(el.innerHTML||"")+pad+txt;}
-  el.dispatchEvent(new Event("input",{bubbles:true}));});}],["☑️",lang==="tr"?"Onay kutuları":"Checkboxes",()=>toggleChecklist(n)]].map(([ic,lb,fn])=><button key={lb} onClick={fn} style={sheetRow}><span style={{fontSize:20,width:24,textAlign:"center",flexShrink:0}}>{ic}</span>{lb}</button>)}</div>}
+  el.dispatchEvent(new Event("input",{bubbles:true}));});}],["☑️",lang==="tr"?"Onay kutuları":TL("Checkboxes",lang),()=>toggleChecklist(n)]].map(([ic,lb,fn])=><button key={lb} onClick={fn} style={sheetRow}><span style={{fontSize:20,width:24,textAlign:"center",flexShrink:0}}>{ic}</span>{lb}</button>)}</div>}
             {noteSheet==="color"&&<div style={{...sheetBox,padding:"10px"}}>
-              <div style={{fontWeight:700,fontSize:fs-1,marginBottom:8}}>{lang==="tr"?"Renk":"Color"}</div>
+              <div style={{fontWeight:700,fontSize:fs-1,marginBottom:8}}>{lang==="tr"?"Renk":TL("Color",lang)}</div>
               <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:10}}>{NCOLS.map(c=>{const sel=n.color===c.k||(c.k==="default"&&(!n.color||n.color==="default"));const sw=c.k==="default"?(dark?"#202124":"#fff"):(dark?c.d:c.l);return <button key={c.k} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,color:c.k}:x))} aria-label={c.k} style={{width:42,height:42,borderRadius:21,background:sw,border:sel?`3px solid ${ac}`:`2px solid ${dark?"#ffffff2e":"#00000022"}`,cursor:"pointer",flexShrink:0,color:dark?"#fff":"#333",fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17}}>{sel?"✓":(c.k==="default"?"🚫":"")}</button>;})}</div>
-              <div style={{fontWeight:700,fontSize:fs-1,margin:"2px 0 8px"}}>{lang==="tr"?"Arka plan":"Background"}</div>
+              <div style={{fontWeight:700,fontSize:fs-1,margin:"2px 0 8px"}}>{lang==="tr"?"Arka plan":TL("Background",lang)}</div>
               <div style={{display:"flex",gap:10,overflowX:"auto"}}>{NOTE_BGS.map(bgp=><button key={bgp.k} onClick={()=>setNotes(p=>p.map(x=>x.id===n.id?{...x,bg:bgp.k==="none"?null:bgp.k}:x))} aria-label={bgp.k} style={{width:48,height:48,borderRadius:24,background:bgp.g||(dark?"#0a0e14":"#eee"),border:((n.bg||"none")===bgp.k)?`3px solid ${ac}`:`2px solid ${bd}`,cursor:"pointer",flexShrink:0,color:tc,fontSize:17}}>{bgp.k==="none"?"🚫":""}</button>)}</div>
             </div>}
             {noteSheet==="more"&&<div style={sheetBox}>
-              <div style={{fontSize:fs-2,color:mt,padding:"6px 16px 8px"}}>{lang==="tr"?"Az önce düzenlendi":"Edited just now"}</div>
-              {[["🗑️",lang==="tr"?"Sil":"Delete",()=>{trashNote(n);setEditNote(null);setNoteSheet(null);}],["📋",lang==="tr"?"Kopya oluştur":"Make a copy",()=>duplicateNote(n)],["📤",lang==="tr"?"Gönder":"Send",()=>shareNote(n)],["👥",lang==="tr"?"Ortak çalışan":"Collaborator",()=>{notify(lang==="tr"?"Ortak çalışma yakında — hesap/sunucu gerekli":"Collaboration coming soon — needs account/server");setNoteSheet(null);}],["🏷️",lang==="tr"?"Etiketler":"Labels",()=>{const l=prompt(lang==="tr"?"Etiket adı:":"Label name:");if(l&&l.trim())setNotes(p=>p.map(x=>x.id===n.id?{...x,labels:[...new Set([...(x.labels||[]),l.trim()])]}:x));setNoteSheet(null);}],["❓",lang==="tr"?"Yardım ve geri bildirim":"Help & feedback",()=>{setNoteSheet(null);setEditNote(null);goTo("admin");}]].map(([ic,lb,fn])=><button key={lb} onClick={fn} style={sheetRow}><span style={{fontSize:20,width:24,textAlign:"center",flexShrink:0}}>{ic}</span>{lb}</button>)}
+              <div style={{fontSize:fs-2,color:mt,padding:"6px 16px 8px"}}>{lang==="tr"?"Az önce düzenlendi":TL("Edited just now",lang)}</div>
+              {[["🗑️",lang==="tr"?"Sil":TL("Delete",lang),()=>{trashNote(n);setEditNote(null);setNoteSheet(null);}],["📋",lang==="tr"?"Kopya oluştur":TL("Make a copy",lang),()=>duplicateNote(n)],["📤",lang==="tr"?"Gönder":TL("Send",lang),()=>shareNote(n)],["👥",lang==="tr"?"Ortak çalışan":TL("Collaborator",lang),()=>{notify(lang==="tr"?"Ortak çalışma yakında — hesap/sunucu gerekli":TL("Collaboration coming soon — needs account/server",lang));setNoteSheet(null);}],["🏷️",lang==="tr"?"Etiketler":TL("Labels",lang),()=>{const l=prompt(lang==="tr"?"Etiket adı:":TL("Label name:",lang));if(l&&l.trim())setNotes(p=>p.map(x=>x.id===n.id?{...x,labels:[...new Set([...(x.labels||[]),l.trim()])]}:x));setNoteSheet(null);}],["❓",lang==="tr"?"Yardım ve geri bildirim":TL("Help & feedback",lang),()=>{setNoteSheet(null);setEditNote(null);goTo("admin");}]].map(([ic,lb,fn])=><button key={lb} onClick={fn} style={sheetRow}><span style={{fontSize:20,width:24,textAlign:"center",flexShrink:0}}>{ic}</span>{lb}</button>)}
             </div>}
             {noteSheet==="format"?<div style={{display:"flex",alignItems:"center",gap:2,padding:"6px",borderTop:`1px solid ${dark?bd:"#00000018"}`,flexShrink:0,background:cbg,justifyContent:"center"}}>
               <button onMouseDown={noP} onClick={()=>fmt("formatBlock","H1")} style={fbtn(blk==="h1")}>H1</button>
@@ -6217,15 +6218,15 @@ return (
               <button onMouseDown={noP} onClick={()=>fmt("italic")} style={fbtn(fmtState.i,{fontStyle:"italic"})}>I</button>
               <button onMouseDown={noP} onClick={()=>fmt("underline")} style={fbtn(fmtState.u,{textDecoration:"underline"})}>U</button>
               <span style={{width:1,height:26,background:bd,margin:"0 8px"}}/>
-              <button onMouseDown={noP} onClick={()=>setNoteSheet(null)} aria-label={lang==="tr"?"Kapat":"Close"} style={fbtn(false)}>✕</button>
+              <button onMouseDown={noP} onClick={()=>setNoteSheet(null)} aria-label={lang==="tr"?"Kapat":TL("Close",lang)} style={fbtn(false)}>✕</button>
             </div>:<div style={{display:"flex",alignItems:"center",gap:2,padding:"6px 8px",borderTop:`1px solid ${dark?bd:"#00000018"}`,flexShrink:0,background:cbg}}>
-              <button onClick={()=>setNoteSheet(noteSheet==="add"?null:"add")} aria-label={lang==="tr"?"Ekle":"Add"} style={{...tbBtn,background:noteSheet==="add"?active:"none"}}>{svgIco(ICO.add)}</button>
-              <button onClick={()=>setNoteSheet(noteSheet==="color"?null:"color")} aria-label={lang==="tr"?"Renk ve arka plan":"Color & background"} style={{...tbBtn,background:noteSheet==="color"?active:"none"}}>{svgIco(ICO.palette)}</button>
-              <button onMouseDown={noP} onClick={()=>setNoteSheet("format")} aria-label={lang==="tr"?"Biçimlendirme":"Formatting"} style={{...tbBtn,background:noteSheet==="format"?active:"none"}}>{svgIco(ICO.format)}</button>
+              <button onClick={()=>setNoteSheet(noteSheet==="add"?null:"add")} aria-label={lang==="tr"?"Ekle":TL("Add",lang)} style={{...tbBtn,background:noteSheet==="add"?active:"none"}}>{svgIco(ICO.add)}</button>
+              <button onClick={()=>setNoteSheet(noteSheet==="color"?null:"color")} aria-label={lang==="tr"?"Renk ve arka plan":TL("Color & background",lang)} style={{...tbBtn,background:noteSheet==="color"?active:"none"}}>{svgIco(ICO.palette)}</button>
+              <button onMouseDown={noP} onClick={()=>setNoteSheet("format")} aria-label={lang==="tr"?"Biçimlendirme":TL("Formatting",lang)} style={{...tbBtn,background:noteSheet==="format"?active:"none"}}>{svgIco(ICO.format)}</button>
               <div style={{flex:1}}/>
-              <button onMouseDown={noP} onClick={()=>canU&&doUndo(n.id)} aria-label={lang==="tr"?"Geri al":"Undo"} style={{...tbBtn,opacity:canU?1:0.3}}>{svgIco(ICO.undo)}</button>
-              <button onMouseDown={noP} onClick={()=>canR&&doRedo(n.id)} aria-label={lang==="tr"?"İleri al":"Redo"} style={{...tbBtn,opacity:canR?1:0.3}}>{svgIco(ICO.redo)}</button>
-              <button onClick={()=>setNoteSheet(noteSheet==="more"?null:"more")} aria-label={lang==="tr"?"Diğer":"More"} style={{...tbBtn,background:noteSheet==="more"?active:"none"}}>{svgIco(ICO.more)}</button>
+              <button onMouseDown={noP} onClick={()=>canU&&doUndo(n.id)} aria-label={lang==="tr"?"Geri al":TL("Undo",lang)} style={{...tbBtn,opacity:canU?1:0.3}}>{svgIco(ICO.undo)}</button>
+              <button onMouseDown={noP} onClick={()=>canR&&doRedo(n.id)} aria-label={lang==="tr"?"İleri al":TL("Redo",lang)} style={{...tbBtn,opacity:canR?1:0.3}}>{svgIco(ICO.redo)}</button>
+              <button onClick={()=>setNoteSheet(noteSheet==="more"?null:"more")} aria-label={lang==="tr"?"Diğer":TL("More",lang)} style={{...tbBtn,background:noteSheet==="more"?active:"none"}}>{svgIco(ICO.more)}</button>
             </div>}
           </div></>);
         })()}
@@ -6273,23 +6274,23 @@ return (
                   if(el&&D.strokes.length)saveDrawing(el.toDataURL("image/png"));
                   else setNoteDraw(false);
                   D.strokes=[];D.redo=[];D.showColors=false;}}
-                aria-label={lang==="tr"?"Kaydet ve geri dön":"Save and go back"}
+                aria-label={lang==="tr"?"Kaydet ve geri dön":TL("Save and go back",lang)}
                 style={{background:"none",border:"none",color:ONCHROME,cursor:"pointer",width:46,height:46,fontSize:23}}>←</button>
               <div style={{flex:1}}/>
               <button disabled={!D.strokes.length} onClick={()=>{if(!D.strokes.length)return;D.redo.push(D.strokes.pop());redraw(drawCanvasRef.current);bump();}}
-                aria-label={lang==="tr"?"Geri al":"Undo"}
+                aria-label={lang==="tr"?"Geri al":TL("Undo",lang)}
                 style={{background:"none",border:"none",color:D.strokes.length?ONCHROME:DIM,cursor:"pointer",width:46,height:46,fontSize:21}}>↺</button>
               <button disabled={!D.redo.length} onClick={()=>{if(!D.redo.length)return;D.strokes.push(D.redo.pop());redraw(drawCanvasRef.current);bump();}}
-                aria-label={lang==="tr"?"İleri al":"Redo"}
+                aria-label={lang==="tr"?"İleri al":TL("Redo",lang)}
                 style={{background:"none",border:"none",color:D.redo.length?ONCHROME:DIM,cursor:"pointer",width:46,height:46,fontSize:21}}>↻</button>
-              <button onClick={()=>{D.showMenu=!D.showMenu;bump();}} aria-label={lang==="tr"?"Diğer":"More"}
+              <button onClick={()=>{D.showMenu=!D.showMenu;bump();}} aria-label={lang==="tr"?"Diğer":TL("More",lang)}
                 style={{background:"none",border:"none",color:ONCHROME,cursor:"pointer",width:46,height:46,fontSize:20,position:"relative"}}>⋮</button>
             </div>
             {D.showMenu&&<div style={{position:"absolute",top:52,right:10,zIndex:2,background:"#2b2d31",borderRadius:10,padding:6,boxShadow:"0 6px 22px rgba(0,0,0,.5)"}}>
               <button onClick={()=>{D.strokes=[];D.redo=[];D.showMenu=false;redraw(drawCanvasRef.current);bump();}}
-                style={{background:"none",border:"none",color:ONCHROME,padding:"10px 16px",cursor:"pointer",display:"block",width:"100%",textAlign:"left",fontSize:fs-1}}>{lang==="tr"?"Tümünü sil":"Clear all"}</button>
+                style={{background:"none",border:"none",color:ONCHROME,padding:"10px 16px",cursor:"pointer",display:"block",width:"100%",textAlign:"left",fontSize:fs-1}}>{lang==="tr"?"Tümünü sil":TL("Clear all",lang)}</button>
               <button onClick={()=>{D.strokes=[];D.redo=[];D.showMenu=false;setNoteDraw(false);}}
-                style={{background:"none",border:"none",color:ONCHROME,padding:"10px 16px",cursor:"pointer",display:"block",width:"100%",textAlign:"left",fontSize:fs-1}}>{lang==="tr"?"Vazgeç":"Discard"}</button>
+                style={{background:"none",border:"none",color:ONCHROME,padding:"10px 16px",cursor:"pointer",display:"block",width:"100%",textAlign:"left",fontSize:fs-1}}>{lang==="tr"?"Vazgeç":TL("Discard",lang)}</button>
             </div>}
             {/* white paper */}
             <canvas ref={el=>{
@@ -6328,7 +6329,7 @@ return (
             {/* colour strip (opens when tapping the active tool) */}
             {D.showColors&&<div style={{flexShrink:0,background:CHROME,display:"flex",gap:14,overflowX:"auto",WebkitOverflowScrolling:"touch",padding:"10px 12px 2px"}}>
               {palette.map(col=>(
-                <button key={col} onClick={()=>{D.color=col;D.erase=false;D.showColors=false;bump();}} aria-label={lang==="tr"?"Renk":"Color"}
+                <button key={col} onClick={()=>{D.color=col;D.erase=false;D.showColors=false;bump();}} aria-label={lang==="tr"?"Renk":TL("Color",lang)}
                   style={{width:30,height:30,minWidth:30,borderRadius:"50%",background:col,cursor:"pointer",flexShrink:0,
                     border:(D.color||inkDefault)===col?"3px solid #8ab4f8":(col==="#ffffff"?"1px solid #9aa0a6":"1px solid #5f6368")}}/>
               ))}
@@ -6338,33 +6339,33 @@ return (
               {/* Always-visible colour swatch: tapping it opens the palette. Previously the palette
                   only opened by re-tapping the active tool (Keep-style), which users could not find. */}
               <button onClick={()=>{D.showColors=!D.showColors;D.erase=false;bump();}}
-                aria-label={lang==="tr"?"Renk seç":"Pick colour"} title={lang==="tr"?"Renk":"Colour"}
+                aria-label={lang==="tr"?"Renk seç":TL("Pick colour",lang)} title={lang==="tr"?"Renk":TL("Colour",lang)}
                 style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}>
                 <span style={{width:26,height:26,borderRadius:"50%",background:(D.color||inkDefault),
                   border:D.showColors?"3px solid #8ab4f8":((D.color||inkDefault)==="#ffffff"?"1px solid #9aa0a6":"2px solid #e8eaed"),
                   boxShadow:"0 0 0 1px rgba(0,0,0,.25)"}}/>
-                <span style={{fontSize:10,color:"#e8eaed"}}>{lang==="tr"?"Renk":"Colour"}</span>
+                <span style={{fontSize:10,color:"#e8eaed"}}>{lang==="tr"?"Renk":TL("Colour",lang)}</span>
               </button>
-              {tool("eraser",lang==="tr"?"Silgi":"Eraser","🧽",()=>{D.erase=true;D.showColors=false;bump();},!!D.erase)}
-              {tool("marker",lang==="tr"?"Marker":"Marker","🖍️",()=>pickTool("marker",18,false),!D.erase&&D.tool==="marker")}
-              {tool("pen",lang==="tr"?"Kalem":"Pen","🖊️",()=>pickTool("pen",6,false),penActive(6))}
-              {tool("thin",lang==="tr"?"İnce kalem":"Thin pen","✒️",()=>pickTool("pen",3,false),penActive(3))}
-              {tool("highlighter",lang==="tr"?"Fosforlu kalem":"Highlighter","🖌️",()=>pickTool("highlighter",22,true),!D.erase&&D.tool==="highlighter")}
+              {tool("eraser",lang==="tr"?"Silgi":TL("Eraser",lang),"🧽",()=>{D.erase=true;D.showColors=false;bump();},!!D.erase)}
+              {tool("marker",lang==="tr"?"Marker":TL("Marker",lang),"🖍️",()=>pickTool("marker",18,false),!D.erase&&D.tool==="marker")}
+              {tool("pen",lang==="tr"?"Kalem":TL("Pen",lang),"🖊️",()=>pickTool("pen",6,false),penActive(6))}
+              {tool("thin",lang==="tr"?"İnce kalem":TL("Thin pen",lang),"✒️",()=>pickTool("pen",3,false),penActive(3))}
+              {tool("highlighter",lang==="tr"?"Fosforlu kalem":TL("Highlighter",lang),"🖌️",()=>pickTool("highlighter",22,true),!D.erase&&D.tool==="highlighter")}
             </div>
           </div>;})()}
         {renderGuide()}
         {showFirstAid&&<div style={{position:"fixed",inset:0,zIndex:9997,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowFirstAid(false)}>
           <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:520,maxHeight:"92vh",borderRadius:"18px 18px 0 0",display:"flex",flexDirection:"column",overflow:"hidden"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
-              <span style={{fontWeight:800,fontSize:fs+3}}>🚑 {lang==="tr"?"İlk Yardım":"First Aid"}</span>
+              <span style={{fontWeight:800,fontSize:fs+3}}>🚑 {lang==="tr"?"İlk Yardım":TL("First Aid",lang)}</span>
               <button onClick={()=>setShowFirstAid(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:tc}}>✕</button>
             </div>
             <div style={{padding:"12px 16px",overflowY:"auto"}}>
               <div style={{display:"flex",gap:8,marginBottom:10}}>
-                <a href="tel:112" style={{...BP,flex:1,textAlign:"center",textDecoration:"none",padding:"12px",fontSize:fs+1,fontWeight:800,background:`linear-gradient(135deg,${dg},#c0392b)`}}>📞 112 {lang==="tr"?"Acil":"Emergency"}</a>
-                <a href="tel:114" title={lang==="tr"?"Zehir Danışma":"Poison line"} style={{...BP,flex:"0 0 auto",textAlign:"center",textDecoration:"none",padding:"12px 14px",fontSize:fs-1,background:"transparent",border:`1px solid ${bd}`,color:tc}}>☠️ 114</a>
+                <a href="tel:112" style={{...BP,flex:1,textAlign:"center",textDecoration:"none",padding:"12px",fontSize:fs+1,fontWeight:800,background:`linear-gradient(135deg,${dg},#c0392b)`}}>📞 112 {lang==="tr"?"Acil":TL("Emergency",lang)}</a>
+                <a href="tel:114" title={lang==="tr"?"Zehir Danışma":TL("Poison line",lang)} style={{...BP,flex:"0 0 auto",textAlign:"center",textDecoration:"none",padding:"12px 14px",fontSize:fs-1,background:"transparent",border:`1px solid ${bd}`,color:tc}}>☠️ 114</a>
               </div>
-              <div style={{fontSize:fs-3,color:tc,background:`${dg}12`,border:`1px solid ${dg}33`,borderRadius:10,padding:"8px 10px",marginBottom:12,lineHeight:1.5}}>⚠️ {lang==="tr"?"Acil durumda ÖNCE 112'yi arayın. Bu bilgiler temel yönlendirmedir; profesyonel tıbbi yardımın veya ilk yardım eğitiminin yerine geçmez.":"In an emergency, call 112 FIRST. This is basic guidance and does not replace professional help or first-aid training."}</div>
+              <div style={{fontSize:fs-3,color:tc,background:`${dg}12`,border:`1px solid ${dg}33`,borderRadius:10,padding:"8px 10px",marginBottom:12,lineHeight:1.5}}>⚠️ {lang==="tr"?"Acil durumda ÖNCE 112'yi arayın. Bu bilgiler temel yönlendirmedir; profesyonel tıbbi yardımın veya ilk yardım eğitiminin yerine geçmez.":TL("In an emergency, call 112 FIRST. This is basic guidance and does not replace professional help or first-aid training.",lang)}</div>
               {FIRST_AID.map((it,i)=>{const c=lang==="tr"?it.tr:it.en;const open=faOpen===i;return <div key={i} style={{border:`1px solid ${bd}`,borderRadius:12,marginBottom:8,overflow:"hidden"}}>
                 <button onClick={()=>setFaOpen(open?null:i)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 12px",background:open?`${ac}10`:"transparent",border:"none",cursor:"pointer",color:tc,textAlign:"left"}}>
                   <span style={{fontSize:22,flexShrink:0}}>{it.ic}</span>
@@ -6373,34 +6374,34 @@ return (
                 </button>
                 {open&&<ol style={{margin:0,padding:"2px 16px 12px 36px",fontSize:fs-1,lineHeight:1.6,color:tc}}>{c.slice(1).map((s,j)=><li key={j} style={{marginBottom:5}}>{s}</li>)}</ol>}
               </div>;})}
-              <div style={{fontSize:fs-4,color:mt,textAlign:"center",padding:"6px 0 8px"}}>{lang==="tr"?"Kaynak: genel kabul görmüş ilk yardım ilkeleri. Ülkenizin acil numarası farklı olabilir.":"Source: widely accepted first-aid principles. Your local emergency number may differ."}</div>
+              <div style={{fontSize:fs-4,color:mt,textAlign:"center",padding:"6px 0 8px"}}>{lang==="tr"?"Kaynak: genel kabul görmüş ilk yardım ilkeleri. Ülkenizin acil numarası farklı olabilir.":TL("Source: widely accepted first-aid principles. Your local emergency number may differ.",lang)}</div>
             </div>
           </div>
         </div>}
         {pulseM&&<div style={{position:"fixed",inset:0,zIndex:9998,background:"rgba(0,0,0,.85)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={pulseM.phase!=="measuring"&&pulseM.phase!=="init"?closePulse:undefined}>
           <div onClick={e=>e.stopPropagation()} style={{background:cd,color:tc,width:"100%",maxWidth:360,borderRadius:18,padding:22,textAlign:"center",border:`1px solid ${dg}`}}>
             <div style={{fontSize:44,marginBottom:8,animation:(pulseM.phase==="measuring")?"pulse 1s infinite":"none"}}>❤️</div>
-            <div style={{fontWeight:700,fontSize:fs+2,marginBottom:6}}>{pulseM.hrv?(lang==="tr"?"Nabız + HRV":"Pulse + HRV"):(lang==="tr"?"Nabız Ölçümü":"Pulse Measurement")}</div>
-            {(pulseM.phase==="init")&&<div style={{color:mt,fontSize:fs-1}}>{lang==="tr"?"Kamera açılıyor…":"Opening camera…"}</div>}
+            <div style={{fontWeight:700,fontSize:fs+2,marginBottom:6}}>{pulseM.hrv?(lang==="tr"?"Nabız + HRV":TL("Pulse + HRV",lang)):(lang==="tr"?"Nabız Ölçümü":TL("Pulse Measurement",lang))}</div>
+            {(pulseM.phase==="init")&&<div style={{color:mt,fontSize:fs-1}}>{lang==="tr"?"Kamera açılıyor…":TL("Opening camera…",lang)}</div>}
             {pulseM.phase==="measuring"&&<>
-              <div style={{fontSize:fs-2,color:mt,marginBottom:10,lineHeight:1.5}}>{lang==="tr"?"Parmağının ucunu arka kameraya ve flaşa hafifçe kapat, sabit tut.":"Gently cover the rear camera and flash with your fingertip, hold still."}</div>
+              <div style={{fontSize:fs-2,color:mt,marginBottom:10,lineHeight:1.5}}>{lang==="tr"?"Parmağının ucunu arka kameraya ve flaşa hafifçe kapat, sabit tut.":TL("Gently cover the rear camera and flash with your fingertip, hold still.",lang)}</div>
               <div style={{height:10,borderRadius:6,background:`${mt}33`,overflow:"hidden"}}><div style={{height:"100%",width:`${pulseM.progress||0}%`,background:`linear-gradient(90deg,${dg},#c0392b)`,transition:"width .2s"}}/></div>
-              <div style={{fontSize:fs-2,color:mt,marginTop:6}}>%{pulseM.progress||0} · {Math.max(0,Math.ceil((100-(pulseM.progress||0))/100*((pulseM.dur||20000)/1000)))} {lang==="tr"?"sn":"s"}</div>
-              <div style={{fontSize:fs-3,color:mt,marginTop:6}}>{pulseM.torch?(lang==="tr"?"🔦 Flaş açık":"🔦 Flash on"):(lang==="tr"?"🔦 Flaş yok — iyi ışıkta ölçün":"🔦 No flash — measure in good light")}</div>
+              <div style={{fontSize:fs-2,color:mt,marginTop:6}}>%{pulseM.progress||0} · {Math.max(0,Math.ceil((100-(pulseM.progress||0))/100*((pulseM.dur||20000)/1000)))} {lang==="tr"?"sn":TL("s",lang)}</div>
+              <div style={{fontSize:fs-3,color:mt,marginTop:6}}>{pulseM.torch?(lang==="tr"?"🔦 Flaş açık":TL("🔦 Flash on",lang)):(lang==="tr"?"🔦 Flaş yok — iyi ışıkta ölçün":TL("🔦 No flash — measure in good light",lang))}</div>
             </>}
             {pulseM.phase==="done"&&<>
               <div style={{fontSize:40,fontWeight:800,color:dg}}>{pulseM.bpm} <span style={{fontSize:fs}}>{t.bpm}</span></div>
-              {(()=>{const q=pulseM.quality;const L=q==="excellent"?(lang==="tr"?"mükemmel ✓✓":"excellent ✓✓"):q==="good"?(lang==="tr"?"iyi ✓":"good ✓"):q==="fair"?(lang==="tr"?"orta":"fair"):(lang==="tr"?"düşük — tekrar dene":"poor — retry");return <div style={{fontSize:fs-2,color:mt,marginTop:4}}>{lang==="tr"?"Sinyal kalitesi":"Signal quality"}: {L} · {lang==="tr"?"güven":"conf"} %{pulseM.conf}{pulseM.fps?` · ${pulseM.fps} fps`:""}</div>;})()}
-              {pulseM.hrvRmssd!=null&&<div style={{fontSize:fs-2,color:acTx,marginTop:6}}>HRV · RMSSD {pulseM.hrvRmssd} ms · SDNN {pulseM.hrvSdnn} ms{pulseM.beats?` · ${pulseM.beats} ${lang==="tr"?"atım":"beats"}`:""}</div>}
-              {pulseM.respRate!=null&&<div style={{fontSize:fs-2,color:acTx,marginTop:4}}>{lang==="tr"?"Solunum (tahmini)":"Respiration (est.)"}: {pulseM.respRate} {lang==="tr"?"/dk":"/min"}</div>}
-              {pulseM.wantHrv&&pulseM.hrvRmssd==null&&<div style={{fontSize:fs-3,color:mt,marginTop:6}}>{pulseM.hrvNote==="short"?(lang==="tr"?"HRV için ≥45 sn iyi sinyal gerekir.":"HRV needs ≥45s of good signal."):(lang==="tr"?"HRV: yeterli/kararlı atım bulunamadı — sabit tutup tekrar dene.":"HRV: not enough stable beats — hold still and retry.")}</div>}
-              <div style={{fontSize:fs-2,color:sc,marginTop:6}}>{lang==="tr"?"Sağlık verilerine kaydedildi. AILVIE yorumluyor…":"Saved. AILVIE is interpreting…"}</div>
+              {(()=>{const q=pulseM.quality;const L=q==="excellent"?(lang==="tr"?"mükemmel ✓✓":TL("excellent ✓✓",lang)):q==="good"?(lang==="tr"?"iyi ✓":TL("good ✓",lang)):q==="fair"?(lang==="tr"?"orta":TL("fair",lang)):(lang==="tr"?"düşük — tekrar dene":TL("poor — retry",lang));return <div style={{fontSize:fs-2,color:mt,marginTop:4}}>{lang==="tr"?"Sinyal kalitesi":TL("Signal quality",lang)}: {L} · {lang==="tr"?"güven":TL("conf",lang)} %{pulseM.conf}{pulseM.fps?` · ${pulseM.fps} fps`:""}</div>;})()}
+              {pulseM.hrvRmssd!=null&&<div style={{fontSize:fs-2,color:acTx,marginTop:6}}>HRV · RMSSD {pulseM.hrvRmssd} ms · SDNN {pulseM.hrvSdnn} ms{pulseM.beats?` · ${pulseM.beats} ${lang==="tr"?"atım":TL("beats",lang)}`:""}</div>}
+              {pulseM.respRate!=null&&<div style={{fontSize:fs-2,color:acTx,marginTop:4}}>{lang==="tr"?"Solunum (tahmini)":TL("Respiration (est.)",lang)}: {pulseM.respRate} {lang==="tr"?"/dk":TL("/min",lang)}</div>}
+              {pulseM.wantHrv&&pulseM.hrvRmssd==null&&<div style={{fontSize:fs-3,color:mt,marginTop:6}}>{pulseM.hrvNote==="short"?(lang==="tr"?"HRV için ≥45 sn iyi sinyal gerekir.":TL("HRV needs ≥45s of good signal.",lang)):(lang==="tr"?"HRV: yeterli/kararlı atım bulunamadı — sabit tutup tekrar dene.":TL("HRV: not enough stable beats — hold still and retry.",lang))}</div>}
+              <div style={{fontSize:fs-2,color:sc,marginTop:6}}>{lang==="tr"?"Sağlık verilerine kaydedildi. AILVIE yorumluyor…":TL("Saved. AILVIE is interpreting…",lang)}</div>
             </>}
             {pulseM.phase==="error"&&<div style={{color:dg,fontSize:fs-1,lineHeight:1.5}}>{pulseM.msg}</div>}
-            <div style={{fontSize:fs-4,color:mt,marginTop:12,lineHeight:1.5}}>⚠️ {lang==="tr"?"Sadece sağlıklı yaşam takibi içindir, tıbbi teşhis değildir. Kesin değer için tıbbi cihaz veya hekiminizi kullanın.":"For wellness tracking only. Not a medical diagnosis. For accuracy use a medical device or consult your doctor."}</div>
+            <div style={{fontSize:fs-4,color:mt,marginTop:12,lineHeight:1.5}}>⚠️ {lang==="tr"?"Sadece sağlıklı yaşam takibi içindir, tıbbi teşhis değildir. Kesin değer için tıbbi cihaz veya hekiminizi kullanın.":TL("For wellness tracking only. Not a medical diagnosis. For accuracy use a medical device or consult your doctor.",lang)}</div>
             <div style={{display:"flex",gap:8,marginTop:14}}>
-              {(pulseM.phase==="done"||pulseM.phase==="error")&&<button onClick={()=>startPulseMeasure(false,pulseM.hrv)} style={{...BP,flex:1,padding:"9px"}}>{lang==="tr"?"Tekrar Ölç":"Measure again"}</button>}
-              <button onClick={closePulse} style={{...BP,flex:1,padding:"9px",background:mt}}>{pulseM.phase==="measuring"||pulseM.phase==="init"?(lang==="tr"?"İptal":"Cancel"):(lang==="tr"?"Kapat":"Close")}</button>
+              {(pulseM.phase==="done"||pulseM.phase==="error")&&<button onClick={()=>startPulseMeasure(false,pulseM.hrv)} style={{...BP,flex:1,padding:"9px"}}>{lang==="tr"?"Tekrar Ölç":TL("Measure again",lang)}</button>}
+              <button onClick={closePulse} style={{...BP,flex:1,padding:"9px",background:mt}}>{pulseM.phase==="measuring"||pulseM.phase==="init"?(lang==="tr"?"İptal":TL("Cancel",lang)):(lang==="tr"?"Kapat":TL("Close",lang))}</button>
             </div>
           </div>
         </div>}
@@ -6418,7 +6419,7 @@ return (
         {/* HEADER */}
         <div style={{background:`linear-gradient(135deg,${ac},${a2})`,padding:"2px 10px",paddingTop:"max(env(safe-area-inset-top),2px)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"flex-end",gap:6,flex:1,minWidth:0}}>
-            <button onClick={()=>setShowMenu(true)} aria-label={lang==="tr"?"Menü":"Menu"} style={{background:"none",border:"none",color:"#fff",fontSize:22,cursor:"pointer",padding:0,flexShrink:0,alignSelf:"center"}}>☰</button>
+            <button onClick={()=>setShowMenu(true)} aria-label={lang==="tr"?"Menü":TL("Menu",lang)} style={{background:"none",border:"none",color:"#fff",fontSize:22,cursor:"pointer",padding:0,flexShrink:0,alignSelf:"center"}}>☰</button>
             <img src="/avatar2-256.webp" alt="AILVIE" style={{height:60,width:51,objectFit:"contain",flexShrink:0,borderRadius:6}} />
             <div onClick={()=>goTo("home")} title={t.home} role="button" style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",lineHeight:1,minWidth:0,cursor:"pointer"}}>
               <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:35,color:"#e8a817",letterSpacing:3,WebkitTextStroke:"1px #e8a817",textShadow:"0 2px 6px rgba(0,0,0,0.5)",textAlign:"center"}}>AILVIE</div>
@@ -6443,9 +6444,9 @@ return (
           onTouchMove={(e)=>{if(!zoomDrag.current.active)return;const t=e.touches[0];const dx=t.clientX-zoomDrag.current.startX;const dy=t.clientY-zoomDrag.current.startY;if(Math.abs(dx)>3||Math.abs(dy)>3)zoomDrag.current.moved=true;const newTop=Math.max(48,Math.min(window.innerHeight-180,zoomDrag.current.startTop+dy));const newRight=Math.max(4,Math.min(window.innerWidth-50,zoomDrag.current.startRight-dx));setZoomPos({top:newTop,right:newRight});}}
           onTouchEnd={()=>{if(zoomDrag.current.moved){try{localStorage.setItem("ailvie_zoompos",JSON.stringify(zoomPos));}catch{}}zoomDrag.current.active=false;}}
         >
-          <div title={lang==="tr"?"Taşımak için basılı tutup sürükle":"Hold & drag to move"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:acTx,fontSize:23,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Yakınlaştır":"Zoom in"} onClick={()=>{if(!zoomDrag.current.moved)setZoom(z=>Math.min(Math.round((z+0.1)*10)/10,1.5));}}>+</div>
-          <div title={lang==="tr"?"Taşımak için basılı tutup sürükle":"Hold & drag to move"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:acTx,fontSize:26,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Uzaklaştır":"Zoom out"} onClick={()=>{if(!zoomDrag.current.moved)setZoom(z=>Math.max(Math.round((z-0.1)*10)/10,1));}}>−</div>
-          {zoom!==1&&<div title={lang==="tr"?"Sıfırla":"Reset"} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:acTx,fontSize:13,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Sıfırla":"Reset zoom"} onClick={()=>{if(!zoomDrag.current.moved)setZoom(1);}}>{zoom.toFixed(1)}x</div>}
+          <div title={lang==="tr"?"Taşımak için basılı tutup sürükle":TL("Hold & drag to move",lang)} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:acTx,fontSize:23,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Yakınlaştır":TL("Zoom in",lang)} onClick={()=>{if(!zoomDrag.current.moved)setZoom(z=>Math.min(Math.round((z+0.1)*10)/10,1.5));}}>+</div>
+          <div title={lang==="tr"?"Taşımak için basılı tutup sürükle":TL("Hold & drag to move",lang)} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:acTx,fontSize:26,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Uzaklaştır":TL("Zoom out",lang)} onClick={()=>{if(!zoomDrag.current.moved)setZoom(z=>Math.max(Math.round((z-0.1)*10)/10,1));}}>−</div>
+          {zoom!==1&&<div title={lang==="tr"?"Sıfırla":TL("Reset",lang)} style={{width:38,height:38,borderRadius:19,background:"transparent",border:`2px solid ${ac}`,color:acTx,fontSize:13,fontWeight:800,cursor:"grab",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0,textShadow:dark?"0 1px 3px rgba(0,0,0,.6)":"0 1px 3px rgba(255,255,255,.6)"}} role="button" tabIndex={0} aria-label={lang==="tr"?"Sıfırla":TL("Reset zoom",lang)} onClick={()=>{if(!zoomDrag.current.moved)setZoom(1);}}>{zoom.toFixed(1)}x</div>}
         </div>}
 
         {/* LEFT SIDE MENU — compact */}
@@ -6468,12 +6469,12 @@ return (
             {[
               {icon:"🏠",label:t.home,action:()=>{goTo("home");setShowMenu(false);}},
               (acctEmail.trim()
-                ? {icon:"👤",label:(lang==="tr"?"Hesabım":"My account")+" — "+acctEmail,action:()=>{setSettingsTab("subs");goTo("settings");setShowMenu(false);}}
+                ? {icon:"👤",label:(lang==="tr"?"Hesabım":TL("My account",lang))+" — "+acctEmail,action:()=>{setSettingsTab("subs");goTo("settings");setShowMenu(false);}}
                 : {icon:"🔑",label:({tr:"Giriş Yap / Abone Ol",en:"Sign in / Subscribe",de:"Anmelden / Abonnieren",ru:"Войти / Подписка",zh:"登录 / 订阅",hi:"साइन इन / सदस्यता",nl:"Inloggen / Abonneren",es:"Iniciar sesión / Suscribirse",ar:"تسجيل الدخول / اشتراك"}[lang]||"Sign in / Subscribe"),action:()=>{setSettingsTab("subs");goTo("settings");setShowMenu(false);}}),
               null,
               {icon:"👤",label:t.profile,action:()=>{goTo("pCard");setShowMenu(false);}},
-              {icon:"🚑",label:lang==="tr"?"İlk Yardım":"First Aid",action:()=>{setShowMenu(false);setFaOpen(null);setShowFirstAid(true);}},
-              {icon:"🧭",label:lang==="tr"?"Navigasyon":"Navigation",action:()=>{setShowMenu(false);setShowNav(true);}},
+              {icon:"🚑",label:lang==="tr"?"İlk Yardım":TL("First Aid",lang),action:()=>{setShowMenu(false);setFaOpen(null);setShowFirstAid(true);}},
+              {icon:"🧭",label:lang==="tr"?"Navigasyon":TL("Navigation",lang),action:()=>{setShowMenu(false);setShowNav(true);}},
               {icon:"🌍",label:t.lang,action:()=>{setShowMenu(false);setShowLangPicker(true);}},
               {icon:dark?"☀️":"🌙",label:dark?t.light:t.dark,action:()=>{setDark(!dark);}},
               {icon:appLockEnabled?"🔓":"🔒",label:appLockEnabled?t.lockOn:t.appLock,action:()=>{setShowMenu(false);if(appLockEnabled)disableAppLock();else enableAppLock();}},
@@ -6505,7 +6506,7 @@ return (
 
         {storageWarn&&<div role="alert" aria-live="assertive" style={{flexShrink:0,background:"#b45309",color:"#fff",fontSize:fs-2,textAlign:"center",padding:"5px 8px"}}>{storageWarn}</div>}
         {/* Offline banner */}
-        {!online&&<div role="status" aria-live="polite" style={{flexShrink:0,background:"#b91c1c",color:"#fff",fontSize:fs-2,textAlign:"center",padding:"4px 8px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>📡 {lang==="tr"?"Çevrimdışısınız — bazı özellikler sınırlı olabilir":"You're offline — some features may be limited"}</div>}
+        {!online&&<div role="status" aria-live="polite" style={{flexShrink:0,background:"#b91c1c",color:"#fff",fontSize:fs-2,textAlign:"center",padding:"4px 8px",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>📡 {lang==="tr"?"Çevrimdışısınız — bazı özellikler sınırlı olabilir":TL("You're offline — some features may be limited",lang)}</div>}
 
         {/* Install / Open-in-app banner (web only, dismissible) */}
         {(()=>{
@@ -6519,14 +6520,14 @@ return (
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <img src="/icon-192.png" alt="" style={{width:34,height:34,borderRadius:8,flexShrink:0}}/>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:fs,color:tc}}>{lang==="tr"?"AILVIE'yi uygulama olarak aç":"Open AILVIE as an app"}</div>
-                  <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Daha hızlı • çevrimdışı • tam ekran":"Faster • offline • full-screen"}</div>
+                  <div style={{fontWeight:700,fontSize:fs,color:tc}}>{lang==="tr"?"AILVIE'yi uygulama olarak aç":TL("Open AILVIE as an app",lang)}</div>
+                  <div style={{fontSize:fs-3,color:mt}}>{lang==="tr"?"Daha hızlı • çevrimdışı • tam ekran":TL("Faster • offline • full-screen",lang)}</div>
                 </div>
                 <button onClick={dismiss} style={{background:"none",border:"none",color:mt,fontSize:fs+6,cursor:"pointer",lineHeight:1,padding:"0 4px"}}>×</button>
               </div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                {canPWA&&<button onClick={async()=>{try{installEvt.prompt();await installEvt.userChoice;}catch(e){}setInstallEvt(null);}} style={{...BP,flex:1,minWidth:120,padding:"9px"}}>⬇️ {lang==="tr"?"Yükle":"Install"}</button>}
-                {!canPWA&&isIOS&&<button onClick={()=>setIosHelp(true)} style={{...BP,flex:1,minWidth:140,padding:"9px"}}>⬇️ {lang==="tr"?"Ana ekrana ekle":"Add to Home Screen"}</button>}
+                {canPWA&&<button onClick={async()=>{try{installEvt.prompt();await installEvt.userChoice;}catch(e){}setInstallEvt(null);}} style={{...BP,flex:1,minWidth:120,padding:"9px"}}>⬇️ {lang==="tr"?"Yükle":TL("Install",lang)}</button>}
+                {!canPWA&&isIOS&&<button onClick={()=>setIosHelp(true)} style={{...BP,flex:1,minWidth:140,padding:"9px"}}>⬇️ {lang==="tr"?"Ana ekrana ekle":TL("Add to Home Screen",lang)}</button>}
                 {PLAY_URL&&<a href={PLAY_URL} target="_blank" rel="noreferrer" style={{...BP,flex:1,minWidth:110,padding:"9px",textAlign:"center",textDecoration:"none",background:"linear-gradient(135deg,#0f9d58,#0b8043)"}}>▶ Google Play</a>}
                 {IOS_URL&&<a href={IOS_URL} target="_blank" rel="noreferrer" style={{...BP,flex:1,minWidth:110,padding:"9px",textAlign:"center",textDecoration:"none",background:"linear-gradient(135deg,#444,#111)"}}> App Store</a>}
               </div>
@@ -6537,13 +6538,13 @@ return (
         {/* iOS install help */}
         {iosHelp&&<div style={{position:"fixed",inset:0,zIndex:350,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={()=>setIosHelp(false)}>
           <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:380,borderRadius:16,padding:18,border:`1px solid ${ac}`}}>
-            <div style={{fontWeight:700,fontSize:fs+2,marginBottom:12}}>📱 {lang==="tr"?"iPhone'a yükleme":"Install on iPhone"}</div>
+            <div style={{fontWeight:700,fontSize:fs+2,marginBottom:12}}>📱 {lang==="tr"?"iPhone'a yükleme":TL("Install on iPhone",lang)}</div>
             <div style={{display:"flex",flexDirection:"column",gap:10,fontSize:fs,color:tc}}>
-              <div>1. {lang==="tr"?"Safari'de alttaki Paylaş (⬆️) simgesine dokunun":"Tap the Share (⬆️) icon in Safari"}</div>
+              <div>1. {lang==="tr"?"Safari'de alttaki Paylaş (⬆️) simgesine dokunun":TL("Tap the Share (⬆️) icon in Safari",lang)}</div>
               <div>2. {lang==="tr"?"\"Ana Ekrana Ekle\" seçeneğine dokunun":"Choose \"Add to Home Screen\""}</div>
               <div>3. {lang==="tr"?"\"Ekle\"ye dokunun — AILVIE simgesi ana ekranda görünür":"Tap \"Add\" — the AILVIE icon appears on your home screen"}</div>
             </div>
-            <button onClick={()=>setIosHelp(false)} style={{...BP,width:"100%",marginTop:16}}>{lang==="tr"?"Anladım":"Got it"}</button>
+            <button onClick={()=>setIosHelp(false)} style={{...BP,width:"100%",marginTop:16}}>{lang==="tr"?"Anladım":TL("Got it",lang)}</button>
           </div>
         </div>}
 
@@ -6551,32 +6552,32 @@ return (
         <div style={{flex:"1 1 0",minHeight:0,height:0,overflowY:page==="chat"?"hidden":"auto",overflowX:"hidden",padding:page==="chat"?"10px 12px 8px":"10px 12px 24px",display:page==="chat"?"flex":"block",flexDirection:"column",WebkitOverflowScrolling:"touch",cursor:"default",zoom:page==="chat"?1:zoom}} role="main" id="ailvie-main" tabIndex={-1} aria-label={pageTitle(page)} ref={mainRef} onClick={(e)=>{if(e.target===e.currentTarget){setEditNote(null);setNOpen(false);setShowAddMed(false);setShowAddAppt(false);setShowAddC(false);setShowWordLangPicker(false);setSelDate(null);}}}>{pages[page]?.()}</div>
 
         {/* Notif Panel */}
-        {showNotif&&<><div onClick={()=>setShowNotif(false)} style={{position:"absolute",inset:0,zIndex:249}}/><div style={{position:"absolute",bottom:86,left:0,right:0,maxHeight:"50%",background:cd,borderRadius:"16px 16px 0 0",boxShadow:"0 -6px 24px rgba(0,0,0,.3)",zIndex:250,padding:"14px 16px",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontWeight:700}}>🔔 {t.notif}</span><div style={{display:"flex",gap:8,alignItems:"center"}}><button onClick={()=>{setShowNotif(false);setShowAlerts(true);}} style={{fontSize:fs-3,color:dg,background:"none",border:`1px solid ${dg}55`,borderRadius:8,padding:"2px 8px",cursor:"pointer",fontWeight:700}}>⚠️ {lang==="tr"?"UYARILAR":"ALERTS"}</button><button onClick={()=>setNotifs(p=>p.map(n=>({...n,read:true})))} aria-label={lang==="tr"?"Tümünü okundu işaretle":"Mark all read"} style={{fontSize:fs-2,color:acTx,background:"none",border:"none",cursor:"pointer"}}>✓</button><button onClick={()=>setNotifs([])} aria-label={lang==="tr"?"Bildirimleri temizle":"Clear notifications"} style={{fontSize:fs-2,color:dg,background:"none",border:"none",cursor:"pointer"}}>✕</button><button onClick={()=>setShowNotif(false)} aria-label={lang==="tr"?"Kapat":"Close"} style={{background:"none",border:"none",fontSize:16,cursor:"pointer",color:tc}}>✕</button></div></div>{notifs.length===0&&<div style={{textAlign:"center",color:mt,padding:16}}>—</div>}{notifs.map(n=><div key={n.id} style={{padding:"6px 0",borderBottom:`1px solid ${bd}`,opacity:n.read?0.4:1}}><div>{n.text}</div><div style={{fontSize:fs-3,color:mt}}>{n.time}</div></div>)}</div></>}
+        {showNotif&&<><div onClick={()=>setShowNotif(false)} style={{position:"absolute",inset:0,zIndex:249}}/><div style={{position:"absolute",bottom:86,left:0,right:0,maxHeight:"50%",background:cd,borderRadius:"16px 16px 0 0",boxShadow:"0 -6px 24px rgba(0,0,0,.3)",zIndex:250,padding:"14px 16px",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{fontWeight:700}}>🔔 {t.notif}</span><div style={{display:"flex",gap:8,alignItems:"center"}}><button onClick={()=>{setShowNotif(false);setShowAlerts(true);}} style={{fontSize:fs-3,color:dg,background:"none",border:`1px solid ${dg}55`,borderRadius:8,padding:"2px 8px",cursor:"pointer",fontWeight:700}}>⚠️ {lang==="tr"?"UYARILAR":TL("ALERTS",lang)}</button><button onClick={()=>setNotifs(p=>p.map(n=>({...n,read:true})))} aria-label={lang==="tr"?"Tümünü okundu işaretle":TL("Mark all read",lang)} style={{fontSize:fs-2,color:acTx,background:"none",border:"none",cursor:"pointer"}}>✓</button><button onClick={()=>setNotifs([])} aria-label={lang==="tr"?"Bildirimleri temizle":TL("Clear notifications",lang)} style={{fontSize:fs-2,color:dg,background:"none",border:"none",cursor:"pointer"}}>✕</button><button onClick={()=>setShowNotif(false)} aria-label={lang==="tr"?"Kapat":TL("Close",lang)} style={{background:"none",border:"none",fontSize:16,cursor:"pointer",color:tc}}>✕</button></div></div>{notifs.length===0&&<div style={{textAlign:"center",color:mt,padding:16}}>—</div>}{notifs.map(n=><div key={n.id} style={{padding:"6px 0",borderBottom:`1px solid ${bd}`,opacity:n.read?0.4:1}}><div>{n.text}</div><div style={{fontSize:fs-3,color:mt}}>{n.time}</div></div>)}</div></>}
         {/* Big red half-screen health alert overlay */}
         {activeAlert&&<div onClick={()=>{setActiveAlert(null);setShowAlerts(true);}} style={{position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,.78)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
           <div style={{width:"100%",maxWidth:460,minHeight:"50vh",background:"linear-gradient(160deg,#e63946,#b71c2c)",borderRadius:22,boxShadow:"0 14px 44px rgba(0,0,0,.55)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"26px 18px",border:"3px solid rgba(255,255,255,.28)"}}>
             <div style={{fontSize:82,lineHeight:1}}>❗</div>
             <div style={{fontSize:32,fontWeight:900,color:"#fff",letterSpacing:1,marginTop:6,textShadow:"0 2px 8px rgba(0,0,0,.45)"}}>{activeAlert.icon} {activeAlert.title}</div>
             <div style={{fontSize:22,fontWeight:700,color:"#fff",marginTop:14,lineHeight:1.35}}>{activeAlert.msg}</div>
-            <div style={{fontSize:fs-1,color:"rgba(255,255,255,.8)",marginTop:18}}>{lang==="tr"?"Tüm uyarılar için dokun":"Tap for all alerts"}</div>
+            <div style={{fontSize:fs-1,color:"rgba(255,255,255,.8)",marginTop:18}}>{lang==="tr"?"Tüm uyarılar için dokun":TL("Tap for all alerts",lang)}</div>
             <div style={{display:"flex",gap:10,marginTop:22,width:"100%"}}>
-              <button onClick={e=>{e.stopPropagation();setActiveAlert(null);setShowAlerts(true);}} style={{flex:1,padding:"14px",borderRadius:13,border:"none",background:"#fff",color:"#b71c2c",fontSize:fs+1,fontWeight:900,cursor:"pointer"}}>{lang==="tr"?"UYARILAR":"ALERTS"}</button>
-              <button onClick={e=>{e.stopPropagation();setActiveAlert(null);}} style={{flex:1,padding:"14px",borderRadius:13,border:"2px solid #fff",background:"transparent",color:"#fff",fontSize:fs+1,fontWeight:800,cursor:"pointer"}}>{lang==="tr"?"Tamam":"OK"}</button>
+              <button onClick={e=>{e.stopPropagation();setActiveAlert(null);setShowAlerts(true);}} style={{flex:1,padding:"14px",borderRadius:13,border:"none",background:"#fff",color:"#b71c2c",fontSize:fs+1,fontWeight:900,cursor:"pointer"}}>{lang==="tr"?"UYARILAR":TL("ALERTS",lang)}</button>
+              <button onClick={e=>{e.stopPropagation();setActiveAlert(null);}} style={{flex:1,padding:"14px",borderRadius:13,border:"2px solid #fff",background:"transparent",color:"#fff",fontSize:fs+1,fontWeight:800,cursor:"pointer"}}>{lang==="tr"?"Tamam":TL("OK",lang)}</button>
             </div>
           </div>
         </div>}
         {/* Full ALERTS window */}
         {showAlerts&&(()=>{const W=getActiveWarnings();return <div style={{position:"fixed",inset:0,zIndex:395,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowAlerts(false)}>
           <div onClick={e=>e.stopPropagation()} style={{background:cd,width:"100%",maxWidth:520,maxHeight:"82vh",overflow:"auto",borderRadius:"18px 18px 0 0",padding:16}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><b style={{fontSize:fs+4,color:dg,letterSpacing:1}}>⚠️ {lang==="tr"?"UYARILAR":"ALERTS"}{W.length?` (${W.length})`:""}</b><button onClick={()=>setShowAlerts(false)} style={{background:"none",border:"none",color:mt,fontSize:22,cursor:"pointer"}}>✕</button></div>
-            {W.length===0&&<div style={{textAlign:"center",color:mt,padding:"30px 0",fontSize:fs}}>✅ {lang==="tr"?"Şu an bekleyen uyarı yok":"No active alerts"}</div>}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><b style={{fontSize:fs+4,color:dg,letterSpacing:1}}>⚠️ {lang==="tr"?"UYARILAR":TL("ALERTS",lang)}{W.length?` (${W.length})`:""}</b><button onClick={()=>setShowAlerts(false)} style={{background:"none",border:"none",color:mt,fontSize:22,cursor:"pointer"}}>✕</button></div>
+            {W.length===0&&<div style={{textAlign:"center",color:mt,padding:"30px 0",fontSize:fs}}>✅ {lang==="tr"?"Şu an bekleyen uyarı yok":TL("No active alerts",lang)}</div>}
             {W.map(w=><div key={w.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px",borderRadius:12,marginBottom:8,background:w.high?dg+"1a":"transparent",border:`1.5px solid ${w.high?dg:bd}`}}>
               <span style={{fontSize:30}}>{w.icon}</span>
               <div style={{flex:1,minWidth:0}}><div style={{fontSize:fs+1,fontWeight:800,color:w.high?dg:tc}}>{w.title}</div><div style={{fontSize:fs-2,color:w.high?dg:mt,marginTop:2}}>{w.high?"❗ ":""}{w.sub}</div></div>
-              {w.kind==="med"&&<button onClick={()=>setMeds(p=>p.map(m=>m.id===w.ref.id?{...m,taken:true}:m))} style={{padding:"7px 12px",borderRadius:10,border:"none",background:sc,color:onAc,fontWeight:700,fontSize:fs-2,cursor:"pointer",flexShrink:0}}>{lang==="tr"?"Aldım":"Taken"}</button>}
-              {w.kind==="appt"&&<button onClick={()=>{setShowAlerts(false);goTo("appts");}} style={{padding:"7px 12px",borderRadius:10,border:`1px solid ${ac}`,background:"transparent",color:acTx,fontWeight:700,fontSize:fs-2,cursor:"pointer",flexShrink:0}}>{lang==="tr"?"Git":"View"}</button>}
+              {w.kind==="med"&&<button onClick={()=>setMeds(p=>p.map(m=>m.id===w.ref.id?{...m,taken:true}:m))} style={{padding:"7px 12px",borderRadius:10,border:"none",background:sc,color:onAc,fontWeight:700,fontSize:fs-2,cursor:"pointer",flexShrink:0}}>{lang==="tr"?"Aldım":TL("Taken",lang)}</button>}
+              {w.kind==="appt"&&<button onClick={()=>{setShowAlerts(false);goTo("appts");}} style={{padding:"7px 12px",borderRadius:10,border:`1px solid ${ac}`,background:"transparent",color:acTx,fontWeight:700,fontSize:fs-2,cursor:"pointer",flexShrink:0}}>{lang==="tr"?"Git":TL("View",lang)}</button>}
             </div>)}
-            <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:8}}>{lang==="tr"?"İlaç · randevu · takvim alarmları":"Meds · appointments · calendar alarms"}</div>
+            <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:8}}>{lang==="tr"?"İlaç · randevu · takvim alarmları":TL("Meds · appointments · calendar alarms",lang)}</div>
           </div>
         </div>;})()}
 
@@ -6594,7 +6595,7 @@ return (
         </div></div>}
 
         {/* BOTTOM NAV — compact 2 rows */}
-        <nav role="navigation" aria-label={lang==="tr"?"Ana gezinme":"Main navigation"} style={{flexShrink:0,background:cd,borderTop:`1px solid ${bd}`,paddingBottom:"max(env(safe-area-inset-bottom),0px)"}}>
+        <nav role="navigation" aria-label={lang==="tr"?"Ana gezinme":TL("Main navigation",lang)} style={{flexShrink:0,background:cd,borderTop:`1px solid ${bd}`,paddingBottom:"max(env(safe-area-inset-bottom),0px)"}}>
           <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)"}}>
             {nav1.map(n=>(<button key={n.key} aria-current={page===n.key?"page":undefined} onClick={()=>page===n.key?goTo("home"):goTo(n.key)} style={{background:"none",border:"none",padding:"9px 1px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:page===n.key?acTx:(dark?"#c5cfd9":"#3c4a57"),position:"relative",minWidth:0}}>{page===n.key&&<div style={{position:"absolute",top:0,left:"25%",right:"25%",height:2,borderRadius:1,background:ac}}/>}<span style={{fontSize:21,opacity:1,lineHeight:1}}>{n.icon}</span><span style={{fontSize:11.5,fontWeight:page===n.key?700:600,lineHeight:1.1,textAlign:"center",wordBreak:"break-word",letterSpacing:"-0.01em"}}>{n.label}</span></button>))}
           </div>
