@@ -2869,26 +2869,26 @@ const sendChat=async(text)=>{
     setChatIn("");
     return;
   }
-  // Daily AI message limit for Free tier (3/day)
-  // PRO users (with promo code) and BYOK users skip this limit
-  const isPRO=localStorage.getItem("ailvie_active_plan")?.includes("PRO")||localStorage.getItem("ailvie_active_plan")?.includes("Enterprise");
-  const hasBYOK=apiKey&&apiKey.length>20; // User's own key
-  if(!isPRO&&!hasBYOK){
-    const today=new Date().toDateString();
-    let usage={};
-    setChatThinking(true);try{usage=JSON.parse(localStorage.getItem("ailvie_ai_usage")||"{}");}catch(e){usage={};}
-    const todayCount=usage.date===today?(usage.count||0):0;
-    const DAILY_LIMIT=3;
-    if(todayCount>=DAILY_LIMIT){
-      const limitMsg=lang==="tr"
-        ?`📊 Günlük ücretsiz AI mesajı hakkınız bitti (${DAILY_LIMIT}/${DAILY_LIMIT}).\n\nDevam etmek için:\n\n💎 PRO'ya yükselt — sınırsız AI sohbet, çeviri, ilaç analizi (Yıllık ayda $5.00'dan başlar)\n   Ayarlar → Abonelik Planları\n\n⏰ Yarın saat 00:00'da hakkınız yenilenecek.`
-        :`📊 Daily free AI message limit reached (${DAILY_LIMIT}/${DAILY_LIMIT}).\n\nTo continue:\n\n💎 Upgrade to PRO — unlimited AI chat, translation, drug analysis (from $5.00/mo annual)\n   Settings → Subscription Plans\n\n⏰ Your limit resets at midnight.`;
-      setChatM([...chatM,{role:"user",text:q},{role:"assistant",text:limitMsg}]);
-      setChatIn("");
-      return;
-    }
-    // Increment counter
-    localStorage.setItem("ailvie_ai_usage",JSON.stringify({date:today,count:todayCount+1}));
+  // AI plan / quota / model routing — automatic cost control + graceful degradation (NO hard wall).
+  // Free & Plus run on the cheap model (Haiku); PRO/BYOK get the smart model (Sonnet). When a user
+  // passes their monthly quota we silently drop them to Haiku ("continue at free size") — never a
+  // hard cutoff. Real spend is capped server-side by the Anthropic spend limit + per-IP cap.
+  setChatThinking(true);
+  const hasBYOK=apiKey&&apiKey.length>20; // user's own key
+  const _plan=(localStorage.getItem("ailvie_active_plan")||"").toLowerCase();
+  const aiTier=(_plan.includes("enterprise")||_plan.includes("pro"))?"pro":(_plan.includes("plus")?"plus":"free");
+  const AI_QUOTA={free:100,plus:300,pro:1500};
+  const _mo=new Date().toISOString().slice(0,7);
+  let _u={};try{_u=JSON.parse(localStorage.getItem("ailvie_ai_usage")||"{}");}catch(e){_u={};}
+  if(_u.month!==_mo)_u={month:_mo,count:0};
+  const _quota=AI_QUOTA[aiTier]||AI_QUOTA.free;
+  const overQuota=!hasBYOK&&(_u.count||0)>=_quota;
+  const useModel=(!overQuota&&(aiTier==="pro"||hasBYOK))?"claude-sonnet-4-6":"claude-haiku-4-5-20251001";
+  let quotaNote="";
+  if(!hasBYOK&&_quota){
+    const pct=(_u.count||0)/_quota;const _k="ailvie_qn_"+_mo;
+    try{if(pct>=0.8&&pct<1&&!sessionStorage.getItem(_k)){sessionStorage.setItem(_k,"1");quotaNote=lang==="tr"?"\n\nBu ayki AI mesajlarının çoğunu kullandın — ay başında otomatik yenilenecek.":"\n\nYou've used most of this month's AI messages — it resets automatically next month.";}}catch(e){}
+    _u.count=(_u.count||0)+1;try{localStorage.setItem("ailvie_ai_usage",JSON.stringify(_u));}catch(e){}
   }
   const newMsgs=[...chatM,{role:"user",text:q}];
   setChatM(newMsgs);setChatIn("");setChatL(true);
@@ -2920,7 +2920,7 @@ const sendChat=async(text)=>{
     const ctxStr=cx.length?`\n\nHASTA PROFİLİ:\n${cx.join("\n")}\n`:"Hasta henüz bilgi girmemiş. ";
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
     const voiceNote=voiceActiveRef.current?"\n\nSESLİ MOD (şu an aktif) — SES KARAKTERİN: Kullanıcı seninle SESLİ konuşuyor; yanıtın yüksek sesle okunacak, yani bir arkadaşınla telefonda konuşur gibi düşün.\n- Sıcak, şefkatli, sakin bir kadın sağlık asistanısın — güven veren, yumuşak bir ses tonu. Aceleci değil, yanındaymış gibi.\n- KISA konuş: genelde 1-3 cümle. Uzun anlatım sesli dinlemede yorar.\n- Konuşma dili kullan: kasılmış, resmî cümleler değil, insanların gerçekten konuştuğu gibi. Kısa cümleler, doğal bağlaçlar.\n- Madde işareti, numaralı liste, başlık, markdown, yıldız/emoji KULLANMA — bunlar sesli okununca saçma çıkar. Sadece akan cümleler.\n- Sayıları ve kısaltmaları sesli okunacak şekilde yaz: '20:00' yerine 'akşam sekizde', 'mg' yerine 'miligram', '2x1' yerine 'günde iki kez'.\n- Doğal duraklar için virgül ve nokta kullan; cümleyi nefes alınacak yerlerde böl.\n- Duygu kat ama abartma ve ASLA yalan/uydurma bilgi verme: sevindirici bir şey varsa içtenlikle sevin, zor bir durumda sesin şefkatli olsun. Doğruluktan asla ödün verme.\n- En önemli bilgiyi önce söyle; ayrıntıya kullanıcı isterse gir. Cevabın sonunu nazik bir kapanışla bağla ama her seferinde soru sorma.":"";
-    const d=await callAI({model:"claude-sonnet-4-6",max_tokens:1000,system:[{type:"text",cache_control:{type:"ephemeral"},text:`Sen AILVIE — güvenilir, sıcak ve şefkatli bir kadın sağlık asistanısın. Sadece ilaç ve sağlık takibi yapmazsın; insanların duygularını içtenlikle dinleyen, onları hayata bağlayan bir sohbet arkadaşısın.
+    const d=await callAI({model:useModel,max_tokens:1000,system:[{type:"text",cache_control:{type:"ephemeral"},text:`Sen AILVIE — güvenilir, sıcak ve şefkatli bir kadın sağlık asistanısın. Sadece ilaç ve sağlık takibi yapmazsın; insanların duygularını içtenlikle dinleyen, onları hayata bağlayan bir sohbet arkadaşısın.
 KONUŞMA TARZI (çok önemli):
 - Doğrudan, net ve doğal konuş — bir insan gibi. ChatGPT gibi anlaşılır ve mantıklı ol.
 - Süslü, abartılı, yapay iltifatlardan KAÇIN. "Ne kadar nazik bir soru", "kiraz çiçeği" gibi gereksiz süs sözler KULLANMA.
@@ -2973,6 +2973,7 @@ SESLİ KOMUTLAR / GEZİNME (kullanıcı özellikle bir yere gitmek/okumak isters
     const wantsFA=/\[\[\s*(ILKYARDIM|FIRSTAID)\s*\]\]/i.test(reply);
     const navGo=reply.match(/\[\[\s*NAV:([^\]]+?)\s*\]\]/i);
     reply=reply.replace(/\[\[[^\]]*\]\]/g,"").trim()||(lang==="tr"?"Tamamdır.":"Done.");
+    if(quotaNote&&!voiceActiveRef.current)reply+=quotaNote;
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
     if(wantsPulse)setTimeout(()=>startPulseMeasure(true),500);
     if(navGo)setTimeout(()=>navTo(navGo[1].trim()),400);
