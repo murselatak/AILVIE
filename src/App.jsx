@@ -1,5 +1,6 @@
 import React from "react";
 import { TL } from "./tl";
+import { emgFor, poisonFor, servicesFor, EMG_LABELS_TR } from "./emergency";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 /* ══════════════════════════════════════════════════════════
@@ -483,7 +484,7 @@ const FIRST_AID=[
  {ic:"🐝",tr:["Şiddetli alerji (anafilaksi)","Adrenalin oto-enjektörü (EpiPen) varsa uyluğun dış yüzüne HEMEN uygulayın.","112'yi arayın.","Nefes zorsa oturtun; baygınsa sırtüstü yatırıp bacakları kaldırın.","Belirtiler sürerse ve ikinci doz varsa 5–15 dk sonra tekrar uygulanabilir.","Belirtiler: yüz/dudak/dil şişmesi, nefes darlığı, yaygın kızarıklık, baş dönmesi."],
   en:["Severe allergy (anaphylaxis)","If an adrenaline auto-injector (EpiPen) is available, use it on the outer thigh NOW.","Call 112.","If breathing is hard, sit them up; if faint, lay flat and raise legs.","A second dose may be given after 5–15 min if symptoms persist.","Signs: swelling of face/lips/tongue, breathlessness, widespread rash, dizziness."]},
  {ic:"☠️",tr:["Zehirlenme","Ulusal Zehir Danışma Merkezi 114'ü veya 112'yi arayın.","Aksi söylenmedikçe KUSTURMAYIN.","Zehirli madde/ilaç kutusunu (isim ve miktar için) yanınıza alın.","Cilt/göz teması varsa bol suyla 15–20 dk yıkayın."],
-  en:["Poisoning","Call the poison center (in Turkey 114) or 112.","Do NOT induce vomiting unless told to.","Keep the substance/medication package (for name and amount).","For skin/eye contact, rinse with plenty of water for 15–20 min."]},
+  en:["Poisoning","Call your local poison centre or 112.","Do NOT induce vomiting unless told to.","Keep the substance/medication package (for name and amount).","For skin/eye contact, rinse with plenty of water for 15–20 min."]},
  {ic:"😵",tr:["Bayılma","Kişiyi sırtüstü yatırın, bacaklarını ~30 cm kaldırın.","Dar giysileri gevşetin, temiz hava sağlayın.","1 dakikada kendine gelmezse ya da nefes/bilinç sorunluysa 112'yi arayın."],
   en:["Fainting","Lay the person on their back and raise their legs ~30 cm.","Loosen tight clothing and provide fresh air.","If they don't recover within a minute or breathing is off, call 112."]},
  {ic:"🩹",tr:["Kırık / burkulma","Bölgeyi hareket ettirmeyin; olduğu gibi sabitleyin (atel/destek).","Kemiği yerine oturtmaya ÇALIŞMAYIN.","Şişlik için beze sarılı soğuk kompres uygulayın (doğrudan cilde değil).","Şiddetli ağrı, şekil bozukluğu veya açık kırıkta 112/hekim."],
@@ -2594,7 +2595,35 @@ const[chatNudgeOff,setChatNudgeOff]=useState(false); // gentle overdue-med remin
 useEffect(()=>{if(chatEndRef.current)chatEndRef.current.scrollIntoView({behavior:"smooth",block:"end"});},[chatM,chatL]);
 
 // Emergency
-const[emNums,setEmNums]=useState([{id:1,name:"Ambulans",number:"112",icon:"🚑",fixed:true},{id:2,name:"Polis",number:"155",icon:"🚔",fixed:true},{id:3,name:"İtfaiye",number:"110",icon:"🚒",fixed:true},{id:4,name:"Jandarma",number:"156",icon:"🛡️",fixed:true},{id:5,name:"AFAD",number:"122",icon:"🆘",fixed:true}]);
+// Emergency services are country-aware: a hardcoded list would send someone in the US to dial 112
+// instead of 911. Fixed entries are derived from the detected country; user-added ones are kept.
+const[ctry,setCtry]=useState(()=>{try{return localStorage.getItem("ailvie_country")||"";}catch(e){return "";}});
+const emgNum=emgFor(ctry);
+const poisonNum=poisonFor(ctry);
+const[emNums,setEmNums]=useState(()=>{
+  let c="";try{c=localStorage.getItem("ailvie_country")||"";}catch(e){}
+  return servicesFor(c);
+});
+// Detect country once (IP-based, already allowlisted in CSP) so emergency numbers are correct.
+useEffect(()=>{
+  if(ctry)return;
+  let done=false;
+  const set=(cc)=>{if(done||!cc)return;done=true;const v=String(cc).toUpperCase();try{localStorage.setItem("ailvie_country",v);}catch(e){}setCtry(v);};
+  fetch("https://ipwho.is/").then(r=>r.ok?r.json():null).then(j=>{if(j&&j.country_code)set(j.country_code);else throw 0;})
+    .catch(()=>{fetch("https://get.geojs.io/v1/ip/geo.json").then(r=>r.ok?r.json():null).then(j=>{if(j&&j.country_code)set(j.country_code);}).catch(()=>{});});
+},[ctry]);
+// Re-sync the fixed services when the country becomes known; keep user-added entries untouched.
+useEffect(()=>{
+  if(!ctry)return;
+  setEmNums(p=>{
+    const fresh=servicesFor(ctry);
+    const custom=(p||[]).filter(x=>!x.fixed);
+    const same=(p||[]).filter(x=>x.fixed).map(x=>x.number).join(",")===fresh.map(x=>x.number).join(",");
+    if(same&&(p||[]).filter(x=>x.fixed).every(x=>x.k))return p;
+    return [...fresh,...custom];
+  });
+},[ctry]);
+const emLabel=(en)=>en&&en.k?(lang==="tr"?(EMG_LABELS_TR[en.k]||en.k):TL(en.k,lang)):((en&&en.name)||"");
 const[newEm,setNewEm]=useState({name:"",number:""});
 
 // Trash
@@ -4028,7 +4057,7 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   <div style={CS}><div style={{marginBottom:6}}>📝 {t.fSize}: {fs}</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[12,13,14,16,18,20,22].map(sz=><button key={sz} onClick={()=>setFs(sz)} aria-label={`${t.fSize} ${sz}`} style={pill(fs===sz)}>{sz}</button>)}</div></div>
   <div style={CS}><div style={{marginBottom:6}}>🌍 {t.lang}</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4}}>{Object.entries(LL).map(([k,v])=>{const emj={tr:"🇹🇷",en:"🇬🇧",de:"🇩🇪",ru:"🇷🇺",zh:"🇨🇳",hi:"🇮🇳",nl:"🇳🇱",es:"🇪🇸",ar:"🇸🇦",fr:"🇫🇷",pt:"🇵🇹",id:"🇮🇩",bn:"🇧🇩"};return<button key={k} onClick={()=>setLang(k)} style={pill(lang===k)}>{emj[k]||""} {v}</button>;})}</div></div>
   <div style={CS}><div style={{marginBottom:6}}>🤖 AI API Key <span style={{fontSize:fs-3,color:mt}}>(Anthropic)</span></div><div style={{display:"flex",gap:6}}><input type="password" value={apiKey} onChange={e=>{setApiKey(e.target.value);try{localStorage.setItem("ailvie_api_key",e.target.value);}catch(ex){}}} placeholder="sk-ant-..." style={{...IS,flex:1,fontFamily:"monospace",fontSize:fs-2}}/>{apiKey&&<button onClick={()=>{setApiKey("");try{localStorage.removeItem("ailvie_api_key");}catch(ex){}}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:8,padding:"4px 8px",color:dg,cursor:"pointer"}}>✕</button>}</div><div style={{fontSize:fs-3,color:apiKey?sc:mt,marginTop:4}}>{apiKey?(lang==="tr"?"✓ API anahtarı ayarlandı":TL("✓ API key set",lang)):(lang==="tr"?"AI Sohbet, çeviri ve ilaç analizi için gerekli":TL("Required for AI Chat, translation & drug analysis",lang))}</div></div>
-  <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {en.name} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>{toTrash("emergency",en);notify(lang==="tr"?"Çöp kutusuna taşındı":TL("Moved to Trash",lang));}} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
+  <div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🚨 {t.emN}</div>{emNums.map(en=>(<div key={en.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${bd}`}}><span>{en.icon} {emLabel(en)} — <strong>{en.number}</strong></span>{!en.fixed&&<button onClick={()=>{toTrash("emergency",en);notify(lang==="tr"?"Çöp kutusuna taşındı":TL("Moved to Trash",lang));}} style={{background:"none",border:"none",color:dg,cursor:"pointer"}}>✕</button>}</div>))}{emNums.filter(e=>!e.fixed).length<5&&<div style={{display:"flex",gap:6,marginTop:8}}><input placeholder={t.nm} value={newEm.name} onChange={e=>setNewEm({...newEm,name:e.target.value})} style={{...IS,flex:1}}/><input placeholder="Nr" value={newEm.number} onChange={e=>setNewEm({...newEm,number:e.target.value})} style={{...IS,width:80}}/><button onClick={()=>{if(newEm.name&&newEm.number){setEmNums(p=>[...p,{id:Date.now(),...newEm,icon:"📞",fixed:false}]);setNewEm({name:"",number:""});}}} style={{...BP,padding:"8px 14px"}}>+</button></div>}</div></>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🛡️ {t.permissions}</div>{[["notif","notifPerm","🔔"],["loc","locPerm","📍"],["mic","micPerm","🎤"],["cam","camPerm","📷"]].map(([k,label,icon])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0"}}><span>{icon} {t[label]||label}</span><button aria-label={lang==="tr"?"Aç/Kapat":TL("Toggle",lang)} onClick={()=>{const willOn=!perms[k];setPerms(p=>({...p,[k]:willOn}));if(k==="loc"){if(willOn){notify(lang==="tr"?"📍 Konum açılıyor…":TL("📍 Enabling location…",lang));loadWeather(true);}else setWeather({err:"off"});return;}if(k==="notif"){if(willOn&&('Notification'in window)){if(Notification.permission==="denied")notify(lang==="tr"?"⚠️ Bildirim tarayıcıda engelli. Tarayıcı > Site izinleri > Bildirim'i açın.":TL("⚠️ Notifications blocked in browser settings.",lang));else Notification.requestPermission().then(st=>{if(st!=="granted")notify(lang==="tr"?"Bildirim izni verilmedi — tarayıcı ayarlarından açabilirsiniz.":TL("Notification permission not granted.",lang));}).catch(()=>{});}return;}}} style={{width:40,height:22,borderRadius:11,background:perms[k]?sc:bd,border:"none",cursor:"pointer",position:"relative"}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:perms[k]?21:3,transition:"left .2s"}}/></button></div>))}</div>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🧹 {lang==="tr"?"İçerik Filtresi":TL("Content Filter",lang)}</div>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",gap:8}}>
@@ -6362,11 +6391,11 @@ return (
             </div>
             <div style={{padding:"12px 16px",overflowY:"auto"}}>
               <div style={{display:"flex",gap:8,marginBottom:10}}>
-                <a href="tel:112" style={{...BP,flex:1,textAlign:"center",textDecoration:"none",padding:"12px",fontSize:fs+1,fontWeight:800,background:`linear-gradient(135deg,${dg},#c0392b)`}}>📞 112 {lang==="tr"?"Acil":TL("Emergency",lang)}</a>
-                <a href="tel:114" title={lang==="tr"?"Zehir Danışma":TL("Poison line",lang)} style={{...BP,flex:"0 0 auto",textAlign:"center",textDecoration:"none",padding:"12px 14px",fontSize:fs-1,background:"transparent",border:`1px solid ${bd}`,color:tc}}>☠️ 114</a>
+                <a href={`tel:${emgNum}`} style={{...BP,flex:1,textAlign:"center",textDecoration:"none",padding:"12px",fontSize:fs+1,fontWeight:800,background:`linear-gradient(135deg,${dg},#c0392b)`}}>📞 {emgNum} {lang==="tr"?"Acil":TL("Emergency",lang)}</a>
+                {poisonNum&&<a href={`tel:${poisonNum}`} title={lang==="tr"?"Zehir Danışma":TL("Poison line",lang)} style={{...BP,flex:"0 0 auto",textAlign:"center",textDecoration:"none",padding:"12px 14px",fontSize:fs-1,background:"transparent",border:`1px solid ${bd}`,color:tc}}>☠️ {poisonNum}</a>}
               </div>
-              <div style={{fontSize:fs-3,color:tc,background:`${dg}12`,border:`1px solid ${dg}33`,borderRadius:10,padding:"8px 10px",marginBottom:12,lineHeight:1.5}}>⚠️ {lang==="tr"?"Acil durumda ÖNCE 112'yi arayın. Bu bilgiler temel yönlendirmedir; profesyonel tıbbi yardımın veya ilk yardım eğitiminin yerine geçmez.":TL("In an emergency, call 112 FIRST. This is basic guidance and does not replace professional help or first-aid training.",lang)}</div>
-              {FIRST_AID.map((it,i)=>{const c=lang==="tr"?it.tr:it.en;const open=faOpen===i;return <div key={i} style={{border:`1px solid ${bd}`,borderRadius:12,marginBottom:8,overflow:"hidden"}}>
+              <div style={{fontSize:fs-3,color:tc,background:`${dg}12`,border:`1px solid ${dg}33`,borderRadius:10,padding:"8px 10px",marginBottom:12,lineHeight:1.5}}>⚠️ {lang==="tr"?`Acil durumda ÖNCE ${emgNum}'yi arayın. Bu bilgiler temel yönlendirmedir; profesyonel tıbbi yardımın veya ilk yardım eğitiminin yerine geçmez.`:TL("In an emergency, call 112 FIRST. This is basic guidance and does not replace professional help or first-aid training.",lang).replace(/\b112\b/g,emgNum)}<br/>{lang==="tr"?`Numaralar bulunduğunuz ülkeye (${ctry||"?"}) göre gösterilir; farklıysa yerel acil numaranızı arayın.`:TL("Numbers shown are for your detected country; if different, dial your local emergency number.",lang)}</div>
+              {FIRST_AID.map((it,i)=>{const c=(lang==="tr"?it.tr:it.en).map(s=>s.replace(/\b112\b/g,emgNum).replace(/\b114\b/g,poisonNum||emgNum));const open=faOpen===i;return <div key={i} style={{border:`1px solid ${bd}`,borderRadius:12,marginBottom:8,overflow:"hidden"}}>
                 <button onClick={()=>setFaOpen(open?null:i)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"11px 12px",background:open?`${ac}10`:"transparent",border:"none",cursor:"pointer",color:tc,textAlign:"left"}}>
                   <span style={{fontSize:22,flexShrink:0}}>{it.ic}</span>
                   <span style={{flex:1,fontWeight:700,fontSize:fs-1}}>{c[0]}</span>
@@ -6582,7 +6611,7 @@ return (
         </div>;})()}
 
         {/* Emergency */}
-        {showEmergency&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.75)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setShowEmergency(false)}><div onClick={e=>e.stopPropagation()} style={{background:cd,borderRadius:20,padding:20,width:"85%",maxHeight:"80%",overflowY:"auto"}}><div style={{textAlign:"center",marginBottom:12}}><div style={{fontSize:44}}>🚨</div><h3 style={{margin:0,color:dg}}>{t.emergency}</h3></div>{emNums.map(en=>(<a key={en.id} href={`tel:${en.number}`} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",borderRadius:12,background:`${dg}08`,border:`1px solid ${dg}22`,textDecoration:"none",color:tc,marginBottom:6}}><span style={{fontSize:26}}>{en.icon}</span><div style={{flex:1}}><div style={{fontWeight:700}}>{en.name}</div><div style={{fontSize:fs+2,color:dg,fontWeight:800}}>{en.number}</div></div><span style={{fontSize:22}}>📞</span></a>))}<button onClick={()=>setShowEmergency(false)} style={{...BP,width:"100%",marginTop:8,background:mt}}>{t.cancel}</button></div></div>}
+        {showEmergency&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.75)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setShowEmergency(false)}><div onClick={e=>e.stopPropagation()} style={{background:cd,borderRadius:20,padding:20,width:"85%",maxHeight:"80%",overflowY:"auto"}}><div style={{textAlign:"center",marginBottom:12}}><div style={{fontSize:44}}>🚨</div><h3 style={{margin:0,color:dg}}>{t.emergency}</h3></div>{emNums.map(en=>(<a key={en.id} href={`tel:${en.number}`} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",borderRadius:12,background:`${dg}08`,border:`1px solid ${dg}22`,textDecoration:"none",color:tc,marginBottom:6}}><span style={{fontSize:26}}>{en.icon}</span><div style={{flex:1}}><div style={{fontWeight:700}}>{emLabel(en)}</div><div style={{fontSize:fs+2,color:dg,fontWeight:800}}>{en.number}</div></div><span style={{fontSize:22}}>📞</span></a>))}<button onClick={()=>setShowEmergency(false)} style={{...BP,width:"100%",marginTop:8,background:mt}}>{t.cancel}</button></div></div>}
 
         {/* Language Picker */}
         {showLangPicker&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.4)",zIndex:350}} onClick={()=>setShowLangPicker(false)}><div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:50,right:6,background:cd,borderRadius:14,padding:8,width:210,maxHeight:"80vh",overflowY:"auto",boxShadow:"0 8px 32px rgba(0,0,0,.5)",border:`1px solid ${bd}`}}>
