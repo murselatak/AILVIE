@@ -4652,7 +4652,9 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         <div style={{fontSize:fs-4,color:mt,marginTop:8}}>{lang==="tr"?"Değerler tarama amaçlıdır; tıbbi karar için doktorunuza danışın.":TL("Values are for screening; consult your doctor for medical decisions.",lang)}</div>
       </>}
     </div>;})()}
-  <div style={{...CS}}>
+  {/* e-Nabız is a Turkey-only national health record. Show it only to users in Turkey or using
+      Turkish (covers Turkish users abroad); other regions would see an irrelevant card. */}
+  {(ctry==="TR"||lang==="tr")&&<div style={{...CS}}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
       <span style={{fontSize:20}}>🩺</span>
       <div style={{fontWeight:700,color:acTx}}>e-Nabız {lang==="tr"?"Bağlantısı":TL("Connection",lang)}</div>
@@ -4667,7 +4669,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       {lang==="tr"?"1) e-Nabız'ı aç, e-Devlet ile gir · 2) Rapor/görüntüyü indir · 3) Aşağıdaki \"Tıbbi Görüntüleme\" bölümüne yükle — AILVIE okuyup yorumlar.":"1) Open e-Nabız, sign in with e-Devlet · 2) Download the report/image · 3) Upload it in \"Medical Imaging\" below — AILVIE reads & interprets."}
     </div>
     <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.5}}>ℹ️ {lang==="tr"?"Uygulama içinden otomatik veri çekme; Sağlık Bakanlığı resmi API izni (OAuth2/FHIR) + güvenli sunucu + KVKK uyumu gerektirir. Bu onay alınınca \"Hesabımı Bağla\" tek dokunuşla çalışacak (sahte bağlantı göstermiyoruz).":"Automatic in-app data pull requires official Ministry of Health API approval (OAuth2/FHIR) + a secure server + data-protection compliance. Once approved, \"Connect account\" works in one tap (we don't show a fake connection)."}</div>
-  </div>
+  </div>}
   <div style={{...CS}}>
     <div style={{fontWeight:700,marginBottom:4,color:acTx}}>🩻 {lang==="tr"?"Tıbbi Görüntüleme & Belgeler":TL("Medical Imaging & Documents",lang)}</div>
     <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"Röntgen, tomografi, MR, ultrason, tahlil… Pencereden seç, sürükle-bırak, fotoğraf çek ya da QR/barkod ile yükle. AILVIE görüntüyü okuyup genel yorum yapar.":TL("X-ray, CT, MRI, ultrasound, labs… Pick, drag & drop, take a photo, or upload via QR/barcode. AILVIE reads and gives a general interpretation.",lang)}</div>
@@ -5231,7 +5233,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div style={{fontSize:fs-2,fontWeight:700,color:sc,marginBottom:4}}>✨ {lang==="tr"?"Wellness Bonusu":TL("Wellness Bonus",lang)}</div>
       <div style={{fontSize:fs-3,color:mt}}>+{wellnessBonus} {lang==="tr"?"puan (su, uyku, adım, ruh hali, egzersiz)":TL("pts (water, sleep, steps, mood, exercise)",lang)}</div>
     </div>}
-    <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Kaynak: acibadem.com.tr referans değerleri":TL("Source: acibadem.com.tr reference values",lang)}</div>
+    <div style={{fontSize:fs-4,color:mt,textAlign:"center",marginTop:6}}>{lang==="tr"?"Referans aralıkları laboratuvara ve ülkeye göre değişir — kendi tahlil raporunuzdaki aralıkları esas alın.":TL("Reference ranges vary by lab and country — use the ranges printed on your own lab report.",lang)}</div>
   </div>
   {/* Smart Watch Health Data — manual now, auto-sync in mobile app */}
   <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>⌚ {lang==="tr"?"Akıllı Saat Verileri":lang==="de"?"Smartwatch-Daten":lang==="es"?"Datos del reloj":lang==="ru"?"Данные часов":lang==="ar"?"بيانات الساعة":"Smartwatch Data"}</div>
