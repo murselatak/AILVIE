@@ -4141,7 +4141,7 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🔒 {lang==="tr"?"Uygulama Kilidi":TL("App Lock",lang)}</div>
     {!lockCfg
       ? <>
-        <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Telefonunuz başkasının eline geçerse sağlık verileriniz göz önünde olmasın diye bir ekran kilidi ekler. Not: veriyi cihazda şifrelemez; PIN düz metin değil, PBKDF2 özeti olarak saklanır.":TL("Adds a screen lock so your health data isn't in plain view if your phone is taken. Note: it doesn't encrypt data on the device; the PIN is stored as a PBKDF2 hash, not plaintext.",lang)}</div>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.4}}>{lang==="tr"?"Ekran kilidi ekler ve PIN açıkken sağlık verilerinizi cihazda AES-256 ile şifreler. Anahtar PIN'inizden türetilir ve yalnızca bellekte tutulur; PIN düz metin değil, PBKDF2 özeti olarak saklanır. Not: kısa bir PIN'in koruması sınırlıdır — cihazınızın kendi kilidini/şifrelemesini de açık tutun.":TL("Adds a screen lock and, while the PIN is on, encrypts your health data on the device with AES-256. The key is derived from your PIN and kept only in memory; the PIN itself is stored as a PBKDF2 hash, not plaintext. Note: a short PIN offers limited protection — also keep your device's own lock/encryption on.",lang)}</div>
         <button onClick={async()=>{
           const L=lang==="tr";
           const p1=window.prompt(L?"Yeni PIN (en az 4 rakam):":"New PIN (min 4 digits):","");
@@ -5994,7 +5994,7 @@ const pages={home:renderHome,medTime:renderMedTime,admin:renderAdmin,meds:render
           {lockErr&&<div style={{color:dg,fontSize:fs-2}}>{lockErr}</div>}
           <button onClick={tryUnlockPIN} disabled={pinIn.length<4} style={{...BP,width:"100%",maxWidth:260,padding:"11px",opacity:pinIn.length<4?0.5:1}}>{lang==="tr"?"Kilidi Aç":TL("Unlock",lang)}</button>
           {lockCfg.credId&&<button onClick={tryUnlockBio} style={{...BP,width:"100%",maxWidth:260,padding:"11px",background:"transparent",color:acTx,border:`1px solid ${ac}`}}>🔐 {lang==="tr"?"Biyometrik ile aç":TL("Use biometrics",lang)}</button>}
-          <div style={{color:mt,fontSize:fs-4,textAlign:"center",maxWidth:280,lineHeight:1.4,marginTop:6}}>{lang==="tr"?"PIN, sağlık verilerinizi bu cihazda göz önünden gizler (ekran kilidi) — tam şifreleme değildir. Daha güçlü koruma için cihazınızın kendi kilidini/şifrelemesini kullanın ve şifreli bir yedek saklayın.":TL("The PIN hides your health data on this device (a screen lock), not full encryption. For stronger protection, use your device's own lock/encryption and keep an encrypted backup.",lang)}</div>
+          <div style={{color:mt,fontSize:fs-4,textAlign:"center",maxWidth:280,lineHeight:1.4,marginTop:6}}>{lang==="tr"?"PIN, bu cihazdaki sağlık verilerinizi AES-256 ile şifreler ve ekranda gizler. Kısa bir PIN'in koruması sınırlıdır — cihazınızın kendi kilidini/şifrelemesini de kullanın ve şifreli bir yedek saklayın.":TL("The PIN encrypts your health data on this device with AES-256 and keeps it off the screen. A short PIN offers limited protection — also use your device's own lock/encryption and keep an encrypted backup.",lang)}</div>
         </div>
   </div>);
 
@@ -6181,7 +6181,7 @@ return (
                 </button>)}
               </div>
               <button onClick={()=>getLoc()} style={{...BP,width:"100%",marginTop:10,padding:"10px"}}>📍 {lang==="tr"?"Konumumu haritada göster":TL("Show my location",lang)}</button>
-              <div style={{fontSize:fs-4,color:mt,marginTop:10,lineHeight:1.5}}>ℹ️ {lang==="tr"?"Yol tarifi cihazının harita uygulamasında açılır. Konum izni gerekebilir; acil durumda önce 112'yi arayın.":TL("Directions open in your device's maps app. Location permission may be needed; in an emergency call 112 first.",lang)}</div>
+              <div style={{fontSize:fs-4,color:mt,marginTop:10,lineHeight:1.5}}>ℹ️ {(lang==="tr"?"Yol tarifi cihazının harita uygulamasında açılır. Konum izni gerekebilir; acil durumda önce 112'yi arayın.":TL("Directions open in your device's maps app. Location permission may be needed; in an emergency call 112 first.",lang)).replace(/\b112\b/g,emgNum)}</div>
             </div>
           </div>
         </div>}
