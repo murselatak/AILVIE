@@ -2325,7 +2325,7 @@ const packData=async(jsonStr)=>{const key=dataKeyRef.current;if(!key)return json
 const unpackData=async(raw)=>{if(raw==null)return null;let env;try{env=JSON.parse(raw);}catch(e){return raw;}if(!env||env.enc!==1)return raw;const key=dataKeyRef.current;if(!key){const er=new Error("locked");er.code="locked";throw er;}const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(env.iv)},key,b64d(env.ct));return dec.decode(pt);};
 const applyLoadedData=(d)=>{
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
-if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(Array.isArray(d.labs))setLabs(d.labs);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(Array.isArray(d.labs))setLabs(d.labs);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);if(Array.isArray(d.aiMem))setAiMem(d.aiMem);
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
 };
 const[repMetric,setRepMetric]=useState("weight");
@@ -2592,6 +2592,16 @@ const[callModal,setCallModal]=useState(null); // {type,group,status:'requesting'
 
 // Chat
 const[chatM,setChatM]=useState([]);
+// AI memory: distilled, durable facts about the person — NOT the raw chat log. The full log is
+// already persisted in chatM, but only the last 10 turns are sent to the model, so anything older
+// is effectively forgotten. These items are captured via a [[HAFIZA:...]] token in the reply (no
+// extra API call) and re-injected into the system prompt, which is what lets the assistant actually
+// know the person over months. Kept on-device with the rest of the encrypted payload; the user can
+// read and delete every item (Settings), because a health assistant remembering things about you
+// silently is exactly the wrong kind of surprise.
+const[aiMem,setAiMem]=useState([]);
+const[memOn,setMemOn]=useState(()=>{try{return localStorage.getItem("ailvie_mem_off")!=="1";}catch(e){return true;}});
+const MEM_CAP=40;
 const[chatSearch,setChatSearch]=useState("");
 const[chatIn,setChatIn]=useState("");
 const[chatL,setChatL]=useState(false);
@@ -2683,12 +2693,12 @@ useEffect(()=>{(async()=>{
   latestPayloadRef.current=payload||"{}";
   try{const d=JSON.parse(payload||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
-if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(Array.isArray(d.labs))setLabs(d.labs);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(Array.isArray(d.labs))setLabs(d.labs);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);if(Array.isArray(d.aiMem))setAiMem(d.aiMem);
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
   }catch(e){}
   dataLoadedRef.current=true;
 })();},[]); // load once (IndexedDB primary)
-useEffect(()=>{if(!dataLoadedRef.current)return;const tm=setTimeout(()=>{const payload=JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs});
+useEffect(()=>{if(!dataLoadedRef.current)return;const tm=setTimeout(()=>{const payload=JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,aiMem,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs});
   (async()=>{
     // GUARD (first write after startup only): a load bug could leave state empty and the
     // very next autosave would wipe good data on disk. Later writes are genuine user edits
@@ -2728,7 +2738,7 @@ useEffect(()=>{if(!dataLoadedRef.current)return;const tm=setTimeout(()=>{const p
     if(!idbOk){
       try{localStorage.getItem("ailvie_data");}catch(e){}
     }
-  })();},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs,lang]); // enhanced auto-save (IndexedDB primary) (incl. drafts + trash + diet/glucose/log/goals)
+  })();},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,aiMem,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs,lang]); // enhanced auto-save (IndexedDB primary) (incl. drafts + trash + diet/glucose/log/goals)
 useEffect(()=>{(async()=>{let raw=null;try{raw=await idbGet("ailvie_medimg");}catch(e){}
   if(raw==null){try{raw=localStorage.getItem("ailvie_medimg");if(raw)await idbSet("ailvie_medimg",raw);}catch(e){}}
   try{if(raw){const a=JSON.parse(raw);if(Array.isArray(a))setMedImages(a);}}catch(e){}})();},[]);
@@ -2953,6 +2963,10 @@ const sendChat=async(text)=>{
     if(meds.length){const takenN=meds.filter(m=>m.taken).length;const pend=meds.filter(m=>!m.taken);const nowMin=_now.getHours()*60+_now.getMinutes();const overdue=pend.filter(m=>{const[h,mm]=(m.time||"00:00").split(":").map(Number);return (h*60+mm)<nowMin;});const nextP=pend.filter(m=>{const[h,mm]=(m.time||"00:00").split(":").map(Number);return (h*60+mm)>=nowMin;}).sort((a,b)=>((a.time||"00:00")>(b.time||"00:00")?1:-1))[0];cx.push(`BUGÜNKÜ İLAÇLAR: ${takenN}/${meds.length} alındı, ${pend.length} bekliyor${overdue.length?`; GECİKMİŞ: ${overdue.map(m=>`${m.name} (${m.time})`).join(", ")}`:""}${nextP?`; sıradaki: ${nextP.name} ${nextP.time}`:""}`);}
     {const wp=[];if(wellness.water>0)wp.push(`su ${wellness.water}/${wellness.waterGoal} bardak`);if(wellness.mood>0){const ml={1:"çok kötü",2:"kötü",3:"normal",4:"iyi",5:"harika"};wp.push(`bugünkü ruh hali: ${ml[wellness.mood]}`);}if(wellness.exercise>0)wp.push(`egzersiz ${wellness.exercise} dk`);if(wp.length)cx.push(`BUGÜNKÜ İYİ-OLUŞ: ${wp.join(", ")}`);}
     const ctxStr=cx.length?`\n\nHASTA PROFİLİ:\n${cx.join("\n")}\n`:"Hasta henüz bilgi girmemiş. ";
+    // Distilled long-term memory. Without this the model only ever sees the last 10 turns, so
+    // anything the person told it last week is gone — this is what makes it know them over time.
+    const MEMLBL={kisi:"Kişi",durum:"Durum",iseyaradi:"İşe yarayan",tercih:"Tercih"};
+    const memStr=(memOn&&aiMem.length)?`\n\nHAFIZAM (önceki konuşmalardan damıtılmış, kişiyi tanımak için — doğal kullan):\n${aiMem.map(m=>`- [${MEMLBL[m.k]||m.k}] ${m.t}`).join("\n")}\n`:(memOn?"":"\n\n(Hafıza kullanıcı tarafından kapatılmış — geçmişi hatırlamıyorsun, sorulursa dürüstçe söyle.)\n");
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
     const voiceNote=voiceActiveRef.current?"\n\nSESLİ MOD (şu an aktif) — SES KARAKTERİN: Kullanıcı seninle SESLİ konuşuyor; yanıtın yüksek sesle okunacak, yani bir arkadaşınla telefonda konuşur gibi düşün.\n- Sıcak, şefkatli, sakin bir kadın sağlık asistanısın — güven veren, yumuşak bir ses tonu. Aceleci değil, yanındaymış gibi.\n- KISA konuş: genelde 1-3 cümle. Uzun anlatım sesli dinlemede yorar.\n- Konuşma dili kullan: kasılmış, resmî cümleler değil, insanların gerçekten konuştuğu gibi. Kısa cümleler, doğal bağlaçlar.\n- Madde işareti, numaralı liste, başlık, markdown, yıldız/emoji KULLANMA — bunlar sesli okununca saçma çıkar. Sadece akan cümleler.\n- Sayıları ve kısaltmaları sesli okunacak şekilde yaz: '20:00' yerine 'akşam sekizde', 'mg' yerine 'miligram', '2x1' yerine 'günde iki kez'.\n- Doğal duraklar için virgül ve nokta kullan; cümleyi nefes alınacak yerlerde böl.\n- Duygu kat ama abartma ve ASLA yalan/uydurma bilgi verme: sevindirici bir şey varsa içtenlikle sevin, zor bir durumda sesin şefkatli olsun. Doğruluktan asla ödün verme.\n- En önemli bilgiyi önce söyle; ayrıntıya kullanıcı isterse gir. Cevabın sonunu nazik bir kapanışla bağla ama her seferinde soru sorma.":"";
     const d=await callAI({model:useModel,max_tokens:1000,system:[{type:"text",cache_control:{type:"ephemeral"},text:`Sen AILVIE — güvenilir, sıcak ve şefkatli bir kadın sağlık asistanısın. Sadece ilaç ve sağlık takibi yapmazsın; insanların duygularını içtenlikle dinleyen, onları hayata bağlayan bir sohbet arkadaşısın.
@@ -2987,7 +3001,7 @@ KURALLAR:
 6) İlaç etkileşimlerinde uyar.
 7) Sesli yanıt özelliğin VAR (🔊 dinleme, 🎙️ sesli diyalog). "Sesli veremiyorum" deme.
 8) Kullanıcının cihazını/mikrofonunu GÖREMEZSİN. "Seni duyamıyorum", "mikrofonun kapalı" gibi cihaz durumu hakkında uydurma yapma.
-9) Kendi teknik altyapın hakkında konuşma. "Makine öğrenimim yok", "önceki günü hatırlamıyorum", "ben sadece bir dil modeliyim", "hafızam yok" gibi teknik açıklamalar YAPMA. Bunlar kullanıcının kafasını karıştırır. Sadece bir sağlık asistanı gibi davran ve sağlık konusuna odaklan.
+9) Kendi teknik altyapın hakkında gereksiz açıklama yapma; "ben sadece bir dil modeliyim" gibi laflarla konuyu dağıtma. ANCAK hafıza konusunda DÜRÜST OL: kullanıcı geçmişi hatırlayıp hatırlamadığını sorarsa, HAFIZAM bölümünde gerçekten yazan şeyleri hatırladığını söyle; orada olmayan bir şeyi hatırlıyormuş gibi YAPMA ("hatırlamıyorum ama not alabilirim" demek dürüsttür ve iyidir). Hafıza kapalıysa veya boşsa bunu sakin bir dille söyle.
 10) İlaç hakkında soru sorulduğunda: İlacı tanıyorsan etken maddesini, ne için kullanıldığını, yan etkilerini ve uyarılarını açıkla. İlacın adını net anlamadıysan kısaca "Hangi ilaç olduğunu netleştirir misin (etken madde veya kullanım amacı)?" diye SADECE BİR KEZ sor, sonra elindeki bilgiyle yardımcı ol. İlaç bilgisi verirken mutlaka "kesin bilgi için doktor/eczacıya danışın" uyarısı ekle.
 
 ÖLÇÜMLER (ölçümleri baştan sona SEN yönet, hastayı yönlendir):
@@ -2995,18 +3009,48 @@ KURALLAR:
 - ASLA bir ölçüm değeri UYDURMA. Yalnızca uygulamanın gönderdiği GERÇEK sonucu yorumla. Sonuç gelince: kişinin yaşına göre normal aralıkla karşılaştır, sakin bir dille normal/yüksek/düşük olduğunu söyle, gerekli ise doktora yönlendir. Bu bir tıbbi tanı değildir; endişe verici değerlerde hekime başvurmasını nazikçe öner.
 - Telefonla GÜVENİLİR ölçülemeyen değerler (tansiyon, SpO2/oksijen, EKG, ateş, kan şekeri): dürüstçe bunların sertifikalı bir cihaz / oksimetre / giyilebilir gerektirdiğini söyle; ölçüyormuş gibi YAPMA. İstersen değeri elle kaydetmeyi öner.
 
+HAFIZA (kişiyi zamanla tanıman için — kullanıcının izniyle açık):
+- Sana verilen HAFIZAM bölümü, bu kişi hakkında önceki konuşmalardan damıtılmış kalıcı notlardır. Onları zaten biliyormuş gibi doğal kullan; "notlarıma göre" gibi robotik ifadeler kurma.
+- KALICI ve gelecekte işe yarayacak bir şey öğrenirsen yanıtının EN SONUNA ayrı satırda [[HAFIZA:tür|kısa not]] ekle. Türler: kisi (yaşam durumu, iş, aile, korkular — ör. gece vardiyasında çalışıyor), durum (tekrarlayan sağlık teması — ör. 2 haftadır uyku sorunu), iseyaradi (kişide işe yarayan şey — ör. metformini yemekle alınca bulantı geçti), tercih (nasıl konuşulmasını istediği).
+- BUNU NADİREN yap: her mesajda değil, sadece gerçekten kalıcı bir şey öğrendiğinde (çoğu yanıtta hiç). Geçici/önemsiz şeyleri (bugünkü hava, tek seferlik soru) YAZMA. Zaten HAFIZAM'da olan bir şeyi tekrar yazma.
+- Not kısa olsun (en fazla ~10 kelime), kişinin kendi ifadesine sadık kal, teşhis/etiket koyma.
+- Kullanıcı "bunu unut" derse [[HAFIZA_SIL:aranacak kelime]] ekle.
+
 SESLİ KOMUTLAR / GEZİNME (kullanıcı özellikle bir yere gitmek/okumak isterse; görme engelli kullanıcılar için önemli):
 - Kullanıcı bir sayfaya gitmek isterse KISA bir onay cümlesi ver ve yanıtının EN SONUNA ayrı satırda [[GIT:sayfa]] ekle. Geçerli sayfalar: home, meds, appts, health, notes, contacts, community, chat, settings, pCard. Örn "ilaçlarıma git" → [[GIT:meds]].
 - Kullanıcı kayıtlı verisini SESLİ okumanı isterse [[OKU:tür]] ekle (tür: meds, appts, health). Uygulama listeyi kendisi sesli okuyacak, sen listeyi tekrar yazma. Örn "ilaçlarımı oku" → [[OKU:meds]].
 - Kullanıcı ilk yardım isterse [[ILKYARDIM]] ekle (İlk Yardım ekranını açar).
 - NAVİGASYON: Kullanıcı yakında bir sağlık yeri bulmak/yol tarifi isterse (hastane, acil servis, eczane, nöbetçi eczane, klinik, diş hekimi, laboratuvar, görüntüleme, aile sağlığı merkezi, psikolog, göz/optik, kan bağışı, ya da kardiyoloji/fizyoterapi gibi bir branş) yanıtının EN SONUNA ayrı satırda [[NAV:arama]] ekle. "arama" kısmına haritada aranacak yeri KULLANICININ DİLİNDE yaz (ör. [[NAV:nöbetçi eczane]] veya [[NAV:cardiologist]]). Uygulama kullanıcının konumunu kullanıp harita uygulamasında yol tarifini açar. Kullanıcı bir yakınma/ihtiyaç belirtirse (ör. "dişim ağrıyor") uygun yeri nazikçe öner ve isterse [[NAV:diş hekimi]] ekle.
-- Bu direktifleri YALNIZCA kullanıcı gerçekten isterse kullan; uydurma bilgi verme.`},{type:"text",text:(ctxStr+voiceNote)}],messages:history},apiKey);
+- Bu direktifleri YALNIZCA kullanıcı gerçekten isterse kullan; uydurma bilgi verme.`},{type:"text",text:(ctxStr+memStr+voiceNote)}],messages:history},apiKey);
     let reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":TL("No response.",lang));
     const wantsPulse=/\[\[\s*(OLC:NABIZ|MEASURE:PULSE)\s*\]\]/i.test(reply);
     const navM=reply.match(/\[\[\s*GIT:(\w+)\s*\]\]/i);
     const readM=reply.match(/\[\[\s*OKU:(\w+)\s*\]\]/i);
     const wantsFA=/\[\[\s*(ILKYARDIM|FIRSTAID)\s*\]\]/i.test(reply);
     const navGo=reply.match(/\[\[\s*NAV:([^\]]+?)\s*\]\]/i);
+  // Memory capture. Runs off the same token protocol as the other directives, so it costs no extra
+  // API call. Only kept when memory is on; every item stays user-readable and user-deletable.
+  if(memOn){
+    const memAdds=[...reply.matchAll(/\[\[\s*HAFIZA:\s*(kisi|durum|iseyaradi|tercih)\s*\|\s*([^\]]{2,90}?)\s*\]\]/gi)];
+    const memDels=[...reply.matchAll(/\[\[\s*HAFIZA_SIL:\s*([^\]]{2,60}?)\s*\]\]/gi)];
+    if(memAdds.length||memDels.length){
+      setAiMem(prev=>{
+        let next=[...prev];
+        for(const d of memDels){
+          const q=d[1].toLowerCase().trim();
+          next=next.filter(m=>!m.t.toLowerCase().includes(q));
+        }
+        for(const a of memAdds){
+          const k=a[1].toLowerCase(), tx=a[2].trim();
+          // skip near-duplicates so the list doesn't fill with restatements of the same thing
+          const norm=x=>x.toLowerCase().replace(/[^\p{L}\p{N} ]/gu,"").trim();
+          if(next.some(m=>m.k===k&&(norm(m.t)===norm(tx)||norm(m.t).includes(norm(tx))||norm(tx).includes(norm(m.t)))))continue;
+          next.push({k,t:tx,d:new Date().toISOString().slice(0,10)});
+        }
+        return next.slice(-MEM_CAP);
+      });
+    }
+  }
     reply=reply.replace(/\[\[[^\]]*\]\]/g,"").trim()||(lang==="tr"?"Tamamdır.":TL("Done.",lang));
     if(quotaNote&&!voiceActiveRef.current)reply+=quotaNote;
     setChatM(p=>[...p,{role:"assistant",text:reply}]);
@@ -4142,6 +4186,29 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
         }} style={{...BP,width:"100%",padding:"8px",background:dgBg,color:"#fff",fontSize:fs-2,opacity:syncBusy?0.6:1}}>{lang==="tr"?"Senkronu Kapat ve Sunucudan Sil":TL("Disable & delete",lang)}</button>
         <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{lang==="tr"?"Sunucu yalnızca şifreli veriyi görür (kimlik özeti, şifreli blok, zaman damgası). Parolanız ve anahtarlarınız cihazınızdan çıkmaz.":TL("The server only sees ciphertext.",lang)}</div>
       </>}
+  </div>}
+  {(all||s==="perms")&&<div style={CS}>
+    <div style={{fontWeight:700,marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+      <span>🧠 {lang==="tr"?"AILVIE'nin Hafızası":TL("AILVIE's Memory",lang)}</span>
+      <button onClick={()=>{const v=!memOn;setMemOn(v);try{v?localStorage.removeItem("ailvie_mem_off"):localStorage.setItem("ailvie_mem_off","1");}catch(e){}}} aria-label="memory" style={{width:40,height:22,borderRadius:11,background:memOn?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:memOn?21:3,transition:"left .2s"}}/></button>
+    </div>
+    <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.45}}>{lang==="tr"?"Açıkken AILVIE, konuşmalarınızdan öğrendiği kalıcı notları saklar ve sizi zamanla tanır. Notlar cihazınızda tutulur, PIN açıkken şifrelenir ve AI'ya yanıt üretmek için gönderilir. Her notu görebilir ve silebilirsiniz.":TL("When on, AILVIE keeps durable notes it learns from your conversations so it gets to know you over time. Notes stay on your device, are encrypted when a PIN is set, and are sent to the AI to generate answers. You can read and delete every note.",lang)}</div>
+    {!memOn?<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:8}}>{lang==="tr"?"Hafıza kapalı — AILVIE geçmiş konuşmaları hatırlamıyor.":TL("Memory is off — AILVIE does not remember past conversations.",lang)}</div>
+    :aiMem.length===0?<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:8}}>{lang==="tr"?"Henüz bir şey öğrenmedi. Sohbet ettikçe burası dolacak.":TL("Nothing learned yet. This fills up as you chat.",lang)}</div>
+    :<>
+      <div style={{display:"flex",flexDirection:"column",gap:5,maxHeight:230,overflowY:"auto"}}>
+        {aiMem.map((m,i)=>{
+          const lbl={kisi:lang==="tr"?"Kişi":TL("Person",lang),durum:lang==="tr"?"Durum":TL("Condition",lang),iseyaradi:lang==="tr"?"İşe yaradı":TL("Worked",lang),tercih:lang==="tr"?"Tercih":TL("Preference",lang)}[m.k]||m.k;
+          return <div key={i} style={{display:"flex",alignItems:"flex-start",gap:6,padding:"6px 8px",borderRadius:7,background:dark?"#0d1520":"#f8fafc"}}>
+            <span style={{fontSize:fs-4,color:acTx,fontWeight:700,flexShrink:0,minWidth:62}}>{lbl}</span>
+            <span style={{flex:1,fontSize:fs-2,wordBreak:"break-word"}}>{m.t}</span>
+            <span style={{fontSize:fs-4,color:mt,flexShrink:0}}>{m.d}</span>
+            <button onClick={()=>setAiMem(p=>p.filter((_,j)=>j!==i))} aria-label={t.del} style={{background:"none",border:"none",color:dg,cursor:"pointer",fontSize:fs-2,flexShrink:0,padding:0}}>✕</button>
+          </div>;
+        })}
+      </div>
+      <button onClick={()=>{if(window.confirm(lang==="tr"?"AILVIE'nin sizin hakkınızda öğrendiği her şey silinecek. Emin misiniz?":TL("Everything AILVIE has learned about you will be deleted. Are you sure?",lang)))setAiMem([]);}} style={{...BP,width:"100%",marginTop:8,padding:"8px",background:"transparent",color:dg,border:`1px solid ${dg}55`}}>🗑️ {lang==="tr"?"Hafızayı Tamamen Sil":TL("Erase All Memory",lang)}</button>
+    </>}
   </div>}
   {(all||s==="perms")&&<div style={CS}><div style={{fontWeight:700,marginBottom:8}}>🔒 {lang==="tr"?"Uygulama Kilidi":TL("App Lock",lang)}</div>
     {!lockCfg
@@ -5867,7 +5934,7 @@ const renderPrivacy=()=>(<div style={{display:"flex",flexDirection:"column",gap:
   <div style={CS}><div style={{fontSize:fs-1,color:tc,lineHeight:1.6}}>
     <p style={{marginBottom:8}}><strong>AILVIE {t.privPolicy}</strong></p>
     <p style={{marginBottom:8}}>{lang==="tr"?"AILVIE'de sağlık verileriniz cihazınızda saklanır — sunucularımızda bir kopyası tutulmaz. PIN açıkken veriler cihazda AES-256 ile şifrelenir. Senkronizasyon isteğe bağlıdır ve açtığınızda veri cihazınızda şifrelenip öyle gönderilir; sunucu yalnızca şifreli metni görür, içeriğini okuyamaz.":TL("In AILVIE your health data is stored on your device — we keep no copy on our servers. With a PIN on, it is encrypted on the device with AES-256. Sync is optional; when you turn it on, data is encrypted on your device before it is sent, so the server only ever sees ciphertext and cannot read it.",lang)}</p>
-    <p style={{marginBottom:8}}>{lang==="tr"?"Bazı özellikler çalışmak için dış servislere veri gönderir — bunu açıkça belirtmek isteriz:\n• AI sohbeti / görüntü yorumu / ilaç analizi: sorunuz ve ilgili sağlık profiliniz (ör. yaş, ilaçlar, alerjiler, kronik hastalıklar) yanıtı üretmek için AI sağlayıcıya (Anthropic) gönderilir.\n• Çeviri: çevrilecek metin çeviri servisine gönderilir.\n• Sesli okuma: okunacak metin ses servisine gönderilir.\n• Hava durumu: yaklaşık konumunuz hava servisine gönderilir.\n• İlaç doğrulama: ilaç adı/barkodu RxNav ve OpenFDA'ya gönderilir.\nBu veriler yalnızca isteğinizi karşılamak için gönderilir; AILVIE bunları saklamaz.":TL("Some features send data to outside services in order to work — we want to be explicit about this:\n• AI chat / image interpretation / drug analysis: your question and the relevant parts of your health profile (e.g. age, medications, allergies, chronic conditions) are sent to the AI provider (Anthropic) to generate the answer.\n• Translation: the text to be translated is sent to the translation service.\n• Read-aloud: the text to be spoken is sent to the voice service.\n• Weather: your approximate location is sent to the weather service.\n• Drug verification: the drug name/barcode is sent to RxNav and OpenFDA.\nThis data is sent only to fulfil your request; AILVIE does not store it.",lang)}</p>
+    <p style={{marginBottom:8}}>{lang==="tr"?"Bazı özellikler çalışmak için dış servislere veri gönderir — bunu açıkça belirtmek isteriz:\n• AI sohbeti / görüntü yorumu / ilaç analizi: sorunuz, ilgili sağlık profiliniz (ör. yaş, ilaçlar, alerjiler, kronik hastalıklar) ve — hafıza açıksa — AILVIE’nin önceki konuşmalarınızdan öğrendiği notlar, yanıtı üretmek için AI sağlayıcıya (Anthropic) gönderilir. Hafızayı Ayarlar’dan kapatabilir, notları tek tek veya toplu silebilirsiniz.\n• Çeviri: çevrilecek metin çeviri servisine gönderilir.\n• Sesli okuma: okunacak metin ses servisine gönderilir.\n• Hava durumu: yaklaşık konumunuz hava servisine gönderilir.\n• İlaç doğrulama: ilaç adı/barkodu RxNav ve OpenFDA'ya gönderilir.\nBu veriler yalnızca isteğinizi karşılamak için gönderilir; AILVIE bunları saklamaz.":TL("Some features send data to outside services in order to work — we want to be explicit about this:\n• AI chat / image interpretation / drug analysis: your question, the relevant parts of your health profile (e.g. age, medications, allergies, chronic conditions) and — if memory is on — the notes AILVIE has learned from your past conversations are sent to the AI provider (Anthropic) to generate the answer. You can turn memory off in Settings and delete notes individually or all at once.\n• Translation: the text to be translated is sent to the translation service.\n• Read-aloud: the text to be spoken is sent to the voice service.\n• Weather: your approximate location is sent to the weather service.\n• Drug verification: the drug name/barcode is sent to RxNav and OpenFDA.\nThis data is sent only to fulfil your request; AILVIE does not store it.",lang)}</p>
     <p style={{marginBottom:8}}>{lang==="tr"?"• Verilerinizi hiçbir zaman satmıyor, reklam için paylaşmıyoruz\n• AI sohbet geçmişiniz sunucularımızda saklanmaz\n• İstediğiniz zaman verilerinizi silebilir veya şifreli yedek alabilirsiniz\n• Konum yalnızca izninizle ve yalnızca ilgili özellik için kullanılır\n• AI özelliklerini hiç kullanmazsanız sağlık verileriniz cihazınızdan çıkmaz":TL("• We never sell your data or share it for advertising\n• Your AI chat history is not stored on our servers\n• You can delete your data or export an encrypted backup at any time\n• Location is used only with your permission and only for the relevant feature\n• If you never use the AI features, your health data does not leave your device",lang)}</p>
     <p style={{marginBottom:8}}>{lang==="tr"?"Son güncelleme: Mart 2026":TL("Last updated: March 2026",lang)}</p>
   </div></div>
