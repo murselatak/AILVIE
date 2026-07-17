@@ -4266,7 +4266,7 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
       <div style={{fontSize:fs-3,color:mt,marginTop:4}}>{lang==="tr"?"Geçerli bir promosyon kodu girerek PRO özelliklerine erişin":TL("Enter a valid promo code to unlock PRO features",lang)}</div>
     </div>
     {[
-{n:t.free,p:"$0",d:(lang==="tr"?"Kişisel sağlık merkezin — kalıcı ücretsiz":TL("Your health hub — free forever",lang)),c:sc,active:true,features:lang==="tr"?["Sınırsız ilaç, randevu & not","Temel ilaç etkileşim & güvenlik uyarıları","Kamera ile nabız ölçümü","Sağlık takibi & hasta karnesi","İlk yardım & acil rehber","PIN/biyometrik kilit + AES-256 şifreleme","13 dil, cihaz sesi","Günde 5 · ayda 100 AI mesajı"]:["Unlimited meds, appointments & notes","Basic drug interaction & safety alerts","Camera-based pulse measurement","Health tracking & patient card","First aid & emergency contacts","PIN/biometric lock + AES-256 encryption","13 languages, device voice","5/day · 100/month AI messages"].map(f=>TL(f,lang))},
+{n:t.free,p:"$0",d:(lang==="tr"?"Kişisel sağlık merkezin — kalıcı ücretsiz":TL("Your health hub — free forever",lang)),c:sc,active:true,features:lang==="tr"?["Sınırsız ilaç, randevu & not","Temel ilaç etkileşim & güvenlik uyarıları","Kamera ile nabız ölçümü","Sağlık takibi & sağlık durumu","İlk yardım & acil rehber","PIN/biyometrik kilit + AES-256 şifreleme","13 dil, cihaz sesi","Günde 5 · ayda 100 AI mesajı"]:["Unlimited meds, appointments & notes","Basic drug interaction & safety alerts","Camera-based pulse measurement","Health tracking & health status","First aid & emergency contacts","PIN/biometric lock + AES-256 encryption","13 languages, device voice","5/day · 100/month AI messages"].map(f=>TL(f,lang))},
 {n:"Plus",p:"$4.99/"+t.monthly,d:(lang==="tr"?"$39.99/yıl (%33 indirim) • 7 gün deneme":TL("$39.99/yr (save 33%) • 7-day trial",lang)),c:ac,active:false,features:lang==="tr"?["Ücretsiz'in tamamı +","Ayda 300 AI mesajı","Doğal AILVIE sesi (Azure)","AI çeviri (63 dil)","AI ilaç analizi (kişiye özel)","Reklamsız"]:["Everything in Free +","300 AI messages/month","Natural AILVIE voice (Azure)","AI translation (63 langs)","Personalized AI drug analysis","Ad-free"].map(f=>TL(f,lang))},
 {n:"PRO",p:"$8.99/"+t.monthly,d:(lang==="tr"?"$69.99/yıl • 7 gün deneme":TL("$69.99/yr • 7-day trial",lang)),c:"#e8a817",active:false,badge:lang==="tr"?"EN POPÜLER":TL("BEST VALUE",lang),features:lang==="tr"?["Plus'ın tamamı +","Yoğun AI kullanımı (ayda 1.500 mesaj)","Röntgen/tahlil için AI ön açıklama (ayda 30) — tanı değil","Kapsamlı AI sağlık raporu (ayda 10)","Öncelikli yanıt hızı","Cihazlar arası senkron — Yakında","Apple Health / Health Connect — Yakında"]:["Everything in Plus +","Heavy AI usage (1,500 msgs/month)","AI preliminary explanation for X-ray/labs (30/mo) — not a diagnosis","Comprehensive AI health reports (10/mo)","Priority response speed","Cross-device sync — Coming soon","Apple Health / Health Connect — Coming soon"].map(f=>TL(f,lang))},
 {n:(lang==="tr"?"Kurumsal":TL("Enterprise",lang)),p:lang==="tr"?"Bize Ulaşın":TL("Contact Us",lang),d:(lang==="tr"?"Klinik, eczane & bakım kuruluşları için":TL("For clinics, pharmacies & care organizations",lang)),c:a2,active:false,features:lang==="tr"?["Yönetim paneli & rol bazlı erişim","Özel marka (white-label)","FHIR/API entegrasyonuna hazır mimari","Öncelikli destek & SLA","Veri koruma uyum desteği"]:["Admin panel & role-based access","Custom branding (white-label)","FHIR/API-ready architecture","Priority support & SLA","Data-protection compliance support"].map(f=>TL(f,lang))}
@@ -4293,7 +4293,7 @@ const renderSettings=()=>{const s=settingsTab;const all=s==="all";return(<div st
   </div>}
   {all&&<div style={CS}>
     <div style={{fontWeight:700,marginBottom:6}}>💾 {lang==="tr"?"Veri Yedekleme":TL("Data Backup",lang)}</div>
-    <div style={{fontSize:fs-2,color:mt,marginBottom:8}}>{lang==="tr"?"Tüm sağlık verilerinizi (ilaç, randevu, not, hasta karnesi) bir dosyaya yedekleyin veya geri yükleyin. Buluta gerek yok — cihaz değiştirirken de kullanışlı.":TL("Back up or restore all your health data (meds, appointments, notes, patient card) to a file. No cloud needed — also handy when switching devices.",lang)}</div>
+    <div style={{fontSize:fs-2,color:mt,marginBottom:8}}>{lang==="tr"?"Tüm sağlık verilerinizi (ilaç, randevu, not, sağlık durumu) bir dosyaya yedekleyin veya geri yükleyin. Buluta gerek yok — cihaz değiştirirken de kullanışlı.":TL("Back up or restore all your health data (meds, appointments, notes, health status) to a file. No cloud needed — also handy when switching devices.",lang)}</div>
     <div style={{display:"flex",gap:8}}>
       <button onClick={exportData} style={{...BP,flex:1}}>⬇️ {lang==="tr"?"Dışa Aktar":TL("Export",lang)}</button>
       <button onClick={()=>backupInputRef.current&&backupInputRef.current.click()} style={{...BP,flex:1,background:`linear-gradient(135deg,${sc},#1a7a6e)`}}>⬆️ {lang==="tr"?"İçe Aktar":TL("Import",lang)}</button>
@@ -4610,7 +4610,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         <button onClick={()=>startGuide("glucose")} aria-label={lang==="tr"?"Kan şekeri ölçüm rehberi":TL("Blood glucose measurement guide",lang)} title={lang==="tr"?"Nasıl ölçülür?":TL("How to measure",lang)} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${bd}`,color:acTx,borderRadius:8,padding:"3px 8px",cursor:"pointer",fontSize:fs-3,flexShrink:0}}>🔊 {lang==="tr"?"Rehber":TL("Guide",lang)}</button>
       </div>
       {(()=>{const c=patCtx();const L=lang==="tr";let msg=null;
-        if(!c.band)msg=L?"⚠️ Doğum tarihi girilmemiş — değerler sınıflandırılmıyor. Sağlık Durumum'dan yaş/cinsiyet ekleyin.":"⚠️ No birth date — values are not classified. Add age/sex in My Health Status.";
+        if(!c.band)msg=L?"⚠️ Doğum tarihi girilmemiş — değerler sınıflandırılmıyor. Yukarıdaki Kimlik & Risk Profili'nden yaş/cinsiyet ekleyin.":"⚠️ No birth date — values are not classified. Add age/sex in Identity & Risk Profile above.";
         else if(c.pregnant)msg=L?"⚠️ Gebelikte şeker eşikleri farklıdır (ör. gestasyonel diyabet). Uygulama sınıflandırma yapmaz; değerleriniz yalnızca kaydedilir. Doktorunuz/kadın doğum uzmanınız değerlendirmelidir.":"⚠️ Pregnancy thresholds differ. Values are recorded but not classified.";
         else if(c.band!=="adult"&&c.band!=="older")msg=L?"⚠️ Çocuk/adölesan referansları yetişkinden farklıdır ve yaşa/yönteme göre değişir. Uygulama sınıflandırma yapmaz; değerler yalnızca kaydedilir.":"⚠️ Pediatric references differ. Values are recorded but not classified.";
         return msg?<div style={{background:`${dg}12`,border:`1px solid ${dg}44`,borderRadius:9,padding:"8px 10px",fontSize:fs-3,color:tc,lineHeight:1.4,marginTop:6}}>{msg}</div>:null;})()}
@@ -4801,7 +4801,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     const uStage=ua?uacrStage(ua.canonValue):null;
     const gated=ctx.pregnant||(ctx.band&&ctx.band!=="adult"&&ctx.band!=="older");
     if(gated||(eg&&!eg.ok&&(eg.reason==="age"||eg.reason==="needs-sex")))
-      return <div style={{...CS,border:`1px solid ${bd}`}}><b style={{fontSize:fs,color:tc}}>🫘 {L?"Böbrek Değerlendirmesi":"Kidney Assessment"}</b><div style={{fontSize:fs-3,color:mt,marginTop:4}}>{ctx.pregnant?(L?"Gebelikte eGFR formülleri geçerli değildir — doktorunuz değerlendirmelidir.":"eGFR formulas not valid in pregnancy."):(eg&&eg.reason==="needs-sex")?(L?"eGFR için biyolojik cinsiyet gerekli (Sağlık Durumum).":"Sex required for eGFR."):(L?"Çocuklarda eGFR farklı formül (Schwartz) ve boy gerektirir — hesaplanmadı.":"Pediatric eGFR requires Schwartz equation.")}</div></div>;
+      return <div style={{...CS,border:`1px solid ${bd}`}}><b style={{fontSize:fs,color:tc}}>🫘 {L?"Böbrek Değerlendirmesi":"Kidney Assessment"}</b><div style={{fontSize:fs-3,color:mt,marginTop:4}}>{ctx.pregnant?(L?"Gebelikte eGFR formülleri geçerli değildir — doktorunuz değerlendirmelidir.":"eGFR formulas not valid in pregnancy."):(eg&&eg.reason==="needs-sex")?(L?"eGFR için biyolojik cinsiyet gerekli (yukarıdaki Kimlik & Risk Profili).":"Sex required for eGFR."):(L?"Çocuklarda eGFR farklı formül (Schwartz) ve boy gerektirir — hesaplanmadı.":"Pediatric eGFR requires Schwartz equation.")}</div></div>;
     const gColor=(st)=>st==="G1"||st==="G2"?sc:st==="G3a"||st==="G3b"?"#e9a23b":dg;
     const uColor=(st)=>st==="A1"?sc:st==="A2"?"#e9a23b":dg;
     const highRisk=(eg&&eg.ok&&eg.value<60)||(uStage&&uStage!=="A1");
@@ -4886,7 +4886,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     const preview=labForm.value?evaluateLab(labForm.test,labForm.value,labForm.unit,ctx,(labForm.low&&labForm.high)?{low:labForm.low,high:labForm.high}:null):null;
     const lvlColor=(lv)=>lv==="normal"?sc:(lv==="critical-low"||lv==="critical-high"||lv==="diabetes-range")?dg:(lv==="low"||lv==="high"||lv==="prediabetes")?"#e9a23b":mt;
     const lvlLabel=(lv)=>({normal:L?"normal":"normal",low:L?"düşük":"low",high:L?"yüksek":"high","critical-low":L?"kritik düşük":"critical low","critical-high":L?"kritik yüksek":"critical high",prediabetes:L?"prediyabet eşiği":"prediabetes","diabetes-range":L?"diyabet eşiği":"diabetes range"}[lv]||lv);
-    const naMsg=(reason)=>({age:L?"Yaşa özgü referans gerekli — sınıflandırma yapılmadı":"Age-specific reference needed",pregnancy:L?"Gebelikte eşikler farklıdır — sınıflandırma yapılmadı":"Pregnancy thresholds differ","no-context":L?"Doğum tarihi/cinsiyet girin (Sağlık Durumum)":"Add birth date/sex in My Health Status","not-in-library":L?"Bu test için dahili referans yok — raporunuzun aralığını girin":"No internal reference — enter your report's range","needs-sex":L?"Cinsiyet gerekli":"Sex required","needs-sex-age":L?"Yaş ve cinsiyet gerekli (Sağlık Durumum)":"Age and sex required","therapy-target":L?"Kan sulandırıcı tedavide INR hedefi kişiye özeldir — sınıflandırılmadı":"INR target is therapy-specific"}[reason]||reason);
+    const naMsg=(reason)=>({age:L?"Yaşa özgü referans gerekli — sınıflandırma yapılmadı":"Age-specific reference needed",pregnancy:L?"Gebelikte eşikler farklıdır — sınıflandırma yapılmadı":"Pregnancy thresholds differ","no-context":L?"Doğum tarihi/cinsiyet girin (yukarıdaki Kimlik & Risk Profili)":"Add birth date/sex in Identity & Risk Profile above","not-in-library":L?"Bu test için dahili referans yok — raporunuzun aralığını girin":"No internal reference — enter your report's range","needs-sex":L?"Cinsiyet gerekli":"Sex required","needs-sex-age":L?"Yaş ve cinsiyet gerekli (yukarıdaki Kimlik & Risk Profili)":"Age and sex required","therapy-target":L?"Kan sulandırıcı tedavide INR hedefi kişiye özeldir — sınıflandırılmadı":"INR target is therapy-specific"}[reason]||reason);
     const save=()=>{
       const r=evaluateLab(labForm.test,labForm.value,labForm.unit,ctx,(labForm.low&&labForm.high)?{low:labForm.low,high:labForm.high}:null);
       if(!r.ok){notify(r.reason==="unknown-unit"||r.reason==="missing-unit"?(L?"⚠️ Birim tanınmadı — sonuç kaydedilmedi":"⚠️ Unknown unit"):(L?"Geçersiz değer":"Invalid value"));return;}
@@ -5242,7 +5242,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     </div>}
     {/* Risk factors from history */}
     {(allergyCount>0||chronicCount>0||medsCount>0||recordsCount>0)&&<div style={{marginTop:8,padding:"8px 10px",borderRadius:8,background:`${dg}08`,border:`1px solid ${dg}22`}}>
-      <div style={{fontSize:fs-2,fontWeight:700,color:dg,marginBottom:4}}>⚠️ {lang==="tr"?"Risk Faktörleri (Sağlık Durumumdan)":TL("Risk Factors (from My Health Status)",lang)}</div>
+      <div style={{fontSize:fs-2,fontWeight:700,color:dg,marginBottom:4}}>⚠️ {lang==="tr"?"Risk Faktörleri (Kimlik & Risk Profilinden)":TL("Risk Factors (from Identity & Risk Profile)",lang)}</div>
       <div style={{fontSize:fs-3,color:mt,display:"flex",flexDirection:"column",gap:2}}>
         {allergyCount>0&&<div>🤧 {lang==="tr"?"Alerji":TL("Allergies",lang)}: <strong>{allergyCount}</strong> {lang==="tr"?"kayıt":TL("entries",lang)} (−{allergyCount*1} {lang==="tr"?"puan":TL("pts",lang)})</div>}
         {chronicCount>0&&<div>🩺 {lang==="tr"?"Kronik Hastalık":TL("Chronic Condition",lang)}: <strong>{chronicCount}</strong> {lang==="tr"?"kayıt":TL("entries",lang)} (−{chronicCount*3} {lang==="tr"?"puan":TL("pts",lang)})</div>}
@@ -5870,7 +5870,7 @@ const renderAbout=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
     <div style={{fontSize:fs-1,color:mt,marginTop:8}}>{t.version}: 9.0.0</div>
     <div style={{fontSize:fs-1,color:mt}}>© 2025-2026 AILVIE Health Technologies</div>
     <div style={{marginTop:12,padding:"8px 12px",borderRadius:8,background:`${ac}11`,fontSize:fs-2,color:acTx}}>
-      {lang==="tr"?"60+ dil • 60+ ilaç DB • AI sohbet • Hasta karnesi • KVKK/GDPR uyumlu":TL("60+ languages • 60+ drug DB • AI chat • Patient card • GDPR compliant",lang)}
+      {lang==="tr"?"60+ dil • 60+ ilaç DB • AI sohbet • Sağlık durumu • Cihazda şifreli":TL("60+ languages • 60+ drug DB • AI chat • Health status • Encrypted on device",lang)}
     </div>
   </div>
   <div style={CS}><div style={{fontSize:fs-1,color:tc,lineHeight:1.6}}>
@@ -6560,7 +6560,7 @@ return (
                 ? {icon:"👤",label:(lang==="tr"?"Hesabım":TL("My account",lang))+" — "+acctEmail,action:()=>{setSettingsTab("subs");goTo("settings");setShowMenu(false);}}
                 : {icon:"🔑",label:({tr:"Giriş Yap / Abone Ol",en:"Sign in / Subscribe",de:"Anmelden / Abonnieren",ru:"Войти / Подписка",zh:"登录 / 订阅",hi:"साइन इन / सदस्यता",nl:"Inloggen / Abonneren",es:"Iniciar sesión / Suscribirse",ar:"تسجيل الدخول / اشتراك"}[lang]||"Sign in / Subscribe"),action:()=>{setSettingsTab("subs");goTo("settings");setShowMenu(false);}}),
               null,
-              {icon:"👤",label:t.profile,action:()=>{goTo("pCard");setShowMenu(false);}},
+              {icon:"👤",label:t.profile,action:()=>{goTo("health");setShowMenu(false);}},
               {icon:"🚑",label:lang==="tr"?"İlk Yardım":TL("First Aid",lang),action:()=>{setShowMenu(false);setFaOpen(null);setShowFirstAid(true);}},
               {icon:"🧭",label:lang==="tr"?"Navigasyon":TL("Navigation",lang),action:()=>{setShowMenu(false);setShowNav(true);}},
               {icon:"🌍",label:t.lang,action:()=>{setShowMenu(false);setShowLangPicker(true);}},
