@@ -4506,7 +4506,7 @@ const setSleepTime=(field,val)=>{const nt={...sleepTimes,[field]:val};setSleepTi
 const stepsPct=Math.min(100,(wellness.steps/wellness.stepsGoal)*100);
 const moods=[{v:1,e:"😢",l:lang==="tr"?"Çok Kötü":TL("Very Bad",lang)},{v:2,e:"😕",l:lang==="tr"?"Kötü":TL("Bad",lang)},{v:3,e:"😐",l:lang==="tr"?"Normal":TL("Normal",lang)},{v:4,e:"🙂",l:lang==="tr"?"İyi":TL("Good",lang)},{v:5,e:"😄",l:lang==="tr"?"Harika":TL("Great",lang)}];
 return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
-  <span style={{fontWeight:700,fontSize:fs+2}}>📊 {t.healthFull}</span>
+  <span style={{fontWeight:700,fontSize:fs+2}}>🩺 {t.healthFull}</span>
   {/* Info Banner */}
   <div style={{padding:"8px 12px",borderRadius:10,background:`${ac}10`,border:`1px solid ${ac}33`,fontSize:fs-2,color:dark?acTx:tc,display:"flex",alignItems:"center",gap:6}}>
     <span>💡</span><span>{lang==="tr"?"Verileriniz Sağlık Durumum ile otomatik senkronize":TL("Data auto-syncs with My Health Status",lang)}</span>
@@ -5406,7 +5406,7 @@ const renderPCard=()=>{
         {cells.map(([ic,lb,vv,pg],i)=><div key={i} onClick={()=>goTo(pg)} style={{background:cd,borderRadius:10,padding:"8px 10px",cursor:"pointer"}}><div style={{fontSize:fs-3,color:mt}}>{ic} {lb}</div><div style={{fontSize:fs+1,fontWeight:800,color:tc,marginTop:2}}>{vv}</div></div>)}
       </div>
     </div>
-    <span style={{fontWeight:700,fontSize:fs+2}}>🪪 {t.pCardFull}</span>
+    <span style={{fontWeight:700,fontSize:fs+2}}>📊 {t.pCardFull}</span>
     <div style={{fontSize:fs-3,color:mt,marginTop:-4,lineHeight:1.45}}>{lang==="tr"?"Burası verilerinizin işlenmiş görünümüdür. Değişiklik için ✏️ ile Sağlık Verilerim'e geçin.":TL("This is the processed view of your data. Use ✏️ to change anything in My Health Data.",lang)}</div>
 
     {panel("id","👤",lang==="tr"?"Kimlik & Risk":TL("Identity & Risk",lang),riskBadge,ac,<>
@@ -6108,15 +6108,15 @@ const IcoPeople=({size=24})=>(
       d="M17.2 11c-3.1 0-5.5 2.1-5.9 5.1L10.9 21h12.6l-0.4-4.9C22.7 13.1 20.3 11 17.2 11z"/>
   </svg>
 );
-// Patient card: larger, brighter, high-contrast ID card
-const IcoIdCard=({size=24})=>(
+// Health status: a ring gauge with a heart at its centre — the processed, at-a-glance view of the
+// data entered in "My Health Data". Deliberately NOT a heart silhouette: the heart+pulse icon
+// belongs to the data-entry page, and at 24px in the nav the two must stay instantly tellable
+// apart (a circle vs a heart). The base ring is mid-grey so it survives both light and dark themes.
+const IcoStatus=({size=24})=>(
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{display:"block"}}>
-    <rect x="0.7" y="3" width="22.6" height="18" rx="2.8" fill="#ffffff" stroke="#e8a817" strokeWidth="1.6"/>
-    <circle cx="7.4" cy="10.2" r="3.1" fill="#0077b6"/>
-    <path fill="#0077b6" d="M2.6 18c0-2.6 2.2-4.1 4.8-4.1S12.2 15.4 12.2 18z"/>
-    <rect x="14" y="7.6" width="7.7" height="2.2" rx="1.1" fill="#e11d2e"/>
-    <rect x="14" y="11.4" width="7.7" height="1.9" rx="0.95" fill="#64748b"/>
-    <rect x="14" y="14.9" width="5.4" height="1.9" rx="0.95" fill="#64748b"/>
+    <circle cx="12" cy="12" r="9.6" fill="none" stroke="#94a3b8" strokeWidth="3.2"/>
+    <path fill="none" stroke="#e8a817" strokeWidth="3.2" strokeLinecap="round" d="M12 2.4a9.6 9.6 0 0 1 8.3 14.4"/>
+    <path fill="#e11d2e" d="M12 17.2l-.6-.55C9.2 14.7 8 13.6 8 12.2c0-1.15.9-2.05 2.05-2.05.65 0 1.28.3 1.95.97.67-.67 1.3-.97 1.95-.97 1.15 0 2.05.9 2.05 2.05 0 1.4-1.2 2.5-3.4 4.45l-.6.55z"/>
   </svg>
 );
 // Chat + Support: same visual language as the other nav icons - flat, two brand colours,
@@ -6194,7 +6194,7 @@ const GUIDES={
     {tr:"İğneyi güvenli bir kutuya atın.",en:"Dispose of the needle in a sharps container."},
   ]},
 };
-const nav1=[{key:"contacts",icon:<IcoPhone/>,label:t.contacts},{key:"pCard",icon:<IcoIdCard/>,label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:<IcoHeartBeat/>,label:t.health}];
+const nav1=[{key:"contacts",icon:<IcoPhone/>,label:t.contacts},{key:"pCard",icon:<IcoStatus/>,label:t.pCard},{key:"meds",icon:"💊",label:t.meds},{key:"appts",icon:"📅",label:t.appts},{key:"health",icon:<IcoHeartBeat/>,label:t.health}];
 const nav2=[{key:"notes",icon:"📝",label:t.notes},{key:"community",icon:<IcoPeople/>,label:t.community},{key:"chat",icon:<IcoAilvie/>,label:t.chat},{key:"admin",icon:<IcoAilvieSupport/>,label:t.adminCh||"Destek"},{key:"settings",icon:"⚙️",label:t.settings,onNav:()=>setSettingsTab("all")}];
 
 return (
