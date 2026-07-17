@@ -4506,15 +4506,51 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   <div style={{padding:"8px 12px",borderRadius:10,background:`${ac}10`,border:`1px solid ${ac}33`,fontSize:fs-2,color:dark?acTx:tc,display:"flex",alignItems:"center",gap:6}}>
     <span>💡</span><span>{lang==="tr"?"Verileriniz Sağlık Durumum ile otomatik senkronize":TL("Data auto-syncs with My Health Status",lang)}</span>
   </div>
+  {/* Kimlik & Risk Profili — X1 owns every input; "My Health Status" (X2) only displays them.
+     Placed first because age/sex/allergies are what every reference range and safety warning below
+     is computed from: if this is empty, the rest of the page cannot classify anything. */}
+  <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>👤 {lang==="tr"?"Kimlik & Risk Profili":TL("Identity & Risk Profile",lang)}</div>
+  <div style={{...CS,border:`1px solid ${ac}33`}}>
+    <div style={{fontSize:fs-3,color:mt,marginBottom:10,lineHeight:1.45}}>{lang==="tr"?"Yaş, cinsiyet, alerji ve kronik durumlar; aşağıdaki tahlil referanslarının ve güvenlik uyarılarının temelidir.":TL("Age, sex, allergies and chronic conditions are the basis for the lab references and safety warnings below.",lang)}</div>
+    {[["fName","name","text"],["bDate","birthDate","date"],["bType","bloodType","text"]].map(([label,field,type])=>(
+      <div key={field} style={{marginBottom:8}}>
+        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||field}{field==="birthDate"&&patAge?` (${patAge} ${t.age})`:""}</div>
+        <input type={type} value={pat[field]||""} onChange={e=>setPat(p=>({...p,[field]:e.target.value}))} placeholder={t[label]||field} style={{...IS,padding:"8px 10px"}}/>
+      </div>
+    ))}
+    <div style={{marginBottom:8}}>
+      <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>⚧ {lang==="tr"?"Biyolojik Cinsiyet":TL("Biological Sex",lang)} <span style={{fontSize:fs-4}}>({lang==="tr"?"referans aralıkları için":TL("for reference ranges",lang)})</span></div>
+      <div style={{display:"flex",gap:6}}>{[["female",lang==="tr"?"Kadın":TL("Female",lang)],["male",lang==="tr"?"Erkek":TL("Male",lang)],["",lang==="tr"?"Belirtme":TL("Unset",lang)]].map(([v,l])=><button key={v||"none"} onClick={()=>setPat(p=>({...p,sex:v,pregnant:v==="female"?p.pregnant:false}))} style={{flex:1,padding:"7px 4px",borderRadius:9,border:`1px solid ${pat.sex===v?ac:bd}`,background:pat.sex===v?`${ac}22`:"transparent",color:pat.sex===v?acTx:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
+    </div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8}}>
+      <span style={{flex:1,fontSize:fs-1,color:tc}}>💊 {lang==="tr"?"Kan sulandırıcı kullanıyorum":TL("On anticoagulant",lang)}<div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Açıkken INR hedefi kişiye özeldir; uygulama INR'yi sınıflandırmaz":TL("INR target is therapy-specific",lang)}</div></span>
+      <button onClick={()=>setPat(p=>({...p,onAnticoag:!p.onAnticoag}))} aria-label="anticoag" style={{width:40,height:22,borderRadius:11,background:pat.onAnticoag?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:pat.onAnticoag?21:3,transition:"left .2s"}}/></button>
+    </div>
+    {pat.sex==="female"&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+      <span style={{flex:1,fontSize:fs-1,color:tc}}>🤰 {lang==="tr"?"Gebelik":TL("Pregnancy",lang)}<div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Açıkken tahlil eşikleri uygulanmaz (farklıdır)":TL("Thresholds not applied when on",lang)}</div></span>
+      <button onClick={()=>setPat(p=>({...p,pregnant:!p.pregnant}))} aria-label="pregnancy" style={{width:40,height:22,borderRadius:11,background:pat.pregnant?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:pat.pregnant?21:3,transition:"left .2s"}}/></button>
+    </div>}
+  </div>
+  <div style={{...CS,border:`1px solid ${dg}33`,background:`${dg}05`}}>
+    <div style={{fontWeight:700,color:dg,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>⚠️ {lang==="tr"?"Alerji & Kronik Durumlar":TL("Allergies & Chronic Conditions",lang)}</div>
+    {[["allrg","allergies","text"],["chron","chronic","text"]].map(([label,field,type])=>(
+      <div key={field} style={{marginBottom:8}}>
+        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||field}</div>
+        <input type={type} value={pat[field]||""} onChange={e=>setPat(p=>({...p,[field]:e.target.value}))} placeholder={lang==="tr"?(field==="allergies"?"Örn: Penisilin, fıstık":"Örn: Diyabet, hipertansiyon"):(field==="allergies"?"e.g. Penicillin, nuts":"e.g. Diabetes, hypertension")} style={{...IS,padding:"8px 10px"}}/>
+      </div>
+    ))}
+  </div>
+  <div style={{...CS,border:`1px solid ${bd}`}}>
+    <div style={{fontWeight:700,color:mt,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>📋 {lang==="tr"?"Sigorta & Acil":TL("Insurance & Emergency",lang)}</div>
+    {[["insu","insu","text"],["emCon","emContact","text"],["","emPhone","tel"]].map(([label,field,type])=>(
+      <div key={field} style={{marginBottom:8}}>
+        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||(field==="emPhone"?(lang==="tr"?"Acil Telefon":TL("Emergency Phone",lang)):field)}</div>
+        <input type={type} value={pat[field]||""} onChange={e=>setPat(p=>({...p,[field]:e.target.value}))} placeholder={t[label]||field} style={{...IS,padding:"8px 10px"}}/>
+      </div>
+    ))}
+  </div>
   {/* Body Measurements */}
   <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>📏 {lang==="tr"?"Vücut Ölçümleri":TL("Body Measurements",lang)}</div>
-  <div style={{...CS,display:"flex",alignItems:"center",gap:10}}>
-    <span style={{fontSize:22}}>🎂</span>
-    <div style={{flex:1}}>
-      <div style={{fontSize:fs-2,color:mt}}>{t.bDate}</div>
-      <div style={{fontWeight:700,fontSize:fs+1,color:pat.birthDate?tc:mt}}>{pat.birthDate?`${pat.birthDate} (${patAge} ${t.age})`:<span onClick={()=>goTo("pCard")} style={{cursor:"pointer",color:acTx}}>{t.tap}</span>}</div>
-    </div>
-  </div>
   {HField({icon:"📏",label:t.ht,field:"height",unit:t.cm})}
   {HField({icon:"⚖️",label:t.wt,field:"weight",unit:t.kg})}
   {bmi>0&&<div style={CS}>
@@ -4714,6 +4750,15 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       </div>
     </div>
   </div>}
+  {/* Tıbbi Kayıtlar — moved here from X2 so that every input lives on this page. It sits next to the
+     document upload above, which is the other way records enter the app; X2 only displays them. */}
+  <div style={{fontWeight:700,fontSize:fs,color:mt,marginTop:4}}>📋 {t.diag} / {t.lab}</div>
+  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <span style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Tanı, tahlil ve rapor kayıtlarınız":TL("Your diagnosis, lab and report records",lang)}</span>
+    <button onClick={()=>{setEditRecId(null);setNewRec(EMPTY_REC);recDraftIdRef.current=null;setShowAddRec(true);}} style={{...BP,padding:"6px 14px"}}>+ {t.add}</button>
+  </div>
+  {records.map(r=>(<div key={r.id} style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,color:acTx}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-2,color:mt}}>{r.date}</span></div><div style={{fontSize:fs-1,color:mt}}>{r.doctor} — {r.hospital}</div><div style={{marginTop:4,wordBreak:"break-word"}}>{r.content}</div><div style={{display:"flex",gap:6,marginTop:4}}><button onClick={()=>{setEditRecId(r.id);setNewRec({type:r.type||"diag",doctor:r.doctor||"",hospital:r.hospital||"",date:r.date||"",content:r.content||"",notes:r.notes||""});setShowAddRec(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:acTx,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>✏️ {lang==="tr"?"Düzenle":TL("Edit",lang)}</button><button onClick={()=>toTrash("record",r)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>🗑️ {t.del}</button></div></div>))}
+  {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><div style={{fontWeight:700,marginBottom:8,color:acTx}}>{editRecId?"✏️ "+(lang==="tr"?"Kaydı Düzenle":TL("Edit Record",lang)):"+ "+(lang==="tr"?"Yeni Kayıt":TL("New Record",lang))}</div><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" aria-label={lang==="tr"?"Tarih":TL("Date",lang)} value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><div style={{display:"flex",gap:6,alignItems:"flex-start"}}><textarea placeholder={lang==="tr"?"İçerik / Sonuç":TL("Content / Result",lang)} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><DictateBtn value={newRec.content} onChange={v=>setNewRec(r=>({...r,content:v}))}/></div><div style={{display:"flex",gap:6}}><button onClick={()=>{recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={BP}>{lang==="tr"?"Bitti":TL("Done",lang)}</button><button onClick={()=>{if(!editRecId&&recDraftIdRef.current!=null){const id=recDraftIdRef.current;setRecords(p=>p.filter(x=>x.id!==id));}recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
   {/* Multi-layer clinical health score (lab-derived) */}
   {(()=>{
     const L=lang==="tr";
@@ -5328,55 +5373,67 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
     </div>;
   })()}
   <span style={{fontWeight:700,fontSize:fs+2}}>🪪 {t.pCardFull}</span>
-  {/* Kimlik Bilgileri */}
-  <div style={{...CS,border:`1px solid ${ac}33`}}>
-    <div style={{fontWeight:700,color:acTx,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>👤 {lang==="tr"?"Kimlik Bilgileri":TL("Identity Info",lang)}</div>
-    {[["fName","name","text"],["bDate","birthDate","date"],["bType","bloodType","text"]].map(([label,field,type])=>(
-      <div key={field} style={{marginBottom:8}}>
-        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||field}{field==="birthDate"&&patAge?` (${patAge} ${t.age})`:""}</div>
-        <input type={type} value={pat[field]||""} onChange={e=>setPat(p=>({...p,[field]:e.target.value}))} placeholder={t[label]||field} style={{...IS,padding:"8px 10px"}}/>
+  {/* X2 is a display centre: it shows, it does not capture. Every group carries an ✏️ that jumps to
+     the matching group in X1 ("My Health Data"), so a wrong value always has an obvious way to fix. */}
+  {(()=>{
+    const EditLink=({to})=><button onClick={()=>goTo(to)} style={{background:"none",border:`1px solid ${ac}44`,color:acTx,cursor:"pointer",fontSize:fs-3,padding:"3px 9px",borderRadius:7,fontWeight:600,flexShrink:0}}>✏️ {lang==="tr"?"Düzenle":TL("Edit",lang)}</button>;
+    const Row=({label,value})=><div style={{display:"flex",justifyContent:"space-between",gap:10,padding:"5px 0",borderBottom:`1px solid ${bd}44`}}>
+      <span style={{fontSize:fs-2,color:mt,flexShrink:0}}>{label}</span>
+      <span style={{fontSize:fs-1,fontWeight:600,color:value?tc:mt,textAlign:"right",wordBreak:"break-word"}}>{value||"—"}</span>
+    </div>;
+    const sexTxt=pat.sex==="female"?(lang==="tr"?"Kadın":TL("Female",lang)):pat.sex==="male"?(lang==="tr"?"Erkek":TL("Male",lang)):"";
+    return <>
+      <div style={{...CS,border:`1px solid ${ac}33`}}>
+        <div style={{fontWeight:700,color:acTx,marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+          <span style={{display:"flex",alignItems:"center",gap:6}}>👤 {lang==="tr"?"Kimlik Bilgileri":TL("Identity Info",lang)}</span>
+          <EditLink to="health"/>
+        </div>
+        <Row label={t.fName} value={pat.name}/>
+        <Row label={t.bDate} value={pat.birthDate?`${pat.birthDate}${patAge?` (${patAge} ${t.age})`:""}`:""}/>
+        <Row label={t.bType} value={pat.bloodType}/>
+        <Row label={lang==="tr"?"Biyolojik Cinsiyet":TL("Biological Sex",lang)} value={sexTxt}/>
+        {pat.onAnticoag&&<Row label="💊" value={lang==="tr"?"Kan sulandırıcı kullanıyor":TL("On anticoagulant",lang)}/>}
+        {pat.pregnant&&<Row label="🤰" value={lang==="tr"?"Gebelik":TL("Pregnancy",lang)}/>}
       </div>
-    ))}
-    <div style={{marginBottom:8}}>
-      <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>⚧ {lang==="tr"?"Biyolojik Cinsiyet":TL("Biological Sex",lang)} <span style={{fontSize:fs-4}}>({lang==="tr"?"referans aralıkları için":TL("for reference ranges",lang)})</span></div>
-      <div style={{display:"flex",gap:6}}>{[["female",lang==="tr"?"Kadın":TL("Female",lang)],["male",lang==="tr"?"Erkek":TL("Male",lang)],["",lang==="tr"?"Belirtme":TL("Unset",lang)]].map(([v,l])=><button key={v||"none"} onClick={()=>setPat(p=>({...p,sex:v,pregnant:v==="female"?p.pregnant:false}))} style={{flex:1,padding:"7px 4px",borderRadius:9,border:`1px solid ${pat.sex===v?ac:bd}`,background:pat.sex===v?`${ac}22`:"transparent",color:pat.sex===v?acTx:mt,fontSize:fs-2,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>
-    </div>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8}}>
-      <span style={{flex:1,fontSize:fs-1,color:tc}}>💊 {lang==="tr"?"Kan sulandırıcı kullanıyorum":TL("On anticoagulant",lang)}<div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Açıkken INR hedefi kişiye özeldir; uygulama INR'yi sınıflandırmaz":TL("INR target is therapy-specific",lang)}</div></span>
-      <button onClick={()=>setPat(p=>({...p,onAnticoag:!p.onAnticoag}))} aria-label="anticoag" style={{width:40,height:22,borderRadius:11,background:pat.onAnticoag?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:pat.onAnticoag?21:3,transition:"left .2s"}}/></button>
-    </div>
-    {pat.sex==="female"&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,gap:8}}>
-      <span style={{flex:1,fontSize:fs-1,color:tc}}>🤰 {lang==="tr"?"Gebelik":TL("Pregnancy",lang)}<div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Açıkken tahlil eşikleri uygulanmaz (farklıdır)":TL("Thresholds not applied when on",lang)}</div></span>
-      <button onClick={()=>setPat(p=>({...p,pregnant:!p.pregnant}))} aria-label="pregnancy" style={{width:40,height:22,borderRadius:11,background:pat.pregnant?sc:bd,border:"none",cursor:"pointer",position:"relative",flexShrink:0}}><div style={{width:16,height:16,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:pat.pregnant?21:3,transition:"left .2s"}}/></button>
-    </div>}
-  </div>
-  {/* Vücut Ölçüleri — Sağlık ile senkronize */}
+      <div style={{...CS,border:`1px solid ${dg}33`,background:`${dg}05`}}>
+        <div style={{fontWeight:700,color:dg,marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+          <span style={{display:"flex",alignItems:"center",gap:6}}>⚠️ {lang==="tr"?"Alerji & Kronik Durumlar":TL("Allergies & Chronic Conditions",lang)}</span>
+          <EditLink to="health"/>
+        </div>
+        <Row label={t.allrg} value={pat.allergies}/>
+        <Row label={t.chron} value={pat.chronic}/>
+      </div>
+      <div style={{...CS,border:`1px solid ${bd}`}}>
+        <div style={{fontWeight:700,color:mt,marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+          <span style={{display:"flex",alignItems:"center",gap:6}}>📋 {lang==="tr"?"Sigorta & Acil":TL("Insurance & Emergency",lang)}</span>
+          <EditLink to="health"/>
+        </div>
+        <Row label={t.insu} value={pat.insu}/>
+        <Row label={t.emCon} value={pat.emContact}/>
+        <Row label={lang==="tr"?"Acil Telefon":TL("Emergency Phone",lang)} value={pat.emPhone}/>
+      </div>
+    </>;
+  })()}
+  {/* Vücut Ölçüleri — display only. The height input used to live here as well as in X1, so the
+     same value could be typed in two places; it is now owned solely by X1. */}
   <div style={{...CS,border:`1px solid ${sc}33`,background:`${sc}05`}}>
-    <div style={{fontWeight:700,color:sc,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>📏 {lang==="tr"?"Vücut Ölçüleri":TL("Body Measurements",lang)} <span style={{fontSize:fs-4,color:mt,fontWeight:400}}>↔ {t.healthFull}</span></div>
+    <div style={{fontWeight:700,color:sc,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+      <span style={{display:"flex",alignItems:"center",gap:6}}>📏 {lang==="tr"?"Vücut Ölçüleri":TL("Body Measurements",lang)}</span>
+      <button onClick={()=>goTo("health")} style={{background:"none",border:`1px solid ${ac}44`,color:acTx,cursor:"pointer",fontSize:fs-3,padding:"3px 9px",borderRadius:7,fontWeight:600,flexShrink:0}}>✏️ {lang==="tr"?"Düzenle":TL("Edit",lang)}</button>
+    </div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-      <div>
-        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>📏 {t.ht} ({t.cm})</div>
-        <input type="number" value={hd.height||""} onChange={e=>setHd(p=>({...p,height:Number(e.target.value)}))} placeholder={t.ht} style={{...IS,padding:"8px 10px"}}/>
+      <div style={{padding:"7px 10px",borderRadius:8,background:dark?"#0e1620":"#f4f7fa"}}>
+        <div style={{fontSize:fs-4,color:mt}}>📏 {t.ht} ({t.cm})</div>
+        <div style={{fontSize:fs,fontWeight:700,color:hd.height>0?tc:mt,marginTop:2}}>{hd.height>0?hd.height:"—"}</div>
       </div>
       <div>
         <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>📊 BMI</div>
         <div style={{padding:"8px 10px",borderRadius:8,background:bmi>0?(bmi>=18.5&&bmi<25?`${sc}15`:`${dg}15`):"transparent",color:bmi>0?(bmi>=18.5&&bmi<25?sc:dg):mt,fontWeight:700,fontSize:fs-1,border:bmi>0?"none":`1px solid ${bd}`}}>{bmi>0?`${bmi} · ${bmi<18.5?(lang==="tr"?"Zayıf":TL("Under",lang)):bmi<25?"Normal":bmi<30?(lang==="tr"?"Fazla":TL("Over",lang)):(lang==="tr"?"Obez":TL("Obese",lang))}`:"—"}</div>
       </div>
     </div>
-    <div style={{display:"flex",gap:8,marginBottom:8}}>
+    <div style={{display:"flex",gap:8}}>
       {[["❤️",t.pulse,hd.pulse>0?hd.pulse+" "+t.bpm:"—"],["🩺",t.bp,hd.bpS>0?hd.bpS+"/"+(hd.bpD||"?"):"—"],["⚖️",t.wt,hd.weight>0?hd.weight+" "+t.kg:"—"]].map(([ic,lb,vv],i)=><div key={i} style={{flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,background:dark?"#0e1620":"#f4f7fa"}}><div style={{fontSize:fs-4,color:mt}}>{ic} {lb}</div><div style={{fontSize:fs-1,fontWeight:700,color:tc,marginTop:2}}>{vv}</div></div>)}
     </div>
-    <button onClick={()=>goTo("health")} style={{...BP,width:"100%",padding:"9px",background:"transparent",color:acTx,border:`1px solid ${ac}`}}>📊 {lang==="tr"?"Sağlık'ta Ölç / Güncelle":TL("Measure / Update in Health",lang)} →</button>
-  </div>
-  {/* Sağlık Durumu */}
-  <div style={{...CS,border:`1px solid ${dg}33`,background:`${dg}05`}}>
-    <div style={{fontWeight:700,color:dg,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>⚠️ {lang==="tr"?"Alerji & Kronik Durumlar":TL("Allergies & Chronic Conditions",lang)}</div>
-    {[["allrg","allergies","text"],["chron","chronic","text"]].map(([label,field,type])=>(
-      <div key={field} style={{marginBottom:8}}>
-        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||field}</div>
-        <input type={type} value={pat[field]||""} onChange={e=>setPat(p=>({...p,[field]:e.target.value}))} placeholder={lang==="tr"?(field==="allergies"?"Örn: Penisilin, fıstık":"Örn: Diyabet, hipertansiyon"):(field==="allergies"?"e.g. Penicillin, nuts":"e.g. Diabetes, hypertension")} style={{...IS,padding:"8px 10px"}}/>
-      </div>
-    ))}
   </div>
   {/* Kullandığı İlaçlar — meds state'den okuyor */}
   <div style={{...CS,border:`1px solid ${ac}33`,background:`${ac}05`}}>
@@ -5395,23 +5452,22 @@ const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10
       </div>
     }
   </div>
-  {/* Sigorta & Acil İletişim */}
-  <div style={{...CS,border:`1px solid ${bd}`}}>
-    <div style={{fontWeight:700,color:mt,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>📋 {lang==="tr"?"Sigorta & Acil":TL("Insurance & Emergency",lang)}</div>
-    {[["insu","insu","text"],["emCon","emContact","text"],["","emPhone","tel"]].map(([label,field,type])=>(
-      <div key={field} style={{marginBottom:8}}>
-        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>{t[label]||(field==="emPhone"?(lang==="tr"?"Acil Telefon":TL("Emergency Phone",lang)):field)}</div>
-        <input type={type} value={pat[field]||""} onChange={e=>setPat(p=>({...p,[field]:e.target.value}))} placeholder={t[label]||field} style={{...IS,padding:"8px 10px"}}/>
+  {/* Tıbbi Kayıtlar — read-only here; adding/editing lives in X1 next to the document upload. */}
+  <div style={{...CS}}>
+    <div style={{fontWeight:700,marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+      <span>📋 {t.diag} / {t.lab}</span>
+      <button onClick={()=>goTo("health")} style={{background:"none",border:`1px solid ${ac}44`,color:acTx,cursor:"pointer",fontSize:fs-3,padding:"3px 9px",borderRadius:7,fontWeight:600,flexShrink:0}}>✏️ {lang==="tr"?"Düzenle":TL("Edit",lang)}</button>
+    </div>
+    {records.length===0?<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:8}}>{lang==="tr"?"Henüz kayıt yok":TL("No records yet",lang)}</div>:
+      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+        {records.map(r=>(<div key={r.id} style={{padding:"7px 10px",borderRadius:8,background:dark?"#0d1520":"#f8fafc"}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:8}}><span style={{fontWeight:700,color:acTx,fontSize:fs-1}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-3,color:mt}}>{r.date}</span></div>
+          {(r.doctor||r.hospital)&&<div style={{fontSize:fs-3,color:mt,marginTop:1}}>{[r.doctor,r.hospital].filter(Boolean).join(" — ")}</div>}
+          {r.content&&<div style={{marginTop:3,fontSize:fs-2,wordBreak:"break-word"}}>{r.content}</div>}
+        </div>))}
       </div>
-    ))}
+    }
   </div>
-  {/* Tıbbi Kayıtlar */}
-  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-    <span style={{fontWeight:700}}>📋 {t.diag} / {t.lab}</span>
-    <button onClick={()=>{setEditRecId(null);setNewRec(EMPTY_REC);recDraftIdRef.current=null;setShowAddRec(true);}} style={{...BP,padding:"6px 14px"}}>+ {t.add}</button>
-  </div>
-  {records.map(r=>(<div key={r.id} style={CS}><div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,color:acTx}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-2,color:mt}}>{r.date}</span></div><div style={{fontSize:fs-1,color:mt}}>{r.doctor} — {r.hospital}</div><div style={{marginTop:4,wordBreak:"break-word"}}>{r.content}</div><div style={{display:"flex",gap:6,marginTop:4}}><button onClick={()=>{setEditRecId(r.id);setNewRec({type:r.type||"diag",doctor:r.doctor||"",hospital:r.hospital||"",date:r.date||"",content:r.content||"",notes:r.notes||""});setShowAddRec(true);}} style={{background:"none",border:`1px solid ${ac}33`,color:acTx,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>✏️ {lang==="tr"?"Düzenle":TL("Edit",lang)}</button><button onClick={()=>toTrash("record",r)} style={{background:"none",border:`1px solid ${dg}33`,color:dg,cursor:"pointer",fontSize:12,padding:"3px 8px",borderRadius:6}}>🗑️ {t.del}</button></div></div>))}
-  {showAddRec&&<div style={{...CS,border:`2px solid ${ac}`}}><div style={{fontWeight:700,marginBottom:8,color:acTx}}>{editRecId?"✏️ "+(lang==="tr"?"Kaydı Düzenle":TL("Edit Record",lang)):"+ "+(lang==="tr"?"Yeni Kayıt":TL("New Record",lang))}</div><select value={newRec.type} onChange={e=>setNewRec({...newRec,type:e.target.value})} style={{...IS,marginBottom:6}}>{["diag","xray","mri","ultra","lab","surg"].map(rt=><option key={rt} value={rt}>{t[rt]||rt}</option>)}</select><input placeholder={t.dr} value={newRec.doctor} onChange={e=>setNewRec({...newRec,doctor:e.target.value})} style={{...IS,marginBottom:6}}/><input placeholder={t.hosp} value={newRec.hospital} onChange={e=>setNewRec({...newRec,hospital:e.target.value})} style={{...IS,marginBottom:6}}/><input type="date" aria-label={lang==="tr"?"Tarih":TL("Date",lang)} value={newRec.date} onChange={e=>setNewRec({...newRec,date:e.target.value})} style={{...IS,marginBottom:6}}/><div style={{display:"flex",gap:6,alignItems:"flex-start"}}><textarea placeholder={lang==="tr"?"İçerik / Sonuç":TL("Content / Result",lang)} value={newRec.content} onChange={e=>setNewRec({...newRec,content:e.target.value})} onInput={autoResize} rows={3} style={{...IS,marginBottom:6,resize:"none"}}/><DictateBtn value={newRec.content} onChange={v=>setNewRec(r=>({...r,content:v}))}/></div><div style={{display:"flex",gap:6}}><button onClick={()=>{recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={BP}>{lang==="tr"?"Bitti":TL("Done",lang)}</button><button onClick={()=>{if(!editRecId&&recDraftIdRef.current!=null){const id=recDraftIdRef.current;setRecords(p=>p.filter(x=>x.id!==id));}recDraftIdRef.current=null;setNewRec(EMPTY_REC);setEditRecId(null);setShowAddRec(false);}} style={{...BP,background:mt}}>{t.cancel}</button></div></div>}
 </div>);
 
 const svgPat=(inner,w,h)=>`url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>${inner}</svg>`)}")`;
