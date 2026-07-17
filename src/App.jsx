@@ -624,6 +624,11 @@ const[fs,setFs]=useState(()=>{try{const v=parseInt(localStorage.getItem("ailvie_
 useEffect(()=>{try{localStorage.setItem("ailvie_fs",String(fs));}catch{}},[fs]);
 useEffect(()=>{try{document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";}catch{}},[lang]);
 const[page,setPage]=useState("home");
+// X2 ("My Health Status") accordion state. Identity is open by default because blood type,
+// allergies and the emergency contact are what someone else needs to find fast in an emergency —
+// they must not be hidden behind a tap. Held here (not inside a panel component) so panels stay
+// plain functions and never remount on re-render.
+const[x2Open,setX2Open]=useState({id:true,meas:false,treat:false,rec:false});
 const[pageHist,setPageHist]=useState(["home"]);
 const[histIdx,setHistIdx]=useState(0);
 const goTo=(p)=>{const nh=[...pageHist.slice(0,histIdx+1),p];setPageHist(nh);setHistIdx(nh.length-1);setPage(p);
@@ -5358,117 +5363,135 @@ const connectENabiz=()=>{
     notify(lang==="tr"?"Otomatik bağlantı için Sağlık Bakanlığı resmi API izni gerekiyor (yakında). Şimdilik e-Nabız'ı açıp raporunu indirip aşağıya yükleyebilirsin.":TL("Automatic connection needs official Ministry of Health API approval (soon). For now, open e-Nabız, download your report and upload it below.",lang));
   }
 };
-const renderPCard=()=>(<div style={{display:"flex",flexDirection:"column",gap:10}}>
-  {(()=>{
-    const now2=new Date();
-    const up=[...(appts||[])].filter(a=>a.date).map(a=>({...a,dt:new Date(a.date+"T"+(a.time||"09:00"))})).filter(a=>a.dt>=now2).sort((a,b)=>a.dt-b.dt)[0];
-    const nextTxt=up?((up.doctor||up.dept||up.title||(lang==="tr"?"Randevu":TL("Appt",lang)))+" · "+up.dt.toLocaleDateString(lc,{day:"2-digit",month:"2-digit"})):"—";
-    const lg=(glucose&&glucose.length)?glucose[glucose.length-1]:null;
-    const cells=[["💊",lang==="tr"?"Aktif İlaç":TL("Meds",lang),(meds||[]).length,"meds"],["🏥",lang==="tr"?"Sıradaki Randevu":TL("Next Appt",lang),nextTxt,"appts"],["🍬",lang==="tr"?"Son Şeker":TL("Last Glucose",lang),lg?lg.val+" mg/dL":"—","health"],["⚖️",lang==="tr"?"Kilo":TL("Weight",lang),hd.weight>0?hd.weight+" "+t.kg:"—","health"]];
-    return <div style={{...CS,background:`linear-gradient(135deg,${ac}10,${sc}08)`,border:`1px solid ${ac}33`}}>
+const renderPCard=()=>{
+  const now2=new Date();
+  const upAll=[...(appts||[])].filter(a=>a.date).map(a=>({...a,dt:new Date(a.date+"T"+(a.time||"09:00"))})).filter(a=>a.dt>=now2).sort((a,b)=>a.dt-b.dt);
+  const up=upAll[0];
+  const nextTxt=up?((up.doctor||up.dept||up.title||(lang==="tr"?"Randevu":TL("Appt",lang)))+" · "+up.dt.toLocaleDateString(lc,{day:"2-digit",month:"2-digit"})):"—";
+  const lg=(glucose&&glucose.length)?glucose[glucose.length-1]:null;
+  const cells=[["💊",lang==="tr"?"Aktif İlaç":TL("Meds",lang),(meds||[]).length,"meds"],["🏥",lang==="tr"?"Sıradaki Randevu":TL("Next Appt",lang),nextTxt,"appts"],["🍬",lang==="tr"?"Son Şeker":TL("Last Glucose",lang),lg?lg.val+" mg/dL":"—","health"],["⚖️",lang==="tr"?"Kilo":TL("Weight",lang),hd.weight>0?hd.weight+" "+t.kg:"—","health"]];
+  const sexTxt=pat.sex==="female"?(lang==="tr"?"Kadın":TL("Female",lang)):pat.sex==="male"?(lang==="tr"?"Erkek":TL("Male",lang)):"";
+  const eLbl=lang==="tr"?"Düzenle":TL("Edit",lang);
+  // Plain render helpers (not components) so they can never remount and lose panel state.
+  const edit=()=><button onClick={()=>goTo("health")} style={{background:"none",border:"1px solid "+ac+"44",color:acTx,cursor:"pointer",fontSize:fs-3,padding:"3px 9px",borderRadius:7,fontWeight:600,flexShrink:0}}>✏️ {eLbl}</button>;
+  const row=(k,label,value)=><div key={k} style={{display:"flex",justifyContent:"space-between",gap:10,padding:"5px 0",borderBottom:"1px solid "+bd+"44"}}>
+    <span style={{fontSize:fs-2,color:mt,flexShrink:0}}>{label}</span>
+    <span style={{fontSize:fs-1,fontWeight:600,color:value?tc:mt,textAlign:"end",wordBreak:"break-word"}}>{value||"—"}</span>
+  </div>;
+  const sub=(title,tone,body)=><div style={{marginTop:10}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4}}>
+      <span style={{fontSize:fs-2,fontWeight:700,color:tone||mt}}>{title}</span>{edit()}
+    </div>
+    {body}
+  </div>;
+  const panel=(key,icon,title,badge,tone,body)=>{
+    const open=!!x2Open[key];
+    return <div style={{...CS,padding:0,overflow:"hidden",border:"1px solid "+(tone||bd)+"33"}}>
+      <button onClick={()=>setX2Open(p=>({...p,[key]:!p[key]}))} aria-expanded={open} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"11px 12px",background:"transparent",border:"none",cursor:"pointer",color:tc}}>
+        <span style={{fontSize:fs+2,flexShrink:0}}>{icon}</span>
+        <span style={{flex:1,fontWeight:700,fontSize:fs,color:tone||tc,textAlign:"start"}}>{title}</span>
+        {badge?<span style={{fontSize:fs-3,color:mt,background:dark?"#0e1620":"#eef2f6",padding:"2px 8px",borderRadius:8,flexShrink:0,fontWeight:600}}>{badge}</span>:null}
+        <span aria-hidden="true" style={{color:mt,fontSize:fs-2,flexShrink:0,display:"inline-block",transform:open?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>
+      </button>
+      {open&&<div style={{padding:"0 12px 12px"}}>{body}</div>}
+    </div>;
+  };
+  const bmiTxt=bmi>0?String(bmi):"—";
+  const riskBadge=[pat.bloodType,pat.allergies?"⚠️":""].filter(Boolean).join(" ")||null;
+  return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
+    {/* Özet — always visible: this is the at-a-glance layer, it must never be behind a tap. */}
+    <div style={{...CS,background:"linear-gradient(135deg,"+ac+"10,"+sc+"08)",border:"1px solid "+ac+"33"}}>
       <b style={{fontSize:fs+1,color:tc,display:"block",marginBottom:8}}>📇 {lang==="tr"?"Canlı Sağlık Özeti":TL("Live Health Summary",lang)}</b>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         {cells.map(([ic,lb,vv,pg],i)=><div key={i} onClick={()=>goTo(pg)} style={{background:cd,borderRadius:10,padding:"8px 10px",cursor:"pointer"}}><div style={{fontSize:fs-3,color:mt}}>{ic} {lb}</div><div style={{fontSize:fs+1,fontWeight:800,color:tc,marginTop:2}}>{vv}</div></div>)}
       </div>
-    </div>;
-  })()}
-  <span style={{fontWeight:700,fontSize:fs+2}}>🪪 {t.pCardFull}</span>
-  {/* X2 is a display centre: it shows, it does not capture. Every group carries an ✏️ that jumps to
-     the matching group in X1 ("My Health Data"), so a wrong value always has an obvious way to fix. */}
-  {(()=>{
-    const EditLink=({to})=><button onClick={()=>goTo(to)} style={{background:"none",border:`1px solid ${ac}44`,color:acTx,cursor:"pointer",fontSize:fs-3,padding:"3px 9px",borderRadius:7,fontWeight:600,flexShrink:0}}>✏️ {lang==="tr"?"Düzenle":TL("Edit",lang)}</button>;
-    const Row=({label,value})=><div style={{display:"flex",justifyContent:"space-between",gap:10,padding:"5px 0",borderBottom:`1px solid ${bd}44`}}>
-      <span style={{fontSize:fs-2,color:mt,flexShrink:0}}>{label}</span>
-      <span style={{fontSize:fs-1,fontWeight:600,color:value?tc:mt,textAlign:"right",wordBreak:"break-word"}}>{value||"—"}</span>
-    </div>;
-    const sexTxt=pat.sex==="female"?(lang==="tr"?"Kadın":TL("Female",lang)):pat.sex==="male"?(lang==="tr"?"Erkek":TL("Male",lang)):"";
-    return <>
-      <div style={{...CS,border:`1px solid ${ac}33`}}>
-        <div style={{fontWeight:700,color:acTx,marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-          <span style={{display:"flex",alignItems:"center",gap:6}}>👤 {lang==="tr"?"Kimlik Bilgileri":TL("Identity Info",lang)}</span>
-          <EditLink to="health"/>
+    </div>
+    <span style={{fontWeight:700,fontSize:fs+2}}>🪪 {t.pCardFull}</span>
+    <div style={{fontSize:fs-3,color:mt,marginTop:-4,lineHeight:1.45}}>{lang==="tr"?"Burası verilerinizin işlenmiş görünümüdür. Değişiklik için ✏️ ile Sağlık Verilerim'e geçin.":TL("This is the processed view of your data. Use ✏️ to change anything in My Health Data.",lang)}</div>
+
+    {panel("id","👤",lang==="tr"?"Kimlik & Risk":TL("Identity & Risk",lang),riskBadge,ac,<>
+      {row("n",t.fName,pat.name)}
+      {row("b",t.bDate,pat.birthDate?pat.birthDate+(patAge?" ("+patAge+" "+t.age+")":""):"")}
+      {row("bt",t.bType,pat.bloodType)}
+      {row("sx",lang==="tr"?"Biyolojik Cinsiyet":TL("Biological Sex",lang),sexTxt)}
+      {pat.onAnticoag?row("ac","💊",lang==="tr"?"Kan sulandırıcı kullanıyor":TL("On anticoagulant",lang)):null}
+      {pat.pregnant?row("pg","🤰",lang==="tr"?"Gebelik":TL("Pregnancy",lang)):null}
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>{edit()}</div>
+      {sub("⚠️ "+(lang==="tr"?"Alerji & Kronik Durumlar":TL("Allergies & Chronic Conditions",lang)),dg,<>
+        {row("al",t.allrg,pat.allergies)}
+        {row("ch",t.chron,pat.chronic)}
+      </>)}
+      {sub("📋 "+(lang==="tr"?"Sigorta & Acil":TL("Insurance & Emergency",lang)),mt,<>
+        {row("in",t.insu,pat.insu)}
+        {row("ec",t.emCon,pat.emContact)}
+        {row("ep",lang==="tr"?"Acil Telefon":TL("Emergency Phone",lang),pat.emPhone)}
+      </>)}
+    </>)}
+
+    {panel("meas","📏",lang==="tr"?"Vücut Ölçüleri":TL("Body Measurements",lang),bmi>0?"BMI "+bmiTxt:null,sc,<>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+        <div style={{padding:"7px 10px",borderRadius:8,background:dark?"#0e1620":"#f4f7fa"}}>
+          <div style={{fontSize:fs-4,color:mt}}>📏 {t.ht} ({t.cm})</div>
+          <div style={{fontSize:fs,fontWeight:700,color:hd.height>0?tc:mt,marginTop:2}}>{hd.height>0?hd.height:"—"}</div>
         </div>
-        <Row label={t.fName} value={pat.name}/>
-        <Row label={t.bDate} value={pat.birthDate?`${pat.birthDate}${patAge?` (${patAge} ${t.age})`:""}`:""}/>
-        <Row label={t.bType} value={pat.bloodType}/>
-        <Row label={lang==="tr"?"Biyolojik Cinsiyet":TL("Biological Sex",lang)} value={sexTxt}/>
-        {pat.onAnticoag&&<Row label="💊" value={lang==="tr"?"Kan sulandırıcı kullanıyor":TL("On anticoagulant",lang)}/>}
-        {pat.pregnant&&<Row label="🤰" value={lang==="tr"?"Gebelik":TL("Pregnancy",lang)}/>}
-      </div>
-      <div style={{...CS,border:`1px solid ${dg}33`,background:`${dg}05`}}>
-        <div style={{fontWeight:700,color:dg,marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-          <span style={{display:"flex",alignItems:"center",gap:6}}>⚠️ {lang==="tr"?"Alerji & Kronik Durumlar":TL("Allergies & Chronic Conditions",lang)}</span>
-          <EditLink to="health"/>
+        <div style={{padding:"7px 10px",borderRadius:8,background:bmi>0?(bmi>=18.5&&bmi<25?sc+"15":dg+"15"):(dark?"#0e1620":"#f4f7fa")}}>
+          <div style={{fontSize:fs-4,color:mt}}>📊 BMI</div>
+          <div style={{fontSize:fs,fontWeight:700,marginTop:2,color:bmi>0?(bmi>=18.5&&bmi<25?sc:dg):mt}}>{bmi>0?bmi+" · "+(bmi<18.5?(lang==="tr"?"Zayıf":TL("Under",lang)):bmi<25?"Normal":bmi<30?(lang==="tr"?"Fazla":TL("Over",lang)):(lang==="tr"?"Obez":TL("Obese",lang))):"—"}</div>
         </div>
-        <Row label={t.allrg} value={pat.allergies}/>
-        <Row label={t.chron} value={pat.chronic}/>
       </div>
-      <div style={{...CS,border:`1px solid ${bd}`}}>
-        <div style={{fontWeight:700,color:mt,marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-          <span style={{display:"flex",alignItems:"center",gap:6}}>📋 {lang==="tr"?"Sigorta & Acil":TL("Insurance & Emergency",lang)}</span>
-          <EditLink to="health"/>
+      <div style={{display:"flex",gap:8}}>
+        {[["❤️",t.pulse,hd.pulse>0?hd.pulse+" "+t.bpm:"—"],["🩺",t.bp,hd.bpS>0?hd.bpS+"/"+(hd.bpD||"?"):"—"],["⚖️",t.wt,hd.weight>0?hd.weight+" "+t.kg:"—"]].map(([ic,lb,vv],i)=><div key={i} style={{flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,background:dark?"#0e1620":"#f4f7fa"}}><div style={{fontSize:fs-4,color:mt}}>{ic} {lb}</div><div style={{fontSize:fs-1,fontWeight:700,color:tc,marginTop:2}}>{vv}</div></div>)}
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>{edit()}</div>
+    </>)}
+
+    {panel("treat","💊",lang==="tr"?"Tedavi":TL("Treatment",lang),(meds||[]).length?String((meds||[]).length):null,ac,<>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4}}>
+        <span style={{fontSize:fs-2,fontWeight:700,color:acTx}}>💊 {lang==="tr"?"Kullandığı İlaçlar":TL("Current Medications",lang)}</span>
+        <button onClick={()=>goTo("meds")} style={{background:"none",border:"1px solid "+ac+"44",color:acTx,cursor:"pointer",fontSize:fs-3,padding:"3px 9px",borderRadius:7,fontWeight:600,flexShrink:0}}>✏️ {eLbl}</button>
+      </div>
+      {meds.length===0?<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:8}}>{t.noM}</div>:
+        <div style={{display:"flex",flexDirection:"column",gap:5}}>
+          {meds.map(m=><div key={m.id} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 8px",borderRadius:6,background:dark?"#0d1520":"#f8fafc",fontSize:fs-2}}>
+            <span>💊</span>
+            <span style={{fontWeight:600,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</span>
+            <span style={{color:mt}}>{m.dose}</span>
+            <span style={{color:acTx,fontWeight:600}}>{m.time}</span>
+          </div>)}
         </div>
-        <Row label={t.insu} value={pat.insu}/>
-        <Row label={t.emCon} value={pat.emContact}/>
-        <Row label={lang==="tr"?"Acil Telefon":TL("Emergency Phone",lang)} value={pat.emPhone}/>
+      }
+      <div style={{marginTop:10}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4}}>
+          <span style={{fontSize:fs-2,fontWeight:700,color:mt}}>🏥 {lang==="tr"?"Yaklaşan Randevular":TL("Upcoming Appointments",lang)}</span>
+          <button onClick={()=>goTo("appts")} style={{background:"none",border:"1px solid "+ac+"44",color:acTx,cursor:"pointer",fontSize:fs-3,padding:"3px 9px",borderRadius:7,fontWeight:600,flexShrink:0}}>✏️ {eLbl}</button>
+        </div>
+        {upAll.length===0?<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:8}}>{lang==="tr"?"Yaklaşan randevu yok":TL("No upcoming appointments",lang)}</div>:
+          <div style={{display:"flex",flexDirection:"column",gap:5}}>
+            {upAll.slice(0,5).map(a=><div key={a.id||a.date+a.time} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 8px",borderRadius:6,background:dark?"#0d1520":"#f8fafc",fontSize:fs-2}}>
+              <span>🏥</span>
+              <span style={{fontWeight:600,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{a.doctor||a.dept||a.title||"—"}</span>
+              <span style={{color:acTx,fontWeight:600}}>{a.dt.toLocaleDateString(lc,{day:"2-digit",month:"2-digit"})}{a.time?" "+a.time:""}</span>
+            </div>)}
+          </div>
+        }
       </div>
-    </>;
-  })()}
-  {/* Vücut Ölçüleri — display only. The height input used to live here as well as in X1, so the
-     same value could be typed in two places; it is now owned solely by X1. */}
-  <div style={{...CS,border:`1px solid ${sc}33`,background:`${sc}05`}}>
-    <div style={{fontWeight:700,color:sc,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-      <span style={{display:"flex",alignItems:"center",gap:6}}>📏 {lang==="tr"?"Vücut Ölçüleri":TL("Body Measurements",lang)}</span>
-      <button onClick={()=>goTo("health")} style={{background:"none",border:`1px solid ${ac}44`,color:acTx,cursor:"pointer",fontSize:fs-3,padding:"3px 9px",borderRadius:7,fontWeight:600,flexShrink:0}}>✏️ {lang==="tr"?"Düzenle":TL("Edit",lang)}</button>
-    </div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-      <div style={{padding:"7px 10px",borderRadius:8,background:dark?"#0e1620":"#f4f7fa"}}>
-        <div style={{fontSize:fs-4,color:mt}}>📏 {t.ht} ({t.cm})</div>
-        <div style={{fontSize:fs,fontWeight:700,color:hd.height>0?tc:mt,marginTop:2}}>{hd.height>0?hd.height:"—"}</div>
-      </div>
-      <div>
-        <div style={{fontSize:fs-2,color:mt,marginBottom:2}}>📊 BMI</div>
-        <div style={{padding:"8px 10px",borderRadius:8,background:bmi>0?(bmi>=18.5&&bmi<25?`${sc}15`:`${dg}15`):"transparent",color:bmi>0?(bmi>=18.5&&bmi<25?sc:dg):mt,fontWeight:700,fontSize:fs-1,border:bmi>0?"none":`1px solid ${bd}`}}>{bmi>0?`${bmi} · ${bmi<18.5?(lang==="tr"?"Zayıf":TL("Under",lang)):bmi<25?"Normal":bmi<30?(lang==="tr"?"Fazla":TL("Over",lang)):(lang==="tr"?"Obez":TL("Obese",lang))}`:"—"}</div>
-      </div>
-    </div>
-    <div style={{display:"flex",gap:8}}>
-      {[["❤️",t.pulse,hd.pulse>0?hd.pulse+" "+t.bpm:"—"],["🩺",t.bp,hd.bpS>0?hd.bpS+"/"+(hd.bpD||"?"):"—"],["⚖️",t.wt,hd.weight>0?hd.weight+" "+t.kg:"—"]].map(([ic,lb,vv],i)=><div key={i} style={{flex:1,textAlign:"center",padding:"7px 4px",borderRadius:8,background:dark?"#0e1620":"#f4f7fa"}}><div style={{fontSize:fs-4,color:mt}}>{ic} {lb}</div><div style={{fontSize:fs-1,fontWeight:700,color:tc,marginTop:2}}>{vv}</div></div>)}
-    </div>
-  </div>
-  {/* Kullandığı İlaçlar — meds state'den okuyor */}
-  <div style={{...CS,border:`1px solid ${ac}33`,background:`${ac}05`}}>
-    <div style={{fontWeight:700,color:acTx,marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-      <span style={{display:"flex",alignItems:"center",gap:6}}>💊 {lang==="tr"?"Kullandığı İlaçlar":TL("Current Medications",lang)} <span style={{fontSize:fs-4,color:mt,fontWeight:400}}>↔ {t.meds}</span></span>
-      <button onClick={()=>goTo("meds")} style={{...BP,padding:"4px 10px",fontSize:fs-2}}>+ {t.add}</button>
-    </div>
-    {meds.length===0?<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:8}}>{t.noM}</div>:
-      <div style={{display:"flex",flexDirection:"column",gap:5}}>
-        {meds.map(m=><div key={m.id} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 8px",borderRadius:6,background:dark?"#0d1520":"#f8fafc",fontSize:fs-2}}>
-          <span>💊</span>
-          <span style={{fontWeight:600,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</span>
-          <span style={{color:mt}}>{m.dose}</span>
-          <span style={{color:acTx,fontWeight:600}}>{m.time}</span>
-        </div>)}
-      </div>
-    }
-  </div>
-  {/* Tıbbi Kayıtlar — read-only here; adding/editing lives in X1 next to the document upload. */}
-  <div style={{...CS}}>
-    <div style={{fontWeight:700,marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
-      <span>📋 {t.diag} / {t.lab}</span>
-      <button onClick={()=>goTo("health")} style={{background:"none",border:`1px solid ${ac}44`,color:acTx,cursor:"pointer",fontSize:fs-3,padding:"3px 9px",borderRadius:7,fontWeight:600,flexShrink:0}}>✏️ {lang==="tr"?"Düzenle":TL("Edit",lang)}</button>
-    </div>
-    {records.length===0?<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:8}}>{lang==="tr"?"Henüz kayıt yok":TL("No records yet",lang)}</div>:
-      <div style={{display:"flex",flexDirection:"column",gap:6}}>
-        {records.map(r=>(<div key={r.id} style={{padding:"7px 10px",borderRadius:8,background:dark?"#0d1520":"#f8fafc"}}>
-          <div style={{display:"flex",justifyContent:"space-between",gap:8}}><span style={{fontWeight:700,color:acTx,fontSize:fs-1}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-3,color:mt}}>{r.date}</span></div>
-          {(r.doctor||r.hospital)&&<div style={{fontSize:fs-3,color:mt,marginTop:1}}>{[r.doctor,r.hospital].filter(Boolean).join(" — ")}</div>}
-          {r.content&&<div style={{marginTop:3,fontSize:fs-2,wordBreak:"break-word"}}>{r.content}</div>}
-        </div>))}
-      </div>
-    }
-  </div>
-</div>);
+    </>)}
+
+    {panel("rec","📋",t.diag+" / "+t.lab,records.length?String(records.length):null,mt,<>
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:6}}>{edit()}</div>
+      {records.length===0?<div style={{fontSize:fs-2,color:mt,textAlign:"center",padding:8}}>{lang==="tr"?"Henüz kayıt yok":TL("No records yet",lang)}</div>:
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {records.map(r=><div key={r.id} style={{padding:"7px 10px",borderRadius:8,background:dark?"#0d1520":"#f8fafc"}}>
+            <div style={{display:"flex",justifyContent:"space-between",gap:8}}><span style={{fontWeight:700,color:acTx,fontSize:fs-1}}>{t[r.type]||r.type}</span><span style={{fontSize:fs-3,color:mt}}>{r.date}</span></div>
+            {(r.doctor||r.hospital)?<div style={{fontSize:fs-3,color:mt,marginTop:1}}>{[r.doctor,r.hospital].filter(Boolean).join(" — ")}</div>:null}
+            {r.content?<div style={{marginTop:3,fontSize:fs-2,wordBreak:"break-word"}}>{r.content}</div>:null}
+          </div>)}
+        </div>
+      }
+    </>)}
+  </div>);
+};
+
 
 const svgPat=(inner,w,h)=>`url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>${inner}</svg>`)}")`;
 const NOTE_BGS=[{k:"none",g:null},{k:"lale",g:svgPat("<g fill='none' stroke='rgba(255,255,255,0.13)' stroke-width='1.3'><path d='M22 40 C15 34 14 25 14 20 C14 16 18 16 18 20 C18 14 22 13 22 13 C22 13 26 14 26 20 C26 16 30 16 30 20 C30 25 29 34 22 40 Z'/><path d='M22 13 V40'/></g>",44,48)+",linear-gradient(135deg,#4a2028,#6e3038)"},{k:"karanfil",g:svgPat("<g fill='none' stroke='rgba(255,255,255,0.13)' stroke-width='1.3'><path d='M20 36 C16 28 16 20 20 11 C24 20 24 28 20 36 Z'/><path d='M20 11 L14 7 M20 11 L26 7 M20 11 L20 4 M20 11 L11 10 M20 11 L29 10'/></g>",40,40)+",linear-gradient(135deg,#4f2a2e,#6e3e42)"},{k:"cintemani",g:svgPat("<g stroke='rgba(255,255,255,0.13)' stroke-width='1.3' fill='none'><circle cx='16' cy='12' r='4'/><circle cx='32' cy='12' r='4'/><circle cx='24' cy='23' r='4'/><path d='M2 34 Q12 29 22 34 T42 34 T62 34'/><path d='M2 38 Q12 33 22 38 T42 38 T62 38'/></g>",60,40)+",linear-gradient(135deg,#20264a,#333a6e)"},{k:"selcuklu",g:svgPat("<g fill='none' stroke='rgba(255,255,255,0.13)' stroke-width='1.2'><rect x='13' y='13' width='22' height='22'/><rect x='13' y='13' width='22' height='22' transform='rotate(45 24 24)'/></g>",48,48)+",linear-gradient(135deg,#123a3a,#1f5a58)"},{k:"rumi",g:svgPat("<path d='M8 36 C8 20 20 10 36 12 C27 13 23 19 23 27 C23 20 17 20 15 26 C14 30 11 33 8 36 Z' fill='none' stroke='rgba(255,255,255,0.13)' stroke-width='1.2'/>",44,44)+",linear-gradient(135deg,#1e3a2e,#2f4f3e)"},{k:"kilim",g:svgPat("<g fill='none' stroke='rgba(255,255,255,0.13)' stroke-width='1.2'><path d='M20 3 L37 20 L20 37 L3 20 Z'/><path d='M20 11 L29 20 L20 29 L11 20 Z'/></g>",40,40)+",linear-gradient(135deg,#3a2030,#5a3048)"},{k:"carkifelek",g:svgPat("<g fill='none' stroke='rgba(255,255,255,0.13)' stroke-width='1.2'><circle cx='23' cy='23' r='3.5'/><ellipse cx='23' cy='12' rx='3.5' ry='6'/><ellipse cx='34' cy='23' rx='6' ry='3.5'/><ellipse cx='23' cy='34' rx='3.5' ry='6'/><ellipse cx='12' cy='23' rx='6' ry='3.5'/></g>",46,46)+",linear-gradient(135deg,#3a2e4f,#5a3a6e)"},{k:"suyolu",g:svgPat("<path d='M2 20 V6 H16 V16 H9 V11 M22 20 V6 H36 V16 H29 V11' fill='none' stroke='rgba(255,255,255,0.13)' stroke-width='1.3'/>",40,24)+",linear-gradient(135deg,#173a3e,#245a5e)"},{k:"penc",g:svgPat("<g fill='none' stroke='rgba(255,255,255,0.13)' stroke-width='1.2'><circle cx='22' cy='22' r='3.5'/><ellipse cx='22' cy='11' rx='3.5' ry='6'/><ellipse cx='32' cy='19' rx='3.5' ry='6' transform='rotate(72 32 19)'/><ellipse cx='28' cy='31' rx='3.5' ry='6' transform='rotate(144 28 31)'/><ellipse cx='16' cy='31' rx='3.5' ry='6' transform='rotate(216 16 31)'/><ellipse cx='12' cy='19' rx='3.5' ry='6' transform='rotate(288 12 19)'/></g>",44,44)+",linear-gradient(135deg,#1e3a4f,#2f5a6e)"}];
