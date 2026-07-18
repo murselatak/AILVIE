@@ -5508,7 +5508,15 @@ const renderPCard=()=>{
   // Clinical read of the saved labs (same engine that feeds the AI). This is the visual surface of
   // it: the person sees what a clinician would flag, phrased as "ask your doctor", never a diagnosis.
   const clin=(()=>{try{return clinicalSummary(labs,meds,patCtx());}catch(e){return{criticals:[],trends:[],patterns:[],drugChecks:[],derived:{}};}})();
-  const clinCount=clin.criticals.length+clin.trends.length+clin.patterns.length+clin.drugChecks.length;
+  // Latest value per test, and the non-critical abnormals (low/high/borderline/prediabetes...).
+  // The engine only reports criticals/trends/patterns/drug-checks, but a plain "your cholesterol is
+  // high" is worth showing too — otherwise a user who enters one abnormal lab sees nothing and
+  // assumes it's broken. Critical values are shown in their own section, so exclude them here.
+  const latestLab={};for(const r of labs||[]){if(r&&r.test&&(!latestLab[r.test]||r.ts>latestLab[r.test].ts))latestLab[r.test]=r;}
+  const abnormals=Object.values(latestLab).filter(r=>r.level&&r.level!=="normal"&&!String(r.level).startsWith("critical"));
+  const hasLabs=Object.keys(latestLab).length>0;
+  const clinCount=clin.criticals.length+clin.trends.length+clin.patterns.length+clin.drugChecks.length+abnormals.length;
+  const levelLbl=(lv)=>({low:lang==="tr"?"düşük":TL("low",lang),high:lang==="tr"?"yüksek":TL("high",lang),borderline:lang==="tr"?"sınırda":TL("borderline",lang),prediabetes:lang==="tr"?"prediyabet":TL("prediabetes",lang),"diabetes-range":lang==="tr"?"diyabet eşiği":TL("diabetes range",lang)}[lv]||lv);
   const testName=(k)=>{const ti=LAB_TESTS.find(x=>x.k===k);return ti?(lang==="tr"?ti.tr:ti.en):k;};
   const drugRuleLbl=(id)=>({
     "metformin-egfr":lang==="tr"?"Metformin + düşük böbrek fonksiyonu (eGFR)":TL("Metformin + low kidney function (eGFR)",lang),
@@ -5539,10 +5547,10 @@ const renderPCard=()=>{
 
     {/* Clinical read of the labs — placed first among the panels because a critical value must be
         findable fast. Only rendered when there is something to say. */}
-    {clinCount>0&&(()=>{
+    {hasLabs&&(()=>{
       const hasCrit=clin.criticals.length>0;
-      const tone=hasCrit?dg:"#e9a23b";
-      const badge=hasCrit?(lang==="tr"?clin.criticals.length+" kritik ⚠️":clin.criticals.length+" critical ⚠️"):String(clinCount);
+      const tone=hasCrit?dg:(abnormals.length||clin.drugChecks.length)?"#e9a23b":sc;
+      const badge=hasCrit?(lang==="tr"?clin.criticals.length+" kritik ⚠️":clin.criticals.length+" critical ⚠️"):clinCount>0?String(clinCount):(lang==="tr"?"tümü normal ✓":TL("all normal ✓",lang));
       return panel("clin","🩺",lang==="tr"?"Tahlil Değerlendirmesi":TL("Lab Assessment",lang),badge,tone,<>
         <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.45}}>{lang==="tr"?"Yayınlanmış kurallara göre okunmuştur — teşhis değildir. Bunları doktorunuza sorun.":TL("Read against published rules — this is not a diagnosis. Take these to your doctor.",lang)}</div>
         {clin.criticals.length>0&&<div style={{marginBottom:10}}>
@@ -5552,6 +5560,13 @@ const renderPCard=()=>{
             <span style={{fontSize:fs-2,fontWeight:700,color:dg}}>{c.value} {c.unit} · {c.level==="critical-high"?(lang==="tr"?"kritik yüksek":TL("critical high",lang)):(lang==="tr"?"kritik düşük":TL("critical low",lang))}</span>
           </div>)}
           <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Not: kritik sınırlar laboratuvarlar arasında değişebilir; kendi laboratuvarınızın sınırı farklı olabilir.":TL("Note: critical limits vary between labs; your own lab's limit may differ.",lang)}</div>
+        </div>}
+        {abnormals.length>0&&<div style={{marginBottom:10}}>
+          <div style={{fontSize:fs-2,fontWeight:700,color:"#e9a23b",marginBottom:4}}>📊 {lang==="tr"?"Referans dışı değerler":TL("Out-of-range values",lang)}</div>
+          {abnormals.map((r,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",gap:8,padding:"6px 9px",borderRadius:7,background:dark?"#0d1520":"#f8fafc",marginBottom:4}}>
+            <span style={{fontSize:fs-2,fontWeight:600}}>{testName(r.test)}</span>
+            <span style={{fontSize:fs-2,color:"#e9a23b",fontWeight:600}}>{r.value} {r.unit||r.canonUnit||""} · {levelLbl(r.level)}</span>
+          </div>)}
         </div>}
         {clin.drugChecks.length>0&&<div style={{marginBottom:10}}>
           <div style={{fontSize:fs-2,fontWeight:700,color:"#e9a23b",marginBottom:4}}>💊 {lang==="tr"?"İlaç–tahlil kontrolü":TL("Drug–lab check",lang)}</div>
@@ -5568,7 +5583,7 @@ const renderPCard=()=>{
             {p.missing&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{lang==="tr"?"Tam ayrım için eksik: ":TL("Missing for full picture: ",lang)}{p.missing.map(testName).join(", ")}</div>}
           </div>)}
         </div>}
-        {clin.trends.length>0&&<div>
+        {clin.trends.length>0&&<div style={{marginBottom:abnormals.length||clin.criticals.length?0:6}}>
           <div style={{fontSize:fs-2,fontWeight:700,color:acTx,marginBottom:4}}>📈 {lang==="tr"?"Eğilimler":TL("Trends",lang)}</div>
           {clin.trends.map((tr,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",gap:8,padding:"6px 9px",borderRadius:7,background:dark?"#0d1520":"#f8fafc",marginBottom:4}}>
             <span style={{fontSize:fs-2,fontWeight:600}}>{testName(tr.test)}</span>
@@ -5576,6 +5591,7 @@ const renderPCard=()=>{
           </div>)}
           <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Yön tek başına iyi/kötü demek değildir; teste göre değişir.":TL("Direction alone is not good or bad; it depends on the test.",lang)}</div>
         </div>}
+        {clinCount===0&&<div style={{fontSize:fs-2,color:sc,textAlign:"center",padding:"8px 4px",fontWeight:600}}>✓ {lang==="tr"?"Girdiğiniz tüm tahliller referans aralığında.":TL("All labs you entered are within range.",lang)}</div>}
         <button onClick={()=>goTo("health")} style={{...BP,width:"100%",marginTop:8,padding:"7px",background:"transparent",color:acTx,border:"1px solid "+ac+"44"}}>✏️ {lang==="tr"?"Tahlilleri Sağlık Verilerim'de düzenle":TL("Edit labs in My Health Data",lang)}</button>
       </>);
     })()}
