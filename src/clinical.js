@@ -339,6 +339,56 @@ export function patterns(labs, ctx = {}) {
     out.push(p);
   }
 
+  // Kidney-function picture: low eGFR and/or raised urine albumin:creatinine (UACR). KDIGO stages
+  // CKD on both axes, so this reports whichever is present and says what's missing. eGFR comes from
+  // ctx (computed from the latest creatinine upstream); UACR is a lab. Reported as 'possible', with
+  // the important caveat that a single low eGFR is not CKD — that needs persistence over >=3 months.
+  const egfr = ctx.egfr == null ? null : Number(ctx.egfr);
+  const uacr = L("uacr");
+  const egfrLow = egfr != null && isFinite(egfr) && egfr < 60;
+  const uacrHigh = uacr && (lvl(uacr) === "high" || lvl(uacr) === "borderline");
+  if (egfrLow || uacrHigh) {
+    const tests = [];
+    if (egfrLow) tests.push("creatinine");
+    if (uacrHigh) tests.push("uacr");
+    const p = { id: "kidney-impairment", tests, strength: (egfrLow && uacrHigh) ? "supported" : "possible", caveat: "ckd-needs-persistence", source: "pattern" };
+    if (egfr != null && isFinite(egfr)) p.egfr = Math.round(egfr);
+    if (!uacr) p.missing = ["uacr"];        // the second KDIGO axis
+    out.push(p);
+  }
+
+  // Thyroid picture. TSH alone is a screen, not an answer: high TSH suggests hypothyroid, low TSH
+  // hyperthyroid, but free T4 is needed to say more (and to separate overt from subclinical). So
+  // this reports the TSH direction and, if free T4 is present, notes whether the pair fits a
+  // consistent picture — always as 'possible', pointing at the doctor.
+  const tsh = L("tsh"), ft4 = L("ft4");
+  if (tsh && (lvl(tsh) === "high" || lvl(tsh) === "low")) {
+    const dir = lvl(tsh) === "high" ? "tsh-high" : "tsh-low";
+    const p = { id: "thyroid-screen", tests: ["tsh"], direction: dir, strength: "possible", source: "pattern" };
+    if (ft4 && lvl(ft4)) {
+      p.tests.push("ft4");
+      p.ft4Level = lvl(ft4);
+    } else {
+      p.missing = ["ft4"];   // needed to interpret and to separate overt vs subclinical
+    }
+    out.push(p);
+  }
+
+  // Electrolyte disturbance: two or more electrolytes out of range at once is worth surfacing as a
+  // group rather than as isolated values, because combinations point somewhere (e.g. low K + low Mg
+  // often travel together). Purely descriptive — lists which are off, no cause claimed.
+  const elytes = ["sodium", "potassium", "calcium", "magnesium", "phosphorus"];
+  const offElytes = elytes.map(t => ({ t, r: L(t) })).filter(x => x.r && x.r.level && x.r.level !== "normal");
+  if (offElytes.length >= 2) {
+    out.push({
+      id: "electrolyte-disturbance",
+      tests: offElytes.map(x => x.t),
+      details: offElytes.map(x => ({ test: x.t, level: x.r.level })),
+      strength: "possible",
+      source: "pattern",
+    });
+  }
+
   return out;
 }
 

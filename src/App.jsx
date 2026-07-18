@@ -1075,6 +1075,7 @@ const UNIT_CONV={
   ferritin:{canon:"ug/L",f:{"ug/L":1,"µg/L":1,"ng/mL":1,"ug/mL":1000,"pmol/L":1/2.247}},
   hba1c:{canon:"%",f:{"%":1}},
   tsh:{canon:"mU/L",f:{"mU/L":1,"mIU/L":1,"uIU/mL":1,"µIU/mL":1,"mIU/mL":1000,"uU/mL":1}},
+  ft4:{canon:"ng/dL",f:{"ng/dL":1,"pmol/L":1/12.87}},
   albumin:{canon:"g/dL",f:{"g/dL":1,"g/L":0.1}},
   alt:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},ast:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},
   sodium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},potassium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},chloride:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},bicarbonate:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},
@@ -1124,6 +1125,7 @@ const REF_LIB={
   ast:{unit:"U/L",adult:{any:[10,40]}},
   bilirubin:{unit:"mg/dL",adult:{any:[0.3,1.0]}},
   tsh:{unit:"mU/L",adult:{any:[0.5,4.0]}},
+  ft4:{unit:"ng/dL",adult:{any:[0.8,1.8]}},
   ferritin:{unit:"ug/L",adult:{any:[15,300]}},
   b12:{unit:"ng/L",adult:{any:[180,914]}},
   crp:{unit:"mg/L",adult:{any:[0,5]}},
@@ -1403,6 +1405,7 @@ const LAB_TESTS=[
   {k:"hdl",tr:"HDL",en:"HDL",units:["mg/dL","mmol/L"],sys:"lipid"},
   {k:"triglyceride",tr:"Trigliserid",en:"Triglyceride",units:["mg/dL","mmol/L"],sys:"lipid"},
   {k:"tsh",tr:"TSH",en:"TSH",units:["mU/L","mIU/L","uIU/mL"],sys:"thyroid"},
+  {k:"ft4",tr:"Serbest T4 (fT4)",en:"Free T4 (fT4)",units:["ng/dL","pmol/L"],sys:"thyroid"},
   {k:"crp",tr:"CRP",en:"CRP",units:["mg/L","mg/dL"],sys:"inflammation"},
   {k:"vitaminD",tr:"D Vitamini (25-OH)",en:"Vitamin D (25-OH)",units:["ng/mL","nmol/L"],sys:"nutrition"},
   {k:"uricAcid",tr:"Ürik Asit",en:"Uric Acid",units:["mg/dL","mmol/L"],sys:"kidney"},
@@ -5710,9 +5713,13 @@ const renderPCard=()=>{
   const patternLbl=(id)=>({
     "iron-deficiency":lang==="tr"?"Demir eksikliği anemisi tablosu olabilir":TL("May fit an iron-deficiency picture",lang),
     "liver-enzymes-raised":lang==="tr"?"Karaciğer enzimleri yüksek":TL("Raised liver enzymes",lang),
+    "kidney-impairment":lang==="tr"?"Böbrek fonksiyonunda azalma olabilir":TL("May fit reduced kidney function",lang),
+    "thyroid-screen":lang==="tr"?"Tiroid taraması değerlendirme gerektirebilir":TL("Thyroid screen may need review",lang),
+    "electrolyte-disturbance":lang==="tr"?"Elektrolit dengesizliği":TL("Electrolyte disturbance",lang),
   }[id]||id);
   const caveatLbl=(c)=>({
     "ferritin-acute-phase":lang==="tr"?"ferritin iltihapla yükselebilir, gerçek eksikliği gizleyebilir":TL("ferritin can rise with inflammation and mask a true deficiency",lang),
+    "ckd-needs-persistence":lang==="tr"?"tek ölçüm kronik böbrek hastalığı demek değildir; tanı için ≥3 ay süreklilik gerekir":TL("a single result isn't chronic kidney disease; that needs persistence over ≥3 months",lang),
   }[c]||c);
   // Source label for a clinical output. The short label is shown as a small "kaynak: X" line so the
   // person can see which published rule a finding rests on. Falls back gracefully if a key is unknown.
@@ -5764,7 +5771,9 @@ const renderPCard=()=>{
         {clin.patterns.length>0&&<div style={{marginBottom:10}}>
           <div style={{fontSize:fs-2,fontWeight:700,color:acTx,marginBottom:4}}>🔬 {lang==="tr"?"Örüntüler (olası)":TL("Patterns (possible)",lang)}</div>
           {clin.patterns.map((p,i)=><div key={i} style={{padding:"6px 9px",borderRadius:7,background:dark?"#0d1520":"#f8fafc",marginBottom:4}}>
-            <div style={{fontSize:fs-2,fontWeight:600}}>{patternLbl(p.id)}{p.astAltRatio!=null?" · AST/ALT "+p.astAltRatio:""}</div>
+            <div style={{fontSize:fs-2,fontWeight:600}}>{patternLbl(p.id)}{p.astAltRatio!=null?" · AST/ALT "+p.astAltRatio:""}{p.egfr!=null?" · eGFR "+p.egfr:""}</div>
+            {p.details&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{p.details.map(x=>testName(x.test)+" "+levelLbl(x.level)).join(", ")}</div>}
+            {p.direction&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{p.direction==="tsh-high"?(lang==="tr"?"TSH yüksek":TL("TSH high",lang)):(lang==="tr"?"TSH düşük":TL("TSH low",lang))}{p.ft4Level?" · "+testName("ft4")+" "+levelLbl(p.ft4Level):""}</div>}
             {p.caveat&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>⚠️ {caveatLbl(p.caveat)}</div>}
             {p.missing&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{lang==="tr"?"Tam ayrım için eksik: ":TL("Missing for full picture: ",lang)}{p.missing.map(testName).join(", ")}</div>}
             {p.source&&<SrcTag k={p.source}/>}

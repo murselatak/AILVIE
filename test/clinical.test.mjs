@@ -81,6 +81,43 @@ ok("karaciger enzim tablosu", !!lp, liver);
 ok("AST/ALT orani hesaplandi", lp && lp.astAltRatio === 2, lp);
 ok("eksik ALP bildiriliyor (tahmin etmiyor)", lp && lp.missing && lp.missing.includes("alp"), lp);
 
+console.log("=== 4b) Yeni örüntüler ===");
+// Kidney: low eGFR (from ctx) + high UACR
+const kid = patterns([
+  { id: "a", ts: T0, test: "creatinine", canonValue: 2.5, level: "high" },
+  { id: "b", ts: T0, test: "uacr", canonValue: 200, level: "high" },
+], { egfr: 35 });
+const kp = kid.find(p => p.id === "kidney-impairment");
+ok("böbrek örüntüsü (eGFR + UACR)", !!kp, kid);
+ok("iki eksen → supported", kp && kp.strength === "supported");
+ok("CKD kalıcılık uyarısı", kp && kp.caveat === "ckd-needs-persistence");
+ok("eGFR normalse ve UACR yoksa böbrek örüntüsü yok", !patterns([{ id: "a", ts: T0, test: "creatinine", canonValue: 0.9, level: "normal" }], { egfr: 95 }).some(p => p.id === "kidney-impairment"));
+// only UACR high, no eGFR -> possible + missing eGFR handled (eGFR null)
+const kidU = patterns([{ id: "b", ts: T0, test: "uacr", canonValue: 200, level: "high" }], {});
+ok("sadece UACR → possible", kidU.find(p => p.id === "kidney-impairment")?.strength === "possible", kidU);
+// Thyroid: high TSH alone
+const thy = patterns([{ id: "a", ts: T0, test: "tsh", canonValue: 8, level: "high" }], {});
+const tp = thy.find(p => p.id === "thyroid-screen");
+ok("tiroid tarama (yüksek TSH)", tp && tp.direction === "tsh-high", thy);
+ok("FT4 eksik bildiriliyor", tp && tp.missing && tp.missing.includes("ft4"));
+// thyroid with ft4
+const thy2 = patterns([
+  { id: "a", ts: T0, test: "tsh", canonValue: 8, level: "high" },
+  { id: "b", ts: T0, test: "ft4", canonValue: 0.6, level: "low" },
+], {});
+const tp2 = thy2.find(p => p.id === "thyroid-screen");
+ok("FT4 varsa seviye bildirilir", tp2 && tp2.ft4Level === "low", tp2);
+ok("normal TSH → tiroid örüntüsü yok", !patterns([{ id: "a", ts: T0, test: "tsh", canonValue: 2, level: "normal" }], {}).some(p => p.id === "thyroid-screen"));
+// Electrolyte: two off
+const ely = patterns([
+  { id: "a", ts: T0, test: "potassium", canonValue: 2.8, level: "low" },
+  { id: "b", ts: T0, test: "magnesium", canonValue: 1.2, level: "low" },
+], {});
+const ep = ely.find(p => p.id === "electrolyte-disturbance");
+ok("elektrolit dengesizliği (2+ anormal)", !!ep, ely);
+ok("hangi elektrolitler listeleniyor", ep && ep.tests.includes("potassium") && ep.tests.includes("magnesium"));
+ok("tek elektrolit anormal → grup örüntüsü yok", !patterns([{ id: "a", ts: T0, test: "potassium", canonValue: 2.8, level: "low" }], {}).some(p => p.id === "electrolyte-disturbance"));
+
 console.log("=== 5) Ilac x tahlil ===");
 const meds = [{ name: "Glucophage 1000mg" }, { name: "Ramipril 5mg" }];
 const c1 = drugLabChecks(meds, [], { egfr: 25 });
