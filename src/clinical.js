@@ -107,7 +107,7 @@ const latestOf = (labs, test) => {
   return best;
 };
 
-export function derived(labs) {
+export function derived(labs, ctx = {}) {
   const out = {};
   const chol = latestOf(labs, "cholesterol");   // mg/dL
   const tg = latestOf(labs, "triglyceride");    // mg/dL
@@ -123,6 +123,45 @@ export function derived(labs) {
     } else {
       const v = Number(chol.canonValue) - Number(hdl.canonValue) - tgv / 5;
       out.ldlCalc = { ok: true, value: Math.round(v * 10) / 10, unit: "mg/dL", formula: "Friedewald" };
+    }
+  }
+
+  // FIB-4 — non-invasive estimate of advanced liver fibrosis. Formula (Sterling 2006, verified
+  // against Labcorp/Medscape): Age × AST / (Platelet[10^9/L] × √ALT). Needs age, so it silently
+  // does nothing if age is unknown rather than guessing. Age also shifts the cutoff: >=65 uses a
+  // higher low-risk threshold (2.0 instead of 1.3) because FIB-4 rises with age and would otherwise
+  // over-flag the elderly. Bands are the widely-cited Sterling values, reported as a band, not a
+  // diagnosis.
+  const ast = latestOf(labs, "ast"), alt = latestOf(labs, "alt"), plt = latestOf(labs, "platelet");
+  const age = Number(ctx.ageYears);
+  if (ast && alt && plt && isFinite(age) && age > 0) {
+    const a = Number(ast.canonValue), l = Number(alt.canonValue), p = Number(plt.canonValue);
+    if (a > 0 && l > 0 && p > 0) {
+      const v = (age * a) / (p * Math.sqrt(l));
+      const lowCut = age >= 65 ? 2.0 : 1.3;
+      const band = v < lowCut ? "low" : (v > 2.67 ? "high" : "indeterminate");
+      out.fib4 = { ok: true, value: Math.round(v * 100) / 100, band, lowCut, highCut: 2.67, note: age >= 65 ? "age>=65-adjusted" : null };
+    }
+  }
+
+  // Anion gap = Na − (Cl + HCO₃). Verified normal ~8–12 mEq/L (lower on modern ion-selective
+  // analysers), so the raw number is reported with the caveat that the person's own lab range is
+  // what counts. Albumin correction matters: low albumin lowers the gap and can HIDE a real high-gap
+  // acidosis, so when albumin is available a corrected value is added (AG + 2.5×(4.0 − albumin g/dL)).
+  const na = latestOf(labs, "sodium"), cl = latestOf(labs, "chloride"), hco3 = latestOf(labs, "bicarbonate");
+  if (na && cl && hco3) {
+    const nav = Number(na.canonValue), clv = Number(cl.canonValue), hv = Number(hco3.canonValue);
+    if ([nav, clv, hv].every(isFinite)) {
+      const ag = nav - (clv + hv);
+      const res = { ok: true, value: Math.round(ag * 10) / 10, unit: "mmol/L", refLow: 8, refHigh: 12 };
+      const alb = latestOf(labs, "albumin");   // g/dL in REF_LIB
+      if (alb && isFinite(Number(alb.canonValue))) {
+        const albv = Number(alb.canonValue);
+        const corr = ag + 2.5 * (4.0 - albv);
+        res.corrected = Math.round(corr * 10) / 10;
+        res.correctedFor = "albumin";
+      }
+      out.anionGap = res;
     }
   }
   return out;
@@ -288,6 +327,6 @@ export function clinicalSummary(labs, meds, ctx = {}) {
     trends,
     patterns: patterns(labs, ctx),
     drugChecks: drugLabChecks(meds, labs, ctx),
-    derived: derived(labs),
+    derived: derived(labs, ctx),
   };
 }

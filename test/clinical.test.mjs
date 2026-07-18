@@ -109,6 +109,57 @@ const d2 = derived(lip2);
 ok("TG>=400 -> Friedewald REDDEDER (yanlis sayi vermez)", d2.ldlCalc && d2.ldlCalc.ok === false, d2);
 ok("HDL yoksa LDL hesaplanmaz", !derived([lip[0], lip[2]]).ldlCalc);
 
+console.log("=== 6b) FIB-4 ===");
+const fibLabs = [
+  { id: "a", ts: T0, test: "ast", canonValue: 80, level: "high" },
+  { id: "b", ts: T0, test: "alt", canonValue: 50, level: "high" },
+  { id: "c", ts: T0, test: "platelet", canonValue: 120, level: "low" },
+];
+// Age 60, AST 80, ALT 50, PLT 120 -> (60*80)/(120*sqrt(50)) = 4800/848.5 = 5.66 -> high
+const f4 = derived(fibLabs, { ageYears: 60 });
+ok("FIB-4 hesaplandı", f4.fib4 && f4.fib4.ok, f4.fib4);
+ok("FIB-4 değeri ~5.66", f4.fib4 && Math.abs(f4.fib4.value - 5.66) < 0.05, f4.fib4 && f4.fib4.value);
+ok("FIB-4 yüksek bandı", f4.fib4 && f4.fib4.band === "high");
+// low case: young, normal enzymes, good platelets
+const f4low = derived([
+  { id: "a", ts: T0, test: "ast", canonValue: 20, level: "normal" },
+  { id: "b", ts: T0, test: "alt", canonValue: 20, level: "normal" },
+  { id: "c", ts: T0, test: "platelet", canonValue: 250, level: "normal" },
+], { ageYears: 30 });
+ok("FIB-4 düşük bandı (genç, normal)", f4low.fib4 && f4low.fib4.band === "low", f4low.fib4);
+// age >=65 uses higher low cutoff (2.0)
+const f4old = derived([
+  { id: "a", ts: T0, test: "ast", canonValue: 30, level: "normal" },
+  { id: "b", ts: T0, test: "alt", canonValue: 25, level: "normal" },
+  { id: "c", ts: T0, test: "platelet", canonValue: 200, level: "normal" },
+], { ageYears: 70 });
+ok("FIB-4 65+ eşiği 2.0 kullanır", f4old.fib4 && f4old.fib4.lowCut === 2.0, f4old.fib4);
+ok("yaş yoksa FIB-4 UYDURMAZ", !derived(fibLabs, {}).fib4);
+ok("platelet yoksa FIB-4 hesaplanmaz", !derived([fibLabs[0], fibLabs[1]], { ageYears: 60 }).fib4);
+
+console.log("=== 6c) Anyon açığı ===");
+// Na 140, Cl 105, HCO3 24 -> AG = 140-(105+24) = 11 (normal)
+const agLabs = [
+  { id: "a", ts: T0, test: "sodium", canonValue: 140, level: "normal" },
+  { id: "b", ts: T0, test: "chloride", canonValue: 105, level: "normal" },
+  { id: "c", ts: T0, test: "bicarbonate", canonValue: 24, level: "normal" },
+];
+const ag = derived(agLabs);
+ok("anyon açığı = 11", ag.anionGap && ag.anionGap.value === 11, ag.anionGap);
+// high gap: Na 140, Cl 100, HCO3 12 -> 28
+const agHigh = derived([
+  { id: "a", ts: T0, test: "sodium", canonValue: 140, level: "normal" },
+  { id: "b", ts: T0, test: "chloride", canonValue: 100, level: "normal" },
+  { id: "c", ts: T0, test: "bicarbonate", canonValue: 12, level: "low" },
+]);
+ok("yüksek anyon açığı = 28", agHigh.anionGap && agHigh.anionGap.value === 28, agHigh.anionGap);
+// albumin correction: low albumin should RAISE the corrected gap
+const agAlb = derived([...agLabs, { id: "d", ts: T0, test: "albumin", canonValue: 2.0, level: "low" }]);
+// corrected = 11 + 2.5*(4.0-2.0) = 11 + 5 = 16
+ok("albümin düzeltmesi (2.0 g/dL) → 16", agAlb.anionGap && agAlb.anionGap.corrected === 16, agAlb.anionGap);
+ok("albümin yoksa düzeltme yok", !ag.anionGap.corrected);
+ok("klorür yoksa anyon açığı hesaplanmaz", !derived([agLabs[0], agLabs[2]]).anionGap);
+
 console.log("=== 7) Ozet ===");
 const sum = clinicalSummary(
   [...ironLabs, { id: "k", ts: T0 + D, test: "potassium", canonValue: 7.2, level: "critical-high" }],

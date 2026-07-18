@@ -1077,7 +1077,7 @@ const UNIT_CONV={
   tsh:{canon:"mU/L",f:{"mU/L":1,"mIU/L":1,"uIU/mL":1,"µIU/mL":1,"mIU/mL":1000,"uU/mL":1}},
   albumin:{canon:"g/dL",f:{"g/dL":1,"g/L":0.1}},
   alt:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},ast:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},
-  sodium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},potassium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},
+  sodium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},potassium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},chloride:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},bicarbonate:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},
   platelet:{canon:"x10^9/L",f:{"x10^9/L":1,"10^9/L":1,"10*9/L":1,"K/uL":1,"K/µL":1,"10^3/uL":1,"10^3/µL":1,"10*3/uL":1,"x10^3/uL":1,"thousand/uL":1,"/uL":0.001,"/µL":0.001}},
   uricAcid:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":16.81}},
   magnesium:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":2.43,"mEq/L":1.215}},
@@ -1112,6 +1112,8 @@ const REF_LIB={
   hemoglobin:{unit:"g/L",adult:{male:[130,180],female:[115,165]}},
   platelet:{unit:"x10^9/L",adult:{any:[140,400]}},
   sodium:{unit:"mmol/L",adult:{any:[135,145]}},
+  chloride:{unit:"mmol/L",adult:{any:[98,107]}},
+  bicarbonate:{unit:"mmol/L",adult:{any:[22,29]}},
   potassium:{unit:"mmol/L",adult:{any:[3.5,5.0]}},
   calcium:{unit:"mg/dL",adult:{any:[8.4,10.2]}},
   creatinine:{unit:"mg/dL",adult:{male:[0.70,1.30],female:[0.50,1.10]}},
@@ -1384,6 +1386,8 @@ const LAB_TESTS=[
   {k:"b12",tr:"B12",en:"B12",units:["ng/L","pg/mL","pmol/L"],sys:"hematology"},
   {k:"creatinine",tr:"Kreatinin",en:"Creatinine",units:["mg/dL","umol/L"],sys:"kidney"},
   {k:"sodium",tr:"Sodyum",en:"Sodium",units:["mmol/L","mEq/L"],sys:"kidney"},
+  {k:"chloride",tr:"Klorür",en:"Chloride",units:["mmol/L","mEq/L"],sys:"kidney"},
+  {k:"bicarbonate",tr:"Bikarbonat (HCO₃)",en:"Bicarbonate (HCO₃)",units:["mmol/L","mEq/L"],sys:"kidney"},
   {k:"potassium",tr:"Potasyum",en:"Potassium",units:["mmol/L","mEq/L"],sys:"kidney"},
   {k:"calcium",tr:"Kalsiyum",en:"Calcium",units:["mg/dL","mmol/L"],sys:"kidney"},
   {k:"alt",tr:"ALT",en:"ALT",units:["U/L","IU/L"],sys:"liver"},
@@ -2999,6 +3003,8 @@ const sendChat=async(text)=>{
       if(cs.patterns.length)parts.push("ÖRÜNTÜLER (olası, teşhis değil): "+cs.patterns.map(p=>p.id+(p.caveat?` [uyarı: ${p.caveat}]`:"")+(p.missing?` [eksik: ${p.missing.join(",")}]`:"")).join(", "));
       if(cs.drugChecks.length)parts.push("İLAÇ-TAHLİL KONTROLÜ (doktora sorulacak): "+cs.drugChecks.map(d=>`${d.drug}×${d.test||("eGFR "+d.egfr)} (${d.severity})`).join(", "));
       if(cs.derived.ldlCalc&&cs.derived.ldlCalc.ok)parts.push("HESAPLANAN: LDL ≈ "+cs.derived.ldlCalc.value+" mg/dL (Friedewald)");
+      if(cs.derived.fib4&&cs.derived.fib4.ok)parts.push("HESAPLANAN: FIB-4 = "+cs.derived.fib4.value+" ("+(cs.derived.fib4.band==="high"?"ileri karaciğer fibrozu olasılığı yüksek":cs.derived.fib4.band==="low"?"düşük olasılık":"belirsiz aralık")+", karaciğer için; teşhis değil)");
+      if(cs.derived.anionGap&&cs.derived.anionGap.ok)parts.push("HESAPLANAN: Anyon açığı = "+cs.derived.anionGap.value+" mmol/L"+(cs.derived.anionGap.corrected!=null?" (albümine göre düzeltilmiş: "+cs.derived.anionGap.corrected+")":""));
       if(parts.length)clinStr="\n\nTAHLİL DEĞERLENDİRMESİ (yayınlanmış kurallara göre; TEŞHİS DEĞİL — kişiyi doğru soruyla doktora yönlendir):\n"+parts.join("\n")+"\n";
     }catch(e){}
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
@@ -5624,7 +5630,7 @@ const renderPCard=()=>{
   const hasLabs=Object.keys(latestLab).length>0;
   const clinCount=clin.criticals.length+clin.trends.length+clin.patterns.length+clin.drugChecks.length+abnormals.length;
   const levelLbl=(lv)=>({low:lang==="tr"?"düşük":TL("low",lang),high:lang==="tr"?"yüksek":TL("high",lang),borderline:lang==="tr"?"sınırda":TL("borderline",lang),prediabetes:lang==="tr"?"prediyabet":TL("prediabetes",lang),"diabetes-range":lang==="tr"?"diyabet eşiği":TL("diabetes range",lang)}[lv]||lv);
-  const testName=(k)=>{const ti=LAB_TESTS.find(x=>x.k===k);return ti?(lang==="tr"?ti.tr:ti.en):k;};
+  const testName=(k)=>{const ti=LAB_TESTS.find(x=>x.k===k);if(!ti)return k;return lang==="tr"?ti.tr:(lang==="en"?ti.en:TL(ti.en,lang));};
   const drugRuleLbl=(id)=>({
     "metformin-egfr":lang==="tr"?"Metformin + düşük böbrek fonksiyonu (eGFR)":TL("Metformin + low kidney function (eGFR)",lang),
     "metformin-egfr-review":lang==="tr"?"Metformin + böbrek fonksiyonu gözden geçirilmeli":TL("Metformin + kidney function to review",lang),
@@ -5698,7 +5704,31 @@ const renderPCard=()=>{
           </div>)}
           <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Yön tek başına iyi/kötü demek değildir; teste göre değişir.":TL("Direction alone is not good or bad; it depends on the test.",lang)}</div>
         </div>}
-        {clinCount===0&&<div style={{fontSize:fs-2,color:sc,textAlign:"center",padding:"8px 4px",fontWeight:600}}>✓ {lang==="tr"?"Girdiğiniz tüm tahliller referans aralığında.":TL("All labs you entered are within range.",lang)}</div>}
+        {(()=>{
+          const d=clin.derived||{};
+          const items=[];
+          if(d.ldlCalc&&d.ldlCalc.ok)items.push({name:lang==="tr"?"LDL (hesaplanan)":TL("LDL (calculated)",lang),val:d.ldlCalc.value+" mg/dL",sub:"Friedewald"});
+          if(d.fib4&&d.fib4.ok){
+            const bandTxt=d.fib4.band==="high"?(lang==="tr"?"ileri fibroz olasılığı yüksek":TL("high probability of advanced fibrosis",lang)):d.fib4.band==="low"?(lang==="tr"?"düşük olasılık":TL("low probability",lang)):(lang==="tr"?"belirsiz aralık":TL("indeterminate range",lang));
+            items.push({name:"FIB-4",val:String(d.fib4.value),sub:(lang==="tr"?"karaciğer fibrozu · ":TL("liver fibrosis · ",lang))+bandTxt,tone:d.fib4.band==="high"?"#e9a23b":undefined});
+          }
+          if(d.anionGap&&d.anionGap.ok){
+            items.push({name:lang==="tr"?"Anyon açığı":TL("Anion gap",lang),val:d.anionGap.value+" mmol/L",sub:d.anionGap.corrected!=null?(lang==="tr"?"albümine göre düzeltilmiş: ":TL("albumin-corrected: ",lang))+d.anionGap.corrected:null});
+          }
+          if(!items.length)return null;
+          return <div style={{marginBottom:6}}>
+            <div style={{fontSize:fs-2,fontWeight:700,color:acTx,marginBottom:4}}>🧮 {lang==="tr"?"Hesaplanan değerler":TL("Calculated values",lang)}</div>
+            {items.map((it,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,padding:"6px 9px",borderRadius:7,background:dark?"#0d1520":"#f8fafc",marginBottom:4}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:fs-2,fontWeight:600}}>{it.name}</div>
+                {it.sub&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{it.sub}</div>}
+              </div>
+              <span style={{fontSize:fs-2,fontWeight:700,color:it.tone||tc,whiteSpace:"nowrap"}}>{it.val}</span>
+            </div>)}
+            <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Bu değerler tahlillerinizden hesaplanmıştır; teşhis değildir, doktorunuzla değerlendirin.":TL("These are computed from your labs; not a diagnosis — review with your doctor.",lang)}</div>
+          </div>;
+        })()}
+        {clinCount===0&&!(clin.derived&&(clin.derived.fib4||clin.derived.anionGap||clin.derived.ldlCalc))&&<div style={{fontSize:fs-2,color:sc,textAlign:"center",padding:"8px 4px",fontWeight:600}}>✓ {lang==="tr"?"Girdiğiniz tüm tahliller referans aralığında.":TL("All labs you entered are within range.",lang)}</div>}
         <button onClick={()=>goTo("health")} style={{...BP,width:"100%",marginTop:8,padding:"7px",background:"transparent",color:acTx,border:"1px solid "+ac+"44"}}>✏️ {lang==="tr"?"Tahlilleri Sağlık Verilerim'de düzenle":TL("Edit labs in My Health Data",lang)}</button>
       </>);
     })()}
