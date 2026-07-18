@@ -440,6 +440,42 @@ const RULES = [
     needs: { testCritical: "inr" },
     severity: "high",
   },
+  {
+    // Hypokalaemia sensitises the myocardium to digoxin — FDA label: toxicity can occur even at
+    // therapeutic levels. Same for low magnesium (separate rule below).
+    id: "digoxin-potassium",
+    drugs: ["digoxin", "lanoxin", "digoksin"],
+    needs: { testLow: "potassium" },
+    severity: "high",
+  },
+  {
+    id: "digoxin-magnesium",
+    drugs: ["digoxin", "lanoxin", "digoksin"],
+    needs: { testLow: "magnesium" },
+    severity: "high",
+  },
+  {
+    // Digoxin is renally excreted; impaired function raises toxicity risk (dose reduced <60 mL/min).
+    id: "digoxin-egfr",
+    drugs: ["digoxin", "lanoxin", "digoksin"],
+    needs: { egfrBelow: 60 },
+    severity: "medium",
+  },
+  {
+    // NSAIDs reduce renal perfusion; risk of decompensation in impaired kidneys, esp. with ACEi/ARB
+    // or diuretics (the 'triple whammy'). Surface it whenever eGFR is low.
+    id: "nsaid-egfr",
+    drugs: ["ibuprofen", "naproxen", "diclofenac", "celecoxib", "indomethacin", "ketorolac", "brufen", "voltaren", "aleve", "advil"],
+    needs: { egfrBelow: 60 },
+    severity: "medium",
+  },
+  {
+    // Allopurinol clearance falls with renal function; dose adjustment reduces toxicity risk.
+    id: "allopurinol-egfr",
+    drugs: ["allopurinol", "zyloprim", "urikoz"],
+    needs: { egfrBelow: 60 },
+    severity: "medium",
+  },
 ];
 
 export function drugLabChecks(meds, labs, ctx = {}) {

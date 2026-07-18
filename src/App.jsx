@@ -5709,6 +5709,11 @@ const renderPCard=()=>{
     "statin-liver":lang==="tr"?"Statin + yüksek karaciğer enzimi":TL("Statin + high liver enzyme",lang),
     "diuretic-sodium":lang==="tr"?"İdrar söktürücü + düşük sodyum":TL("Diuretic + low sodium",lang),
     "warfarin-inr":lang==="tr"?"Varfarin + kritik INR":TL("Warfarin + critical INR",lang),
+    "digoxin-potassium":lang==="tr"?"Digoksin + düşük potasyum":TL("Digoxin + low potassium",lang),
+    "digoxin-magnesium":lang==="tr"?"Digoksin + düşük magnezyum":TL("Digoxin + low magnesium",lang),
+    "digoxin-egfr":lang==="tr"?"Digoksin + düşük böbrek fonksiyonu":TL("Digoxin + low kidney function",lang),
+    "nsaid-egfr":lang==="tr"?"Ağrı kesici (NSAİİ) + düşük böbrek fonksiyonu":TL("Painkiller (NSAID) + low kidney function",lang),
+    "allopurinol-egfr":lang==="tr"?"Allopurinol + düşük böbrek fonksiyonu":TL("Allopurinol + low kidney function",lang),
   }[id]||id);
   const patternLbl=(id)=>({
     "iron-deficiency":lang==="tr"?"Demir eksikliği anemisi tablosu olabilir":TL("May fit an iron-deficiency picture",lang),

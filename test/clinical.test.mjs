@@ -133,6 +133,22 @@ ok("ilac yoksa uyari yok", c5.length === 0, c5);
 const c6 = drugLabChecks(meds, [], {});
 ok("eGFR bilinmiyorsa metformin uyarisi UYDURMAZ", !c6.some(x => x.id.startsWith("metformin")), c6);
 
+console.log("=== 5b) Yeni ilaç-tahlil kuralları ===");
+const dgK = drugLabChecks([{ name: "Digoxin 0.25mg" }], [{ id: "k", ts: T0, test: "potassium", canonValue: 2.9, level: "low" }], {});
+ok("digoksin + düşük K → yüksek uyarı", dgK.some(x => x.id === "digoxin-potassium" && x.severity === "high"), dgK);
+const dgM = drugLabChecks([{ name: "Lanoxin" }], [{ id: "m", ts: T0, test: "magnesium", canonValue: 1.2, level: "low" }], {});
+ok("digoksin + düşük Mg → uyarı", dgM.some(x => x.id === "digoxin-magnesium"), dgM);
+const dgE = drugLabChecks([{ name: "Digoxin" }], [], { egfr: 45 });
+ok("digoksin + düşük eGFR → uyarı", dgE.some(x => x.id === "digoxin-egfr"), dgE);
+ok("digoksin + normal → uyarı yok", drugLabChecks([{ name: "Digoxin" }], [{ id: "k", ts: T0, test: "potassium", canonValue: 4.0, level: "normal" }], { egfr: 90 }).length === 0);
+const ns = drugLabChecks([{ name: "Ibuprofen 400mg" }], [], { egfr: 40 });
+ok("NSAİİ + düşük eGFR → uyarı", ns.some(x => x.id === "nsaid-egfr"), ns);
+ok("NSAİİ + normal eGFR → uyarı yok", !drugLabChecks([{ name: "Ibuprofen" }], [], { egfr: 90 }).some(x => x.id === "nsaid-egfr"));
+ok("NSAİİ + eGFR bilinmiyor → UYDURMAZ", !drugLabChecks([{ name: "Ibuprofen" }], [], {}).some(x => x.id === "nsaid-egfr"));
+const al = drugLabChecks([{ name: "Allopurinol 300mg" }], [], { egfr: 35 });
+ok("allopurinol + düşük eGFR → uyarı", al.some(x => x.id === "allopurinol-egfr"), al);
+ok("yeni kuralların hepsi source taşır", [...dgK, ...ns, ...al].every(x => x.source === "drug-label"));
+
 console.log("=== 6) Turev ===");
 const lip = [
   { id: "a", ts: T0, test: "cholesterol", canonValue: 200, level: "normal" },
