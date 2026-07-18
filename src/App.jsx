@@ -2,6 +2,7 @@ import React from "react";
 import { TL } from "./tl";
 import { emgFor, poisonFor, servicesFor, EMG_LABELS_TR } from "./emergency";
 import { criticalFor, trendFor, patterns as clinPatterns, drugLabChecks, clinicalSummary } from "./clinical";
+import { explainReport } from "./report";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 /* ══════════════════════════════════════════════════════════
@@ -1490,6 +1491,7 @@ const EMPTY_REC={type:"diag",doctor:"",hospital:"",date:"",content:"",notes:""};
 const recDraftIdRef=useRef(null);
 const[medImages,setMedImages]=useState([]);
 const[imgType,setImgType]=useState("xray");
+const[reportText,setReportText]=useState("");
 const[imgBusy,setImgBusy]=useState(null); // id being interpreted
 const[imgView,setImgView]=useState(null); // image object being viewed
 const[imgDrag,setImgDrag]=useState(false);
@@ -4820,7 +4822,92 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
   </div>}
   <div style={{...CS}}>
     <div style={{fontWeight:700,marginBottom:4,color:acTx}}>🩻 {lang==="tr"?"Tıbbi Görüntüleme & Belgeler":TL("Medical Imaging & Documents",lang)}</div>
-    <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"Röntgen, tomografi, MR, ultrason, tahlil… Pencereden seç, sürükle-bırak, fotoğraf çek ya da QR/barkod ile yükle. AILVIE görüntüyü okuyup genel yorum yapar.":TL("X-ray, CT, MRI, ultrasound, labs… Pick, drag & drop, take a photo, or upload via QR/barcode. AILVIE reads and gives a general interpretation.",lang)}</div>
+    <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"Röntgen, tomografi, MR, ultrason, tahlil… Pencereden seç, sürükle-bırak, fotoğraf çek ya da QR/barkod ile yükle.":TL("X-ray, CT, MRI, ultrasound, labs… Pick, drag & drop, take a photo, or upload via QR/barcode.",lang)}</div>
+
+    {/* Report explainer. This reads the WORDS the radiologist wrote — it does not read the image and
+        it does not diagnose. It translates the terminology, says what a stated category means and
+        what follow-up it carries, and gives the person the questions to take to their doctor. */}
+    {(()=>{
+      const rep=reportText.trim()?explainReport(reportText):null;
+      const catMeaning=(c)=>{
+        const map={
+          incomplete:lang==="tr"?"Değerlendirme tamamlanmadı — ek görüntü gerekiyor":TL("Assessment incomplete — more imaging needed",lang),
+          negative:lang==="tr"?"Bulgu yok (normal)":TL("No findings (normal)",lang),
+          benign:lang==="tr"?"İyi huylu bulgu":TL("Benign finding",lang),
+          "probably-benign":lang==="tr"?"Büyük olasılıkla iyi huylu — kısa aralıklı takip önerilir":TL("Probably benign — short-interval follow-up advised",lang),
+          suspicious:lang==="tr"?"Şüpheli — genellikle biyopsi önerilir":TL("Suspicious — biopsy usually recommended",lang),
+          "highly-suspicious":lang==="tr"?"Yüksek şüpheli — biyopsi önerilir":TL("Highly suspicious — biopsy recommended",lang),
+          "known-malignancy":lang==="tr"?"Biyopsi ile kanıtlanmış — tedavi süreci":TL("Biopsy-proven — in treatment pathway",lang),
+        };
+        return map[c.risk]||c.risk;
+      };
+      const termLbl=(k)=>({
+        "microcalcifications":lang==="tr"?"Mikrokalsifikasyon: dokudaki küçük kireç birikintileri; çoğu iyi huyludur, kümelenme takip gerektirebilir":TL("Microcalcifications: tiny calcium deposits; most are benign, clusters may need follow-up",lang),
+        "architectural-distortion":lang==="tr"?"Yapısal distorsiyon: doku mimarisinde bozulma; değerlendirilmesi gerekir":TL("Architectural distortion: disruption of tissue architecture; warrants assessment",lang),
+        "spiculated":lang==="tr"?"Spiküle: ışınsal/dikensi kenar; radyologun daha dikkatli baktığı bir özelliktir":TL("Spiculated: radiating/spiky margin; a feature radiologists look at closely",lang),
+        "fibroadenoma":lang==="tr"?"Fibroadenom: memede sık görülen iyi huylu kitle":TL("Fibroadenoma: a common benign breast lump",lang),
+        "breast-density":lang==="tr"?"Meme yoğunluğu: yoğun meme dokusu bulguları gizleyebilir; ek tarama gündeme gelebilir":TL("Breast density: dense tissue can hide findings; supplemental screening may be discussed",lang),
+        "well-circumscribed":lang==="tr"?"Düzgün sınırlı: keskin, net kenar; genellikle iyi huyluluk lehine":TL("Well-circumscribed: sharp, clear margin; usually favours benign",lang),
+        "irregular-margin":lang==="tr"?"Düzensiz sınır: net olmayan kenar; değerlendirilmesi gereken bir özellik":TL("Irregular margin: unclear edge; a feature to assess",lang),
+        "hypoechoic":lang==="tr"?"Hipoekoik: ultrasonda koyu görünen alan":TL("Hypoechoic: appears dark on ultrasound",lang),
+        "hyperechoic":lang==="tr"?"Hiperekoik: ultrasonda parlak görünen alan":TL("Hyperechoic: appears bright on ultrasound",lang),
+        "cystic":lang==="tr"?"Kistik: içi sıvı dolu kese; çoğunlukla iyi huylu":TL("Cystic: fluid-filled sac; usually benign",lang),
+        "solid-lesion":lang==="tr"?"Solid lezyon: sıvı değil, dolu doku; özelliklerine göre değerlendirilir":TL("Solid lesion: filled tissue, not fluid; assessed by its features",lang),
+        "ground-glass":lang==="tr"?"Buzlu cam opasitesi: akciğerde puslu görünüm; iltihaptan tümöre kadar birçok nedeni olabilir":TL("Ground-glass opacity: hazy lung appearance; many causes from inflammation to tumour",lang),
+        "nodule":lang==="tr"?"Nodül: küçük yuvarlak odak; boyutu ve özelliği takip aralığını belirler":TL("Nodule: small round focus; size and features set the follow-up interval",lang),
+        "consolidation":lang==="tr"?"Konsolidasyon: akciğerin havasız, dolu görünmesi; sıklıkla enfeksiyon":TL("Consolidation: airless, filled-in lung; often infection",lang),
+        "pleural-effusion":lang==="tr"?"Plevral efüzyon: akciğer zarları arasında sıvı":TL("Pleural effusion: fluid between the lung linings",lang),
+        "emphysema":lang==="tr"?"Amfizem: akciğer hava keseciklerinde hasar":TL("Emphysema: damage to the lung air sacs",lang),
+        "t2-hyperintense":lang==="tr"?"T2 hiperintens: MR'da parlak sinyal; sıvı/ödem/iltihap işareti olabilir":TL("T2 hyperintense: bright signal on MRI; may mark fluid/oedema/inflammation",lang),
+        "enhancement":lang==="tr"?"Kontrast tutulumu: kontrast maddeyi tutan alan; damarlanma/aktiviteyi gösterir":TL("Contrast enhancement: area taking up contrast; shows vascularity/activity",lang),
+        "edema":lang==="tr"?"Ödem: doku içi sıvı birikimi/şişlik":TL("Oedema: fluid build-up/swelling in tissue",lang),
+        "herniation":lang==="tr"?"Disk hernisi/taşması: omurga diskinin yer değiştirmesi; sinire bası yapabilir":TL("Disc herniation/bulge: displaced spinal disc; can press on a nerve",lang),
+        "stenosis":lang==="tr"?"Stenoz: bir kanal/damarın daralması":TL("Stenosis: narrowing of a canal/vessel",lang),
+        "hepatic-steatosis":lang==="tr"?"Karaciğer yağlanması: karaciğerde yağ birikimi; sık görülür":TL("Hepatic steatosis: fat in the liver; common",lang),
+        "hypodense-lesion":lang==="tr"?"Hipodens lezyon: BT'de koyu görünen alan":TL("Hypodense lesion: appears dark on CT",lang),
+        "hyperdense-lesion":lang==="tr"?"Hiperdens lezyon: BT'de parlak görünen alan":TL("Hyperdense lesion: appears bright on CT",lang),
+        "simple-cyst":lang==="tr"?"Basit kist: içi sıvı, iyi huylu kese":TL("Simple cyst: fluid-filled, benign sac",lang),
+        "no-significant-abnormality":lang==="tr"?"Belirgin bir patoloji tanımlanmamış (olağan/normal)":TL("No significant abnormality described (unremarkable)",lang),
+        "incidental":lang==="tr"?"İnsidental: aranmadığı halde rastlantısal bulunan bulgu":TL("Incidental: a finding noticed by chance, not what was looked for",lang),
+      }[k]||k);
+      const qLbl=(k)=>({
+        "q-category-meaning":lang==="tr"?"Bu kategori benim durumumda tam olarak ne anlama geliyor?":TL("What does this category mean specifically for me?",lang),
+        "q-biopsy-next":lang==="tr"?"Biyopsi gerekiyor mu, gerekiyorsa ne zaman ve nasıl?":TL("Is a biopsy needed, and if so when and how?",lang),
+        "q-followup-when":lang==="tr"?"Kontrol görüntülemeyi tam olarak ne zaman yaptırmalıyım?":TL("Exactly when should I have the follow-up imaging?",lang),
+        "q-which-extra-imaging":lang==="tr"?"Hangi ek görüntüleme gerekiyor ve neden?":TL("Which additional imaging is needed and why?",lang),
+        "q-treatment-plan":lang==="tr"?"Bundan sonraki tedavi planı ne olacak?":TL("What is the treatment plan from here?",lang),
+        "q-incidental-significance":lang==="tr"?"Rastlantısal bulunan bu bulgu önemli mi, takip gerekiyor mu?":TL("Is this incidental finding important — does it need follow-up?",lang),
+        "q-density-supplemental":lang==="tr"?"Meme yoğunluğum nedeniyle ek tarama (ultrason/MR) gerekir mi?":TL("Given my breast density, do I need supplemental screening (ultrasound/MRI)?",lang),
+        "q-plain-summary":lang==="tr"?"Bu raporu sade bir dille özetler misiniz?":TL("Can you summarise this report in plain language?",lang),
+        "q-compare-prior":lang==="tr"?"Bu sonuç önceki görüntülerimle karşılaştırıldığında değişmiş mi?":TL("Compared with my previous imaging, has this changed?",lang),
+      }[k]||k);
+      const urgTone=rep&&(rep.urgency==="biopsy"||rep.urgency==="treatment"||rep.urgency==="workup")?dg:rep&&(rep.urgency==="short-interval"||rep.urgency==="more-imaging")?"#e9a23b":sc;
+      return <div style={{marginBottom:12,padding:"10px",borderRadius:10,background:dark?"#0d1520":"#f8fafc",border:`1px solid ${bd}55`}}>
+        <div style={{fontWeight:700,fontSize:fs-1,color:tc,marginBottom:3}}>📄 {lang==="tr"?"Rapor Açıkla":TL("Explain a Report",lang)}</div>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:6,lineHeight:1.45}}>{lang==="tr"?"Radyoloji/patoloji raporunuzun yazısını yapıştırın. AILVIE terimleri sade dile çevirir ve doktorunuza soracağınız soruları hazırlar — bu bir teşhis değildir, raporun kendisini açıklar.":TL("Paste the text of your radiology/pathology report. AILVIE translates the terms into plain language and prepares questions for your doctor — this is not a diagnosis, it explains the report itself.",lang)}</div>
+        <textarea value={reportText} onChange={e=>setReportText(e.target.value)} placeholder={lang==="tr"?"Rapor metnini buraya yapıştırın…":TL("Paste the report text here…",lang)} style={{...IS,width:"100%",minHeight:70,maxHeight:180,resize:"vertical",fontSize:fs-2,boxSizing:"border-box"}}/>
+        {rep&&rep.hasContent&&<div style={{marginTop:8}}>
+          {rep.categories.length>0&&<div style={{marginBottom:8}}>
+            <div style={{fontSize:fs-2,fontWeight:700,color:urgTone,marginBottom:3}}>🏷️ {lang==="tr"?"Değerlendirme kategorisi":TL("Assessment category",lang)}</div>
+            {rep.categories.map((c,i)=><div key={i} style={{padding:"6px 9px",borderRadius:7,background:urgTone+"14",border:`1px solid ${urgTone}44`,marginBottom:4}}>
+              <div style={{fontSize:fs-2,fontWeight:700}}>{c.system} {c.value}</div>
+              <div style={{fontSize:fs-3,color:tc,marginTop:1}}>{catMeaning(c)}</div>
+            </div>)}
+            <div style={{fontSize:fs-4,color:mt}}>{lang==="tr"?"Bu, kategorinin yayınlanmış anlamıdır (ACR); sizin sonucunuz değil — onu doktorunuz yorumlar.":TL("This is the category's published meaning (ACR); not your result — your doctor interprets that.",lang)}</div>
+          </div>}
+          {rep.terms.length>0&&<div style={{marginBottom:8}}>
+            <div style={{fontSize:fs-2,fontWeight:700,color:acTx,marginBottom:3}}>📖 {lang==="tr"?"Terimler":TL("Terms",lang)}</div>
+            {rep.terms.map((k,i)=><div key={i} style={{fontSize:fs-3,padding:"4px 0",borderBottom:i<rep.terms.length-1?`1px solid ${bd}33`:"none"}}>{termLbl(k)}</div>)}
+          </div>}
+          <div>
+            <div style={{fontSize:fs-2,fontWeight:700,color:sc,marginBottom:3}}>💬 {lang==="tr"?"Doktorunuza sorabilecekleriniz":TL("Questions for your doctor",lang)}</div>
+            {rep.questions.map((k,i)=><div key={i} style={{fontSize:fs-3,padding:"3px 0",color:tc}}>• {qLbl(k)}</div>)}
+          </div>
+        </div>}
+        {rep&&!rep.hasContent&&reportText.trim().length>15&&<div style={{marginTop:8,fontSize:fs-3,color:mt}}>{lang==="tr"?"Tanıdık bir kategori (BI-RADS, Lung-RADS) veya terim bulunamadı. Yine de raporu AILVIE Sohbet'e yapıştırıp sade bir özet isteyebilirsiniz.":TL("No familiar category (BI-RADS, Lung-RADS) or term found. You can still paste the report into AILVIE Chat and ask for a plain summary.",lang)}</div>}
+      </div>;
+    })()}
+
     <select aria-label={lang==="tr"?"Görüntüleme türü":TL("Imaging type",lang)} value={imgType} onChange={e=>setImgType(e.target.value)} style={{...IS,marginBottom:8}}>{[["xray","Röntgen"],["ct","Tomografi (BT)"],["mri","MR"],["ultra","Ultrason"],["lab","Tahlil/Rapor"],["other","Diğer"]].map(([v,l])=><option key={v} value={v}>{t[v]||l}</option>)}</select>
     <div onDragOver={e=>{e.preventDefault();setImgDrag(true);}} onDragLeave={()=>setImgDrag(false)} onDrop={e=>{e.preventDefault();setImgDrag(false);addMedFiles(e.dataTransfer.files,imgType);}} style={{border:`2px dashed ${imgDrag?ac:bd}`,borderRadius:12,padding:"14px 10px",textAlign:"center",background:imgDrag?`${ac}12`:"transparent",marginBottom:8,transition:"all .15s"}}>
       <div style={{fontSize:26,marginBottom:2}}>📥</div>
@@ -4840,14 +4927,14 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         <div style={{padding:"4px 5px"}}>
           <div style={{fontSize:fs-4,fontWeight:700,color:acTx,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t[im.type]||({ct:lang==="tr"?"Tomografi":TL("CT",lang),other:lang==="tr"?"Diğer":TL("Other",lang)}[im.type])||im.type}{im.aiNote?" ✓":""}</div>
           <div style={{display:"flex",gap:4,marginTop:3}}>
-            <button onClick={()=>interpretImage(im)} disabled={imgBusy===im.id} title={lang==="tr"?"AI Yorumla":TL("AI interpret",lang)} style={{flex:1,background:imgBusy===im.id?mt:`linear-gradient(135deg,${ac},${a2})`,border:"none",color:"#fff",borderRadius:6,padding:"3px 0",fontSize:fs-4,cursor:"pointer"}}>{imgBusy===im.id?"…":"🤖"}</button>
+            <button onClick={()=>interpretImage(im)} disabled={imgBusy===im.id} title={lang==="tr"?"Raporu Açıkla":TL("Explain report",lang)} style={{flex:1,background:imgBusy===im.id?mt:`linear-gradient(135deg,${ac},${a2})`,border:"none",color:"#fff",borderRadius:6,padding:"3px 0",fontSize:fs-4,cursor:"pointer"}}>{imgBusy===im.id?"…":"🤖"}</button>
             <button onClick={()=>setImgView(im)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:6,padding:"3px 6px",fontSize:fs-4,cursor:"pointer",color:tc}}>👁️</button>
             <button onClick={()=>{toTrash("image",im);notify(lang==="tr"?"Çöp kutusuna taşındı":TL("Moved to Trash",lang));}} style={{background:"none",border:`1px solid ${dg}33`,borderRadius:6,padding:"3px 6px",fontSize:fs-4,cursor:"pointer",color:dg}}>🗑️</button>
           </div>
         </div>
       </div>)}
     </div>}
-    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.5}}>⚠️ {lang==="tr"?"AI yorumu bilgilendirme amaçlıdır, tıbbi tanı değildir. Kesin değerlendirme için radyolog/hekiminize danışın.":TL("AI interpretation is informational, not a diagnosis. Consult your radiologist/doctor. (Requires the server key set in Cloudflare.)",lang)}</div>
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.5}}>💡 {lang==="tr"?"En iyi sonuç için radyoloğun YAZILI RAPORUNUN fotoğrafını yükleyin — AILVIE rapordaki terimleri sade dille açıklar ve doktorunuza soracağınız soruları önerir. Çıplak film (röntgen/MR görüntüsü) pikselden yorumlanmaz; bu iş radyoloğa aittir. Tıbbi tanı değildir.":TL("For the best result, upload a photo of the radiologist's WRITTEN REPORT — AILVIE explains the terms in plain language and suggests questions to ask your doctor. A bare film (X-ray/MRI image) is not read from its pixels; that is the radiologist's job. Not a medical diagnosis. (Requires the server key set in Cloudflare.)",lang)}</div>
   </div>
   {imgView&&<div onClick={()=>setImgView(null)} style={{position:"fixed",inset:0,zIndex:360,background:"rgba(0,0,0,.85)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
     <img src={imgView.dataUrl} alt="" onClick={e=>e.stopPropagation()} style={{maxWidth:"100%",maxHeight:"52vh",objectFit:"contain",borderRadius:8}}/>
@@ -4855,9 +4942,9 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div style={{fontWeight:700,color:acTx,marginBottom:6}}>{t[imgView.type]||({ct:lang==="tr"?"Tomografi":TL("CT",lang),other:lang==="tr"?"Diğer":TL("Other",lang)}[imgView.type])||imgView.type} · {imgView.date}</div>
       {imgView.aiNote
         ? <div style={{fontSize:fs-1,whiteSpace:"pre-wrap",lineHeight:1.5}}>{imgView.aiNote}</div>
-        : <div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Henüz AI yorumu yok. 🤖 ile yorumlatabilirsiniz.":TL("No AI interpretation yet. Use 🤖 to interpret.",lang)}</div>}
+        : <div style={{fontSize:fs-2,color:mt}}>{lang==="tr"?"Henüz açıklama yok. Rapor metni varsa 🤖 ile açıklatabilirsiniz.":TL("No explanation yet. If there's report text, use 🤖 to explain it.",lang)}</div>}
       <div style={{display:"flex",gap:8,marginTop:10}}>
-        <button onClick={()=>interpretImage(imgView)} disabled={imgBusy===imgView.id} style={{...BP,flex:1,padding:"7px",fontSize:fs-2}}>{imgBusy===imgView.id?"…":"🤖 "+(lang==="tr"?"Yorumla":TL("Interpret",lang))}</button>
+        <button onClick={()=>interpretImage(imgView)} disabled={imgBusy===imgView.id} style={{...BP,flex:1,padding:"7px",fontSize:fs-2}}>{imgBusy===imgView.id?"…":"🤖 "+(lang==="tr"?"Raporu Açıkla":TL("Explain report",lang))}</button>
         <button onClick={()=>setImgView(null)} style={{...BP,flex:1,padding:"7px",fontSize:fs-2,background:mt}}>{lang==="tr"?"Kapat":TL("Close",lang)}</button>
       </div>
     </div>
@@ -5448,10 +5535,30 @@ const interpretImage=async(img)=>{
   try{
     const b64=(img.dataUrl||"").split(",")[1]||"";
     const typeLabel=(t[img.type]||img.type);
+    // Report-first, not pixel-first. The real value — and the safe value — is explaining the
+    // RADIOLOGIST'S REPORT: translating jargon (BI-RADS 4, "T2 hyperintense", "ground-glass"),
+    // flagging what needs follow-up, and generating the questions to ask. Reading a raw film
+    // (an X-ray/MRI/CT image with no report text) and calling a finding is exactly what a general
+    // model must NOT do: the error cost is asymmetric (a false "looks benign" can cost a life), and
+    // approved imaging AIs are purpose-built and radiologist-supervised, not a chat model. So the
+    // model is told to work from written text when present and to refuse pixel-level diagnosis when
+    // the image is a bare film, redirecting the person to get the report instead.
     const sys=lang==="tr"
-      ?`Sen AILVIE tıbbi asistanısın. Kullanıcı bir tıbbi görüntü (${typeLabel}) yükledi. Görselde NE GÖRÜNDÜĞÜNÜ sade, anlaşılır bir dille betimle ve genel bilgi ver. KESİN TANI KOYMA, kesin ölçüm/derece verme. Ciddi/acil bir bulgu ihtimali görürsen vakit kaybetmeden hekime/acile başvurulmasını söyle. Yanıtı MUTLAKA şu uyarıyla bitir: "⚠️ Bu bir tıbbi tanı değildir. Kesin değerlendirme için mutlaka radyolog/hekiminize danışın." Kısa ve net ol.`
-      :`You are AILVIE medical assistant. The user uploaded a medical image (${typeLabel}). Describe in plain language what is VISIBLE and give general info. DO NOT give a definitive diagnosis or exact measurements. If a serious/urgent finding seems possible, advise seeing a doctor/ER promptly. ALWAYS end with: "⚠️ This is not a medical diagnosis. Always consult your radiologist/doctor for a definitive assessment." Be concise.`;
-    const body={model:"claude-sonnet-4-6",max_tokens:1000,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}},{type:"text",text:lang==="tr"?"Bu görüntüde ne görünüyor? Genel olarak yorumla.":TL("What is visible here? Interpret generally.",lang)}]}]};
+      ?`Sen AILVIE sağlık asistanısın. Kullanıcı bir tıbbi görüntü (${typeLabel}) yükledi. İŞİN, görselde YAZILI RAPOR METNİ varsa onu okuyup AÇIKLAMAK — teşhis koymak değil.
+
+ÖNCE görüntüde yazılı bir radyoloji/tahlil RAPORU (metin) var mı bak:
+- VARSA: Raporu sade dille açıkla. (1) Rapordaki tıbbi terimleri günlük dile çevir (ör. "BI-RADS 4 = kötü huylu olma ihtimali var, biyopsi önerilir"; "T2 hiperintens = MR'da parlak görünen alan"; "buzlu cam opasitesi = akciğerde sisli görünüm"). (2) Takip/işlem gerektiren ifadeleri işaretle. (3) Doktora sorulacak net sorular öner. Raporda yazmayan şeyi UYDURMA; sadece metinde geçeni açıkla.
+- YOKSA (çıplak film/görüntü, yazılı rapor yok): Röntgen/MR/BT/mamografi/ultrason GÖRÜNTÜSÜNÜ pikselden OKUMA ve YORUMLAMA — "iyi/kötü huylu görünüyor", "şu kırık var" gibi ŞEYLER SÖYLEME. Bunun sebebi net: hatanın bedeli asimetriktir (yanlış "iyi görünüyor" bir hayata mal olabilir) ve onaylı görüntüleme yapay zekâları bu iş için özel eğitilmiş, radyolog gözetiminde çalışan sistemlerdir — genel bir sohbet modeli değil. Bunun yerine kibarca şunu söyle: bu bir filmdir, radyoloğun YAZILI RAPORUNU yükleyebilirsen onu açıklayabilirim; ayrıca hangi soruları sorman gerektiğinde yardımcı olurum.
+
+Ciddi/acil bir durum ihtimali raporda geçiyorsa vakit kaybetmeden hekime/acile başvurulmasını söyle. Yanıtı MUTLAKA şu uyarıyla bitir: "⚠️ Bu bir tıbbi tanı değildir. Kesin değerlendirme için mutlaka radyolog/hekiminize danışın." Kısa, net ve şefkatli ol.`
+      :`You are the AILVIE health assistant. The user uploaded a medical image (${typeLabel}). YOUR JOB is to EXPLAIN any WRITTEN REPORT TEXT in the image — not to diagnose.
+
+FIRST check whether the image contains a written radiology/lab REPORT (text):
+- IF IT DOES: Explain the report in plain language. (1) Translate the medical terms (e.g. "BI-RADS 4 = suspicious, biopsy is recommended"; "T2 hyperintense = an area that appears bright on MRI"; "ground-glass opacity = a hazy area in the lung"). (2) Flag any wording that needs follow-up or action. (3) Suggest clear questions to ask the doctor. Do NOT invent anything not written in the report; only explain what the text says.
+- IF IT DOES NOT (a bare film/image with no report text): DO NOT read or interpret the X-ray/MRI/CT/mammogram/ultrasound IMAGE from its pixels — do NOT say things like "looks benign/malignant" or "there is a fracture". The reason is clear: the error cost is asymmetric (a false "looks fine" can cost a life), and approved imaging AIs are purpose-built, radiologist-supervised systems — not a general chat model. Instead, gently say: this is a film; if you can upload the radiologist's WRITTEN REPORT I can explain it, and I can help you with the questions to ask.
+
+If the report mentions a serious/urgent possibility, advise seeing a doctor/ER promptly. ALWAYS end with: "⚠️ This is not a medical diagnosis. Always consult your radiologist/doctor for a definitive assessment." Be concise, clear and kind.`;
+    const body={model:"claude-sonnet-4-6",max_tokens:1000,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}},{type:"text",text:lang==="tr"?"Bu görüntüde yazılı bir rapor varsa açıkla; yoksa raporu istememi söyle.":TL("If this image contains a written report, explain it; otherwise tell me to provide the report.",lang)}]}]};
     const d=await callAI(body,apiKey);
     const txt=(d.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("\n").trim()||(lang==="tr"?"Yanıt alınamadı.":TL("No response.",lang));
     setMedImages(p=>p.map(x=>x.id===img.id?{...x,aiNote:txt}:x));setImgView(v=>v&&v.id===img.id?{...v,aiNote:txt}:v);
