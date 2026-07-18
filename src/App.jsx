@@ -1083,6 +1083,8 @@ const UNIT_CONV={
   magnesium:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":2.43,"mEq/L":1.215}},
   phosphorus:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":3.097}},
   tibc:{canon:"ug/dL",f:{"ug/dL":1,"µg/dL":1,"umol/L":5.587}},
+  bun:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":2.8}},
+  iron:{canon:"ug/dL",f:{"ug/dL":1,"µg/dL":1,"umol/L":5.587}},
   esr:{canon:"mm/h",f:{"mm/h":1,"mm/hr":1}},
   insulin:{canon:"uIU/mL",f:{"uIU/mL":1,"µIU/mL":1,"mIU/L":1,"pmol/L":1/6.945}},
   uacr:{canon:"mg/g",f:{"mg/g":1,"mg/mmol":8.84}},
@@ -1133,6 +1135,8 @@ const REF_LIB={
   magnesium:{unit:"mg/dL",adult:{any:[1.5,2.4]}},
   phosphorus:{unit:"mg/dL",adult:{any:[2.5,4.5]}},
   tibc:{unit:"ug/dL",adult:{any:[251,460]}},
+  bun:{unit:"mg/dL",adult:{any:[7,20]}},
+  iron:{unit:"ug/dL",adult:{male:[65,175],female:[50,170]}},
   uacr:{unit:"mg/g",adult:{any:[0,30]}},
   pt:{unit:"s",adult:{any:[9,13]}},
   aptt:{unit:"s",adult:{any:[22,36]}},
@@ -1405,6 +1409,8 @@ const LAB_TESTS=[
   {k:"magnesium",tr:"Magnezyum",en:"Magnesium",units:["mg/dL","mmol/L","mEq/L"],sys:"kidney"},
   {k:"phosphorus",tr:"Fosfor",en:"Phosphorus",units:["mg/dL","mmol/L"],sys:"kidney"},
   {k:"tibc",tr:"TIBC (Demir Bağlama)",en:"TIBC",units:["ug/dL","umol/L"],sys:"hematology"},
+  {k:"iron",tr:"Serum Demiri",en:"Serum Iron",units:["ug/dL","umol/L"],sys:"hematology"},
+  {k:"bun",tr:"BUN (Kan Üresi)",en:"BUN (Blood Urea)",units:["mg/dL","mmol/L"],sys:"kidney"},
   {k:"esr",tr:"Sedimentasyon (ESR)",en:"ESR",units:["mm/h"],sys:"inflammation"},
   {k:"insulin",tr:"İnsülin (açlık)",en:"Insulin (fasting)",units:["uIU/mL","pmol/L"],sys:"glycemic"},
   {k:"uacr",tr:"İdrar Alb/Kreatinin (UACR)",en:"Urine ACR",units:["mg/g","mg/mmol"],sys:"kidney"},
@@ -3008,6 +3014,10 @@ const sendChat=async(text)=>{
       if(cs.derived.ldlCalc&&cs.derived.ldlCalc.ok)parts.push("HESAPLANAN: LDL ≈ "+cs.derived.ldlCalc.value+" mg/dL (Friedewald)");
       if(cs.derived.fib4&&cs.derived.fib4.ok)parts.push("HESAPLANAN: FIB-4 = "+cs.derived.fib4.value+" ("+(cs.derived.fib4.band==="high"?"ileri karaciğer fibrozu olasılığı yüksek":cs.derived.fib4.band==="low"?"düşük olasılık":"belirsiz aralık")+", karaciğer için; teşhis değil)");
       if(cs.derived.anionGap&&cs.derived.anionGap.ok)parts.push("HESAPLANAN: Anyon açığı = "+cs.derived.anionGap.value+" mmol/L"+(cs.derived.anionGap.corrected!=null?" (albümine göre düzeltilmiş: "+cs.derived.anionGap.corrected+")":""));
+      if(cs.derived.correctedCalcium&&cs.derived.correctedCalcium.ok)parts.push("HESAPLANAN: Düzeltilmiş kalsiyum = "+cs.derived.correctedCalcium.value+" mg/dL (albümine göre; kesinlik gerekirse iyonize kalsiyum tercih edilir)");
+      if(cs.derived.nonHDL&&cs.derived.nonHDL.ok)parts.push("HESAPLANAN: Non-HDL kolesterol = "+cs.derived.nonHDL.value+" mg/dL (hedef genelde <130)");
+      if(cs.derived.bunCrRatio&&cs.derived.bunCrRatio.ok)parts.push("HESAPLANAN: BUN/Kreatinin oranı = "+cs.derived.bunCrRatio.value+" ("+(cs.derived.bunCrRatio.band==="high"?"yüksek, böbrek öncesi düşündürebilir":cs.derived.bunCrRatio.band==="low"?"düşük":"normal")+")");
+      if(cs.derived.tsat&&cs.derived.tsat.ok)parts.push("HESAPLANAN: Transferrin satürasyonu (TSAT) = "+cs.derived.tsat.value+"% ("+(cs.derived.tsat.band==="low"?"düşük, demir eksikliği düşündürebilir":cs.derived.tsat.band==="high"?"yüksek, demir yükü düşündürebilir":"normal")+"; ferritinle birlikte oku)");
       try{
         const da=dialysisAdequacy({preBUN:+dialysis.preBUN,postBUN:+dialysis.postBUN,hours:+dialysis.hours,ufLiters:+dialysis.ufLiters,postWeightKg:+dialysis.postWeightKg});
         if(da.ok){
@@ -5779,6 +5789,20 @@ const renderPCard=()=>{
           if(d.anionGap&&d.anionGap.ok){
             items.push({name:lang==="tr"?"Anyon açığı":TL("Anion gap",lang),val:d.anionGap.value+" mmol/L",sub:d.anionGap.corrected!=null?(lang==="tr"?"albümine göre düzeltilmiş: ":TL("albumin-corrected: ",lang))+d.anionGap.corrected:null,source:d.anionGap.source});
           }
+          if(d.correctedCalcium&&d.correctedCalcium.ok){
+            items.push({name:lang==="tr"?"Düzeltilmiş kalsiyum":TL("Corrected calcium",lang),val:d.correctedCalcium.value+" mg/dL",sub:lang==="tr"?"albümine göre · kesinlik için iyonize kalsiyum tercih edilir":TL("albumin-adjusted · ionised calcium preferred when in doubt",lang),source:d.correctedCalcium.source});
+          }
+          if(d.nonHDL&&d.nonHDL.ok){
+            items.push({name:lang==="tr"?"Non-HDL kolesterol":TL("Non-HDL cholesterol",lang),val:d.nonHDL.value+" mg/dL",sub:lang==="tr"?"tüm aterojenik parçacıklar (hedef genelde <130)":TL("all atherogenic particles (target usually <130)",lang),tone:d.nonHDL.value>=160?"#e9a23b":undefined,source:d.nonHDL.source});
+          }
+          if(d.bunCrRatio&&d.bunCrRatio.ok){
+            const bcTxt=d.bunCrRatio.band==="high"?(lang==="tr"?"yüksek — böbrek öncesi (ör. sıvı kaybı) düşündürebilir":TL("high — may suggest pre-renal (e.g. dehydration)",lang)):d.bunCrRatio.band==="low"?(lang==="tr"?"düşük":TL("low",lang)):(lang==="tr"?"normal aralık":TL("normal range",lang));
+            items.push({name:lang==="tr"?"BUN/Kreatinin oranı":TL("BUN/creatinine ratio",lang),val:String(d.bunCrRatio.value),sub:bcTxt,source:d.bunCrRatio.source});
+          }
+          if(d.tsat&&d.tsat.ok){
+            const tsTxt=d.tsat.band==="low"?(lang==="tr"?"düşük — demir eksikliğini düşündürebilir (ferritinle birlikte oku)":TL("low — may suggest iron deficiency (read with ferritin)",lang)):d.tsat.band==="high"?(lang==="tr"?"yüksek — demir yükünü düşündürebilir":TL("high — may suggest iron overload",lang)):(lang==="tr"?"normal aralık":TL("normal range",lang));
+            items.push({name:lang==="tr"?"Transferrin satürasyonu (TSAT)":TL("Transferrin saturation (TSAT)",lang),val:d.tsat.value+"%",sub:tsTxt,tone:d.tsat.band!=="normal"?"#e9a23b":undefined,source:d.tsat.source});
+          }
           if(!items.length)return null;
           return <div style={{marginBottom:6}}>
             <div style={{fontSize:fs-2,fontWeight:700,color:acTx,marginBottom:4}}>🧮 {lang==="tr"?"Hesaplanan değerler":TL("Calculated values",lang)}</div>
@@ -5793,7 +5817,7 @@ const renderPCard=()=>{
             <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Bu değerler tahlillerinizden hesaplanmıştır; teşhis değildir, doktorunuzla değerlendirin.":TL("These are computed from your labs; not a diagnosis — review with your doctor.",lang)}</div>
           </div>;
         })()}
-        {clinCount===0&&!(clin.derived&&(clin.derived.fib4||clin.derived.anionGap||clin.derived.ldlCalc))&&<div style={{fontSize:fs-2,color:sc,textAlign:"center",padding:"8px 4px",fontWeight:600}}>✓ {lang==="tr"?"Girdiğiniz tüm tahliller referans aralığında.":TL("All labs you entered are within range.",lang)}</div>}
+        {clinCount===0&&!(clin.derived&&(clin.derived.fib4||clin.derived.anionGap||clin.derived.ldlCalc||clin.derived.correctedCalcium||clin.derived.nonHDL||clin.derived.bunCrRatio||clin.derived.tsat))&&<div style={{fontSize:fs-2,color:sc,textAlign:"center",padding:"8px 4px",fontWeight:600}}>✓ {lang==="tr"?"Girdiğiniz tüm tahliller referans aralığında.":TL("All labs you entered are within range.",lang)}</div>}
         <button onClick={()=>goTo("health")} style={{...BP,width:"100%",marginTop:8,padding:"7px",background:"transparent",color:acTx,border:"1px solid "+ac+"44"}}>✏️ {lang==="tr"?"Tahlilleri Sağlık Verilerim'de düzenle":TL("Edit labs in My Health Data",lang)}</button>
       </>);
     })()}

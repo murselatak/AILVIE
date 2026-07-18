@@ -189,6 +189,52 @@ const sumSrc = clinicalSummary([{ id: "k", ts: T0, test: "potassium", canonValue
 ok("kritik değer kaynağı", sumSrc.criticals[0].source === "critical-arup");
 ok("her kaynak anahtarı SOURCES'ta tanımlı", ["critical-arup","fib4-sterling","friedewald","aniongap","dialysis-kdoqi","pattern","drug-label"].every(k => SOURCES[k]));
 
+console.log("=== 6f) Yeni türevler ===");
+// Corrected calcium: Ca 8.0, albumin 2.0 -> 8.0 + 0.8*(4-2) = 9.6
+const ccLabs = [
+  { id: "a", ts: T0, test: "calcium", canonValue: 8.0, level: "low" },
+  { id: "b", ts: T0, test: "albumin", canonValue: 2.0, level: "low" },
+];
+const cc = derived(ccLabs);
+ok("düzeltilmiş kalsiyum = 9.6", cc.correctedCalcium && cc.correctedCalcium.value === 9.6, cc.correctedCalcium);
+ok("iyonize kalsiyum uyarısı var", cc.correctedCalcium && cc.correctedCalcium.caveat === "ionised-calcium-preferred");
+ok("albümin normal (>=4) → düzeltme yapılmaz", !derived([{ id: "a", ts: T0, test: "calcium", canonValue: 9.5, level: "normal" }, { id: "b", ts: T0, test: "albumin", canonValue: 4.2, level: "normal" }]).correctedCalcium);
+// Non-HDL: chol 200, HDL 50 -> 150
+const nh = derived([
+  { id: "a", ts: T0, test: "cholesterol", canonValue: 200, level: "normal" },
+  { id: "b", ts: T0, test: "hdl", canonValue: 50, level: "normal" },
+]);
+ok("non-HDL = 150", nh.nonHDL && nh.nonHDL.value === 150, nh.nonHDL);
+ok("non-HDL yüksek TG'de bile hesaplanır", !!derived([
+  { id: "a", ts: T0, test: "cholesterol", canonValue: 250, level: "high" },
+  { id: "b", ts: T0, test: "hdl", canonValue: 40, level: "low" },
+]).nonHDL);
+// BUN:Cr ratio: BUN 40, Cr 1.0 -> 40 (high, pre-renal picture)
+const bc = derived([
+  { id: "a", ts: T0, test: "bun", canonValue: 40, level: "high" },
+  { id: "b", ts: T0, test: "creatinine", canonValue: 1.0, level: "normal" },
+]);
+ok("BUN:Cr oranı = 40", bc.bunCrRatio && bc.bunCrRatio.value === 40, bc.bunCrRatio);
+ok("BUN:Cr yüksek bandı (>20)", bc.bunCrRatio && bc.bunCrRatio.band === "high");
+const bc2 = derived([
+  { id: "a", ts: T0, test: "bun", canonValue: 14, level: "normal" },
+  { id: "b", ts: T0, test: "creatinine", canonValue: 1.0, level: "normal" },
+]);
+ok("BUN:Cr normal bandı", bc2.bunCrRatio && bc2.bunCrRatio.band === "normal");
+// TSAT: iron 30, TIBC 300 -> 10% (low, iron deficiency)
+const ts = derived([
+  { id: "a", ts: T0, test: "iron", canonValue: 30, level: "low" },
+  { id: "b", ts: T0, test: "tibc", canonValue: 300, level: "high" },
+]);
+ok("TSAT = 10%", ts.tsat && ts.tsat.value === 10, ts.tsat);
+ok("TSAT düşük bandı (<20)", ts.tsat && ts.tsat.band === "low");
+const ts2 = derived([
+  { id: "a", ts: T0, test: "iron", canonValue: 180, level: "high" },
+  { id: "b", ts: T0, test: "tibc", canonValue: 300, level: "normal" },
+]);
+ok("TSAT yüksek bandı (>45)", ts2.tsat && ts2.tsat.band === "high", ts2.tsat);
+ok("her yeni türevin kaynağı SOURCES'ta", ["corrected-calcium","non-hdl","bun-cr-ratio","tsat"].every(k => SOURCES[k]));
+
 console.log("=== 7) Ozet ===");
 const sum = clinicalSummary(
   [...ironLabs, { id: "k", ts: T0 + D, test: "potassium", canonValue: 7.2, level: "critical-high" }],

@@ -26,6 +26,10 @@ export const SOURCES = {
   "reference-range": { label: "Adult reference ranges (ARUP / common laboratory values)", short: "Lab reference" },
   "drug-label": { label: "Drug-label & guideline cautions (e.g. metformin at low eGFR)", short: "Drug guidance" },
   "pattern": { label: "Pattern recognition from routine panels (supportive, not diagnostic)", short: "Panel pattern" },
+  "corrected-calcium": { label: "Albumin-corrected calcium, Payne formula (ionised Ca preferred when in doubt)", short: "Payne" },
+  "non-hdl": { label: "Non-HDL cholesterol (Total − HDL); a secondary lipid target", short: "Non-HDL" },
+  "bun-cr-ratio": { label: "BUN:creatinine ratio, common laboratory interpretation", short: "BUN:Cr" },
+  "tsat": { label: "Transferrin saturation = serum iron / TIBC × 100", short: "TSAT" },
 };
 
 // ---------------------------------------------------------------------------
@@ -183,6 +187,58 @@ export function derived(labs, ctx = {}) {
       out.anionGap = res;
     }
   }
+
+  // Albumin-corrected calcium (Payne): Ca + 0.8×(4.0 − albumin g/dL). Total calcium is misleading
+  // when albumin is off because ~40% of it is protein-bound. HONEST LIMIT: this formula is known to
+  // over/under-estimate ionised calcium and can mask or invent abnormality — where calcium status
+  // truly matters, ionised calcium is the better test. So it is reported WITH that caveat, and only
+  // when albumin is actually abnormal (>= 4.0 the measured value stands).
+  const ca = latestOf(labs, "calcium"), albc = latestOf(labs, "albumin");
+  if (ca && albc) {
+    const cav = Number(ca.canonValue), av = Number(albc.canonValue);  // mg/dL, g/dL
+    if (isFinite(cav) && isFinite(av) && av < 4.0) {
+      const corr = cav + 0.8 * (4.0 - av);
+      out.correctedCalcium = { ok: true, value: Math.round(corr * 100) / 100, unit: "mg/dL", refLow: 8.6, refHigh: 10.2, caveat: "ionised-calcium-preferred", source: "corrected-calcium" };
+    }
+  }
+
+  // Non-HDL cholesterol = Total − HDL. Captures all the atherogenic particles (not just LDL) in one
+  // number; a common secondary lipid target. Simple and robust (valid even when triglycerides are
+  // high, unlike Friedewald LDL).
+  const cholN = latestOf(labs, "cholesterol"), hdlN = latestOf(labs, "hdl");
+  if (cholN && hdlN) {
+    const c = Number(cholN.canonValue), h = Number(hdlN.canonValue);
+    if (isFinite(c) && isFinite(h)) {
+      out.nonHDL = { ok: true, value: Math.round((c - h) * 10) / 10, unit: "mg/dL", refHigh: 130, source: "non-hdl" };
+    }
+  }
+
+  // BUN:creatinine ratio — helps separate pre-renal (dehydration, ratio typically >20) from
+  // intrinsic renal patterns (ratio ~10–15). Both must be in mg/dL; the module reports the ratio and
+  // a broad band, never a diagnosis. Needs BUN, which is a distinct test from urea.
+  const bun = latestOf(labs, "bun"), crb = latestOf(labs, "creatinine");
+  if (bun && crb) {
+    const b = Number(bun.canonValue), cr = Number(crb.canonValue);   // both mg/dL
+    if (isFinite(b) && isFinite(cr) && cr > 0) {
+      const ratio = b / cr;
+      const band = ratio > 20 ? "high" : (ratio < 10 ? "low" : "normal");
+      out.bunCrRatio = { ok: true, value: Math.round(ratio * 10) / 10, band, refLow: 10, refHigh: 20, source: "bun-cr-ratio" };
+    }
+  }
+
+  // Transferrin saturation (TSAT) = serum iron / TIBC × 100. More stable and meaningful than serum
+  // iron alone; low (<20%) points to iron deficiency, high (>45%) to iron overload. Read with
+  // ferritin. Serum iron and TIBC must share units (both canonical µg/dL here).
+  const ironL = latestOf(labs, "iron"), tibcL = latestOf(labs, "tibc");
+  if (ironL && tibcL) {
+    const fe = Number(ironL.canonValue), tb = Number(tibcL.canonValue);
+    if (isFinite(fe) && isFinite(tb) && tb > 0) {
+      const tsat = (fe / tb) * 100;
+      const band = tsat < 20 ? "low" : (tsat > 45 ? "high" : "normal");
+      out.tsat = { ok: true, value: Math.round(tsat * 10) / 10, unit: "%", band, refLow: 20, refHigh: 45, source: "tsat" };
+    }
+  }
+
   return out;
 }
 
