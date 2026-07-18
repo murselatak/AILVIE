@@ -1,4 +1,4 @@
-import { CRITICAL, criticalFor, trendFor, patterns, drugLabChecks, derived, dialysisAdequacy, clinicalSummary } from "../src/clinical.js";
+import { CRITICAL, SOURCES, criticalFor, trendFor, patterns, drugLabChecks, derived, dialysisAdequacy, clinicalSummary } from "../src/clinical.js";
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra) => { if (cond) { pass++; } else { fail++; console.log("  ✗ " + name + (extra ? "  → " + JSON.stringify(extra) : "")); } };
@@ -176,6 +176,18 @@ ok("URR 60% yetersiz işaretlenir", daUrrOnly.ok && daUrrOnly.urr.adequate === f
 const daBad = dialysisAdequacy({ preBUN: 40, postBUN: 45 });
 ok("post >= pre → REDDEDER", !daBad.ok && daBad.reason === "post-not-below-pre", daBad);
 ok("eksik BUN → reddeder", !dialysisAdequacy({ preBUN: 80 }).ok);
+
+console.log("=== 6e) Kaynak gösterimi ===");
+ok("SOURCES sözlüğü var", SOURCES && SOURCES["critical-arup"] && SOURCES["fib4-sterling"]);
+ok("LDL kaynağı", derived(lip).ldlCalc.source === "friedewald");
+ok("FIB-4 kaynağı", f4.fib4.source === "fib4-sterling");
+ok("anyon açığı kaynağı", ag.anionGap.source === "aniongap");
+ok("URR/Kt/V kaynağı", da.urr.source === "dialysis-kdoqi" && da.ktv.source === "dialysis-kdoqi");
+ok("örüntü kaynağı", p1.find(p => p.id === "iron-deficiency").source === "pattern");
+ok("ilaç kontrolü kaynağı", c1.find(x => x.id === "metformin-egfr").source === "drug-label");
+const sumSrc = clinicalSummary([{ id: "k", ts: T0, test: "potassium", canonValue: 7.2, level: "critical-high" }], [], {});
+ok("kritik değer kaynağı", sumSrc.criticals[0].source === "critical-arup");
+ok("her kaynak anahtarı SOURCES'ta tanımlı", ["critical-arup","fib4-sterling","friedewald","aniongap","dialysis-kdoqi","pattern","drug-label"].every(k => SOURCES[k]));
 
 console.log("=== 7) Ozet ===");
 const sum = clinicalSummary(

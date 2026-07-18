@@ -10,6 +10,25 @@
 // entry carries its unit and there is a unit-consistency test in clinical.test.mjs.
 
 // ---------------------------------------------------------------------------
+// Sources
+// ---------------------------------------------------------------------------
+// Every rule the engine applies is traceable to a published source, and the UI shows it. A person
+// who reads "potassium critical" or "FIB-4 high" deserves to know which guideline that came from —
+// it is the difference between a black box and something they can take to their doctor. Keys here
+// are attached to each output as `source`, and the app maps the key to a short human label.
+export const SOURCES = {
+  "critical-arup": { label: "ARUP Laboratories critical values (cross-checked: URMC Rochester)", short: "ARUP" },
+  "fib4-sterling": { label: "Sterling 2006 FIB-4 (verified: Labcorp, Medscape)", short: "Sterling 2006" },
+  "friedewald": { label: "Friedewald equation for LDL", short: "Friedewald" },
+  "aniongap": { label: "Serum anion gap; albumin correction Figge/Wellally", short: "Anion gap" },
+  "dialysis-kdoqi": { label: "Kt/V Daugirdas 2nd-gen; targets KDOQI (URR ≥65%, Kt/V ≥1.2)", short: "KDOQI / Daugirdas" },
+  "egfr-ckdepi": { label: "eGFR CKD-EPI 2021 (race-free)", short: "CKD-EPI 2021" },
+  "reference-range": { label: "Adult reference ranges (ARUP / common laboratory values)", short: "Lab reference" },
+  "drug-label": { label: "Drug-label & guideline cautions (e.g. metformin at low eGFR)", short: "Drug guidance" },
+  "pattern": { label: "Pattern recognition from routine panels (supportive, not diagnostic)", short: "Panel pattern" },
+};
+
+// ---------------------------------------------------------------------------
 // CRITICAL ("panic") limits
 // ---------------------------------------------------------------------------
 // Source: ARUP Laboratories Critical Values list, cross-checked against the University of
@@ -122,7 +141,7 @@ export function derived(labs, ctx = {}) {
       out.ldlCalc = { ok: false, reason: "triglycerides-too-high", note: "Friedewald is not valid at TG >= 400 mg/dL" };
     } else {
       const v = Number(chol.canonValue) - Number(hdl.canonValue) - tgv / 5;
-      out.ldlCalc = { ok: true, value: Math.round(v * 10) / 10, unit: "mg/dL", formula: "Friedewald" };
+      out.ldlCalc = { ok: true, value: Math.round(v * 10) / 10, unit: "mg/dL", formula: "Friedewald", source: "friedewald" };
     }
   }
 
@@ -140,7 +159,7 @@ export function derived(labs, ctx = {}) {
       const v = (age * a) / (p * Math.sqrt(l));
       const lowCut = age >= 65 ? 2.0 : 1.3;
       const band = v < lowCut ? "low" : (v > 2.67 ? "high" : "indeterminate");
-      out.fib4 = { ok: true, value: Math.round(v * 100) / 100, band, lowCut, highCut: 2.67, note: age >= 65 ? "age>=65-adjusted" : null };
+      out.fib4 = { ok: true, value: Math.round(v * 100) / 100, band, lowCut, highCut: 2.67, note: age >= 65 ? "age>=65-adjusted" : null, source: "fib4-sterling" };
     }
   }
 
@@ -153,7 +172,7 @@ export function derived(labs, ctx = {}) {
     const nav = Number(na.canonValue), clv = Number(cl.canonValue), hv = Number(hco3.canonValue);
     if ([nav, clv, hv].every(isFinite)) {
       const ag = nav - (clv + hv);
-      const res = { ok: true, value: Math.round(ag * 10) / 10, unit: "mmol/L", refLow: 8, refHigh: 12 };
+      const res = { ok: true, value: Math.round(ag * 10) / 10, unit: "mmol/L", refLow: 8, refHigh: 12, source: "aniongap" };
       const alb = latestOf(labs, "albumin");   // g/dL in REF_LIB
       if (alb && isFinite(Number(alb.canonValue))) {
         const albv = Number(alb.canonValue);
@@ -208,7 +227,7 @@ export function dialysisAdequacy(session = {}) {
 
   // URR
   const urr = (1 - R) * 100;
-  out.urr = { value: Math.round(urr * 10) / 10, target: 65, adequate: urr >= 65, unit: "%" };
+  out.urr = { value: Math.round(urr * 10) / 10, target: 65, adequate: urr >= 65, unit: "%", source: "dialysis-kdoqi" };
 
   // Kt/V needs the session mechanics too. Compute only if all are present and sensible.
   const t = Number(session.hours);
@@ -218,7 +237,7 @@ export function dialysisAdequacy(session = {}) {
     const inner = R - 0.008 * t;
     if (inner > 0) {
       const ktv = -Math.log(inner) + (4 - 3.5 * R) * (uf / w);
-      out.ktv = { value: Math.round(ktv * 100) / 100, target: 1.2, adequate: ktv >= 1.2, formula: "Daugirdas-2G" };
+      out.ktv = { value: Math.round(ktv * 100) / 100, target: 1.2, adequate: ktv >= 1.2, formula: "Daugirdas-2G", source: "dialysis-kdoqi" };
     }
   }
   return out;
@@ -242,6 +261,7 @@ export function patterns(labs, ctx = {}) {
       // Ferritin is an acute-phase reactant: infection/inflammation can lift it into the normal
       // range and mask a real deficiency. Saying so is the difference between a rule and a doctor.
       caveat: "ferritin-acute-phase",
+      source: "pattern",
     });
   }
 
@@ -256,6 +276,7 @@ export function patterns(labs, ctx = {}) {
       tests: ["alt", "ast"],
       astAltRatio: ratio == null ? null : Math.round(ratio * 100) / 100,
       strength: "possible",
+      source: "pattern",
     };
     if (bil && lvl(bil) === "high") p.tests.push("bilirubin");
     if (!alp) p.missing = ["alp"];   // needed to call cholestatic vs hepatocellular
@@ -330,25 +351,25 @@ export function drugLabChecks(meds, labs, ctx = {}) {
       if (egfr == null || !isFinite(egfr)) continue;
       if (!(egfr < need.egfrBelow)) continue;
       if (need.egfrAtLeast != null && !(egfr >= need.egfrAtLeast)) continue;
-      out.push({ id: rule.id, drug: hit, severity: rule.severity, egfr });
+      out.push({ id: rule.id, drug: hit, severity: rule.severity, egfr, source: "drug-label" });
       continue;
     }
     if (need.testHigh) {
       const r = latestOf(labs, need.testHigh);
       if (!r || (lvl(r) !== "high" && lvl(r) !== "critical-high")) continue;
-      out.push({ id: rule.id, drug: hit, severity: lvl(r) === "critical-high" ? "high" : rule.severity, test: need.testHigh, value: r.canonValue, level: lvl(r) });
+      out.push({ id: rule.id, drug: hit, severity: lvl(r) === "critical-high" ? "high" : rule.severity, test: need.testHigh, value: r.canonValue, level: lvl(r), source: "drug-label" });
       continue;
     }
     if (need.testLow) {
       const r = latestOf(labs, need.testLow);
       if (!r || (lvl(r) !== "low" && lvl(r) !== "critical-low")) continue;
-      out.push({ id: rule.id, drug: hit, severity: lvl(r) === "critical-low" ? "high" : rule.severity, test: need.testLow, value: r.canonValue, level: lvl(r) });
+      out.push({ id: rule.id, drug: hit, severity: lvl(r) === "critical-low" ? "high" : rule.severity, test: need.testLow, value: r.canonValue, level: lvl(r), source: "drug-label" });
       continue;
     }
     if (need.testCritical) {
       const r = latestOf(labs, need.testCritical);
       if (!r || !String(lvl(r) || "").startsWith("critical")) continue;
-      out.push({ id: rule.id, drug: hit, severity: "high", test: need.testCritical, value: r.canonValue, level: lvl(r) });
+      out.push({ id: rule.id, drug: hit, severity: "high", test: need.testCritical, value: r.canonValue, level: lvl(r), source: "drug-label" });
     }
   }
   return out;
@@ -366,7 +387,7 @@ export function clinicalSummary(labs, meds, ctx = {}) {
   }
   const criticals = Object.values(latest)
     .filter(r => String(r.level || "").startsWith("critical"))
-    .map(r => ({ test: r.test, value: r.canonValue, unit: r.canonUnit, level: r.level }));
+    .map(r => ({ test: r.test, value: r.canonValue, unit: r.canonUnit, level: r.level, source: "critical-arup" }));
 
   const trends = [];
   for (const test of Object.keys(latest)) {

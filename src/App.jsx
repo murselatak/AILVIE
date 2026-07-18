@@ -1,7 +1,7 @@
 import React from "react";
 import { TL } from "./tl";
 import { emgFor, poisonFor, servicesFor, EMG_LABELS_TR } from "./emergency";
-import { criticalFor, trendFor, patterns as clinPatterns, drugLabChecks, dialysisAdequacy, clinicalSummary } from "./clinical";
+import { criticalFor, trendFor, patterns as clinPatterns, drugLabChecks, dialysisAdequacy, clinicalSummary, SOURCES } from "./clinical";
 import { explainReport } from "./report";
 import { useState, useEffect, useRef, useCallback } from "react";
 
@@ -3068,6 +3068,7 @@ TAHLİL DEĞERLENDİRMESİ (sana verilen "TAHLİL DEĞERLENDİRMESİ" bölümü 
 - EĞİLİM yönü tek başına iyi/kötü demek değildir (yükselen hemoglobin iyi, yükselen kreatinin kötü olabilir) — teste göre yorumla.
 - ÖRÜNTÜLER olasılıktır, kesinlik değil; "uyarı" veya "eksik" notlarını dürüstçe aktar (ör. ferritin iltihapla yükselebilir).
 - Sana verilmeyen bir tahlili UYDURMA. Sadece bu bölümde geçenleri konuş.
+- Bu değerlendirmeler yayınlanmış kaynaklara dayanır (kritik değerler ARUP; FIB-4 Sterling 2006; Kt/V Daugirdas/KDOQI; eGFR CKD-EPI 2021). Kullanıcı "bu neye dayanıyor?" diye sorarsa ilgili kaynağı dürüstçe söyle; ama bunların birer kılavuz olduğunu, kesin sınırların laboratuvara/duruma göre değişebileceğini de belirt.
 
 HAFIZA (kişiyi zamanla tanıman için — kullanıcının izniyle açık):
 - Sana verilen HAFIZAM bölümü, bu kişi hakkında önceki konuşmalardan damıtılmış kalıcı notlardır. Onları zaten biliyormuş gibi doğal kullan; "notlarıma göre" gibi robotik ifadeler kurma.
@@ -4876,6 +4877,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
             </div>
             {!da.ktv&&<div style={{fontSize:fs-4,color:mt,marginTop:6}}>{lang==="tr"?"Kt/V için süre, çekilen sıvı ve ağırlık da gerekli. Kt/V, sıvı çekişini hesaba kattığı için daha eksiksizdir.":TL("Kt/V also needs time, fluid removed and weight. Kt/V is more complete because it accounts for fluid removal.",lang)}</div>}
             <div style={{fontSize:fs-4,color:mt,marginTop:6,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Hedefler yaygın kılavuzlara dayanır (URR ≥%65, Kt/V ≥1.2, haftada 3 seans). Teşhis değildir; diyaliz ekibinizle değerlendirin.":TL("Targets follow common guidelines (URR ≥65%, Kt/V ≥1.2, thrice-weekly). Not a diagnosis; review with your dialysis team.",lang)}</div>
+            <div style={{fontSize:fs-5,color:mt,marginTop:2,fontStyle:"italic",opacity:0.85}}>{(lang==="tr"?"kaynak: ":TL("source: ",lang))+(SOURCES["dialysis-kdoqi"]?SOURCES["dialysis-kdoqi"].short:"KDOQI")}</div>
           </div>;
         })()}
       </>;
@@ -5702,6 +5704,10 @@ const renderPCard=()=>{
   const caveatLbl=(c)=>({
     "ferritin-acute-phase":lang==="tr"?"ferritin iltihapla yükselebilir, gerçek eksikliği gizleyebilir":TL("ferritin can rise with inflammation and mask a true deficiency",lang),
   }[c]||c);
+  // Source label for a clinical output. The short label is shown as a small "kaynak: X" line so the
+  // person can see which published rule a finding rests on. Falls back gracefully if a key is unknown.
+  const srcLabel=(key)=>{const src=SOURCES&&SOURCES[key];if(!src)return null;return(lang==="tr"?"kaynak: ":TL("source: ",lang))+src.short;};
+  const SrcTag=({k})=>{const t2=srcLabel(k);return t2?<div style={{fontSize:fs-5,color:mt,marginTop:2,fontStyle:"italic",opacity:0.85}}>{t2}</div>:null;};
   return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     {/* Özet — always visible: this is the at-a-glance layer, it must never be behind a tap. */}
     <div style={{...CS,background:"linear-gradient(135deg,"+ac+"10,"+sc+"08)",border:"1px solid "+ac+"33"}}>
@@ -5728,6 +5734,7 @@ const renderPCard=()=>{
             <span style={{fontSize:fs-2,fontWeight:700,color:dg}}>{c.value} {c.unit} · {c.level==="critical-high"?(lang==="tr"?"kritik yüksek":TL("critical high",lang)):(lang==="tr"?"kritik düşük":TL("critical low",lang))}</span>
           </div>)}
           <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Not: kritik sınırlar laboratuvarlar arasında değişebilir; kendi laboratuvarınızın sınırı farklı olabilir.":TL("Note: critical limits vary between labs; your own lab's limit may differ.",lang)}</div>
+          <SrcTag k="critical-arup"/>
         </div>}
         {abnormals.length>0&&<div style={{marginBottom:10}}>
           <div style={{fontSize:fs-2,fontWeight:700,color:"#e9a23b",marginBottom:4}}>📊 {lang==="tr"?"Referans dışı değerler":TL("Out-of-range values",lang)}</div>
@@ -5741,6 +5748,7 @@ const renderPCard=()=>{
           {clin.drugChecks.map((d,i)=><div key={i} style={{padding:"6px 9px",borderRadius:7,background:dark?"#0d1520":"#f8fafc",marginBottom:4}}>
             <div style={{fontSize:fs-2,fontWeight:600}}>{drugRuleLbl(d.id)}</div>
             <div style={{fontSize:fs-4,color:mt,marginTop:1,textTransform:"capitalize"}}>{d.drug}{d.test?" · "+testName(d.test)+" "+d.value:d.egfr!=null?" · eGFR "+Math.round(d.egfr):""}</div>
+            {d.source&&<SrcTag k={d.source}/>}
           </div>)}
         </div>}
         {clin.patterns.length>0&&<div style={{marginBottom:10}}>
@@ -5749,6 +5757,7 @@ const renderPCard=()=>{
             <div style={{fontSize:fs-2,fontWeight:600}}>{patternLbl(p.id)}{p.astAltRatio!=null?" · AST/ALT "+p.astAltRatio:""}</div>
             {p.caveat&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>⚠️ {caveatLbl(p.caveat)}</div>}
             {p.missing&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{lang==="tr"?"Tam ayrım için eksik: ":TL("Missing for full picture: ",lang)}{p.missing.map(testName).join(", ")}</div>}
+            {p.source&&<SrcTag k={p.source}/>}
           </div>)}
         </div>}
         {clin.trends.length>0&&<div style={{marginBottom:abnormals.length||clin.criticals.length?0:6}}>
@@ -5762,13 +5771,13 @@ const renderPCard=()=>{
         {(()=>{
           const d=clin.derived||{};
           const items=[];
-          if(d.ldlCalc&&d.ldlCalc.ok)items.push({name:lang==="tr"?"LDL (hesaplanan)":TL("LDL (calculated)",lang),val:d.ldlCalc.value+" mg/dL",sub:"Friedewald"});
+          if(d.ldlCalc&&d.ldlCalc.ok)items.push({name:lang==="tr"?"LDL (hesaplanan)":TL("LDL (calculated)",lang),val:d.ldlCalc.value+" mg/dL",sub:"Friedewald",source:d.ldlCalc.source});
           if(d.fib4&&d.fib4.ok){
             const bandTxt=d.fib4.band==="high"?(lang==="tr"?"ileri fibroz olasılığı yüksek":TL("high probability of advanced fibrosis",lang)):d.fib4.band==="low"?(lang==="tr"?"düşük olasılık":TL("low probability",lang)):(lang==="tr"?"belirsiz aralık":TL("indeterminate range",lang));
-            items.push({name:"FIB-4",val:String(d.fib4.value),sub:(lang==="tr"?"karaciğer fibrozu · ":TL("liver fibrosis · ",lang))+bandTxt,tone:d.fib4.band==="high"?"#e9a23b":undefined});
+            items.push({name:"FIB-4",val:String(d.fib4.value),sub:(lang==="tr"?"karaciğer fibrozu · ":TL("liver fibrosis · ",lang))+bandTxt,tone:d.fib4.band==="high"?"#e9a23b":undefined,source:d.fib4.source});
           }
           if(d.anionGap&&d.anionGap.ok){
-            items.push({name:lang==="tr"?"Anyon açığı":TL("Anion gap",lang),val:d.anionGap.value+" mmol/L",sub:d.anionGap.corrected!=null?(lang==="tr"?"albümine göre düzeltilmiş: ":TL("albumin-corrected: ",lang))+d.anionGap.corrected:null});
+            items.push({name:lang==="tr"?"Anyon açığı":TL("Anion gap",lang),val:d.anionGap.value+" mmol/L",sub:d.anionGap.corrected!=null?(lang==="tr"?"albümine göre düzeltilmiş: ":TL("albumin-corrected: ",lang))+d.anionGap.corrected:null,source:d.anionGap.source});
           }
           if(!items.length)return null;
           return <div style={{marginBottom:6}}>
@@ -5777,6 +5786,7 @@ const renderPCard=()=>{
               <div style={{flex:1}}>
                 <div style={{fontSize:fs-2,fontWeight:600}}>{it.name}</div>
                 {it.sub&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{it.sub}</div>}
+                {it.source&&<SrcTag k={it.source}/>}
               </div>
               <span style={{fontSize:fs-2,fontWeight:700,color:it.tone||tc,whiteSpace:"nowrap"}}>{it.val}</span>
             </div>)}
