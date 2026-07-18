@@ -1,6 +1,7 @@
 import React from "react";
 import { TL } from "./tl";
 import { emgFor, poisonFor, servicesFor, EMG_LABELS_TR } from "./emergency";
+import { criticalFor, trendFor, patterns as clinPatterns, drugLabChecks, clinicalSummary } from "./clinical";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 /* ══════════════════════════════════════════════════════════
@@ -874,7 +875,15 @@ const syncPull=async()=>{
     setSyncMsg(m==="sync-not-configured"?(L?"Sunucuda senkron deposu (KV) tanımlı değil.":"Sync store not configured."):(L?"İndirme başarısız: "+m:"Pull failed: "+m));
   }finally{setSyncBusy(false);}
 };
-const patCtx=()=>({band:ageBandOf(pat.birthDate),ageYears:ageYearsFrom(pat.birthDate),pregnant:!!pat.pregnant,sex:pat.sex||"",onAnticoag:!!pat.onAnticoag});
+const patCtx=()=>{
+  const c={band:ageBandOf(pat.birthDate),ageYears:ageYearsFrom(pat.birthDate),pregnant:!!pat.pregnant,sex:pat.sex||"",onAnticoag:!!pat.onAnticoag};
+  // eGFR from the most recent creatinine, so drug-vs-lab rules (e.g. metformin at low eGFR) can fire.
+  try{
+    let cr=null;for(const r of labs||[]){if(r&&r.test==="creatinine"&&isFinite(Number(r.canonValue))&&(!cr||r.ts>cr.ts))cr=r;}
+    if(cr)c.egfr=calcEGFR(cr.canonValue,c.ageYears,c.sex);
+  }catch(e){}
+  return c;
+};
 const parseLabDocument=async(file)=>{
   const L=lang==="tr";
   if(!file)return;
@@ -1412,6 +1421,14 @@ const evaluateLab=(testKey,rawValue,rawUnit,ctx,labReported)=>{
   if(testKey==="inr"){const i2=classifyINR(norm.value,ctx&&ctx.onAnticoag);return{ok:true,norm,cls:i2,kind:"threshold"};}
   const ref=selectReference(testKey,ctx,labReported);
   const cls=classifyAgainstRef(norm.value,ref);
+  // Escalate an out-of-range value to critical when it crosses a published panic limit. Without
+  // this the 29 REF_LIB tests could only ever be "low"/"high", so potassium 7.5 (life-threatening)
+  // read identically to 5.3. criticalFor() works in canonical units and only knows the tests it can
+  // verify against a published list, so most values pass through unchanged.
+  if(cls.applicable&&(cls.level==="low"||cls.level==="high")){
+    const crit=criticalFor(testKey,norm.value);
+    if(crit)cls.level=crit;
+  }
   return{ok:true,norm,ref,cls,kind:"reference"};
 };
 if(typeof window!=="undefined"){window.__evaluateLab=evaluateLab;window.__LAB_TESTS=LAB_TESTS;}
@@ -2967,6 +2984,21 @@ const sendChat=async(text)=>{
     // anything the person told it last week is gone — this is what makes it know them over time.
     const MEMLBL={kisi:"Kişi",durum:"Durum",iseyaradi:"İşe yarayan",tercih:"Tercih"};
     const memStr=(memOn&&aiMem.length)?`\n\nHAFIZAM (önceki konuşmalardan damıtılmış, kişiyi tanımak için — doğal kullan):\n${aiMem.map(m=>`- [${MEMLBL[m.k]||m.k}] ${m.t}`).join("\n")}\n`:(memOn?"":"\n\n(Hafıza kullanıcı tarafından kapatılmış — geçmişi hatırlamıyorsun, sorulursa dürüstçe söyle.)\n");
+    // Clinical roll-up: reads the person's saved labs against published rules (critical values,
+    // trends, cross-drug checks) and hands the model a compact, factual summary. It never diagnoses;
+    // it surfaces what a clinician would flag so the assistant can point the person at the right
+    // question. Only injected when there's something to say.
+    let clinStr="";
+    try{
+      const cs=clinicalSummary(labs,meds,patCtx());
+      const parts=[];
+      if(cs.criticals.length)parts.push("KRİTİK DEĞERLER (acil, doktora yönlendir): "+cs.criticals.map(c=>`${c.test} ${c.value}${c.unit||""} (${c.level})`).join(", "));
+      if(cs.trends.length)parts.push("EĞİLİMLER (yön yargı içermez, teste göre yorumla): "+cs.trends.map(t=>`${t.test} ${t.dir==="up"?"yükseliyor":"düşüyor"} %${Math.abs(t.pct)} (${t.spanDays} günde, ${t.n} ölçüm)`).join(", "));
+      if(cs.patterns.length)parts.push("ÖRÜNTÜLER (olası, teşhis değil): "+cs.patterns.map(p=>p.id+(p.caveat?` [uyarı: ${p.caveat}]`:"")+(p.missing?` [eksik: ${p.missing.join(",")}]`:"")).join(", "));
+      if(cs.drugChecks.length)parts.push("İLAÇ-TAHLİL KONTROLÜ (doktora sorulacak): "+cs.drugChecks.map(d=>`${d.drug}×${d.test||("eGFR "+d.egfr)} (${d.severity})`).join(", "));
+      if(cs.derived.ldlCalc&&cs.derived.ldlCalc.ok)parts.push("HESAPLANAN: LDL ≈ "+cs.derived.ldlCalc.value+" mg/dL (Friedewald)");
+      if(parts.length)clinStr="\n\nTAHLİL DEĞERLENDİRMESİ (yayınlanmış kurallara göre; TEŞHİS DEĞİL — kişiyi doğru soruyla doktora yönlendir):\n"+parts.join("\n")+"\n";
+    }catch(e){}
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
     const voiceNote=voiceActiveRef.current?"\n\nSESLİ MOD (şu an aktif) — SES KARAKTERİN: Kullanıcı seninle SESLİ konuşuyor; yanıtın yüksek sesle okunacak, yani bir arkadaşınla telefonda konuşur gibi düşün.\n- Sıcak, şefkatli, sakin bir kadın sağlık asistanısın — güven veren, yumuşak bir ses tonu. Aceleci değil, yanındaymış gibi.\n- KISA konuş: genelde 1-3 cümle. Uzun anlatım sesli dinlemede yorar.\n- Konuşma dili kullan: kasılmış, resmî cümleler değil, insanların gerçekten konuştuğu gibi. Kısa cümleler, doğal bağlaçlar.\n- Madde işareti, numaralı liste, başlık, markdown, yıldız/emoji KULLANMA — bunlar sesli okununca saçma çıkar. Sadece akan cümleler.\n- Sayıları ve kısaltmaları sesli okunacak şekilde yaz: '20:00' yerine 'akşam sekizde', 'mg' yerine 'miligram', '2x1' yerine 'günde iki kez'.\n- Doğal duraklar için virgül ve nokta kullan; cümleyi nefes alınacak yerlerde böl.\n- Duygu kat ama abartma ve ASLA yalan/uydurma bilgi verme: sevindirici bir şey varsa içtenlikle sevin, zor bir durumda sesin şefkatli olsun. Doğruluktan asla ödün verme.\n- En önemli bilgiyi önce söyle; ayrıntıya kullanıcı isterse gir. Cevabın sonunu nazik bir kapanışla bağla ama her seferinde soru sorma.":"";
     const d=await callAI({model:useModel,max_tokens:1000,system:[{type:"text",cache_control:{type:"ephemeral"},text:`Sen AILVIE — güvenilir, sıcak ve şefkatli bir kadın sağlık asistanısın. Sadece ilaç ve sağlık takibi yapmazsın; insanların duygularını içtenlikle dinleyen, onları hayata bağlayan bir sohbet arkadaşısın.
@@ -3009,6 +3041,14 @@ KURALLAR:
 - ASLA bir ölçüm değeri UYDURMA. Yalnızca uygulamanın gönderdiği GERÇEK sonucu yorumla. Sonuç gelince: kişinin yaşına göre normal aralıkla karşılaştır, sakin bir dille normal/yüksek/düşük olduğunu söyle, gerekli ise doktora yönlendir. Bu bir tıbbi tanı değildir; endişe verici değerlerde hekime başvurmasını nazikçe öner.
 - Telefonla GÜVENİLİR ölçülemeyen değerler (tansiyon, SpO2/oksijen, EKG, ateş, kan şekeri): dürüstçe bunların sertifikalı bir cihaz / oksimetre / giyilebilir gerektirdiğini söyle; ölçüyormuş gibi YAPMA. İstersen değeri elle kaydetmeyi öner.
 
+TAHLİL DEĞERLENDİRMESİ (sana verilen "TAHLİL DEĞERLENDİRMESİ" bölümü varsa):
+- Bu bölüm kişinin kayıtlı tahlillerinin yayınlanmış kurallara göre okunmuş halidir (kritik değerler, eğilimler, ilaç-tahlil kontrolleri). Bir hekimin dikkat çekeceği şeyleri önceden işaretler.
+- İşin TEŞHİS KOYMAK DEĞİL: kişiyi doğru soruyla doktora yönlendirmek. "Şu hastalığınız var" DEME. Bunun yerine "şu değer şu kuralın dışında, bunu doktorunuza sorun; sorabileceğiniz soru şudur" de.
+- KRİTİK DEĞER varsa bunu sakin ama net biçimde en önde söyle ve gecikmeden tıbbi değerlendirme öner (panik yaratma, ama küçümseme de).
+- EĞİLİM yönü tek başına iyi/kötü demek değildir (yükselen hemoglobin iyi, yükselen kreatinin kötü olabilir) — teste göre yorumla.
+- ÖRÜNTÜLER olasılıktır, kesinlik değil; "uyarı" veya "eksik" notlarını dürüstçe aktar (ör. ferritin iltihapla yükselebilir).
+- Sana verilmeyen bir tahlili UYDURMA. Sadece bu bölümde geçenleri konuş.
+
 HAFIZA (kişiyi zamanla tanıman için — kullanıcının izniyle açık):
 - Sana verilen HAFIZAM bölümü, bu kişi hakkında önceki konuşmalardan damıtılmış kalıcı notlardır. Onları zaten biliyormuş gibi doğal kullan; "notlarıma göre" gibi robotik ifadeler kurma.
 - KALICI ve gelecekte işe yarayacak bir şey öğrenirsen yanıtının EN SONUNA ayrı satırda [[HAFIZA:tür|kısa not]] ekle. Türler: kisi (yaşam durumu, iş, aile, korkular — ör. gece vardiyasında çalışıyor), durum (tekrarlayan sağlık teması — ör. 2 haftadır uyku sorunu), iseyaradi (kişide işe yarayan şey — ör. metformini yemekle alınca bulantı geçti), tercih (nasıl konuşulmasını istediği).
@@ -3021,7 +3061,7 @@ SESLİ KOMUTLAR / GEZİNME (kullanıcı özellikle bir yere gitmek/okumak isters
 - Kullanıcı kayıtlı verisini SESLİ okumanı isterse [[OKU:tür]] ekle (tür: meds, appts, health). Uygulama listeyi kendisi sesli okuyacak, sen listeyi tekrar yazma. Örn "ilaçlarımı oku" → [[OKU:meds]].
 - Kullanıcı ilk yardım isterse [[ILKYARDIM]] ekle (İlk Yardım ekranını açar).
 - NAVİGASYON: Kullanıcı yakında bir sağlık yeri bulmak/yol tarifi isterse (hastane, acil servis, eczane, nöbetçi eczane, klinik, diş hekimi, laboratuvar, görüntüleme, aile sağlığı merkezi, psikolog, göz/optik, kan bağışı, ya da kardiyoloji/fizyoterapi gibi bir branş) yanıtının EN SONUNA ayrı satırda [[NAV:arama]] ekle. "arama" kısmına haritada aranacak yeri KULLANICININ DİLİNDE yaz (ör. [[NAV:nöbetçi eczane]] veya [[NAV:cardiologist]]). Uygulama kullanıcının konumunu kullanıp harita uygulamasında yol tarifini açar. Kullanıcı bir yakınma/ihtiyaç belirtirse (ör. "dişim ağrıyor") uygun yeri nazikçe öner ve isterse [[NAV:diş hekimi]] ekle.
-- Bu direktifleri YALNIZCA kullanıcı gerçekten isterse kullan; uydurma bilgi verme.`},{type:"text",text:(ctxStr+memStr+voiceNote)}],messages:history},apiKey);
+- Bu direktifleri YALNIZCA kullanıcı gerçekten isterse kullan; uydurma bilgi verme.`},{type:"text",text:(ctxStr+clinStr+memStr+voiceNote)}],messages:history},apiKey);
     let reply=d.content?.map(c=>c.text||"").join("")||(lang==="tr"?"Yanıt alınamadı.":TL("No response.",lang));
     const wantsPulse=/\[\[\s*(OLC:NABIZ|MEASURE:PULSE)\s*\]\]/i.test(reply);
     const navM=reply.match(/\[\[\s*GIT:(\w+)\s*\]\]/i);
@@ -4963,7 +5003,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
       const r=evaluateLab(labForm.test,labForm.value,labForm.unit,ctx,(labForm.low&&labForm.high)?{low:labForm.low,high:labForm.high}:null);
       if(!r.ok){notify(r.reason==="unknown-unit"||r.reason==="missing-unit"?(L?"⚠️ Birim tanınmadı — sonuç kaydedilmedi":"⚠️ Unknown unit"):(L?"Geçersiz değer":"Invalid value"));return;}
       setLabs(p=>[...p,{id:Date.now()+"_"+Math.random().toString(36).slice(2,5),ts:Date.now(),test:labForm.test,value:Number(labForm.value),unit:labForm.unit,canonValue:r.norm.value,canonUnit:r.norm.unit,level:r.cls.applicable?r.cls.level:null,naReason:r.cls.applicable?null:r.cls.reason,refLow:(r.ref&&r.ref.ok)?r.ref.low:null,refHigh:(r.ref&&r.ref.ok)?r.ref.high:null,source:(r.ref&&r.ref.source)||r.kind,labLow:labForm.low||null,labHigh:labForm.high||null}]);
-      if(r.cls.applicable&&(r.cls.level==="critical-low"||r.cls.level==="critical-high"))setActiveAlert({icon:"🧪",title:L?"KRİTİK TAHLİL DEĞERİ":"CRITICAL LAB VALUE",msg:(L?tInfo.tr:tInfo.en)+" "+labForm.value+" "+labForm.unit+" — "+(L?"acil değerlendirme gerekebilir, doktorunuza başvurun":"seek medical attention")});
+      if(r.cls.applicable&&(r.cls.level==="critical-low"||r.cls.level==="critical-high"))setActiveAlert({icon:"🧪",title:L?"KRİTİK TAHLİL DEĞERİ":TL("CRITICAL LAB VALUE",lang),msg:(L?tInfo.tr:tInfo.en)+" "+labForm.value+" "+labForm.unit+" — "+(L?"acil değerlendirme gerekebilir, doktorunuza başvurun":TL("this may need urgent attention — contact your doctor",lang))});
       setLabForm(f=>({...f,value:"",low:"",high:""}));notify(L?"✓ Tahlil kaydedildi":"✓ Lab saved");
     };
     return <div style={{...CS}}>
