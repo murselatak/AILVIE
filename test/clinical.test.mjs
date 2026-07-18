@@ -1,4 +1,4 @@
-import { CRITICAL, criticalFor, trendFor, patterns, drugLabChecks, derived, clinicalSummary } from "../src/clinical.js";
+import { CRITICAL, criticalFor, trendFor, patterns, drugLabChecks, derived, dialysisAdequacy, clinicalSummary } from "../src/clinical.js";
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra) => { if (cond) { pass++; } else { fail++; console.log("  ✗ " + name + (extra ? "  → " + JSON.stringify(extra) : "")); } };
@@ -159,6 +159,23 @@ const agAlb = derived([...agLabs, { id: "d", ts: T0, test: "albumin", canonValue
 ok("albümin düzeltmesi (2.0 g/dL) → 16", agAlb.anionGap && agAlb.anionGap.corrected === 16, agAlb.anionGap);
 ok("albümin yoksa düzeltme yok", !ag.anionGap.corrected);
 ok("klorür yoksa anyon açığı hesaplanmaz", !derived([agLabs[0], agLabs[2]]).anionGap);
+
+console.log("=== 6d) Diyaliz yeterliliği (URR + Kt/V) ===");
+// Verified example (Daugirdas): pre 80, post 24, 4h, 2.5L UF, 70kg -> URR 70%, Kt/V ~1.42
+const da = dialysisAdequacy({ preBUN: 80, postBUN: 24, hours: 4, ufLiters: 2.5, postWeightKg: 70 });
+ok("URR hesaplandı = 70%", da.ok && da.urr.value === 70, da.urr);
+ok("URR yeterli (>=65)", da.ok && da.urr.adequate === true);
+ok("Kt/V ~1.42", da.ok && Math.abs(da.ktv.value - 1.42) < 0.03, da.ktv);
+ok("Kt/V yeterli (>=1.2)", da.ok && da.ktv.adequate === true);
+// URR only (no session mechanics) — still gives URR, no Kt/V
+const daUrrOnly = dialysisAdequacy({ preBUN: 80, postBUN: 32 });
+ok("sadece BUN → URR var (60%)", daUrrOnly.ok && daUrrOnly.urr.value === 60, daUrrOnly.urr);
+ok("mekanik yoksa Kt/V yok", daUrrOnly.ok && !daUrrOnly.ktv);
+ok("URR 60% yetersiz işaretlenir", daUrrOnly.ok && daUrrOnly.urr.adequate === false);
+// safety: post >= pre must refuse, not emit nonsense
+const daBad = dialysisAdequacy({ preBUN: 40, postBUN: 45 });
+ok("post >= pre → REDDEDER", !daBad.ok && daBad.reason === "post-not-below-pre", daBad);
+ok("eksik BUN → reddeder", !dialysisAdequacy({ preBUN: 80 }).ok);
 
 console.log("=== 7) Ozet ===");
 const sum = clinicalSummary(

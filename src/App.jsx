@@ -1,7 +1,7 @@
 import React from "react";
 import { TL } from "./tl";
 import { emgFor, poisonFor, servicesFor, EMG_LABELS_TR } from "./emergency";
-import { criticalFor, trendFor, patterns as clinPatterns, drugLabChecks, clinicalSummary } from "./clinical";
+import { criticalFor, trendFor, patterns as clinPatterns, drugLabChecks, dialysisAdequacy, clinicalSummary } from "./clinical";
 import { explainReport } from "./report";
 import { useState, useEffect, useRef, useCallback } from "react";
 
@@ -1496,6 +1496,9 @@ const recDraftIdRef=useRef(null);
 const[medImages,setMedImages]=useState([]);
 const[imgType,setImgType]=useState("xray");
 const[reportText,setReportText]=useState("");
+// Dialysis session inputs (pre/post BUN, hours, ultrafiltration, weight). Kept as a small object;
+// persisted with the rest of the encrypted payload so a dialysis patient's last session stays.
+const[dialysis,setDialysis]=useState({preBUN:"",postBUN:"",hours:"",ufLiters:"",postWeightKg:""});
 const[imgBusy,setImgBusy]=useState(null); // id being interpreted
 const[imgView,setImgView]=useState(null); // image object being viewed
 const[imgDrag,setImgDrag]=useState(false);
@@ -2348,7 +2351,7 @@ const packData=async(jsonStr)=>{const key=dataKeyRef.current;if(!key)return json
 const unpackData=async(raw)=>{if(raw==null)return null;let env;try{env=JSON.parse(raw);}catch(e){return raw;}if(!env||env.enc!==1)return raw;const key=dataKeyRef.current;if(!key){const er=new Error("locked");er.code="locked";throw er;}const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(env.iv)},key,b64d(env.ct));return dec.decode(pt);};
 const applyLoadedData=(d)=>{
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
-if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(Array.isArray(d.labs))setLabs(d.labs);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);if(Array.isArray(d.aiMem))setAiMem(d.aiMem);
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(Array.isArray(d.labs))setLabs(d.labs);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);if(Array.isArray(d.aiMem))setAiMem(d.aiMem);if(d.dialysis&&typeof d.dialysis==="object")setDialysis(d.dialysis);
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
 };
 const[repMetric,setRepMetric]=useState("weight");
@@ -2716,12 +2719,12 @@ useEffect(()=>{(async()=>{
   latestPayloadRef.current=payload||"{}";
   try{const d=JSON.parse(payload||"{}");
 if(d.meds?.length)setMeds(d.meds);if(d.appts?.length)setAppts(d.appts);if(d.notes?.length)setNotes(d.notes);
-if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(Array.isArray(d.labs))setLabs(d.labs);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);if(Array.isArray(d.aiMem))setAiMem(d.aiMem);
+if(d.contacts?.length)setContacts(d.contacts);if(d.pat)setPat(p=>({...p,...d.pat}));if(d.hd)setHd(p=>({...p,...d.hd}));if(d.wellness)setWellness(p=>({...p,...d.wellness}));if(d.diet)setDiet(p=>({...p,...d.diet}));if(Array.isArray(d.glucose))setGlucose(d.glucose);if(Array.isArray(d.healthLog))setHealthLog(d.healthLog);if(Array.isArray(d.labs))setLabs(d.labs);if(d.goals)setGoals(p=>({...p,...d.goals}));if(d.tests)setTests(d.tests);if(d.trashDays)setTrashDays(d.trashDays);if(Array.isArray(d.trashItems))setTrashItems(d.trashItems);if(d.draftMed)setNewMed(v=>({...v,...d.draftMed}));if(d.draftAppt)setNewAppt(v=>({...v,...d.draftAppt}));if(d.draftContact)setNewC(v=>({...v,...d.draftContact}));if(d.draftRec)setNewRec(v=>({...v,...d.draftRec}));if(d.records?.length)setRecords(d.records);if(d.msgs?.length)setMsgs(d.msgs);if(Array.isArray(d.reportedMsgs))setReportedMsgs(d.reportedMsgs);if(Array.isArray(d.blockedUsers))setBlockedUsers(d.blockedUsers);if(d.chatM?.length)setChatM(d.chatM);if(Array.isArray(d.aiMem))setAiMem(d.aiMem);if(d.dialysis&&typeof d.dialysis==="object")setDialysis(d.dialysis);
 if(d.calNotes)setCalNotes(d.calNotes);if(d.calAlarms)setCalAlarms(d.calAlarms);if(d.moodLog?.length)setMoodLog(d.moodLog);if(d.groups?.length)setGroups(d.groups);
   }catch(e){}
   dataLoadedRef.current=true;
 })();},[]); // load once (IndexedDB primary)
-useEffect(()=>{if(!dataLoadedRef.current)return;const tm=setTimeout(()=>{const payload=JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,aiMem,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs});
+useEffect(()=>{if(!dataLoadedRef.current)return;const tm=setTimeout(()=>{const payload=JSON.stringify({meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,aiMem,dialysis,moodLog,groups,draftMed:newMed,draftAppt:newAppt,draftContact:newC,draftRec:newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs});
   (async()=>{
     // GUARD (first write after startup only): a load bug could leave state empty and the
     // very next autosave would wipe good data on disk. Later writes are genuine user edits
@@ -2761,7 +2764,7 @@ useEffect(()=>{if(!dataLoadedRef.current)return;const tm=setTimeout(()=>{const p
     if(!idbOk){
       try{localStorage.getItem("ailvie_data");}catch(e){}
     }
-  })();},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,aiMem,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs,lang]); // enhanced auto-save (IndexedDB primary) (incl. drafts + trash + diet/glucose/log/goals)
+  })();},1000);return()=>clearTimeout(tm);},[meds,appts,notes,contacts,pat,hd,wellness,tests,calNotes,calAlarms,records,msgs,chatM,aiMem,dialysis,moodLog,groups,newMed,newAppt,newC,newRec,trashItems,trashDays,diet,glucose,healthLog,goals,reportedMsgs,blockedUsers,labs,lang]); // enhanced auto-save (IndexedDB primary) (incl. drafts + trash + diet/glucose/log/goals)
 useEffect(()=>{(async()=>{let raw=null;try{raw=await idbGet("ailvie_medimg");}catch(e){}
   if(raw==null){try{raw=localStorage.getItem("ailvie_medimg");if(raw)await idbSet("ailvie_medimg",raw);}catch(e){}}
   try{if(raw){const a=JSON.parse(raw);if(Array.isArray(a))setMedImages(a);}}catch(e){}})();},[]);
@@ -3005,6 +3008,15 @@ const sendChat=async(text)=>{
       if(cs.derived.ldlCalc&&cs.derived.ldlCalc.ok)parts.push("HESAPLANAN: LDL ≈ "+cs.derived.ldlCalc.value+" mg/dL (Friedewald)");
       if(cs.derived.fib4&&cs.derived.fib4.ok)parts.push("HESAPLANAN: FIB-4 = "+cs.derived.fib4.value+" ("+(cs.derived.fib4.band==="high"?"ileri karaciğer fibrozu olasılığı yüksek":cs.derived.fib4.band==="low"?"düşük olasılık":"belirsiz aralık")+", karaciğer için; teşhis değil)");
       if(cs.derived.anionGap&&cs.derived.anionGap.ok)parts.push("HESAPLANAN: Anyon açığı = "+cs.derived.anionGap.value+" mmol/L"+(cs.derived.anionGap.corrected!=null?" (albümine göre düzeltilmiş: "+cs.derived.anionGap.corrected+")":""));
+      try{
+        const da=dialysisAdequacy({preBUN:+dialysis.preBUN,postBUN:+dialysis.postBUN,hours:+dialysis.hours,ufLiters:+dialysis.ufLiters,postWeightKg:+dialysis.postWeightKg});
+        if(da.ok){
+          const bits=[];
+          if(da.urr)bits.push("URR %"+da.urr.value+" ("+(da.urr.adequate?"yeterli":"hedefin altında, ≥%65")+")");
+          if(da.ktv)bits.push("Kt/V "+da.ktv.value+" ("+(da.ktv.adequate?"yeterli":"hedefin altında, ≥1.2")+")");
+          if(bits.length)parts.push("HESAPLANAN: Diyaliz yeterliliği — "+bits.join(", ")+" (teşhis değil; diyaliz ekibiyle değerlendir)");
+        }
+      }catch(e){}
       if(parts.length)clinStr="\n\nTAHLİL DEĞERLENDİRMESİ (yayınlanmış kurallara göre; TEŞHİS DEĞİL — kişiyi doğru soruyla doktora yönlendir):\n"+parts.join("\n")+"\n";
     }catch(e){}
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
@@ -4826,6 +4838,49 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     </div>
     <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.5}}>ℹ️ {lang==="tr"?"Uygulama içinden otomatik veri çekme; Sağlık Bakanlığı resmi API izni (OAuth2/FHIR) + güvenli sunucu + KVKK uyumu gerektirir. Bu onay alınınca \"Hesabımı Bağla\" tek dokunuşla çalışacak (sahte bağlantı göstermiyoruz).":"Automatic in-app data pull requires official Ministry of Health API approval (OAuth2/FHIR) + a secure server + data-protection compliance. Once approved, \"Connect account\" works in one tap (we don't show a fake connection)."}</div>
   </div>}
+  {/* Dialysis adequacy. A dialysis patient needs to know if a session actually cleared enough — URR
+      and Kt/V are the standard measures, and until now they had to be worked out by hand. Inputs are
+      session-based (pre/post urea, time, fluid removed, weight); the module refuses rather than
+      guessing when inputs are missing or non-physiological. */}
+  <div style={{...CS}}>
+    <div style={{fontWeight:700,marginBottom:4,color:acTx}}>🩸 {lang==="tr"?"Diyaliz Yeterliliği (URR / Kt/V)":TL("Dialysis Adequacy (URR / Kt/V)",lang)}</div>
+    <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.45}}>{lang==="tr"?"Bir hemodiyaliz seansının yeterli olup olmadığını gösterir. Seans değerlerini girin — sadece üre (öncesi/sonrası) ile URR, hepsiyle Kt/V hesaplanır.":TL("Shows whether a haemodialysis session cleared enough. Enter the session values — urea (pre/post) alone gives URR; all of them give Kt/V.",lang)}</div>
+    {(()=>{
+      const F=(k,label,unit,ph)=><div style={{flex:"1 1 45%",minWidth:120}}>
+        <label style={{fontSize:fs-4,color:mt,display:"block",marginBottom:2}}>{label}{unit?" ("+unit+")":""}</label>
+        <input type="number" inputMode="decimal" value={dialysis[k]} onChange={e=>setDialysis(d=>({...d,[k]:e.target.value}))} placeholder={ph||""} style={{width:"100%",padding:"7px 9px",borderRadius:8,border:`1px solid ${bd}`,background:dark?"#0d1520":"#fff",color:tc,fontSize:fs-1,boxSizing:"border-box"}}/>
+      </div>;
+      return <>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+          {F("preBUN",lang==="tr"?"Üre/BUN öncesi":TL("Urea/BUN pre",lang),"mg/dL","80")}
+          {F("postBUN",lang==="tr"?"Üre/BUN sonrası":TL("Urea/BUN post",lang),"mg/dL","24")}
+          {F("hours",lang==="tr"?"Seans süresi":TL("Session time",lang),lang==="tr"?"saat":TL("hours",lang),"4")}
+          {F("ufLiters",lang==="tr"?"Çekilen sıvı":TL("Fluid removed",lang),"L","2.5")}
+          {F("postWeightKg",lang==="tr"?"Seans sonrası ağırlık":TL("Post-session weight",lang),"kg","70")}
+        </div>
+        {(()=>{
+          const da=dialysisAdequacy({preBUN:+dialysis.preBUN,postBUN:+dialysis.postBUN,hours:+dialysis.hours,ufLiters:+dialysis.ufLiters,postWeightKg:+dialysis.postWeightKg});
+          if(!da.ok){
+            if(da.reason==="post-not-below-pre"&&dialysis.preBUN&&dialysis.postBUN)return <div style={{fontSize:fs-3,color:dg,marginTop:8}}>⚠️ {lang==="tr"?"Sonrası değeri öncesinden düşük olmalı — girişi kontrol edin.":TL("The post value must be lower than the pre value — please check the entry.",lang)}</div>;
+            return null;
+          }
+          const chip=(label,v,adequate,target,unit)=><div style={{flex:"1 1 45%",minWidth:130,padding:"8px 10px",borderRadius:8,background:adequate?sc+"18":"#e9a23b18",border:`1px solid ${adequate?sc:"#e9a23b"}55`}}>
+            <div style={{fontSize:fs-4,color:mt}}>{label}</div>
+            <div style={{fontSize:fs+2,fontWeight:800,color:adequate?sc:"#e9a23b"}}>{v}{unit}</div>
+            <div style={{fontSize:fs-4,color:mt}}>{lang==="tr"?"hedef":TL("target",lang)} {target}{unit} · {adequate?(lang==="tr"?"yeterli ✓":TL("adequate ✓",lang)):(lang==="tr"?"hedefin altında":TL("below target",lang))}</div>
+          </div>;
+          return <div style={{marginTop:10}}>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              {da.urr&&chip("URR",da.urr.value,da.urr.adequate,da.urr.target,"%")}
+              {da.ktv&&chip("Kt/V",da.ktv.value,da.ktv.adequate,da.ktv.target,"")}
+            </div>
+            {!da.ktv&&<div style={{fontSize:fs-4,color:mt,marginTop:6}}>{lang==="tr"?"Kt/V için süre, çekilen sıvı ve ağırlık da gerekli. Kt/V, sıvı çekişini hesaba kattığı için daha eksiksizdir.":TL("Kt/V also needs time, fluid removed and weight. Kt/V is more complete because it accounts for fluid removal.",lang)}</div>}
+            <div style={{fontSize:fs-4,color:mt,marginTop:6,lineHeight:1.45}}>ℹ️ {lang==="tr"?"Hedefler yaygın kılavuzlara dayanır (URR ≥%65, Kt/V ≥1.2, haftada 3 seans). Teşhis değildir; diyaliz ekibinizle değerlendirin.":TL("Targets follow common guidelines (URR ≥65%, Kt/V ≥1.2, thrice-weekly). Not a diagnosis; review with your dialysis team.",lang)}</div>
+          </div>;
+        })()}
+      </>;
+    })()}
+  </div>
   <div style={{...CS}}>
     <div style={{fontWeight:700,marginBottom:4,color:acTx}}>🩻 {lang==="tr"?"Tıbbi Görüntüleme & Belgeler":TL("Medical Imaging & Documents",lang)}</div>
     <div style={{fontSize:fs-3,color:mt,marginBottom:8}}>{lang==="tr"?"Röntgen, tomografi, MR, ultrason, tahlil… Pencereden seç, sürükle-bırak, fotoğraf çek ya da QR/barkod ile yükle.":TL("X-ray, CT, MRI, ultrasound, labs… Pick, drag & drop, take a photo, or upload via QR/barcode.",lang)}</div>

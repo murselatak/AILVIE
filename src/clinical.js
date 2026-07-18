@@ -173,6 +173,57 @@ export function derived(labs, ctx = {}) {
 // Recognising a *picture* across several tests is a large part of what reading a panel means.
 // These are deliberately phrased as "this looks like the pattern of X — ask your doctor", never
 // as a diagnosis, and each carries the reasoning so the user can see why.
+// ---------------------------------------------------------------------------
+// Dialysis adequacy — URR and Kt/V
+// ---------------------------------------------------------------------------
+// Unlike the other derived values these are SESSION-based: they need the urea/BUN before and after
+// a haemodialysis session, not a single lab point. So this takes an explicit session object rather
+// than reading `labs`. Everything is verified against Daugirdas' second-generation formula and the
+// KDOQI adequacy targets.
+//
+// URR = (1 - postBUN/preBUN) × 100. Target >= 65% for thrice-weekly HD. Simple, but it ignores
+// fluid removal, so in patients with large ultrafiltration it can understate real clearance.
+//
+// Kt/V (single-pool, Daugirdas 2nd generation):
+//   Kt/V = -ln(R - 0.008×t) + (4 - 3.5×R) × UF/W
+//   R = postBUN/preBUN, t = session hours, UF = fluid removed (L), W = post-dialysis weight (kg).
+//   KDOQI minimum adequate target 1.2. This is the preferred measure because the UF/W term accounts
+//   for ultrafiltration.
+//
+// Refuses (returns ok:false) rather than guessing when inputs are missing or non-physiological
+// (e.g. post >= pre, which would make URR negative and the log undefined).
+export function dialysisAdequacy(session = {}) {
+  const pre = Number(session.preBUN);
+  const post = Number(session.postBUN);
+  if (!isFinite(pre) || !isFinite(post) || pre <= 0 || post < 0) {
+    return { ok: false, reason: "need-pre-post-bun" };
+  }
+  if (post >= pre) {
+    // Post should be lower than pre after dialysis; if not, the sample or entry is off, and both
+    // formulas break (URR <= 0, and the Kt/V log goes undefined). Say so rather than emit nonsense.
+    return { ok: false, reason: "post-not-below-pre" };
+  }
+  const R = post / pre;
+  const out = { ok: true };
+
+  // URR
+  const urr = (1 - R) * 100;
+  out.urr = { value: Math.round(urr * 10) / 10, target: 65, adequate: urr >= 65, unit: "%" };
+
+  // Kt/V needs the session mechanics too. Compute only if all are present and sensible.
+  const t = Number(session.hours);
+  const uf = Number(session.ufLiters);
+  const w = Number(session.postWeightKg);
+  if (isFinite(t) && t > 0 && isFinite(uf) && uf >= 0 && isFinite(w) && w > 0) {
+    const inner = R - 0.008 * t;
+    if (inner > 0) {
+      const ktv = -Math.log(inner) + (4 - 3.5 * R) * (uf / w);
+      out.ktv = { value: Math.round(ktv * 100) / 100, target: 1.2, adequate: ktv >= 1.2, formula: "Daugirdas-2G" };
+    }
+  }
+  return out;
+}
+
 const lvl = (r) => (r && r.level) || null;
 
 export function patterns(labs, ctx = {}) {
