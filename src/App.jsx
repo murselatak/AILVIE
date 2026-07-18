@@ -629,7 +629,7 @@ const[page,setPage]=useState("home");
 // allergies and the emergency contact are what someone else needs to find fast in an emergency —
 // they must not be hidden behind a tap. Held here (not inside a panel component) so panels stay
 // plain functions and never remount on re-render.
-const[x2Open,setX2Open]=useState({id:true,meas:false,treat:false,rec:false});
+const[x2Open,setX2Open]=useState({clin:true,id:true,meas:false,treat:false,rec:false});
 const[pageHist,setPageHist]=useState(["home"]);
 const[histIdx,setHistIdx]=useState(0);
 const goTo=(p)=>{const nh=[...pageHist.slice(0,histIdx+1),p];setPageHist(nh);setHistIdx(nh.length-1);setPage(p);
@@ -880,7 +880,7 @@ const patCtx=()=>{
   // eGFR from the most recent creatinine, so drug-vs-lab rules (e.g. metformin at low eGFR) can fire.
   try{
     let cr=null;for(const r of labs||[]){if(r&&r.test==="creatinine"&&isFinite(Number(r.canonValue))&&(!cr||r.ts>cr.ts))cr=r;}
-    if(cr)c.egfr=calcEGFR(cr.canonValue,c.ageYears,c.sex);
+    if(cr){const eg=calcEGFR(cr.canonValue,c.ageYears,c.sex);if(eg&&eg.ok)c.egfr=eg.value;}
   }catch(e){}
   return c;
 };
@@ -5505,6 +5505,27 @@ const renderPCard=()=>{
   };
   const bmiTxt=bmi>0?String(bmi):"—";
   const riskBadge=[pat.bloodType,pat.allergies?"⚠️":""].filter(Boolean).join(" ")||null;
+  // Clinical read of the saved labs (same engine that feeds the AI). This is the visual surface of
+  // it: the person sees what a clinician would flag, phrased as "ask your doctor", never a diagnosis.
+  const clin=(()=>{try{return clinicalSummary(labs,meds,patCtx());}catch(e){return{criticals:[],trends:[],patterns:[],drugChecks:[],derived:{}};}})();
+  const clinCount=clin.criticals.length+clin.trends.length+clin.patterns.length+clin.drugChecks.length;
+  const testName=(k)=>{const ti=LAB_TESTS.find(x=>x.k===k);return ti?(lang==="tr"?ti.tr:ti.en):k;};
+  const drugRuleLbl=(id)=>({
+    "metformin-egfr":lang==="tr"?"Metformin + düşük böbrek fonksiyonu (eGFR)":TL("Metformin + low kidney function (eGFR)",lang),
+    "metformin-egfr-review":lang==="tr"?"Metformin + böbrek fonksiyonu gözden geçirilmeli":TL("Metformin + kidney function to review",lang),
+    "acei-arb-potassium":lang==="tr"?"Tansiyon ilacı + yüksek potasyum":TL("Blood-pressure drug + high potassium",lang),
+    "spironolactone-potassium":lang==="tr"?"Spironolakton + yüksek potasyum":TL("Spironolactone + high potassium",lang),
+    "statin-liver":lang==="tr"?"Statin + yüksek karaciğer enzimi":TL("Statin + high liver enzyme",lang),
+    "diuretic-sodium":lang==="tr"?"İdrar söktürücü + düşük sodyum":TL("Diuretic + low sodium",lang),
+    "warfarin-inr":lang==="tr"?"Varfarin + kritik INR":TL("Warfarin + critical INR",lang),
+  }[id]||id);
+  const patternLbl=(id)=>({
+    "iron-deficiency":lang==="tr"?"Demir eksikliği anemisi tablosu olabilir":TL("May fit an iron-deficiency picture",lang),
+    "liver-enzymes-raised":lang==="tr"?"Karaciğer enzimleri yüksek":TL("Raised liver enzymes",lang),
+  }[id]||id);
+  const caveatLbl=(c)=>({
+    "ferritin-acute-phase":lang==="tr"?"ferritin iltihapla yükselebilir, gerçek eksikliği gizleyebilir":TL("ferritin can rise with inflammation and mask a true deficiency",lang),
+  }[c]||c);
   return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     {/* Özet — always visible: this is the at-a-glance layer, it must never be behind a tap. */}
     <div style={{...CS,background:"linear-gradient(135deg,"+ac+"10,"+sc+"08)",border:"1px solid "+ac+"33"}}>
@@ -5515,6 +5536,49 @@ const renderPCard=()=>{
     </div>
     <span style={{fontWeight:700,fontSize:fs+2}}>📊 {t.pCardFull}</span>
     <div style={{fontSize:fs-3,color:mt,marginTop:-4,lineHeight:1.45}}>{lang==="tr"?"Burası verilerinizin işlenmiş görünümüdür. Değişiklik için ✏️ ile Sağlık Verilerim'e geçin.":TL("This is the processed view of your data. Use ✏️ to change anything in My Health Data.",lang)}</div>
+
+    {/* Clinical read of the labs — placed first among the panels because a critical value must be
+        findable fast. Only rendered when there is something to say. */}
+    {clinCount>0&&(()=>{
+      const hasCrit=clin.criticals.length>0;
+      const tone=hasCrit?dg:"#e9a23b";
+      const badge=hasCrit?(lang==="tr"?clin.criticals.length+" kritik ⚠️":clin.criticals.length+" critical ⚠️"):String(clinCount);
+      return panel("clin","🩺",lang==="tr"?"Tahlil Değerlendirmesi":TL("Lab Assessment",lang),badge,tone,<>
+        <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.45}}>{lang==="tr"?"Yayınlanmış kurallara göre okunmuştur — teşhis değildir. Bunları doktorunuza sorun.":TL("Read against published rules — this is not a diagnosis. Take these to your doctor.",lang)}</div>
+        {clin.criticals.length>0&&<div style={{marginBottom:10}}>
+          <div style={{fontSize:fs-2,fontWeight:700,color:dg,marginBottom:4}}>⚠️ {lang==="tr"?"Kritik değerler — acil":TL("Critical values — urgent",lang)}</div>
+          {clin.criticals.map((c,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",gap:8,padding:"6px 9px",borderRadius:7,background:dg+"18",border:"1px solid "+dg+"55",marginBottom:4}}>
+            <span style={{fontSize:fs-2,fontWeight:600}}>{testName(c.test)}</span>
+            <span style={{fontSize:fs-2,fontWeight:700,color:dg}}>{c.value} {c.unit} · {c.level==="critical-high"?(lang==="tr"?"kritik yüksek":TL("critical high",lang)):(lang==="tr"?"kritik düşük":TL("critical low",lang))}</span>
+          </div>)}
+          <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Not: kritik sınırlar laboratuvarlar arasında değişebilir; kendi laboratuvarınızın sınırı farklı olabilir.":TL("Note: critical limits vary between labs; your own lab's limit may differ.",lang)}</div>
+        </div>}
+        {clin.drugChecks.length>0&&<div style={{marginBottom:10}}>
+          <div style={{fontSize:fs-2,fontWeight:700,color:"#e9a23b",marginBottom:4}}>💊 {lang==="tr"?"İlaç–tahlil kontrolü":TL("Drug–lab check",lang)}</div>
+          {clin.drugChecks.map((d,i)=><div key={i} style={{padding:"6px 9px",borderRadius:7,background:dark?"#0d1520":"#f8fafc",marginBottom:4}}>
+            <div style={{fontSize:fs-2,fontWeight:600}}>{drugRuleLbl(d.id)}</div>
+            <div style={{fontSize:fs-4,color:mt,marginTop:1,textTransform:"capitalize"}}>{d.drug}{d.test?" · "+testName(d.test)+" "+d.value:d.egfr!=null?" · eGFR "+Math.round(d.egfr):""}</div>
+          </div>)}
+        </div>}
+        {clin.patterns.length>0&&<div style={{marginBottom:10}}>
+          <div style={{fontSize:fs-2,fontWeight:700,color:acTx,marginBottom:4}}>🔬 {lang==="tr"?"Örüntüler (olası)":TL("Patterns (possible)",lang)}</div>
+          {clin.patterns.map((p,i)=><div key={i} style={{padding:"6px 9px",borderRadius:7,background:dark?"#0d1520":"#f8fafc",marginBottom:4}}>
+            <div style={{fontSize:fs-2,fontWeight:600}}>{patternLbl(p.id)}{p.astAltRatio!=null?" · AST/ALT "+p.astAltRatio:""}</div>
+            {p.caveat&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>⚠️ {caveatLbl(p.caveat)}</div>}
+            {p.missing&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{lang==="tr"?"Tam ayrım için eksik: ":TL("Missing for full picture: ",lang)}{p.missing.map(testName).join(", ")}</div>}
+          </div>)}
+        </div>}
+        {clin.trends.length>0&&<div>
+          <div style={{fontSize:fs-2,fontWeight:700,color:acTx,marginBottom:4}}>📈 {lang==="tr"?"Eğilimler":TL("Trends",lang)}</div>
+          {clin.trends.map((tr,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",gap:8,padding:"6px 9px",borderRadius:7,background:dark?"#0d1520":"#f8fafc",marginBottom:4}}>
+            <span style={{fontSize:fs-2,fontWeight:600}}>{testName(tr.test)}</span>
+            <span style={{fontSize:fs-2,color:mt}}>{tr.dir==="up"?"↗ ":"↘ "}{lang==="tr"?(tr.dir==="up"?"yükseliyor":"düşüyor"):(tr.dir==="up"?TL("rising",lang):TL("falling",lang))} %{Math.abs(tr.pct)} · {tr.spanDays}{lang==="tr"?" gün":TL(" days",lang)} · {tr.n} {lang==="tr"?"ölçüm":TL("readings",lang)}</span>
+          </div>)}
+          <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Yön tek başına iyi/kötü demek değildir; teste göre değişir.":TL("Direction alone is not good or bad; it depends on the test.",lang)}</div>
+        </div>}
+        <button onClick={()=>goTo("health")} style={{...BP,width:"100%",marginTop:8,padding:"7px",background:"transparent",color:acTx,border:"1px solid "+ac+"44"}}>✏️ {lang==="tr"?"Tahlilleri Sağlık Verilerim'de düzenle":TL("Edit labs in My Health Data",lang)}</button>
+      </>);
+    })()}
 
     {panel("id","👤",lang==="tr"?"Kimlik & Risk":TL("Identity & Risk",lang),riskBadge,ac,<>
       {row("n",t.fName,pat.name)}
