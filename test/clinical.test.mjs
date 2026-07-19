@@ -351,6 +351,33 @@ const cc = derived(ccLabs);
 ok("düzeltilmiş kalsiyum = 9.6", cc.correctedCalcium && cc.correctedCalcium.value === 9.6, cc.correctedCalcium);
 ok("iyonize kalsiyum uyarısı var", cc.correctedCalcium && cc.correctedCalcium.caveat === "ionised-calcium-preferred");
 ok("albümin normal (>=4) → düzeltme yapılmaz", !derived([{ id: "a", ts: T0, test: "calcium", canonValue: 9.5, level: "normal" }, { id: "b", ts: T0, test: "albumin", canonValue: 4.2, level: "normal" }]).correctedCalcium);
+// Globulin + A/G: total protein 7.0, albumin 4.0 -> globulin 3.0, A/G 1.33 (normal)
+const agrD = derived([
+  { id: "a", ts: T0, test: "totalProtein", canonValue: 7.0, level: "normal" },
+  { id: "b", ts: T0, test: "albumin", canonValue: 4.0, level: "normal" },
+]);
+ok("globulin = 3.0", agrD.globulinAG && agrD.globulinAG.globulin === 3.0, agrD.globulinAG);
+ok("A/G oranı = 1.33", agrD.globulinAG && agrD.globulinAG.agRatio === 1.33, agrD.globulinAG);
+ok("A/G normal bandı", agrD.globulinAG && agrD.globulinAG.band === "normal");
+ok("A/G bir bayraktır uyarısı", agrD.globulinAG && agrD.globulinAG.caveat === "ag-ratio-is-a-flag");
+// low A/G: total protein 9.0, albumin 3.0 -> globulin 6.0, A/G 0.5 (low -> myeloma/inflammation)
+const agrLow = derived([
+  { id: "a", ts: T0, test: "totalProtein", canonValue: 9.0, level: "high" },
+  { id: "b", ts: T0, test: "albumin", canonValue: 3.0, level: "low" },
+]);
+ok("düşük A/G bandı (0.5)", agrLow.globulinAG && agrLow.globulinAG.agRatio === 0.5 && agrLow.globulinAG.band === "low", agrLow.globulinAG);
+// high A/G: total protein 6.0, albumin 5.0 -> globulin 1.0, A/G 5.0 (high)
+const agrHigh = derived([
+  { id: "a", ts: T0, test: "totalProtein", canonValue: 6.0, level: "normal" },
+  { id: "b", ts: T0, test: "albumin", canonValue: 5.0, level: "normal" },
+]);
+ok("yüksek A/G bandı (5.0)", agrHigh.globulinAG && agrHigh.globulinAG.band === "high", agrHigh.globulinAG);
+ok("total protein albüminden küçükse hesaplanmaz", !derived([
+  { id: "a", ts: T0, test: "totalProtein", canonValue: 3.0, level: "low" },
+  { id: "b", ts: T0, test: "albumin", canonValue: 4.0, level: "normal" },
+]).globulinAG);
+ok("total protein yoksa A/G hesaplanmaz", !derived([{ id: "b", ts: T0, test: "albumin", canonValue: 4.0, level: "normal" }]).globulinAG);
+ok("A/G kaynağı", agrD.globulinAG && agrD.globulinAG.source === "globulin-ag" && SOURCES["globulin-ag"]);
 // Non-HDL: chol 200, HDL 50 -> 150
 const nh = derived([
   { id: "a", ts: T0, test: "cholesterol", canonValue: 200, level: "normal" },

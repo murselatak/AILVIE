@@ -36,6 +36,7 @@ export const SOURCES = {
   "anemia-morphology": { label: "Anaemia morphology by MCV (microcytic <80, normocytic 80–100, macrocytic >100 fL)", short: "MCV morphology" },
   "aki-kdigo": { label: "Acute kidney injury, KDIGO 2012 creatinine criteria (≥0.3 mg/dL in 48h or ≥1.5× baseline in 7d)", short: "KDIGO AKI" },
   "apri-wai": { label: "APRI = (AST/ULN)/platelets ×100 (Wai 2003; interpretation Lin/Chou meta-analyses)", short: "APRI (Wai)" },
+  "globulin-ag": { label: "Globulin = total protein − albumin; A/G ratio = albumin / globulin (URMC, Cleveland Clinic)", short: "A/G ratio" },
 };
 
 // ---------------------------------------------------------------------------
@@ -283,6 +284,33 @@ export function derived(labs, ctx = {}) {
     if (isFinite(cav) && isFinite(av) && av < 4.0) {
       const corr = cav + 0.8 * (4.0 - av);
       out.correctedCalcium = { ok: true, value: Math.round(corr * 100) / 100, unit: "mg/dL", refLow: 8.6, refHigh: 10.2, caveat: "ionised-calcium-preferred", source: "corrected-calcium" };
+    }
+  }
+
+  // Globulin (= total protein − albumin) and the A/G ratio (= albumin / globulin). Both are on every
+  // basic metabolic/liver panel and are CALCULATED, not measured. A low A/G ratio (<1.0) means
+  // globulin has overtaken albumin — seen in chronic inflammation, autoimmune disease, liver disease
+  // and multiple myeloma; a high ratio (>2.5) usually means low globulin. IMPORTANT and encoded as a
+  // caveat: the ratio is only a flag — it doesn't say which protein is abnormal, so it must be read
+  // alongside albumin and globulin, never alone. Needs total protein and albumin, both g/dL.
+  const tp = latestOf(labs, "totalProtein"), albG = latestOf(labs, "albumin");
+  if (tp && albG) {
+    const t = Number(tp.canonValue), al = Number(albG.canonValue);   // both g/dL
+    if (isFinite(t) && isFinite(al) && t > al && al > 0) {
+      const glob = t - al;
+      if (glob > 0) {
+        const ag = al / glob;
+        const band = ag < 1.0 ? "low" : (ag > 2.5 ? "high" : "normal");
+        out.globulinAG = {
+          ok: true,
+          globulin: Math.round(glob * 10) / 10,
+          agRatio: Math.round(ag * 100) / 100,
+          band,
+          refLow: 1.0, refHigh: 2.5,
+          caveat: "ag-ratio-is-a-flag",
+          source: "globulin-ag",
+        };
+      }
     }
   }
 

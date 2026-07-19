@@ -1078,6 +1078,7 @@ const UNIT_CONV={
   tsh:{canon:"mU/L",f:{"mU/L":1,"mIU/L":1,"uIU/mL":1,"µIU/mL":1,"mIU/mL":1000,"uU/mL":1}},
   ft4:{canon:"ng/dL",f:{"ng/dL":1,"pmol/L":1/12.87}},
   albumin:{canon:"g/dL",f:{"g/dL":1,"g/L":0.1}},
+  totalProtein:{canon:"g/dL",f:{"g/dL":1,"g/L":0.1}},
   alt:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},ast:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},alp:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},
   sodium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},potassium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},chloride:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},bicarbonate:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},
   platelet:{canon:"x10^9/L",f:{"x10^9/L":1,"10^9/L":1,"10*9/L":1,"K/uL":1,"K/µL":1,"10^3/uL":1,"10^3/µL":1,"10*3/uL":1,"x10^3/uL":1,"thousand/uL":1,"/uL":0.001,"/µL":0.001}},
@@ -1123,6 +1124,7 @@ const REF_LIB={
   calcium:{unit:"mg/dL",adult:{any:[8.4,10.2]}},
   creatinine:{unit:"mg/dL",adult:{male:[0.70,1.30],female:[0.50,1.10]},peds:[[0.041,[0.40,1.00]],[2,[0.20,0.40]],[4,[0.30,0.50]],[12,[0.40,0.70]],[16,[0.50,0.90]]],pregnancy:[0.40,0.85]},
   albumin:{unit:"g/dL",adult:{any:[3.5,5.5]}},
+  totalProtein:{unit:"g/dL",adult:{any:[6.0,8.3]}},
   alt:{unit:"U/L",adult:{any:[10,40]}},
   ast:{unit:"U/L",adult:{any:[10,40]}},
   alp:{unit:"U/L",adult:{male:[40,129],female:[35,104]},peds:[[0.041,[83,248]],[1,[122,469]],[10,[142,335]],[13,[129,468]],[16,[55,331]]]},
@@ -1425,6 +1427,7 @@ const LAB_TESTS=[
   {k:"ast",tr:"AST",en:"AST",units:["U/L","IU/L"],sys:"liver"},
   {k:"alp",tr:"ALP (Alkalen Fosfataz)",en:"ALP (Alkaline Phosphatase)",units:["U/L","IU/L"],sys:"liver"},
   {k:"albumin",tr:"Albümin",en:"Albumin",units:["g/dL","g/L"],sys:"liver"},
+  {k:"totalProtein",tr:"Total Protein",en:"Total Protein",units:["g/dL","g/L"],sys:"liver"},
   {k:"bilirubin",tr:"Bilirubin",en:"Bilirubin",units:["mg/dL","umol/L"],sys:"liver"},
   {k:"cholesterol",tr:"Total Kolesterol",en:"Total Cholesterol",units:["mg/dL","mmol/L"],sys:"lipid"},
   {k:"ldl",tr:"LDL",en:"LDL",units:["mg/dL","mmol/L"],sys:"lipid"},
@@ -3047,6 +3050,7 @@ const sendChat=async(text)=>{
       if(cs.derived.ldlCalc&&cs.derived.ldlCalc.ok)parts.push("HESAPLANAN: LDL ≈ "+cs.derived.ldlCalc.value+" mg/dL (Friedewald)");
       if(cs.derived.fib4&&cs.derived.fib4.ok)parts.push("HESAPLANAN: FIB-4 = "+cs.derived.fib4.value+" ("+(cs.derived.fib4.band==="high"?"ileri karaciğer fibrozu olasılığı yüksek":cs.derived.fib4.band==="low"?"düşük olasılık":"belirsiz aralık")+", karaciğer için; teşhis değil)");
       if(cs.derived.apri&&cs.derived.apri.ok)parts.push("HESAPLANAN: APRI = "+cs.derived.apri.value+" ("+(cs.derived.apri.band==="high"?"siroz olasılığını düşündürebilir":cs.derived.apri.band==="low"?"anlamlı fibroz olası değil":"belirsiz aralık")+", karaciğer fibrozu; FIB-4'ü destekler, yaş gerekmez; teşhis değil)");
+      if(cs.derived.globulinAG&&cs.derived.globulinAG.ok)parts.push("HESAPLANAN: A/G oranı = "+cs.derived.globulinAG.agRatio+" (globulin "+cs.derived.globulinAG.globulin+" g/dL; "+(cs.derived.globulinAG.band==="low"?"düşük — kronik iltihap/otoimmün/karaciğer/miyelom düşündürebilir":cs.derived.globulinAG.band==="high"?"yüksek — genelde düşük globulin, ör. dehidratasyon":"normal")+"). Bu bir bayraktır, teşhis değil; albümin ve globulinle birlikte yorumla.");
       if(cs.derived.anionGap&&cs.derived.anionGap.ok)parts.push("HESAPLANAN: Anyon açığı = "+cs.derived.anionGap.value+" mmol/L"+(cs.derived.anionGap.corrected!=null?" (albümine göre düzeltilmiş: "+cs.derived.anionGap.corrected+")":""));
       if(cs.derived.correctedCalcium&&cs.derived.correctedCalcium.ok)parts.push("HESAPLANAN: Düzeltilmiş kalsiyum = "+cs.derived.correctedCalcium.value+" mg/dL (albümine göre; kesinlik gerekirse iyonize kalsiyum tercih edilir)");
       if(cs.derived.nonHDL&&cs.derived.nonHDL.ok)parts.push("HESAPLANAN: Non-HDL kolesterol = "+cs.derived.nonHDL.value+" mg/dL (hedef genelde <130)");
@@ -5864,6 +5868,10 @@ const renderPCard=()=>{
           if(d.correctedCalcium&&d.correctedCalcium.ok){
             items.push({name:lang==="tr"?"Düzeltilmiş kalsiyum":TL("Corrected calcium",lang),val:d.correctedCalcium.value+" mg/dL",sub:lang==="tr"?"albümine göre · kesinlik için iyonize kalsiyum tercih edilir":TL("albumin-adjusted · ionised calcium preferred when in doubt",lang),source:d.correctedCalcium.source});
           }
+          if(d.globulinAG&&d.globulinAG.ok){
+            const agTxt=d.globulinAG.band==="low"?(lang==="tr"?"düşük — kronik iltihap/otoimmün/karaciğer/miyelom değerlendirilebilir":TL("low — may warrant review for chronic inflammation/autoimmune/liver/myeloma",lang)):d.globulinAG.band==="high"?(lang==="tr"?"yüksek — genelde düşük globulin (ör. dehidratasyon)":TL("high — usually low globulin (e.g. dehydration)",lang)):(lang==="tr"?"normal aralık":TL("normal range",lang));
+            items.push({name:lang==="tr"?"A/G oranı (globulin "+d.globulinAG.globulin+")":TL("A/G ratio",lang)+" (globulin "+d.globulinAG.globulin+")",val:String(d.globulinAG.agRatio),sub:agTxt+(lang==="tr"?" · tek başına teşhis değil, bir bayraktır":TL(" · a flag, not a diagnosis on its own",lang)),tone:d.globulinAG.band!=="normal"?"#e9a23b":undefined,source:d.globulinAG.source});
+          }
           if(d.nonHDL&&d.nonHDL.ok){
             items.push({name:lang==="tr"?"Non-HDL kolesterol":TL("Non-HDL cholesterol",lang),val:d.nonHDL.value+" mg/dL",sub:lang==="tr"?"tüm aterojenik parçacıklar (hedef genelde <130)":TL("all atherogenic particles (target usually <130)",lang),tone:d.nonHDL.value>=160?"#e9a23b":undefined,source:d.nonHDL.source});
           }
@@ -5898,7 +5906,7 @@ const renderPCard=()=>{
             <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Bu değerler tahlillerinizden hesaplanmıştır; teşhis değildir, doktorunuzla değerlendirin.":TL("These are computed from your labs; not a diagnosis — review with your doctor.",lang)}</div>
           </div>;
         })()}
-        {clinCount===0&&!(clin.derived&&(clin.derived.fib4||clin.derived.anionGap||clin.derived.ldlCalc||clin.derived.correctedCalcium||clin.derived.nonHDL||clin.derived.bunCrRatio||clin.derived.tsat||clin.derived.eag||clin.derived.osmolality||clin.derived.correctedSodium||clin.derived.apri))&&<div style={{fontSize:fs-2,color:sc,textAlign:"center",padding:"8px 4px",fontWeight:600}}>✓ {lang==="tr"?"Girdiğiniz tüm tahliller referans aralığında.":TL("All labs you entered are within range.",lang)}</div>}
+        {clinCount===0&&!(clin.derived&&(clin.derived.fib4||clin.derived.anionGap||clin.derived.ldlCalc||clin.derived.correctedCalcium||clin.derived.nonHDL||clin.derived.bunCrRatio||clin.derived.tsat||clin.derived.eag||clin.derived.osmolality||clin.derived.correctedSodium||clin.derived.apri||clin.derived.globulinAG))&&<div style={{fontSize:fs-2,color:sc,textAlign:"center",padding:"8px 4px",fontWeight:600}}>✓ {lang==="tr"?"Girdiğiniz tüm tahliller referans aralığında.":TL("All labs you entered are within range.",lang)}</div>}
         <button onClick={()=>goTo("health")} style={{...BP,width:"100%",marginTop:8,padding:"7px",background:"transparent",color:acTx,border:"1px solid "+ac+"44"}}>✏️ {lang==="tr"?"Tahlilleri Sağlık Verilerim'de düzenle":TL("Edit labs in My Health Data",lang)}</button>
       </>);
     })()}
