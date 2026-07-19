@@ -11,6 +11,8 @@ const REF = {
   creatinine: { unit: "mg/dL", adult: { male: [0.70, 1.30], female: [0.50, 1.10] }, peds: [[0.041, [0.40, 1.00]], [2, [0.20, 0.40]], [4, [0.30, 0.50]], [12, [0.40, 0.70]], [16, [0.50, 0.90]]], pregnancy: [0.40, 0.85] },
   hemoglobin: { unit: "g/L", adult: { male: [130, 180], female: [115, 165] }, peds: [[0.5, [100, 140]], [5, [110, 150]], [12, [115, 155]]] },
   alp: { unit: "U/L", adult: { male: [40, 129], female: [35, 104] }, peds: [[0.041, [83, 248]], [1, [122, 469]], [10, [142, 335]], [13, [129, 468]], [16, [55, 331]]] },
+  phosphorus: { unit: "mg/dL", adult: { any: [2.5, 4.5] }, peds: [[0.041, [4.3, 9.3]], [1, [4.5, 7.0]], [12, [4.5, 6.5]], [16, [2.7, 4.7]]] },
+  bun: { unit: "mg/dL", adult: { any: [7, 20] }, peds: [[2, [4, 15]], [16, [5, 20]]] },
   alt: { unit: "U/L", adult: { any: [10, 40] } },   // deliberately no peds -> caveat
 };
 
@@ -52,6 +54,18 @@ ok("6 ay ALP [122,469] (bebek yüksek)", (r => r.ok && r.low === 122 && r.high =
 ok("5 yaş ALP [142,335]", (r => r.ok && r.low === 142 && r.high === 335)(selectReference("alp", { band: "child", ageYears: 5 })));
 ok("11 yaş ALP [129,468] (puberte artışı)", (r => r.ok && r.low === 129 && r.high === 468)(selectReference("alp", { band: "child", ageYears: 11 })));
 ok("17 yaş ALP -> erişkin [40,129]", (r => r.ok && r.low === 40 && r.high === 129)(selectReference("alp", { band: "adolescent", ageYears: 17, sex: "male" })));
+
+console.log("=== Pediatrik fosfor bantları (büyümeyle yüksek — normal) ===");
+ok("yenidoğan fosfor [4.3,9.3]", (r => r.ok && r.low === 4.3 && r.high === 9.3)(selectReference("phosphorus", { band: "infant", ageYears: 0.02 })));
+ok("6 aylık fosfor [4.5,7.0]", (r => r.ok && r.low === 4.5 && r.high === 7.0)(selectReference("phosphorus", { band: "infant", ageYears: 0.5 })));
+ok("5 yaş fosfor [4.5,6.5]", (r => r.ok && r.low === 4.5 && r.high === 6.5 && r.note === "paediatric")(selectReference("phosphorus", { band: "child", ageYears: 5 })));
+ok("14 yaş fosfor [2.7,4.7]", (r => r.ok && r.low === 2.7 && r.high === 4.7)(selectReference("phosphorus", { band: "adolescent", ageYears: 14 })));
+ok("18+ fosfor -> erişkin [2.5,4.5]", (r => r.ok && r.low === 2.5 && r.high === 4.5)(selectReference("phosphorus", { band: "adult", ageYears: 30 })));
+
+console.log("=== Pediatrik BUN bantları (çocukta düşük) ===");
+ok("1 yaş BUN [4,15]", (r => r.ok && r.low === 4 && r.high === 15 && r.note === "paediatric")(selectReference("bun", { band: "infant", ageYears: 1 })));
+ok("8 yaş BUN [5,20]", (r => r.ok && r.low === 5 && r.high === 20)(selectReference("bun", { band: "child", ageYears: 8 })));
+ok("18+ BUN -> erişkin [7,20]", (r => r.ok && r.low === 7 && r.high === 20)(selectReference("bun", { band: "adult", ageYears: 30 })));
 
 console.log("=== Uyarılar (aralık yoksa) ===");
 ok("çocuk ALT -> pediatrik uyarı", (r => !r.ok && r.reason === "paediatric-adult-range-may-not-apply")(selectReference("alt", { band: "child", ageYears: 8 })));
