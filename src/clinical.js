@@ -30,6 +30,9 @@ export const SOURCES = {
   "non-hdl": { label: "Non-HDL cholesterol (Total − HDL); a secondary lipid target", short: "Non-HDL" },
   "bun-cr-ratio": { label: "BUN:creatinine ratio, common laboratory interpretation", short: "BUN:Cr" },
   "tsat": { label: "Transferrin saturation = serum iron / TIBC × 100", short: "TSAT" },
+  "eag": { label: "Estimated average glucose from HbA1c (ADAG study, Nathan 2008)", short: "ADAG" },
+  "osmolality": { label: "Calculated serum osmolality 2×Na + glucose/18 + BUN/2.8 (ADA/AAP)", short: "Calc. osmolality" },
+  "corrected-sodium": { label: "Sodium corrected for hyperglycaemia (Katz 1973)", short: "Katz" },
 };
 
 // ---------------------------------------------------------------------------
@@ -236,6 +239,44 @@ export function derived(labs, ctx = {}) {
       const tsat = (fe / tb) * 100;
       const band = tsat < 20 ? "low" : (tsat > 45 ? "high" : "normal");
       out.tsat = { ok: true, value: Math.round(tsat * 10) / 10, unit: "%", band, refLow: 20, refHigh: 45, source: "tsat" };
+    }
+  }
+
+  // Estimated average glucose (eAG) from HbA1c — ADAG/Nathan 2008: eAG mg/dL = 28.7×A1c − 46.7. This
+  // is the single thing people with diabetes most want: their A1c translated into the mg/dL they see
+  // on a meter. HONEST LIMITS encoded as a caveat: the relationship is altered in pregnancy (standard
+  // eAG should NOT be used then) and A1c can diverge from true average glucose in anaemia, recent
+  // blood loss, kidney disease or haemoglobin variants.
+  const a1c = latestOf(labs, "hba1c");
+  if (a1c) {
+    const hv = Number(a1c.canonValue);   // %
+    if (isFinite(hv) && hv > 0) {
+      const eag = 28.7 * hv - 46.7;
+      out.eag = { ok: true, value: Math.round(eag), unit: "mg/dL", mmol: Math.round((eag / 18) * 10) / 10, caveat: "eag-unreliable-when", source: "eag" };
+    }
+  }
+
+  // Calculated serum osmolality = 2×Na + glucose/18 + BUN/2.8 (ADA/AAP). Screening estimate; a large
+  // gap vs a measured value can flag unmeasured osmoles (e.g. toxic alcohols) — but this only reports
+  // the calculated number, never a gap it cannot see. Needs Na, glucose and BUN together.
+  const naO = latestOf(labs, "sodium"), gluO = latestOf(labs, "glucose"), bunO = latestOf(labs, "bun");
+  if (naO && gluO && bunO) {
+    const nav = Number(naO.canonValue), gv = Number(gluO.canonValue), bv = Number(bunO.canonValue);
+    if ([nav, gv, bv].every(isFinite)) {
+      const osm = 2 * nav + gv / 18 + bv / 2.8;
+      out.osmolality = { ok: true, value: Math.round(osm), unit: "mOsm/kg", refLow: 275, refHigh: 295, source: "osmolality" };
+    }
+  }
+
+  // Sodium corrected for hyperglycaemia (Katz 1973): measured Na + 1.6×(glucose − 100)/100. High
+  // glucose pulls water out of cells and dilutes sodium, so a low measured sodium may be
+  // pseudohyponatraemia. Only meaningful when glucose is actually raised, so it only fires above
+  // 100 mg/dL, and it carries the caveat that this is an estimate, not the "true" sodium.
+  if (naO && gluO) {
+    const nav = Number(naO.canonValue), gv = Number(gluO.canonValue);
+    if (isFinite(nav) && isFinite(gv) && gv > 100) {
+      const corr = nav + 1.6 * (gv - 100) / 100;
+      out.correctedSodium = { ok: true, value: Math.round(corr * 10) / 10, unit: "mmol/L", measured: nav, caveat: "estimate-not-true-value", source: "corrected-sodium" };
     }
   }
 

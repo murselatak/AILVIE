@@ -288,6 +288,33 @@ const ts2 = derived([
 ok("TSAT yüksek bandı (>45)", ts2.tsat && ts2.tsat.band === "high", ts2.tsat);
 ok("her yeni türevin kaynağı SOURCES'ta", ["corrected-calcium","non-hdl","bun-cr-ratio","tsat"].every(k => SOURCES[k]));
 
+console.log("=== 6g) eAG / osmolalite / düzeltilmiş sodyum ===");
+// eAG: A1c 7.0 -> 28.7*7 - 46.7 = 154.2 -> 154
+const eagD = derived([{ id: "a", ts: T0, test: "hba1c", canonValue: 7.0, level: "high" }]);
+ok("eAG (A1c 7.0) = 154 mg/dL", eagD.eag && eagD.eag.value === 154, eagD.eag);
+ok("eAG mmol/L de veriyor (~8.6)", eagD.eag && Math.abs(eagD.eag.mmol - 8.6) < 0.1, eagD.eag);
+ok("eAG güvenilmezlik uyarısı", eagD.eag && eagD.eag.caveat === "eag-unreliable-when");
+// Osmolality: Na 140, glu 90, BUN 14 -> 280 + 5 + 5 = 290
+const osmD = derived([
+  { id: "a", ts: T0, test: "sodium", canonValue: 140, level: "normal" },
+  { id: "b", ts: T0, test: "glucose", canonValue: 90, level: "normal" },
+  { id: "c", ts: T0, test: "bun", canonValue: 14, level: "normal" },
+]);
+ok("osmolalite = 290 mOsm/kg", osmD.osmolality && osmD.osmolality.value === 290, osmD.osmolality);
+ok("osmolalite Na+glu+BUN gerektirir", !derived([{ id: "a", ts: T0, test: "sodium", canonValue: 140, level: "normal" }]).osmolality);
+// Corrected sodium: Na 130, glu 600 -> 130 + 1.6*(500/100) = 130 + 8 = 138
+const csD = derived([
+  { id: "a", ts: T0, test: "sodium", canonValue: 130, level: "low" },
+  { id: "b", ts: T0, test: "glucose", canonValue: 600, level: "high" },
+]);
+ok("düzeltilmiş sodyum (Na130/glu600) = 138", csD.correctedSodium && csD.correctedSodium.value === 138, csD.correctedSodium);
+ok("düzeltilmiş sodyum ölçüleni saklar", csD.correctedSodium && csD.correctedSodium.measured === 130);
+ok("normal glukozda düzeltme yapılmaz", !derived([
+  { id: "a", ts: T0, test: "sodium", canonValue: 140, level: "normal" },
+  { id: "b", ts: T0, test: "glucose", canonValue: 95, level: "normal" },
+]).correctedSodium);
+ok("yeni üç türevin kaynağı SOURCES'ta", ["eag","osmolality","corrected-sodium"].every(k => SOURCES[k]));
+
 console.log("=== 7) Ozet ===");
 const sum = clinicalSummary(
   [...ironLabs, { id: "k", ts: T0 + D, test: "potassium", canonValue: 7.2, level: "critical-high" }],

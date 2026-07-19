@@ -3021,6 +3021,9 @@ const sendChat=async(text)=>{
       if(cs.derived.nonHDL&&cs.derived.nonHDL.ok)parts.push("HESAPLANAN: Non-HDL kolesterol = "+cs.derived.nonHDL.value+" mg/dL (hedef genelde <130)");
       if(cs.derived.bunCrRatio&&cs.derived.bunCrRatio.ok)parts.push("HESAPLANAN: BUN/Kreatinin oranı = "+cs.derived.bunCrRatio.value+" ("+(cs.derived.bunCrRatio.band==="high"?"yüksek, böbrek öncesi düşündürebilir":cs.derived.bunCrRatio.band==="low"?"düşük":"normal")+")");
       if(cs.derived.tsat&&cs.derived.tsat.ok)parts.push("HESAPLANAN: Transferrin satürasyonu (TSAT) = "+cs.derived.tsat.value+"% ("+(cs.derived.tsat.band==="low"?"düşük, demir eksikliği düşündürebilir":cs.derived.tsat.band==="high"?"yüksek, demir yükü düşündürebilir":"normal")+"; ferritinle birlikte oku)");
+      if(cs.derived.eag&&cs.derived.eag.ok)parts.push("HESAPLANAN: Tahmini ortalama glukoz (eAG) = "+cs.derived.eag.value+" mg/dL ("+cs.derived.eag.mmol+" mmol/L); HbA1c'nin günlük şeker karşılığı. Gebelikte ve anemi/böbrek hastalığında güvenilmez olabilir.");
+      if(cs.derived.osmolality&&cs.derived.osmolality.ok)parts.push("HESAPLANAN: Hesaplanmış osmolalite = "+cs.derived.osmolality.value+" mOsm/kg (normal ~275–295)");
+      if(cs.derived.correctedSodium&&cs.derived.correctedSodium.ok)parts.push("HESAPLANAN: Düzeltilmiş sodyum = "+cs.derived.correctedSodium.value+" mmol/L (yüksek şekere göre; ölçülen "+cs.derived.correctedSodium.measured+"; kesin değer değil, tahmindir)");
       try{
         const da=dialysisAdequacy({preBUN:+dialysis.preBUN,postBUN:+dialysis.postBUN,hours:+dialysis.hours,ufLiters:+dialysis.ufLiters,postWeightKg:+dialysis.postWeightKg});
         if(da.ok){
@@ -5817,6 +5820,15 @@ const renderPCard=()=>{
             const tsTxt=d.tsat.band==="low"?(lang==="tr"?"düşük — demir eksikliğini düşündürebilir (ferritinle birlikte oku)":TL("low — may suggest iron deficiency (read with ferritin)",lang)):d.tsat.band==="high"?(lang==="tr"?"yüksek — demir yükünü düşündürebilir":TL("high — may suggest iron overload",lang)):(lang==="tr"?"normal aralık":TL("normal range",lang));
             items.push({name:lang==="tr"?"Transferrin satürasyonu (TSAT)":TL("Transferrin saturation (TSAT)",lang),val:d.tsat.value+"%",sub:tsTxt,tone:d.tsat.band!=="normal"?"#e9a23b":undefined,source:d.tsat.source});
           }
+          if(d.eag&&d.eag.ok){
+            items.push({name:lang==="tr"?"Tahmini ortalama glukoz (eAG)":TL("Estimated average glucose (eAG)",lang),val:d.eag.value+" mg/dL",sub:(lang==="tr"?"HbA1c'nizin günlük şeker karşılığı · ":TL("your HbA1c as everyday glucose · ",lang))+d.eag.mmol+" mmol/L",source:d.eag.source});
+          }
+          if(d.osmolality&&d.osmolality.ok){
+            items.push({name:lang==="tr"?"Hesaplanmış osmolalite":TL("Calculated osmolality",lang),val:d.osmolality.value+" mOsm/kg",sub:lang==="tr"?"kandaki çözünen yoğunluğu (normal ~275–295)":TL("concentration of dissolved solutes (normal ~275–295)",lang),source:d.osmolality.source});
+          }
+          if(d.correctedSodium&&d.correctedSodium.ok){
+            items.push({name:lang==="tr"?"Düzeltilmiş sodyum":TL("Corrected sodium",lang),val:d.correctedSodium.value+" mmol/L",sub:(lang==="tr"?"yüksek şekere göre · ölçülen ":TL("adjusted for high glucose · measured ",lang))+d.correctedSodium.measured,source:d.correctedSodium.source});
+          }
           if(!items.length)return null;
           return <div style={{marginBottom:6}}>
             <div style={{fontSize:fs-2,fontWeight:700,color:acTx,marginBottom:4}}>🧮 {lang==="tr"?"Hesaplanan değerler":TL("Calculated values",lang)}</div>
@@ -5831,7 +5843,7 @@ const renderPCard=()=>{
             <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Bu değerler tahlillerinizden hesaplanmıştır; teşhis değildir, doktorunuzla değerlendirin.":TL("These are computed from your labs; not a diagnosis — review with your doctor.",lang)}</div>
           </div>;
         })()}
-        {clinCount===0&&!(clin.derived&&(clin.derived.fib4||clin.derived.anionGap||clin.derived.ldlCalc||clin.derived.correctedCalcium||clin.derived.nonHDL||clin.derived.bunCrRatio||clin.derived.tsat))&&<div style={{fontSize:fs-2,color:sc,textAlign:"center",padding:"8px 4px",fontWeight:600}}>✓ {lang==="tr"?"Girdiğiniz tüm tahliller referans aralığında.":TL("All labs you entered are within range.",lang)}</div>}
+        {clinCount===0&&!(clin.derived&&(clin.derived.fib4||clin.derived.anionGap||clin.derived.ldlCalc||clin.derived.correctedCalcium||clin.derived.nonHDL||clin.derived.bunCrRatio||clin.derived.tsat||clin.derived.eag||clin.derived.osmolality||clin.derived.correctedSodium))&&<div style={{fontSize:fs-2,color:sc,textAlign:"center",padding:"8px 4px",fontWeight:600}}>✓ {lang==="tr"?"Girdiğiniz tüm tahliller referans aralığında.":TL("All labs you entered are within range.",lang)}</div>}
         <button onClick={()=>goTo("health")} style={{...BP,width:"100%",marginTop:8,padding:"7px",background:"transparent",color:acTx,border:"1px solid "+ac+"44"}}>✏️ {lang==="tr"?"Tahlilleri Sağlık Verilerim'de düzenle":TL("Edit labs in My Health Data",lang)}</button>
       </>);
     })()}
