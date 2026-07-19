@@ -1121,7 +1121,7 @@ const REF_LIB={
   bicarbonate:{unit:"mmol/L",adult:{any:[22,29]}},
   potassium:{unit:"mmol/L",adult:{any:[3.5,5.0]}},
   calcium:{unit:"mg/dL",adult:{any:[8.4,10.2]}},
-  creatinine:{unit:"mg/dL",adult:{male:[0.70,1.30],female:[0.50,1.10]},peds:[[0.041,[0.40,1.00]],[2,[0.20,0.40]],[4,[0.30,0.50]],[12,[0.40,0.70]],[16,[0.50,0.90]]]},
+  creatinine:{unit:"mg/dL",adult:{male:[0.70,1.30],female:[0.50,1.10]},peds:[[0.041,[0.40,1.00]],[2,[0.20,0.40]],[4,[0.30,0.50]],[12,[0.40,0.70]],[16,[0.50,0.90]]],pregnancy:[0.40,0.85]},
   albumin:{unit:"g/dL",adult:{any:[3.5,5.5]}},
   alt:{unit:"U/L",adult:{any:[10,40]}},
   ast:{unit:"U/L",adult:{any:[10,40]}},
@@ -5281,7 +5281,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         : <div style={{background:dark?"#0e1620":"#f4f7fa",borderRadius:9,padding:"8px 10px",fontSize:fs-2,marginBottom:6}}>
             <div style={{color:mt,fontSize:fs-3}}>{L?"Normalize":"Normalized"}: <b style={{color:tc}}>{preview.norm.value} {preview.norm.unit}</b></div>
             {preview.cls.applicable
-              ? <div style={{marginTop:3}}><b style={{color:lvlColor(preview.cls.level)}}>{lvlLabel(preview.cls.level)}</b> <span style={{fontSize:fs-4,color:mt}}>· {preview.kind==="threshold"?(L?"tanısal karar eşiği":"diagnostic threshold"):(preview.ref&&preview.ref.source==="lab-reported"?(L?"raporun aralığı":"report range"):preview.cls.note==="paediatric"?(L?"çocuk yaş aralığı":TL("child age range",lang)):preview.cls.note==="pregnancy"?(L?"gebelik aralığı":TL("pregnancy range",lang)):(L?"dahili referans":"internal reference"))}{preview.ref&&preview.ref.ok?` (${preview.ref.low}–${preview.ref.high})`:""}</span>{preview.cls.note==="paediatric"&&<div style={{fontSize:fs-5,color:mt,marginTop:1}}>{L?"Doğrulanmış çocuk yaş aralığı kullanıldı — yine de değerlendirmeyi çocuk doktoruna bırakın.":TL("A verified child age range was used — still leave interpretation to a paediatrician.",lang)}</div>}</div>
+              ? <div style={{marginTop:3}}><b style={{color:lvlColor(preview.cls.level)}}>{lvlLabel(preview.cls.level)}</b> <span style={{fontSize:fs-4,color:mt}}>· {preview.kind==="threshold"?(L?"tanısal karar eşiği":"diagnostic threshold"):(preview.ref&&preview.ref.source==="lab-reported"?(L?"raporun aralığı":"report range"):preview.cls.note==="paediatric"?(L?"çocuk yaş aralığı":TL("child age range",lang)):preview.cls.note==="pregnancy"?(L?"gebelik aralığı":TL("pregnancy range",lang)):(L?"dahili referans":"internal reference"))}{preview.ref&&preview.ref.ok?` (${preview.ref.low}–${preview.ref.high})`:""}</span>{preview.cls.note==="paediatric"&&<div style={{fontSize:fs-5,color:mt,marginTop:1}}>{L?"Doğrulanmış çocuk yaş aralığı kullanıldı — yine de değerlendirmeyi çocuk doktoruna bırakın.":TL("A verified child age range was used — still leave interpretation to a paediatrician.",lang)}</div>}{preview.cls.note==="pregnancy"&&<div style={{fontSize:fs-5,color:mt,marginTop:1}}>{L?"Gebelik aralığı kullanıldı; kesin sınırlar trimestre göre biraz değişir — takibi doktorunuzla yapın.":TL("A pregnancy range was used; exact limits shift a little by trimester — follow up with your doctor.",lang)}</div>}</div>
               : <div style={{marginTop:3,color:"#e9a23b",fontSize:fs-3}}>⚠️ {naMsg(preview.cls.reason)}</div>}
           </div>)}
       <button onClick={save} disabled={!labForm.value} style={{...BP,width:"100%",padding:"9px",opacity:labForm.value?1:0.5}}>+ {L?"Tahlili Kaydet":"Save Lab"}</button>

@@ -8,7 +8,7 @@
 // selection is the first row where age < maxAgeYears.
 
 const REF = {
-  creatinine: { unit: "mg/dL", adult: { male: [0.70, 1.30], female: [0.50, 1.10] }, peds: [[0.041, [0.40, 1.00]], [2, [0.20, 0.40]], [4, [0.30, 0.50]], [12, [0.40, 0.70]], [16, [0.50, 0.90]]] },
+  creatinine: { unit: "mg/dL", adult: { male: [0.70, 1.30], female: [0.50, 1.10] }, peds: [[0.041, [0.40, 1.00]], [2, [0.20, 0.40]], [4, [0.30, 0.50]], [12, [0.40, 0.70]], [16, [0.50, 0.90]]], pregnancy: [0.40, 0.85] },
   hemoglobin: { unit: "g/L", adult: { male: [130, 180], female: [115, 165] }, peds: [[0.5, [100, 140]], [5, [110, 150]], [12, [115, 155]]] },
   alp: { unit: "U/L", adult: { male: [40, 129], female: [35, 104] }, peds: [[0.041, [83, 248]], [1, [122, 469]], [10, [142, 335]], [13, [129, 468]], [16, [55, 331]]] },
   alt: { unit: "U/L", adult: { any: [10, 40] } },   // deliberately no peds -> caveat
@@ -55,7 +55,8 @@ ok("17 yaş ALP -> erişkin [40,129]", (r => r.ok && r.low === 40 && r.high === 
 
 console.log("=== Uyarılar (aralık yoksa) ===");
 ok("çocuk ALT -> pediatrik uyarı", (r => !r.ok && r.reason === "paediatric-adult-range-may-not-apply")(selectReference("alt", { band: "child", ageYears: 8 })));
-ok("gebe kreatinin -> gebelik uyarısı", (r => !r.ok && r.reason === "pregnancy-adult-range-may-not-apply")(selectReference("creatinine", { band: "adult", ageYears: 30, pregnant: true, sex: "female" })));
+ok("gebe kreatinin -> gebelik uyarısı", (r => !r.ok && r.reason === "pregnancy-adult-range-may-not-apply")(selectReference("alt", { band: "adult", ageYears: 30, pregnant: true, sex: "female" })));
+ok("gebe kreatinin -> doğrulanmış gebelik aralığı [0.40,0.85]", (r => r.ok && r.low === 0.40 && r.high === 0.85 && r.note === "pregnancy")(selectReference("creatinine", { band: "adult", ageYears: 30, pregnant: true, sex: "female" })));
 
 console.log("=== Erişkin dokunulmamış ===");
 ok("erişkin erkek kreatinin [0.70,1.30]", (r => r.ok && r.low === 0.70 && r.high === 1.30)(selectReference("creatinine", { band: "adult", ageYears: 40, sex: "male" })));
