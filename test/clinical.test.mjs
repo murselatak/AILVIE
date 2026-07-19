@@ -265,6 +265,20 @@ const f4low = derived([
   { id: "c", ts: T0, test: "platelet", canonValue: 250, level: "normal" },
 ], { ageYears: 30 });
 ok("FIB-4 düşük bandı (genç, normal)", f4low.fib4 && f4low.fib4.band === "low", f4low.fib4);
+// APRI: AST 80, PLT 120 -> (80/40)/120*100 = 1.67 -> high (cirrhosis risk)
+ok("APRI hesaplandı ~1.67", f4.apri && Math.abs(f4.apri.value - 1.67) < 0.02, f4.apri);
+ok("APRI yüksek bandı (>1.0)", f4.apri && f4.apri.band === "high");
+// APRI needs NO age (unlike FIB-4) — fires even without ageYears
+const apriNoAge = derived([
+  { id: "a", ts: T0, test: "ast", canonValue: 80, level: "high" },
+  { id: "c", ts: T0, test: "platelet", canonValue: 120, level: "low" },
+], {});
+ok("APRI yaş olmadan da hesaplanır", apriNoAge.apri && apriNoAge.apri.ok, apriNoAge.apri);
+ok("APRI yaşsızken FIB-4 hesaplanmaz", !apriNoAge.fib4);
+// APRI low: normal AST, good platelets -> (20/40)/250*100 = 0.2 -> low
+ok("APRI düşük bandı (<0.5)", f4low.apri && f4low.apri.band === "low" && f4low.apri.value === 0.2, f4low.apri);
+ok("APRI trombosit yoksa hesaplanmaz", !derived([{ id: "a", ts: T0, test: "ast", canonValue: 80, level: "high" }]).apri);
+ok("APRI kaynağı", f4.apri && f4.apri.source === "apri-wai" && SOURCES["apri-wai"]);
 // age >=65 uses higher low cutoff (2.0)
 const f4old = derived([
   { id: "a", ts: T0, test: "ast", canonValue: 30, level: "normal" },

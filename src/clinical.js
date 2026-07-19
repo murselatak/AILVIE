@@ -35,6 +35,7 @@ export const SOURCES = {
   "corrected-sodium": { label: "Sodium corrected for hyperglycaemia (Katz 1973)", short: "Katz" },
   "anemia-morphology": { label: "Anaemia morphology by MCV (microcytic <80, normocytic 80–100, macrocytic >100 fL)", short: "MCV morphology" },
   "aki-kdigo": { label: "Acute kidney injury, KDIGO 2012 creatinine criteria (≥0.3 mg/dL in 48h or ≥1.5× baseline in 7d)", short: "KDIGO AKI" },
+  "apri-wai": { label: "APRI = (AST/ULN)/platelets ×100 (Wai 2003; interpretation Lin/Chou meta-analyses)", short: "APRI (Wai)" },
 };
 
 // ---------------------------------------------------------------------------
@@ -232,6 +233,21 @@ export function derived(labs, ctx = {}) {
       const lowCut = age >= 65 ? 2.0 : 1.3;
       const band = v < lowCut ? "low" : (v > 2.67 ? "high" : "indeterminate");
       out.fib4 = { ok: true, value: Math.round(v * 100) / 100, band, lowCut, highCut: 2.67, note: age >= 65 ? "age>=65-adjusted" : null, source: "fib4-sterling" };
+    }
+  }
+
+  // APRI = (AST / AST-upper-limit) / platelet[10^9/L] × 100 (Wai 2003). A second, simpler liver
+  // fibrosis marker that corroborates FIB-4 — and unlike FIB-4 it needs no age, so it can speak when
+  // FIB-4 can't. AST upper limit taken as 40 U/L (matching REF_LIB). Interpretation from Lin/Chou
+  // meta-analyses: <0.5 makes significant fibrosis unlikely, >0.7 suggests significant fibrosis, >1.0
+  // raises cirrhosis. Reported as a band, never a diagnosis.
+  if (ast && plt) {
+    const a = Number(ast.canonValue), p = Number(plt.canonValue);
+    if (a > 0 && p > 0) {
+      const AST_ULN = 40;
+      const apri = ((a / AST_ULN) / p) * 100;
+      const band = apri < 0.5 ? "low" : (apri > 1.0 ? "high" : "indeterminate");
+      out.apri = { ok: true, value: Math.round(apri * 100) / 100, band, lowCut: 0.5, highCut: 1.0, source: "apri-wai" };
     }
   }
 

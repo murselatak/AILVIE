@@ -3046,6 +3046,7 @@ const sendChat=async(text)=>{
       if(cs.drugChecks.length)parts.push("İLAÇ-TAHLİL KONTROLÜ (doktora sorulacak): "+cs.drugChecks.map(d=>`${d.drug}×${d.test||("eGFR "+d.egfr)} (${d.severity})`).join(", "));
       if(cs.derived.ldlCalc&&cs.derived.ldlCalc.ok)parts.push("HESAPLANAN: LDL ≈ "+cs.derived.ldlCalc.value+" mg/dL (Friedewald)");
       if(cs.derived.fib4&&cs.derived.fib4.ok)parts.push("HESAPLANAN: FIB-4 = "+cs.derived.fib4.value+" ("+(cs.derived.fib4.band==="high"?"ileri karaciğer fibrozu olasılığı yüksek":cs.derived.fib4.band==="low"?"düşük olasılık":"belirsiz aralık")+", karaciğer için; teşhis değil)");
+      if(cs.derived.apri&&cs.derived.apri.ok)parts.push("HESAPLANAN: APRI = "+cs.derived.apri.value+" ("+(cs.derived.apri.band==="high"?"siroz olasılığını düşündürebilir":cs.derived.apri.band==="low"?"anlamlı fibroz olası değil":"belirsiz aralık")+", karaciğer fibrozu; FIB-4'ü destekler, yaş gerekmez; teşhis değil)");
       if(cs.derived.anionGap&&cs.derived.anionGap.ok)parts.push("HESAPLANAN: Anyon açığı = "+cs.derived.anionGap.value+" mmol/L"+(cs.derived.anionGap.corrected!=null?" (albümine göre düzeltilmiş: "+cs.derived.anionGap.corrected+")":""));
       if(cs.derived.correctedCalcium&&cs.derived.correctedCalcium.ok)parts.push("HESAPLANAN: Düzeltilmiş kalsiyum = "+cs.derived.correctedCalcium.value+" mg/dL (albümine göre; kesinlik gerekirse iyonize kalsiyum tercih edilir)");
       if(cs.derived.nonHDL&&cs.derived.nonHDL.ok)parts.push("HESAPLANAN: Non-HDL kolesterol = "+cs.derived.nonHDL.value+" mg/dL (hedef genelde <130)");
@@ -5853,6 +5854,10 @@ const renderPCard=()=>{
             const bandTxt=d.fib4.band==="high"?(lang==="tr"?"ileri fibroz olasılığı yüksek":TL("high probability of advanced fibrosis",lang)):d.fib4.band==="low"?(lang==="tr"?"düşük olasılık":TL("low probability",lang)):(lang==="tr"?"belirsiz aralık":TL("indeterminate range",lang));
             items.push({name:"FIB-4",val:String(d.fib4.value),sub:(lang==="tr"?"karaciğer fibrozu · ":TL("liver fibrosis · ",lang))+bandTxt,tone:d.fib4.band==="high"?"#e9a23b":undefined,source:d.fib4.source});
           }
+          if(d.apri&&d.apri.ok){
+            const apriTxt=d.apri.band==="high"?(lang==="tr"?"siroz olasılığını düşündürebilir":TL("may raise the possibility of cirrhosis",lang)):d.apri.band==="low"?(lang==="tr"?"anlamlı fibroz olası değil":TL("significant fibrosis unlikely",lang)):(lang==="tr"?"belirsiz aralık":TL("indeterminate range",lang));
+            items.push({name:"APRI",val:String(d.apri.value),sub:(lang==="tr"?"karaciğer fibrozu (yaş gerekmez) · ":TL("liver fibrosis (no age needed) · ",lang))+apriTxt,tone:d.apri.band==="high"?"#e9a23b":undefined,source:d.apri.source});
+          }
           if(d.anionGap&&d.anionGap.ok){
             items.push({name:lang==="tr"?"Anyon açığı":TL("Anion gap",lang),val:d.anionGap.value+" mmol/L",sub:d.anionGap.corrected!=null?(lang==="tr"?"albümine göre düzeltilmiş: ":TL("albumin-corrected: ",lang))+d.anionGap.corrected:null,source:d.anionGap.source});
           }
@@ -5893,7 +5898,7 @@ const renderPCard=()=>{
             <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Bu değerler tahlillerinizden hesaplanmıştır; teşhis değildir, doktorunuzla değerlendirin.":TL("These are computed from your labs; not a diagnosis — review with your doctor.",lang)}</div>
           </div>;
         })()}
-        {clinCount===0&&!(clin.derived&&(clin.derived.fib4||clin.derived.anionGap||clin.derived.ldlCalc||clin.derived.correctedCalcium||clin.derived.nonHDL||clin.derived.bunCrRatio||clin.derived.tsat||clin.derived.eag||clin.derived.osmolality||clin.derived.correctedSodium))&&<div style={{fontSize:fs-2,color:sc,textAlign:"center",padding:"8px 4px",fontWeight:600}}>✓ {lang==="tr"?"Girdiğiniz tüm tahliller referans aralığında.":TL("All labs you entered are within range.",lang)}</div>}
+        {clinCount===0&&!(clin.derived&&(clin.derived.fib4||clin.derived.anionGap||clin.derived.ldlCalc||clin.derived.correctedCalcium||clin.derived.nonHDL||clin.derived.bunCrRatio||clin.derived.tsat||clin.derived.eag||clin.derived.osmolality||clin.derived.correctedSodium||clin.derived.apri))&&<div style={{fontSize:fs-2,color:sc,textAlign:"center",padding:"8px 4px",fontWeight:600}}>✓ {lang==="tr"?"Girdiğiniz tüm tahliller referans aralığında.":TL("All labs you entered are within range.",lang)}</div>}
         <button onClick={()=>goTo("health")} style={{...BP,width:"100%",marginTop:8,padding:"7px",background:"transparent",color:acTx,border:"1px solid "+ac+"44"}}>✏️ {lang==="tr"?"Tahlilleri Sağlık Verilerim'de düzenle":TL("Edit labs in My Health Data",lang)}</button>
       </>);
     })()}
