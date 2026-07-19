@@ -441,6 +441,38 @@ ok("normal glukozda düzeltme yapılmaz", !derived([
 ]).correctedSodium);
 ok("yeni üç türevin kaynağı SOURCES'ta", ["eag","osmolality","corrected-sodium"].every(k => SOURCES[k]));
 
+console.log("=== 6h) FENa (sodyum fraksiyonel atılımı) ===");
+// UNa 20, PCr 2.0, PNa 140, UCr 100 -> (20*2)/(140*100)*100 = 0.29% -> prerenal
+const fenaD = derived([
+  { id: "a", ts: T0, test: "urineSodium", canonValue: 20 },
+  { id: "b", ts: T0, test: "urineCreatinine", canonValue: 100 },
+  { id: "c", ts: T0, test: "sodium", canonValue: 140 },
+  { id: "d", ts: T0, test: "creatinine", canonValue: 2.0 },
+], {});
+ok("FENa = 0.29%", fenaD.fena && fenaD.fena.value === 0.29, fenaD.fena);
+ok("FENa prerenal bandı (<1%)", fenaD.fena && fenaD.fena.band === "prerenal");
+// intrinsic: UNa 80, PCr 2.0, PNa 140, UCr 40 -> (80*2)/(140*40)*100 = 2.86% -> intrinsic
+const fenaI = derived([
+  { id: "a", ts: T0, test: "urineSodium", canonValue: 80 },
+  { id: "b", ts: T0, test: "urineCreatinine", canonValue: 40 },
+  { id: "c", ts: T0, test: "sodium", canonValue: 140 },
+  { id: "d", ts: T0, test: "creatinine", canonValue: 2.0 },
+], {});
+ok("FENa intrinsik bandı (>2%)", fenaI.fena && fenaI.fena.band === "intrinsic", fenaI.fena);
+// diuretic makes it unreliable -> caveat flips
+const fenaDiur = derived([
+  { id: "a", ts: T0, test: "urineSodium", canonValue: 20 },
+  { id: "b", ts: T0, test: "urineCreatinine", canonValue: 100 },
+  { id: "c", ts: T0, test: "sodium", canonValue: 140 },
+  { id: "d", ts: T0, test: "creatinine", canonValue: 2.0 },
+], { onDiuretic: true });
+ok("diüretikte güvenilmezlik uyarısı", fenaDiur.fena && fenaDiur.fena.caveat === "fena-diuretic-unreliable", fenaDiur.fena);
+ok("idrar değerleri yoksa FENa hesaplanmaz", !derived([
+  { id: "c", ts: T0, test: "sodium", canonValue: 140 },
+  { id: "d", ts: T0, test: "creatinine", canonValue: 2.0 },
+], {}).fena);
+ok("FENa kaynağı", fenaD.fena && fenaD.fena.source === "fena" && SOURCES["fena"]);
+
 console.log("=== 7) Ozet ===");
 const sum = clinicalSummary(
   [...ironLabs, { id: "k", ts: T0 + D, test: "potassium", canonValue: 7.2, level: "critical-high" }],

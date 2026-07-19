@@ -37,6 +37,7 @@ export const SOURCES = {
   "aki-kdigo": { label: "Acute kidney injury, KDIGO 2012 creatinine criteria (≥0.3 mg/dL in 48h or ≥1.5× baseline in 7d)", short: "KDIGO AKI" },
   "apri-wai": { label: "APRI = (AST/ULN)/platelets ×100 (Wai 2003; interpretation Lin/Chou meta-analyses)", short: "APRI (Wai)" },
   "globulin-ag": { label: "Globulin = total protein − albumin; A/G ratio = albumin / globulin (URMC, Cleveland Clinic)", short: "A/G ratio" },
+  "fena": { label: "Fractional excretion of sodium (Espinel 1976 / Miller 1978): (UNa×PCr)/(PNa×UCr)×100", short: "FENa" },
 };
 
 // ---------------------------------------------------------------------------
@@ -386,6 +387,30 @@ export function derived(labs, ctx = {}) {
     if (isFinite(nav) && isFinite(gv) && gv > 100) {
       const corr = nav + 1.6 * (gv - 100) / 100;
       out.correctedSodium = { ok: true, value: Math.round(corr * 10) / 10, unit: "mmol/L", measured: nav, caveat: "estimate-not-true-value", source: "corrected-sodium" };
+    }
+  }
+
+  // Fractional excretion of sodium (FENa) = (UNa × PCr) / (PNa × UCr) × 100. The classic tool for
+  // splitting the two commonest causes of acute kidney injury: prerenal (the kidney is fine but
+  // under-perfused, so it avidly holds sodium → FENa <1%) vs intrinsic/ATN (damaged tubules can't
+  // hold sodium → FENa >2%). This directly complements the AKI alert. Needs four values, all paired
+  // by unit (Na in mmol/L, creatinine in mg/dL). HONEST LIMITS encoded as caveats: diuretics falsely
+  // raise it (use FEUrea then), and it's unreliable in CKD and can be low despite hypovolaemia in
+  // cirrhosis/heart failure — so it's a pointer, never a verdict.
+  const uNa = latestOf(labs, "urineSodium"), uCr = latestOf(labs, "urineCreatinine");
+  const pNa = latestOf(labs, "sodium"), pCr = latestOf(labs, "creatinine");
+  if (uNa && uCr && pNa && pCr) {
+    const un = Number(uNa.canonValue), uc = Number(uCr.canonValue), pn = Number(pNa.canonValue), pc = Number(pCr.canonValue);
+    if ([un, uc, pn, pc].every(isFinite) && pn > 0 && uc > 0) {
+      const fena = ((un * pc) / (pn * uc)) * 100;
+      const band = fena < 1 ? "prerenal" : (fena > 2 ? "intrinsic" : "indeterminate");
+      out.fena = {
+        ok: true,
+        value: Math.round(fena * 100) / 100,
+        band,
+        caveat: ctx.onDiuretic ? "fena-diuretic-unreliable" : "fena-context",
+        source: "fena",
+      };
     }
   }
 

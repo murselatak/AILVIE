@@ -877,7 +877,7 @@ const syncPull=async()=>{
   }finally{setSyncBusy(false);}
 };
 const patCtx=()=>{
-  const c={band:ageBandOf(pat.birthDate),ageYears:ageYearsFrom(pat.birthDate),pregnant:!!pat.pregnant,sex:pat.sex||"",onAnticoag:!!pat.onAnticoag};
+  const c={band:ageBandOf(pat.birthDate),ageYears:ageYearsFrom(pat.birthDate),pregnant:!!pat.pregnant,sex:pat.sex||"",onAnticoag:!!pat.onAnticoag,onDiuretic:(meds||[]).some(m=>/furosemid|lasix|hidroklorotiyazid|hydrochlorothiazide|hctz|spironolakton|spironolactone|torasemid|torsemide|bumetanid|bumetanide|indapamid|indapamide|klortalidon|chlorthalidone|diüretik|diuretic/i.test(String((m&&m.name)||"")))};
   // eGFR from the most recent creatinine, so drug-vs-lab rules (e.g. metformin at low eGFR) can fire.
   try{
     let cr=null;for(const r of labs||[]){if(r&&r.test==="creatinine"&&isFinite(Number(r.canonValue))&&(!cr||r.ts>cr.ts))cr=r;}
@@ -1088,6 +1088,7 @@ const UNIT_CONV={
   tibc:{canon:"ug/dL",f:{"ug/dL":1,"µg/dL":1,"umol/L":5.587}},
   bun:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":2.8}},
   iron:{canon:"ug/dL",f:{"ug/dL":1,"µg/dL":1,"umol/L":5.587}},
+  urineSodium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},urineCreatinine:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":1/0.0884}},
   esr:{canon:"mm/h",f:{"mm/h":1,"mm/hr":1}},
   insulin:{canon:"uIU/mL",f:{"uIU/mL":1,"µIU/mL":1,"mIU/L":1,"pmol/L":1/6.945}},
   uacr:{canon:"mg/g",f:{"mg/g":1,"mg/mmol":8.84}},
@@ -1442,6 +1443,8 @@ const LAB_TESTS=[
   {k:"phosphorus",tr:"Fosfor",en:"Phosphorus",units:["mg/dL","mmol/L"],sys:"kidney"},
   {k:"tibc",tr:"TIBC (Demir Bağlama)",en:"TIBC",units:["ug/dL","umol/L"],sys:"hematology"},
   {k:"iron",tr:"Serum Demiri",en:"Serum Iron",units:["ug/dL","umol/L"],sys:"hematology"},
+  {k:"urineSodium",tr:"İdrar Sodyumu",en:"Urine Sodium",units:["mmol/L","mEq/L"],sys:"kidney"},
+  {k:"urineCreatinine",tr:"İdrar Kreatinini",en:"Urine Creatinine",units:["mg/dL"],sys:"kidney"},
   {k:"bun",tr:"BUN (Kan Üresi)",en:"BUN (Blood Urea)",units:["mg/dL","mmol/L"],sys:"kidney"},
   {k:"esr",tr:"Sedimentasyon (ESR)",en:"ESR",units:["mm/h"],sys:"inflammation"},
   {k:"insulin",tr:"İnsülin (açlık)",en:"Insulin (fasting)",units:["uIU/mL","pmol/L"],sys:"glycemic"},
@@ -3051,6 +3054,7 @@ const sendChat=async(text)=>{
       if(cs.derived.fib4&&cs.derived.fib4.ok)parts.push("HESAPLANAN: FIB-4 = "+cs.derived.fib4.value+" ("+(cs.derived.fib4.band==="high"?"ileri karaciğer fibrozu olasılığı yüksek":cs.derived.fib4.band==="low"?"düşük olasılık":"belirsiz aralık")+", karaciğer için; teşhis değil)");
       if(cs.derived.apri&&cs.derived.apri.ok)parts.push("HESAPLANAN: APRI = "+cs.derived.apri.value+" ("+(cs.derived.apri.band==="high"?"siroz olasılığını düşündürebilir":cs.derived.apri.band==="low"?"anlamlı fibroz olası değil":"belirsiz aralık")+", karaciğer fibrozu; FIB-4'ü destekler, yaş gerekmez; teşhis değil)");
       if(cs.derived.globulinAG&&cs.derived.globulinAG.ok)parts.push("HESAPLANAN: A/G oranı = "+cs.derived.globulinAG.agRatio+" (globulin "+cs.derived.globulinAG.globulin+" g/dL; "+(cs.derived.globulinAG.band==="low"?"düşük — kronik iltihap/otoimmün/karaciğer/miyelom düşündürebilir":cs.derived.globulinAG.band==="high"?"yüksek — genelde düşük globulin, ör. dehidratasyon":"normal")+"). Bu bir bayraktır, teşhis değil; albümin ve globulinle birlikte yorumla.");
+      if(cs.derived.fena&&cs.derived.fena.ok)parts.push("HESAPLANAN: FENa = "+cs.derived.fena.value+"% ("+(cs.derived.fena.band==="prerenal"?"prerenal örüntü, böbrek sodyumu tutuyor — sıvı kaybı/kalp yetmezliği":cs.derived.fena.band==="intrinsic"?"intrinsik/ATN örüntüsü, tübül hasarı":"belirsiz %1–2")+"). AKI ayrımına yardımcı; "+(cs.derived.fena.caveat==="fena-diuretic-unreliable"?"DİKKAT: idrar söktürücü FENa'yı yanıltıcı yükseltir, güvenilmez olabilir (FEUrea tercih edilebilir). ":"")+"bir ipucudur, teşhis değil; klinikle birlikte yorumla.");
       if(cs.derived.anionGap&&cs.derived.anionGap.ok)parts.push("HESAPLANAN: Anyon açığı = "+cs.derived.anionGap.value+" mmol/L"+(cs.derived.anionGap.corrected!=null?" (albümine göre düzeltilmiş: "+cs.derived.anionGap.corrected+")":""));
       if(cs.derived.correctedCalcium&&cs.derived.correctedCalcium.ok)parts.push("HESAPLANAN: Düzeltilmiş kalsiyum = "+cs.derived.correctedCalcium.value+" mg/dL (albümine göre; kesinlik gerekirse iyonize kalsiyum tercih edilir)");
       if(cs.derived.nonHDL&&cs.derived.nonHDL.ok)parts.push("HESAPLANAN: Non-HDL kolesterol = "+cs.derived.nonHDL.value+" mg/dL (hedef genelde <130)");
@@ -5892,6 +5896,11 @@ const renderPCard=()=>{
           if(d.correctedSodium&&d.correctedSodium.ok){
             items.push({name:lang==="tr"?"Düzeltilmiş sodyum":TL("Corrected sodium",lang),val:d.correctedSodium.value+" mmol/L",sub:(lang==="tr"?"yüksek şekere göre · ölçülen ":TL("adjusted for high glucose · measured ",lang))+d.correctedSodium.measured,source:d.correctedSodium.source});
           }
+          if(d.fena&&d.fena.ok){
+            const feTxt=d.fena.band==="prerenal"?(lang==="tr"?"prerenal örüntü — böbrek sodyumu tutuyor (ör. sıvı kaybı, kalp yetmezliği)":TL("prerenal pattern — kidney is holding sodium (e.g. volume loss, heart failure)",lang)):d.fena.band==="intrinsic"?(lang==="tr"?"intrinsik/ATN örüntüsü — tübüller sodyumu tutamıyor":TL("intrinsic/ATN pattern — tubules can't hold sodium",lang)):(lang==="tr"?"belirsiz aralık (%1–2)":TL("indeterminate range (1–2%)",lang));
+            const feCav=d.fena.caveat==="fena-diuretic-unreliable"?(lang==="tr"?" · dikkat: idrar söktürücü FENa'yı yanıltıcı yükseltir, güvenilmez olabilir":TL(" · caution: a diuretic falsely raises FENa, may be unreliable",lang)):(lang==="tr"?" · bir ipucudur, klinikle birlikte yorumlanır":TL(" · a pointer, interpret with the clinical picture",lang));
+            items.push({name:"FENa",val:d.fena.value+"%",sub:feTxt+feCav,tone:d.fena.band==="intrinsic"?"#e9a23b":undefined,source:d.fena.source});
+          }
           if(!items.length)return null;
           return <div style={{marginBottom:6}}>
             <div style={{fontSize:fs-2,fontWeight:700,color:acTx,marginBottom:4}}>🧮 {lang==="tr"?"Hesaplanan değerler":TL("Calculated values",lang)}</div>
@@ -5906,7 +5915,7 @@ const renderPCard=()=>{
             <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"Bu değerler tahlillerinizden hesaplanmıştır; teşhis değildir, doktorunuzla değerlendirin.":TL("These are computed from your labs; not a diagnosis — review with your doctor.",lang)}</div>
           </div>;
         })()}
-        {clinCount===0&&!(clin.derived&&(clin.derived.fib4||clin.derived.anionGap||clin.derived.ldlCalc||clin.derived.correctedCalcium||clin.derived.nonHDL||clin.derived.bunCrRatio||clin.derived.tsat||clin.derived.eag||clin.derived.osmolality||clin.derived.correctedSodium||clin.derived.apri||clin.derived.globulinAG))&&<div style={{fontSize:fs-2,color:sc,textAlign:"center",padding:"8px 4px",fontWeight:600}}>✓ {lang==="tr"?"Girdiğiniz tüm tahliller referans aralığında.":TL("All labs you entered are within range.",lang)}</div>}
+        {clinCount===0&&!(clin.derived&&(clin.derived.fib4||clin.derived.anionGap||clin.derived.ldlCalc||clin.derived.correctedCalcium||clin.derived.nonHDL||clin.derived.bunCrRatio||clin.derived.tsat||clin.derived.eag||clin.derived.osmolality||clin.derived.correctedSodium||clin.derived.apri||clin.derived.globulinAG||clin.derived.fena))&&<div style={{fontSize:fs-2,color:sc,textAlign:"center",padding:"8px 4px",fontWeight:600}}>✓ {lang==="tr"?"Girdiğiniz tüm tahliller referans aralığında.":TL("All labs you entered are within range.",lang)}</div>}
         <button onClick={()=>goTo("health")} style={{...BP,width:"100%",marginTop:8,padding:"7px",background:"transparent",color:acTx,border:"1px solid "+ac+"44"}}>✏️ {lang==="tr"?"Tahlilleri Sağlık Verilerim'de düzenle":TL("Edit labs in My Health Data",lang)}</button>
       </>);
     })()}
