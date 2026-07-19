@@ -1,4 +1,4 @@
-import { CRITICAL, SOURCES, criticalFor, trendFor, patterns, drugLabChecks, derived, dialysisAdequacy, clinicalSummary } from "../src/clinical.js";
+import { CRITICAL, SOURCES, criticalFor, trendFor, trendAlert, patterns, drugLabChecks, derived, dialysisAdequacy, clinicalSummary } from "../src/clinical.js";
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra) => { if (cond) { pass++; } else { fail++; console.log("  ✗ " + name + (extra ? "  → " + JSON.stringify(extra) : "")); } };
@@ -56,6 +56,47 @@ ok("duz trend tespit", fl.ok && fl.dir === "flat", fl);
 const few = trendFor(mk("alt", [30, 40]), "alt");
 ok("2 nokta -> trend yok", !few.ok && few.reason === "not-enough-points", few);
 ok("bos veri -> trend yok", !trendFor([], "alt").ok);
+
+console.log("=== 3b) AKI (trend hızlanma) ===");
+const now = Date.now();
+// 48h absolute rise >=0.3: 1.0 -> 1.4 over 24h
+const aki48 = trendAlert([
+  { id: "a", ts: now - 24 * 3600 * 1000, test: "creatinine", canonValue: 1.0, canonUnit: "mg/dL" },
+  { id: "b", ts: now, test: "creatinine", canonValue: 1.4, canonUnit: "mg/dL" },
+]);
+ok("AKI: 48s'de ≥0.3 artış yakalandı", aki48.length === 1 && aki48[0].id === "aki-rising-creatinine", aki48);
+ok("48s mutlak artış kriteri", aki48[0].criterion === "abs-48h" && aki48[0].absRise === 0.4);
+// 7-day ratio >=1.5: 1.0 -> 1.8 over 5 days (ratio 1.8 -> stage 1)
+const aki7 = trendAlert([
+  { id: "a", ts: now - 5 * D, test: "creatinine", canonValue: 1.0, canonUnit: "mg/dL" },
+  { id: "b", ts: now, test: "creatinine", canonValue: 1.8, canonUnit: "mg/dL" },
+]);
+ok("AKI: 7g'de ≥1.5× yakalandı", aki7.length === 1 && aki7[0].ratio === 1.8, aki7);
+ok("evre 1 (1.5–1.9×)", aki7[0].stage === 1);
+// stage 3: ratio >=3
+const aki3 = trendAlert([
+  { id: "a", ts: now - 3 * D, test: "creatinine", canonValue: 1.0, canonUnit: "mg/dL" },
+  { id: "b", ts: now, test: "creatinine", canonValue: 3.5, canonUnit: "mg/dL" },
+]);
+ok("evre 3 (≥3×)", aki3[0].stage === 3, aki3);
+// stage 3 by absolute >=4.0
+const aki4 = trendAlert([
+  { id: "a", ts: now - 2 * D, test: "creatinine", canonValue: 3.0, canonUnit: "mg/dL" },
+  { id: "b", ts: now, test: "creatinine", canonValue: 4.2, canonUnit: "mg/dL" },
+]);
+ok("evre 3 (≥4.0 mg/dL)", aki4[0].stage === 3, aki4);
+// stable creatinine -> no alert
+ok("stabil kreatinin → AKI uyarısı yok", trendAlert([
+  { id: "a", ts: now - 5 * D, test: "creatinine", canonValue: 1.0, canonUnit: "mg/dL" },
+  { id: "b", ts: now, test: "creatinine", canonValue: 1.05, canonUnit: "mg/dL" },
+]).length === 0);
+// old rise outside 7d window -> no alert
+ok("7 günden eski yükseliş → uyarı yok", trendAlert([
+  { id: "a", ts: now - 30 * D, test: "creatinine", canonValue: 1.0, canonUnit: "mg/dL" },
+  { id: "b", ts: now, test: "creatinine", canonValue: 2.0, canonUnit: "mg/dL" },
+]).length === 0);
+ok("tek değer → AKI uyarısı yok", trendAlert([{ id: "a", ts: now, test: "creatinine", canonValue: 3.0, canonUnit: "mg/dL" }]).length === 0);
+ok("AKI kaynağı SOURCES'ta", aki48[0].source === "aki-kdigo" && SOURCES["aki-kdigo"]);
 // direction carries no judgement: rising Hb and rising creatinine both report "up"
 const hbUp = trendFor(mk("hemoglobin", [90, 110, 135]), "hemoglobin");
 ok("yon yargi tasimaz (Hb yukselisi de 'up')", hbUp.ok && hbUp.dir === "up");

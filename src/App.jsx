@@ -3036,6 +3036,13 @@ const sendChat=async(text)=>{
           if(bits.length)parts.push("HESAPLANAN: Diyaliz yeterliliği — "+bits.join(", ")+" (teşhis değil; diyaliz ekibiyle değerlendir)");
         }
       }catch(e){}
+      try{
+        if(cs.alerts&&cs.alerts.length){
+          cs.alerts.forEach(a=>{
+            if(a.id==="aki-rising-creatinine")parts.unshift("⚠️ ACİL OLABİLİR — Kreatinin hızlı yükseliyor: son "+a.latest+(a.baseline!=null?", önceki "+a.baseline:"")+" mg/dL"+(a.ratio!=null?" ("+a.ratio+"×)":"")+". KDIGO'ya göre akut böbrek hasarı (AKI, ~evre "+a.stage+") ölçütlerini karşılayabilir. Teşhis değil; sıvı değişimi vb. de benzer görünebilir ama kişiyi vakit kaybetmeden hekime/acile yönlendir.");
+          });
+        }
+      }catch(e){}
       if(parts.length)clinStr="\n\nTAHLİL DEĞERLENDİRMESİ (yayınlanmış kurallara göre; TEŞHİS DEĞİL — kişiyi doğru soruyla doktora yönlendir):\n"+parts.join("\n")+"\n";
     }catch(e){}
     const history=newMsgs.slice(-10).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
@@ -5751,11 +5758,21 @@ const renderPCard=()=>{
     {/* Clinical read of the labs — placed first among the panels because a critical value must be
         findable fast. Only rendered when there is something to say. */}
     {hasLabs&&(()=>{
-      const hasCrit=clin.criticals.length>0;
+      const hasAlert=clin.alerts&&clin.alerts.length>0;
+      const hasCrit=clin.criticals.length>0||hasAlert;
       const tone=hasCrit?dg:(abnormals.length||clin.drugChecks.length)?"#e9a23b":sc;
-      const badge=hasCrit?(lang==="tr"?clin.criticals.length+" kritik ⚠️":clin.criticals.length+" critical ⚠️"):clinCount>0?String(clinCount):(lang==="tr"?"tümü normal ✓":TL("all normal ✓",lang));
+      const badge=hasAlert?(lang==="tr"?"AKI? 🚨":TL("AKI? 🚨",lang)):clin.criticals.length>0?(lang==="tr"?clin.criticals.length+" kritik ⚠️":clin.criticals.length+" critical ⚠️"):clinCount>0?String(clinCount):(lang==="tr"?"tümü normal ✓":TL("all normal ✓",lang));
       return panel("clin","🩺",lang==="tr"?"Tahlil Değerlendirmesi":TL("Lab Assessment",lang),badge,tone,<>
         <div style={{fontSize:fs-3,color:mt,marginBottom:8,lineHeight:1.45}}>{lang==="tr"?"Yayınlanmış kurallara göre okunmuştur — teşhis değildir. Bunları doktorunuza sorun.":TL("Read against published rules — this is not a diagnosis. Take these to your doctor.",lang)}</div>
+        {clin.alerts&&clin.alerts.length>0&&<div style={{marginBottom:10}}>
+          {clin.alerts.map((a,i)=><div key={i} style={{padding:"9px 11px",borderRadius:8,background:dg+"20",border:"1.5px solid "+dg+"88",marginBottom:6}}>
+            <div style={{fontSize:fs-1,fontWeight:800,color:dg}}>🚨 {lang==="tr"?"Kreatinin hızla yükseliyor olabilir":TL("Creatinine may be rising quickly",lang)}</div>
+            <div style={{fontSize:fs-3,marginTop:3,lineHeight:1.45}}>{(lang==="tr"?"Son değer ":TL("Latest ",lang))+a.latest+(a.baseline!=null?(lang==="tr"?" · önceki ":TL(" · earlier ",lang))+a.baseline:"")+" mg/dL"+(a.ratio!=null?" · "+a.ratio+"×":"")+(a.absRise!=null?" · +"+a.absRise:"")}</div>
+            <div style={{fontSize:fs-3,marginTop:3,lineHeight:1.45,color:tc}}>{lang==="tr"?"Kreatininde bu hızda bir yükseliş akut böbrek hasarı (AKI) ölçütlerini karşılayabilir. Bu bir teşhis değildir; sıvı değişimi veya başka nedenler de benzer görünebilir — ama vakit kaybetmeden hekiminize danışmanız önerilir.":TL("A rise this fast can meet acute kidney injury (AKI) criteria. This is not a diagnosis — fluid shifts and other causes can look similar — but prompt review by your doctor is advised.",lang)}</div>
+            <div style={{fontSize:fs-4,color:mt,marginTop:2}}>{lang==="tr"?"KDIGO evresi ~":TL("KDIGO stage ~",lang)}{a.stage}</div>
+            <SrcTag k={a.source}/>
+          </div>)}
+        </div>}
         {clin.criticals.length>0&&<div style={{marginBottom:10}}>
           <div style={{fontSize:fs-2,fontWeight:700,color:dg,marginBottom:4}}>⚠️ {lang==="tr"?"Kritik değerler — acil":TL("Critical values — urgent",lang)}</div>
           {clin.criticals.map((c,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",gap:8,padding:"6px 9px",borderRadius:7,background:dg+"18",border:"1px solid "+dg+"55",marginBottom:4}}>

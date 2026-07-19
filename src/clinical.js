@@ -34,6 +34,7 @@ export const SOURCES = {
   "osmolality": { label: "Calculated serum osmolality 2×Na + glucose/18 + BUN/2.8 (ADA/AAP)", short: "Calc. osmolality" },
   "corrected-sodium": { label: "Sodium corrected for hyperglycaemia (Katz 1973)", short: "Katz" },
   "anemia-morphology": { label: "Anaemia morphology by MCV (microcytic <80, normocytic 80–100, macrocytic >100 fL)", short: "MCV morphology" },
+  "aki-kdigo": { label: "Acute kidney injury, KDIGO 2012 creatinine criteria (≥0.3 mg/dL in 48h or ≥1.5× baseline in 7d)", short: "KDIGO AKI" },
 };
 
 // ---------------------------------------------------------------------------
@@ -118,6 +119,69 @@ export function trendFor(labs, test, opts = {}) {
     last: { v: ys[n - 1], ts: rows[n - 1].ts },
     unit: rows[n - 1].canonUnit || null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Rate-of-change alert: acute kidney injury (AKI) from rising creatinine
+// ---------------------------------------------------------------------------
+// A single creatinine that's "high" is one thing; a creatinine that has JUMPED is a different, more
+// urgent thing. KDIGO 2012 defines AKI on the RATE of rise, not the absolute value:
+//   * an increase of >=0.3 mg/dL within 48 hours, OR
+//   * an increase to >=1.5x the baseline within 7 days.
+// This walks the creatinine history (canonical mg/dL) and reports the strongest KDIGO criterion met,
+// with the stage from the ratio. It is deliberately conservative and honest about its limits: a
+// slow rise from a fluid change or a rehydration rebound can mimic this, and in CKD the percentage
+// criterion can overstate; so it is surfaced as "warrants prompt review", not a diagnosis, and it
+// needs at least two dated creatinine values to say anything at all.
+export function trendAlert(labs) {
+  const out = [];
+  const cr = (labs || [])
+    .filter(r => r && r.test === "creatinine" && r.canonValue != null && r.ts != null)
+    .map(r => ({ v: Number(r.canonValue), ts: Number(r.ts) }))
+    .filter(r => isFinite(r.v) && isFinite(r.ts) && r.v > 0)
+    .sort((a, b) => a.ts - b.ts);
+  if (cr.length < 2) return out;
+
+  const latest = cr[cr.length - 1];
+  const H48 = 48 * 3600 * 1000, D7 = 7 * 24 * 3600 * 1000;
+  let crit = null;   // "abs-48h" | "ratio-7d"
+  let baseline = null, ratio = null, absRise = null;
+
+  // 48-hour absolute rise: compare latest with the lowest value within the preceding 48h.
+  const win48 = cr.filter(r => latest.ts - r.ts <= H48 && r.ts < latest.ts);
+  if (win48.length) {
+    const low48 = Math.min(...win48.map(r => r.v));
+    if (latest.v - low48 >= 0.3) { crit = "abs-48h"; absRise = Math.round((latest.v - low48) * 100) / 100; baseline = low48; }
+  }
+  // 7-day ratio: compare latest with the lowest value within the preceding 7 days.
+  const win7 = cr.filter(r => latest.ts - r.ts <= D7 && r.ts < latest.ts);
+  if (win7.length) {
+    const low7 = Math.min(...win7.map(r => r.v));
+    if (low7 > 0 && latest.v / low7 >= 1.5) {
+      const rr = latest.v / low7;
+      // Prefer the ratio criterion label when the ratio is the stronger signal (or 48h didn't fire).
+      if (!crit || rr >= 1.5) { crit = crit === "abs-48h" && rr < 1.5 ? crit : "ratio-7d"; ratio = Math.round(rr * 100) / 100; if (baseline == null) baseline = low7; }
+    }
+  }
+  if (!crit) return out;
+
+  // Stage from the ratio when we have it (KDIGO: 1 = 1.5–1.9x, 2 = 2.0–2.9x, 3 = >=3x or >=4.0 mg/dL).
+  let stage = 1;
+  if (ratio != null) stage = ratio >= 3.0 ? 3 : (ratio >= 2.0 ? 2 : 1);
+  if (latest.v >= 4.0) stage = 3;
+
+  out.push({
+    id: "aki-rising-creatinine",
+    test: "creatinine",
+    criterion: crit,
+    stage,
+    baseline: baseline == null ? null : Math.round(baseline * 100) / 100,
+    latest: Math.round(latest.v * 100) / 100,
+    ratio,
+    absRise,
+    source: "aki-kdigo",
+  });
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -598,5 +662,6 @@ export function clinicalSummary(labs, meds, ctx = {}) {
     patterns: patterns(labs, ctx),
     drugChecks: drugLabChecks(meds, labs, ctx),
     derived: derived(labs, ctx),
+    alerts: trendAlert(labs),
   };
 }
