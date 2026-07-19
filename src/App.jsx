@@ -1067,6 +1067,7 @@ const UNIT_CONV={
   triglyceride:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":88.57}},
   creatinine:{canon:"mg/dL",f:{"mg/dL":1,"umol/L":1/88.4,"µmol/L":1/88.4}},
   hemoglobin:{canon:"g/L",f:{"g/L":1,"g/l":1,"g/dL":10,"g/dl":10,"gr/dL":10,"g%":10}},
+  mcv:{canon:"fL",f:{"fL":1,"um3":1}},
   crp:{canon:"mg/L",f:{"mg/L":1,"mg/l":1,"mg/dL":10,"mg/dl":10,"nmol/L":1/9.524}},
   bilirubin:{canon:"mg/dL",f:{"mg/dL":1,"umol/L":1/17.1,"µmol/L":1/17.1}},
   calcium:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":4.008}},
@@ -1113,6 +1114,7 @@ const normalizeUnit=(test,value,unit)=>{
 // NOTE: these are REFERENCE INTERVALS, not diagnostic thresholds. Pediatric = intentionally absent -> gated.
 const REF_LIB={
   hemoglobin:{unit:"g/L",adult:{male:[130,180],female:[115,165]}},
+  mcv:{unit:"fL",adult:{any:[80,100]}},
   platelet:{unit:"x10^9/L",adult:{any:[140,400]}},
   sodium:{unit:"mmol/L",adult:{any:[135,145]}},
   chloride:{unit:"mmol/L",adult:{any:[98,107]}},
@@ -1387,6 +1389,7 @@ const LAB_TESTS=[
   {k:"glucose",tr:"Glukoz",en:"Glucose",units:["mg/dL","mmol/L"],sys:"glycemic"},
   {k:"hba1c",tr:"HbA1c",en:"HbA1c",units:["%"],sys:"glycemic"},
   {k:"hemoglobin",tr:"Hemoglobin",en:"Hemoglobin",units:["g/dL","g/L"],sys:"hematology"},
+  {k:"mcv",tr:"MCV (Ortalama Eritrosit Hacmi)",en:"MCV",units:["fL"],sys:"hematology"},
   {k:"platelet",tr:"Trombosit",en:"Platelet",units:["x10^9/L","K/uL"],sys:"hematology"},
   {k:"ferritin",tr:"Ferritin",en:"Ferritin",units:["ug/L","ng/mL"],sys:"hematology"},
   {k:"b12",tr:"B12",en:"B12",units:["ng/L","pg/mL","pmol/L"],sys:"hematology"},
@@ -5724,6 +5727,7 @@ const renderPCard=()=>{
     "kidney-impairment":lang==="tr"?"Böbrek fonksiyonunda azalma olabilir":TL("May fit reduced kidney function",lang),
     "thyroid-screen":lang==="tr"?"Tiroid taraması değerlendirme gerektirebilir":TL("Thyroid screen may need review",lang),
     "electrolyte-disturbance":lang==="tr"?"Elektrolit dengesizliği":TL("Electrolyte disturbance",lang),
+    "anemia-morphology":lang==="tr"?"Anemi tipi (kırmızı hücre boyutu)":TL("Anaemia type (red-cell size)",lang),
   }[id]||id);
   const caveatLbl=(c)=>({
     "ferritin-acute-phase":lang==="tr"?"ferritin iltihapla yükselebilir, gerçek eksikliği gizleyebilir":TL("ferritin can rise with inflammation and mask a true deficiency",lang),
@@ -5782,6 +5786,7 @@ const renderPCard=()=>{
             <div style={{fontSize:fs-2,fontWeight:600}}>{patternLbl(p.id)}{p.astAltRatio!=null?" · AST/ALT "+p.astAltRatio:""}{p.egfr!=null?" · eGFR "+p.egfr:""}</div>
             {p.details&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{p.details.map(x=>testName(x.test)+" "+levelLbl(x.level)).join(", ")}</div>}
             {p.direction&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{p.direction==="tsh-high"?(lang==="tr"?"TSH yüksek":TL("TSH high",lang)):(lang==="tr"?"TSH düşük":TL("TSH low",lang))}{p.ft4Level?" · "+testName("ft4")+" "+levelLbl(p.ft4Level):""}</div>}
+            {p.morphology&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{p.morphology==="microcytic"?(lang==="tr"?"Mikrositik (küçük hücreler, MCV "+p.mcvValue+") — demir eksikliği/talasemi düşündürebilir":TL("Microcytic (small cells) — may suggest iron deficiency/thalassaemia",lang)):p.morphology==="macrocytic"?(lang==="tr"?"Makrositik (büyük hücreler, MCV "+p.mcvValue+") — B12/folat eksikliği düşündürebilir":TL("Macrocytic (large cells) — may suggest B12/folate deficiency",lang)):(lang==="tr"?"Normositik (normal boyut, MCV "+p.mcvValue+") — kronik hastalık/kan kaybı düşündürebilir":TL("Normocytic (normal size) — may suggest chronic disease/blood loss",lang))}</div>}
             {p.caveat&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>⚠️ {caveatLbl(p.caveat)}</div>}
             {p.missing&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{lang==="tr"?"Tam ayrım için eksik: ":TL("Missing for full picture: ",lang)}{p.missing.map(testName).join(", ")}</div>}
             {p.source&&<SrcTag k={p.source}/>}

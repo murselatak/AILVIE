@@ -33,6 +33,7 @@ export const SOURCES = {
   "eag": { label: "Estimated average glucose from HbA1c (ADAG study, Nathan 2008)", short: "ADAG" },
   "osmolality": { label: "Calculated serum osmolality 2×Na + glucose/18 + BUN/2.8 (ADA/AAP)", short: "Calc. osmolality" },
   "corrected-sodium": { label: "Sodium corrected for hyperglycaemia (Katz 1973)", short: "Katz" },
+  "anemia-morphology": { label: "Anaemia morphology by MCV (microcytic <80, normocytic 80–100, macrocytic >100 fL)", short: "MCV morphology" },
 };
 
 // ---------------------------------------------------------------------------
@@ -428,6 +429,20 @@ export function patterns(labs, ctx = {}) {
       strength: "possible",
       source: "pattern",
     });
+  }
+
+  // Anaemia morphology by MCV. When haemoglobin is low, MCV is the first fork a clinician takes:
+  // microcytic (<80 fL, e.g. iron deficiency, thalassaemia), normocytic (80–100, e.g. chronic
+  // disease, acute blood loss) or macrocytic (>100, e.g. B12/folate deficiency). This classifies the
+  // picture and names the broad category — never a specific diagnosis, and only when anaemia is
+  // actually present (a low MCV with normal haemoglobin is not this).
+  const hgb = L("hemoglobin"), mcv = L("mcv");
+  if (hgb && lvl(hgb) === "low" && mcv) {
+    const m = Number(mcv.canonValue);
+    if (isFinite(m)) {
+      const morph = m < 80 ? "microcytic" : (m > 100 ? "macrocytic" : "normocytic");
+      out.push({ id: "anemia-morphology", tests: ["hemoglobin", "mcv"], morphology: morph, mcvValue: Math.round(m * 10) / 10, strength: "possible", source: "anemia-morphology" });
+    }
   }
 
   return out;

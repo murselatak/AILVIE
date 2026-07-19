@@ -118,6 +118,32 @@ ok("elektrolit dengesizliği (2+ anormal)", !!ep, ely);
 ok("hangi elektrolitler listeleniyor", ep && ep.tests.includes("potassium") && ep.tests.includes("magnesium"));
 ok("tek elektrolit anormal → grup örüntüsü yok", !patterns([{ id: "a", ts: T0, test: "potassium", canonValue: 2.8, level: "low" }], {}).some(p => p.id === "electrolyte-disturbance"));
 
+console.log("=== 4c) Anemi morfolojisi (MCV) ===");
+// low Hgb + MCV 70 -> microcytic
+const anMic = patterns([
+  { id: "a", ts: T0, test: "hemoglobin", canonValue: 90, level: "low" },
+  { id: "b", ts: T0, test: "mcv", canonValue: 70, level: "low" },
+], {});
+const amp = anMic.find(p => p.id === "anemia-morphology");
+ok("mikrositik anemi (Hgb düşük + MCV 70)", amp && amp.morphology === "microcytic", anMic);
+// low Hgb + MCV 110 -> macrocytic
+ok("makrositik (MCV 110)", patterns([
+  { id: "a", ts: T0, test: "hemoglobin", canonValue: 100, level: "low" },
+  { id: "b", ts: T0, test: "mcv", canonValue: 110, level: "high" },
+], {}).find(p => p.id === "anemia-morphology")?.morphology === "macrocytic");
+// low Hgb + MCV 90 -> normocytic
+ok("normositik (MCV 90)", patterns([
+  { id: "a", ts: T0, test: "hemoglobin", canonValue: 110, level: "low" },
+  { id: "b", ts: T0, test: "mcv", canonValue: 90, level: "normal" },
+], {}).find(p => p.id === "anemia-morphology")?.morphology === "normocytic");
+// normal Hgb + low MCV -> NOT anemia morphology (not anaemic)
+ok("normal Hgb + düşük MCV → anemi morfolojisi YOK", !patterns([
+  { id: "a", ts: T0, test: "hemoglobin", canonValue: 150, level: "normal" },
+  { id: "b", ts: T0, test: "mcv", canonValue: 75, level: "low" },
+], {}).some(p => p.id === "anemia-morphology"));
+ok("MCV yoksa morfoloji hesaplanmaz", !patterns([{ id: "a", ts: T0, test: "hemoglobin", canonValue: 90, level: "low" }], {}).some(p => p.id === "anemia-morphology"));
+ok("anemi morfolojisi kaynağı", amp && amp.source === "anemia-morphology" && SOURCES["anemia-morphology"]);
+
 console.log("=== 5) Ilac x tahlil ===");
 const meds = [{ name: "Glucophage 1000mg" }, { name: "Ramipril 5mg" }];
 const c1 = drugLabChecks(meds, [], { egfr: 25 });
