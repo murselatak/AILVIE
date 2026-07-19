@@ -655,6 +655,17 @@ export const TLD = {
   "tilt angle": {de:"Neigungswinkel",ru:"угол наклона",zh:"倾斜角度",hi:"झुकाव कोण",nl:"kantelhoek",es:"ángulo de inclinación",ar:"زاوية الميل",fr:"angle d'inclinaison",pt:"ângulo de inclinação",id:"sudut kemiringan",bn:"হেলানোর কোণ"},
   "e.g. 5 mg": {de:"z. B. 5 mg",ru:"напр. 5 мг",zh:"例如 5 mg",hi:"जैसे 5 mg",nl:"bijv. 5 mg",es:"p. ej. 5 mg",ar:"مثال: 5 ملغ",fr:"ex. 5 mg",pt:"ex.: 5 mg",id:"mis. 5 mg",bn:"যেমন ৫ মিগ্রা"},
 
+  // ---- Batch 54: urinalysis (dipstick) test names ----
+  "Urine Protein": {de:"Urin-Protein",ru:"Белок мочи",zh:"尿蛋白",hi:"मूत्र प्रोटीन",nl:"Urine-eiwit",es:"Proteína en orina",ar:"بروتين البول",fr:"Protéines urinaires",pt:"Proteína urinária",id:"Protein urin",bn:"মূত্র প্রোটিন"},
+  "Urine Glucose": {de:"Urin-Glukose",ru:"Глюкоза мочи",zh:"尿糖",hi:"मूत्र ग्लूकोज",nl:"Urine-glucose",es:"Glucosa en orina",ar:"جلوكوز البول",fr:"Glucose urinaire",pt:"Glicose urinária",id:"Glukosa urin",bn:"মূত্র গ্লুকোজ"},
+  "Urine Ketones": {de:"Urin-Ketone",ru:"Кетоны мочи",zh:"尿酮体",hi:"मूत्र कीटोन",nl:"Urine-ketonen",es:"Cetonas en orina",ar:"كيتونات البول",fr:"Cétones urinaires",pt:"Cetonas urinárias",id:"Keton urin",bn:"মূত্র কিটোন"},
+  "Urine Blood (Occult)": {de:"Urin-Blut (okkult)",ru:"Кровь в моче (скрытая)",zh:"尿隐血",hi:"मूत्र रक्त (गुप्त)",nl:"Urine-bloed (occult)",es:"Sangre en orina (oculta)",ar:"دم البول (خفي)",fr:"Sang urinaire (occulte)",pt:"Sangue na urina (oculto)",id:"Darah urin (samar)",bn:"মূত্র রক্ত (সুপ্ত)"},
+  "Urine Leukocyte Esterase": {de:"Urin-Leukozytenesterase",ru:"Лейкоцитарная эстераза мочи",zh:"尿白细胞酯酶",hi:"मूत्र ल्यूकोसाइट एस्टरेज़",nl:"Urine-leukocytenesterase",es:"Esterasa leucocitaria en orina",ar:"إستراز الكريات البيضاء في البول",fr:"Estérase leucocytaire urinaire",pt:"Esterase leucocitária urinária",id:"Esterase leukosit urin",bn:"মূত্র লিউকোসাইট এস্টারেজ"},
+  "Urine Nitrite": {de:"Urin-Nitrit",ru:"Нитриты мочи",zh:"尿亚硝酸盐",hi:"मूत्र नाइट्राइट",nl:"Urine-nitriet",es:"Nitritos en orina",ar:"نتريت البول",fr:"Nitrites urinaires",pt:"Nitrito urinário",id:"Nitrit urin",bn:"মূত্র নাইট্রাইট"},
+  "Urine Bilirubin": {de:"Urin-Bilirubin",ru:"Билирубин мочи",zh:"尿胆红素",hi:"मूत्र बिलीरुबिन",nl:"Urine-bilirubine",es:"Bilirrubina en orina",ar:"بيليروبين البول",fr:"Bilirubine urinaire",pt:"Bilirrubina urinária",id:"Bilirubin urin",bn:"মূত্র বিলিরুবিন"},
+  "Urine Urobilinogen": {de:"Urin-Urobilinogen",ru:"Уробилиноген мочи",zh:"尿胆原",hi:"मूत्र यूरोबिलिनोजेन",nl:"Urine-urobilinogeen",es:"Urobilinógeno en orina",ar:"يوروبيلينوجين البول",fr:"Urobilinogène urinaire",pt:"Urobilinogênio urinário",id:"Urobilinogen urin",bn:"মূত্র ইউরোবিলিনোজেন"},
+  "Urine Microalbumin": {de:"Urin-Mikroalbumin",ru:"Микроальбумин мочи",zh:"尿微量白蛋白",hi:"मूत्र माइक्रोएल्ब्यूमिन",nl:"Urine-microalbumine",es:"Microalbúmina en orina",ar:"ألبومين دقيق في البول",fr:"Microalbumine urinaire",pt:"Microalbumina urinária",id:"Mikroalbumin urin",bn:"মূত্র মাইক্রোঅ্যালবুমিন"},
+
   // ---- Batch 53: cardiac + hormone + thyroid panel test names ----
   "Creatine Kinase (CK)": {de:"Kreatinkinase (CK)",ru:"Креатинкиназа (КК)",zh:"肌酸激酶 (CK)",hi:"क्रिएटिन काइनेज (CK)",nl:"Creatinekinase (CK)",es:"Creatina quinasa (CK)",ar:"كيناز الكرياتين (CK)",fr:"Créatine kinase (CK)",pt:"Creatina quinase (CK)",id:"Kreatin kinase (CK)",bn:"ক্রিয়েটিন কাইনেজ (CK)"},
   "Myoglobin": {de:"Myoglobin",ru:"Миоглобин",zh:"肌红蛋白",hi:"मायोग्लोबिन",nl:"Myoglobine",es:"Mioglobina",ar:"الميوغلوبين",fr:"Myoglobine",pt:"Mioglobina",id:"Mioglobin",bn:"মায়োগ্লোবিন"},
