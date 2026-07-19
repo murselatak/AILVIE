@@ -523,7 +523,7 @@ const StorageHealth=({lang,fs,tc,mt,sc,ac,acTx,bd,dg,t,BP,lastBackup,idbGet,idbS
       const stale=days===null||days>=30;
       return <div style={{marginTop:10,background:stale?`${dg}12`:`${sc}10`,border:`1px solid ${stale?dg:sc}44`,borderRadius:9,padding:"8px 10px"}}>
         <div style={{fontSize:fs-2,color:tc,fontWeight:600}}>{stale?"⚠️ ":"✓ "}{L?"Son yedek":"Last backup"}: <span style={{color:stale?dg:sc}}>{days===null?(L?"hiç alınmadı":"never"):(days===0?(L?"bugün":"today"):`${days} ${L?"gün önce":"days ago"}`)}</span></div>
-        {stale&&<div style={{fontSize:fs-4,color:mt,marginTop:3,lineHeight:1.4}}>{L?"Cihazınızı kaybederseniz veriler geri gelmez. Ayarlar > Yedekle ile şifreli yedek alın.":"Take an encrypted backup."}</div>}
+        {stale&&<div style={{fontSize:fs-4,color:mt,marginTop:3,lineHeight:1.4}}>{L?"Cihazınızı kaybederseniz veriler geri gelmez. Ayarlar > Yedekle ile şifreli yedek alın.":TL("If you lose your device, the data can't be recovered. Take an encrypted backup from Settings > Backup.",lang)}</div>}
       </div>;})()}
     <button onClick={async()=>{
       const L2=lang==="tr";
@@ -537,7 +537,7 @@ const StorageHealth=({lang,fs,tc,mt,sc,ac,acTx,bd,dg,t,BP,lastBackup,idbGet,idbS
       setTimeout(()=>location.reload(),800);
     }} style={{...BP,width:"100%",padding:"8px",marginTop:10,background:"transparent",color:acTx,border:`1px solid ${ac}`,fontSize:fs-2}}>↩️ {lang==="tr"?"Önceki sürüme dön":TL("Restore previous revision",lang)}</button>
     <div style={{fontSize:fs-5,color:mt,marginTop:4,lineHeight:1.4}}>{lang==="tr"?"Her kayıttan önce bir önceki sürüm saklanır. Bir şey yanlış giderse buradan geri alabilirsiniz.":TL("One previous revision is kept before each save.",lang)}</div>
-    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Veriler yalnızca bu cihazda saklanır (IndexedDB) ve sunucuya gönderilmez; cihazlar arası senkron yoktur. Yedekleriniz AES-256 ile parolayla şifrelenebilir.":"Data stored on this device only (IndexedDB). No cloud sync. Backups can be AES-256 encrypted."}</div>
+    <div style={{fontSize:fs-4,color:mt,marginTop:8,lineHeight:1.4}}>{L?"Veriler bu cihazda saklanır (IndexedDB). Senkron isteğe bağlıdır; açarsanız veriler cihazınızda şifrelenip öyle gönderilir. Yedekleriniz AES-256 ile parolayla şifrelenebilir.":TL("Data is stored on this device (IndexedDB). Sync is optional; if you turn it on, data is encrypted on your device before being sent. Backups can be AES-256 encrypted.",lang)}</div>
   </div>;
 };
 const Clock=({dark,ac,tc,mt,dg})=>{
@@ -3753,9 +3753,9 @@ const renderHome=()=>{
     {/* Calendar */}
     <div style={{...CS,padding:"8px 10px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-        <button onClick={()=>{if(calM===0){setCalM(11);setCalY(y=>y-1);}else setCalM(m=>m-1);}} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:14}}>◀</button>
+        <button aria-label={lang==="tr"?"Önceki ay":TL("Previous month",lang)} onClick={()=>{if(calM===0){setCalM(11);setCalY(y=>y-1);}else setCalM(m=>m-1);}} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:14}}>◀</button>
         <span style={{fontWeight:700,fontSize:fs-1}}>{[t.jan,t.feb,t.mar,t.apr,t.may,t.jun,t.jul,t.aug,t.sep,t.oct,t.nov,t.dec][calM]} {calY}</span>
-        <button onClick={()=>{if(calM===11){setCalM(0);setCalY(y=>y+1);}else setCalM(m=>m+1);}} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:14}}>▶</button>
+        <button aria-label={lang==="tr"?"Sonraki ay":TL("Next month",lang)} onClick={()=>{if(calM===11){setCalM(0);setCalY(y=>y+1);}else setCalM(m=>m+1);}} style={{background:"none",border:"none",color:acTx,cursor:"pointer",fontSize:14}}>▶</button>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,textAlign:"center"}}>
         {[t.su,t.mo,t.tu,t.we,t.th,t.fr,t.sa].map(d=><div key={d} style={{fontSize:11,color:mt,fontWeight:700}}>{d}</div>)}
@@ -3796,7 +3796,7 @@ const renderHome=()=>{
             <button onClick={()=>setShowWordLangPicker(!showWordLangPicker)} style={{background:`${ac}15`,border:`1px solid ${bd}`,borderRadius:8,padding:"3px 10px",fontSize:fs-2,color:acTx,cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:4}}><Flag code={(EXT_LANGS.find(l=>l.k===wordLang)||{flag:wordLang}).flag} size={14}/> {(EXT_LANGS.find(l=>l.k===wordLang)||{n:wordLang}).n} ▾</button>
             {showWordLangPicker&&<div style={{position:"absolute",right:0,top:28,background:cd,border:`1px solid ${bd}`,borderRadius:10,boxShadow:`0 4px 16px rgba(0,0,0,.3)`,zIndex:50,padding:4,width:200,maxHeight:280,overflowY:"auto"}}>{EXT_LANGS.filter(l=>l.k!==lang).map(l=><button key={l.k} onClick={()=>{setWordLang(l.k);setShowWordLangPicker(false);}} style={{display:"flex",alignItems:"center",gap:6,width:"100%",padding:"6px 10px",background:wordLang===l.k?`${ac}15`:"transparent",border:"none",borderRadius:6,fontSize:fs-2,color:tc,cursor:"pointer"}}><Flag code={l.flag} size={14}/><span style={{fontWeight:wordLang===l.k?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.n}</span></button>)}</div>}
           </div>
-          <button onClick={()=>setWordIdx(p=>(p+1)%WORDS.length)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"3px 10px",cursor:"pointer",color:acTx,fontSize:fs-1}}>→</button>
+          <button aria-label={lang==="tr"?"Sonraki":TL("Next",lang)} onClick={()=>setWordIdx(p=>(p+1)%WORDS.length)} style={{background:"none",border:`1px solid ${bd}`,borderRadius:8,padding:"3px 10px",cursor:"pointer",color:acTx,fontSize:fs-1}}>→</button>
         </div>
       </div>
       <div style={{textAlign:"center",padding:"8px 0"}}>
