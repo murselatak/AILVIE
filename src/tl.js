@@ -655,6 +655,25 @@ export const TLD = {
   "tilt angle": {de:"Neigungswinkel",ru:"угол наклона",zh:"倾斜角度",hi:"झुकाव कोण",nl:"kantelhoek",es:"ángulo de inclinación",ar:"زاوية الميل",fr:"angle d'inclinaison",pt:"ângulo de inclinação",id:"sudut kemiringan",bn:"হেলানোর কোণ"},
   "e.g. 5 mg": {de:"z. B. 5 mg",ru:"напр. 5 мг",zh:"例如 5 mg",hi:"जैसे 5 mg",nl:"bijv. 5 mg",es:"p. ej. 5 mg",ar:"مثال: 5 ملغ",fr:"ex. 5 mg",pt:"ex.: 5 mg",id:"mis. 5 mg",bn:"যেমন ৫ মিগ্রা"},
 
+  // ---- Batch 52: standard panel test names (CBC differential + chemistry) ----
+  "White Blood Cells (WBC)": {de:"Leukozyten (WBC)",ru:"Лейкоциты (WBC)",zh:"白细胞 (WBC)",hi:"श्वेत रक्त कोशिकाएं (WBC)",nl:"Witte bloedcellen (WBC)",es:"Glóbulos blancos (WBC)",ar:"خلايا الدم البيضاء (WBC)",fr:"Globules blancs (GB)",pt:"Glóbulos brancos (WBC)",id:"Sel darah putih (WBC)",bn:"শ্বেত রক্তকণিকা (WBC)"},
+  "Red Blood Cells (RBC)": {de:"Erythrozyten (RBC)",ru:"Эритроциты (RBC)",zh:"红细胞 (RBC)",hi:"लाल रक्त कोशिकाएं (RBC)",nl:"Rode bloedcellen (RBC)",es:"Glóbulos rojos (RBC)",ar:"خلايا الدم الحمراء (RBC)",fr:"Globules rouges (GR)",pt:"Glóbulos vermelhos (RBC)",id:"Sel darah merah (RBC)",bn:"লোহিত রক্তকণিকা (RBC)"},
+  "Hematocrit": {de:"Hämatokrit",ru:"Гематокрит",zh:"血细胞比容",hi:"हेमाटोक्रिट",nl:"Hematocriet",es:"Hematocrito",ar:"الهيماتوكريت",fr:"Hématocrite",pt:"Hematócrito",id:"Hematokrit",bn:"হেমাটোক্রিট"},
+  "MPV": {de:"MPV",ru:"MPV",zh:"平均血小板体积 (MPV)",hi:"MPV",nl:"MPV",es:"VPM",ar:"MPV",fr:"VPM",pt:"VPM",id:"MPV",bn:"MPV"},
+  "Reticulocyte": {de:"Retikulozyten",ru:"Ретикулоциты",zh:"网织红细胞",hi:"रेटिक्युलोसाइट",nl:"Reticulocyten",es:"Reticulocitos",ar:"الخلايا الشبكية",fr:"Réticulocytes",pt:"Reticulócitos",id:"Retikulosit",bn:"রেটিকুলোসাইট"},
+  "Neutrophils %": {de:"Neutrophile %",ru:"Нейтрофилы %",zh:"中性粒细胞 %",hi:"न्यूट्रोफिल %",nl:"Neutrofielen %",es:"Neutrófilos %",ar:"العدلات %",fr:"Neutrophiles %",pt:"Neutrófilos %",id:"Neutrofil %",bn:"নিউট্রোফিল %"},
+  "Lymphocytes %": {de:"Lymphozyten %",ru:"Лимфоциты %",zh:"淋巴细胞 %",hi:"लिम्फोसाइट %",nl:"Lymfocyten %",es:"Linfocitos %",ar:"اللمفاويات %",fr:"Lymphocytes %",pt:"Linfócitos %",id:"Limfosit %",bn:"লিম্ফোসাইট %"},
+  "Monocytes %": {de:"Monozyten %",ru:"Моноциты %",zh:"单核细胞 %",hi:"मोनोसाइट %",nl:"Monocyten %",es:"Monocitos %",ar:"الوحيدات %",fr:"Monocytes %",pt:"Monócitos %",id:"Monosit %",bn:"মনোসাইট %"},
+  "Eosinophils %": {de:"Eosinophile %",ru:"Эозинофилы %",zh:"嗜酸性粒细胞 %",hi:"इओसिनोफिल %",nl:"Eosinofielen %",es:"Eosinófilos %",ar:"الحمضات %",fr:"Éosinophiles %",pt:"Eosinófilos %",id:"Eosinofil %",bn:"ইওসিনোফিল %"},
+  "Basophils %": {de:"Basophile %",ru:"Базофилы %",zh:"嗜碱性粒细胞 %",hi:"बेसोफिल %",nl:"Basofielen %",es:"Basófilos %",ar:"القعدات %",fr:"Basophiles %",pt:"Basófilos %",id:"Basofil %",bn:"বেসোফিল %"},
+  "Neutrophils (Absolute)": {de:"Neutrophile (absolut)",ru:"Нейтрофилы (абс.)",zh:"中性粒细胞（绝对值）",hi:"न्यूट्रोफिल (निरपेक्ष)",nl:"Neutrofielen (absoluut)",es:"Neutrófilos (absolutos)",ar:"العدلات (مطلق)",fr:"Neutrophiles (absolus)",pt:"Neutrófilos (absolutos)",id:"Neutrofil (absolut)",bn:"নিউট্রোফিল (পরম)"},
+  "Lymphocytes (Absolute)": {de:"Lymphozyten (absolut)",ru:"Лимфоциты (абс.)",zh:"淋巴细胞（绝对值）",hi:"लिम्फोसाइट (निरपेक्ष)",nl:"Lymfocyten (absoluut)",es:"Linfocitos (absolutos)",ar:"اللمفاويات (مطلق)",fr:"Lymphocytes (absolus)",pt:"Linfócitos (absolutos)",id:"Limfosit (absolut)",bn:"লিম্ফোসাইট (পরম)"},
+  "GGT": {de:"GGT",ru:"ГГТ",zh:"γ-谷氨酰转移酶 (GGT)",hi:"GGT",nl:"GGT",es:"GGT",ar:"GGT",fr:"GGT",pt:"GGT",id:"GGT",bn:"GGT"},
+  "LDH": {de:"LDH",ru:"ЛДГ",zh:"乳酸脱氢酶 (LDH)",hi:"LDH",nl:"LDH",es:"LDH",ar:"LDH",fr:"LDH",pt:"LDH",id:"LDH",bn:"LDH"},
+  "Direct Bilirubin": {de:"Direktes Bilirubin",ru:"Прямой билирубин",zh:"直接胆红素",hi:"डायरेक्ट बिलीरुबिन",nl:"Directe bilirubine",es:"Bilirrubina directa",ar:"البيليروبين المباشر",fr:"Bilirubine directe",pt:"Bilirrubina direta",id:"Bilirubin direk",bn:"ডাইরেক্ট বিলিরুবিন"},
+  "Amylase": {de:"Amylase",ru:"Амилаза",zh:"淀粉酶",hi:"एमाइलेज",nl:"Amylase",es:"Amilasa",ar:"الأميليز",fr:"Amylase",pt:"Amilase",id:"Amilase",bn:"অ্যামাইলেজ"},
+  "Lipase": {de:"Lipase",ru:"Липаза",zh:"脂肪酶",hi:"लाइपेज",nl:"Lipase",es:"Lipasa",ar:"الليباز",fr:"Lipase",pt:"Lipase",id:"Lipase",bn:"লাইপেজ"},
+
   // ---- Batch 51: accessibility labels for icon-only buttons ----
   "Previous month": {de:"Voriger Monat",ru:"Предыдущий месяц",zh:"上个月",hi:"पिछला महीना",nl:"Vorige maand",es:"Mes anterior",ar:"الشهر السابق",fr:"Mois précédent",pt:"Mês anterior",id:"Bulan sebelumnya",bn:"পূর্ববর্তী মাস"},
   "Next month": {de:"Nächster Monat",ru:"Следующий месяц",zh:"下个月",hi:"अगला महीना",nl:"Volgende maand",es:"Mes siguiente",ar:"الشهر التالي",fr:"Mois suivant",pt:"Próximo mês",id:"Bulan berikutnya",bn:"পরবর্তী মাস"},
