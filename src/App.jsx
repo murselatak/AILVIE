@@ -1454,7 +1454,7 @@ const LAB_TESTS=[
   {k:"inr",tr:"INR",en:"INR",units:["ratio"],sys:"coagulation"},
   {k:"fibrinogen",tr:"Fibrinojen",en:"Fibrinogen",units:["mg/dL","g/L"],sys:"coagulation"},
   {k:"dDimer",tr:"D-dimer",en:"D-dimer",units:["ug/mL FEU","ng/mL FEU"],sys:"coagulation"},
-  {k:"urineSG",tr:"İdrar Dansitesi",en:"Urine Specific Gravity",units:[""],sys:"urine"},
+  {k:"urineSG",tr:"İdrar Dansitesi",en:"Urine Specific Gravity",units:["sg"],sys:"urine"},
   {k:"urinePH",tr:"İdrar pH",en:"Urine pH",units:["pH"],sys:"urine"},
 ];
 // Full pipeline: normalize -> select reference -> classify. Returns {saved, classification}
