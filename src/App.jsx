@@ -1113,7 +1113,7 @@ const normalizeUnit=(test,value,unit)=>{
 // Canonical library: partitioned intervals (adult defaults; sex splits where clinically real).
 // NOTE: these are REFERENCE INTERVALS, not diagnostic thresholds. Pediatric = intentionally absent -> gated.
 const REF_LIB={
-  hemoglobin:{unit:"g/L",adult:{male:[130,180],female:[115,165]}},
+  hemoglobin:{unit:"g/L",adult:{male:[130,180],female:[115,165]},peds:[[0.5,[100,140]],[5,[110,150]],[12,[115,155]]]},
   mcv:{unit:"fL",adult:{any:[80,100]}},
   platelet:{unit:"x10^9/L",adult:{any:[140,400]}},
   sodium:{unit:"mmol/L",adult:{any:[135,145]}},
@@ -1121,7 +1121,7 @@ const REF_LIB={
   bicarbonate:{unit:"mmol/L",adult:{any:[22,29]}},
   potassium:{unit:"mmol/L",adult:{any:[3.5,5.0]}},
   calcium:{unit:"mg/dL",adult:{any:[8.4,10.2]}},
-  creatinine:{unit:"mg/dL",adult:{male:[0.70,1.30],female:[0.50,1.10]}},
+  creatinine:{unit:"mg/dL",adult:{male:[0.70,1.30],female:[0.50,1.10]},peds:[[0.041,[0.40,1.00]],[2,[0.20,0.40]],[4,[0.30,0.50]],[12,[0.40,0.70]],[16,[0.50,0.90]]]},
   albumin:{unit:"g/dL",adult:{any:[3.5,5.5]}},
   alt:{unit:"U/L",adult:{any:[10,40]}},
   ast:{unit:"U/L",adult:{any:[10,40]}},
@@ -1156,9 +1156,30 @@ const selectReference=(test,ctx,labReported)=>{
     return{ok:true,low:Number(labReported.low),high:Number(labReported.high),source:"lab-reported"};
   const band=ctx&&ctx.band;
   if(!band)return{ok:false,reason:"no-context"};
-  if(ctx.pregnant)return{ok:false,reason:"pregnancy"};
-  if(band!=="adult"&&band!=="older")return{ok:false,reason:"age"};
   const e=REF_LIB[test];if(!e)return{ok:false,reason:"not-in-library"};
+  const age=Number(ctx&&ctx.ageYears);
+  // Pregnancy: several ranges shift in pregnancy (e.g. creatinine falls, ALP rises from placenta), so
+  // rather than apply a possibly-wrong adult cutoff we flag it. If a test has an explicit pregnancy
+  // range we could use it, but by default we return a caveat so the UI can say "adult ranges may not
+  // apply in pregnancy".
+  if(ctx.pregnant){
+    if(e.pregnancy)return{ok:true,low:e.pregnancy[0],high:e.pregnancy[1],unit:e.unit,source:"internal-library",note:"pregnancy"};
+    return{ok:false,reason:"pregnancy-adult-range-may-not-apply"};
+  }
+  // Paediatric: many analytes change dramatically with age (creatinine tracks muscle mass, ALP rises
+  // during growth). Where we have a VERIFIED age-banded range we use it; otherwise we deliberately do
+  // NOT apply the adult range to a child (that could mislead) and return a caveat so the UI can advise
+  // paediatric interpretation. `peds` is [[maxAgeYears,[low,high]], ...] in ascending order.
+  const isChild=(band!=="adult"&&band!=="older")||(isFinite(age)&&age<18);
+  if(isChild){
+    if(e.peds&&isFinite(age)){
+      const bandRow=e.peds.find(row=>age<row[0]);
+      if(bandRow)return{ok:true,low:bandRow[1][0],high:bandRow[1][1],unit:e.unit,source:"internal-library",note:"paediatric"};
+      // age above the highest paediatric band but still <18: fall through to adult range (adolescents
+      // approach adult values) but mark it.
+    }
+    if(!e.peds)return{ok:false,reason:"paediatric-adult-range-may-not-apply"};
+  }
   if(e.dynamic){const r=e.dynamic(ctx);if(!r)return{ok:false,reason:"needs-sex-age"};return{ok:true,low:r[0],high:r[1],unit:e.unit,source:"internal-library"};}
   const sex=(ctx.sex==="male"||ctx.sex==="female")?ctx.sex:null;
   const r=e.adult[sex]||e.adult.any;
@@ -1438,6 +1459,10 @@ const evaluateLab=(testKey,rawValue,rawUnit,ctx,labReported)=>{
   if(testKey==="inr"){const i2=classifyINR(norm.value,ctx&&ctx.onAnticoag);return{ok:true,norm,cls:i2,kind:"threshold"};}
   const ref=selectReference(testKey,ctx,labReported);
   const cls=classifyAgainstRef(norm.value,ref);
+  // Carry the age/pregnancy context out so the UI can explain it: a paediatric or pregnancy caveat
+  // (adult ranges may not apply) or, when a verified age-banded range WAS used, note that.
+  if(ref&&ref.note)cls.note=ref.note;
+  if(ref&&!ref.ok&&/paediatric|pregnancy/.test(ref.reason||""))cls.contextCaveat=ref.reason;
   // Escalate an out-of-range value to critical when it crosses a published panic limit. Without
   // this the 29 REF_LIB tests could only ever be "low"/"high", so potassium 7.5 (life-threatening)
   // read identically to 5.3. criticalFor() works in canonical units and only knows the tests it can
@@ -5174,7 +5199,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
     const preview=labForm.value?evaluateLab(labForm.test,labForm.value,labForm.unit,ctx,(labForm.low&&labForm.high)?{low:labForm.low,high:labForm.high}:null):null;
     const lvlColor=(lv)=>lv==="normal"?sc:(lv==="critical-low"||lv==="critical-high"||lv==="diabetes-range")?dg:(lv==="low"||lv==="high"||lv==="prediabetes")?"#e9a23b":mt;
     const lvlLabel=(lv)=>({normal:L?"normal":"normal",low:L?"düşük":"low",high:L?"yüksek":"high","critical-low":L?"kritik düşük":"critical low","critical-high":L?"kritik yüksek":"critical high",prediabetes:L?"prediyabet eşiği":"prediabetes","diabetes-range":L?"diyabet eşiği":"diabetes range"}[lv]||lv);
-    const naMsg=(reason)=>({age:L?"Yaşa özgü referans gerekli — sınıflandırma yapılmadı":"Age-specific reference needed",pregnancy:L?"Gebelikte eşikler farklıdır — sınıflandırma yapılmadı":"Pregnancy thresholds differ","no-context":L?"Doğum tarihi/cinsiyet girin (yukarıdaki Kimlik & Risk Profili)":"Add birth date/sex in Identity & Risk Profile above","not-in-library":L?"Bu test için dahili referans yok — raporunuzun aralığını girin":"No internal reference — enter your report's range","needs-sex":L?"Cinsiyet gerekli":"Sex required","needs-sex-age":L?"Yaş ve cinsiyet gerekli (yukarıdaki Kimlik & Risk Profili)":"Age and sex required","therapy-target":L?"Kan sulandırıcı tedavide INR hedefi kişiye özeldir — sınıflandırılmadı":"INR target is therapy-specific"}[reason]||reason);
+    const naMsg=(reason)=>({age:L?"Yaşa özgü referans gerekli — sınıflandırma yapılmadı":"Age-specific reference needed",pregnancy:L?"Gebelikte eşikler farklıdır — sınıflandırma yapılmadı":"Pregnancy thresholds differ","paediatric-adult-range-may-not-apply":L?"Çocuklarda bu test yaşa göre çok değişir; erişkin aralığı yanıltıcı olabilir. Değerlendirmeyi çocuk doktoruna bırakın.":TL("In children this test varies a lot by age; the adult range may mislead. Leave interpretation to a paediatrician.",lang),"pregnancy-adult-range-may-not-apply":L?"Gebelikte bu testin aralığı kayabilir; erişkin aralığı yanıltıcı olabilir. Doktorunuza danışın.":TL("This test's range can shift in pregnancy; the adult range may mislead. Consult your doctor.",lang),"no-context":L?"Doğum tarihi/cinsiyet girin (yukarıdaki Kimlik & Risk Profili)":"Add birth date/sex in Identity & Risk Profile above","not-in-library":L?"Bu test için dahili referans yok — raporunuzun aralığını girin":"No internal reference — enter your report's range","needs-sex":L?"Cinsiyet gerekli":"Sex required","needs-sex-age":L?"Yaş ve cinsiyet gerekli (yukarıdaki Kimlik & Risk Profili)":"Age and sex required","therapy-target":L?"Kan sulandırıcı tedavide INR hedefi kişiye özeldir — sınıflandırılmadı":"INR target is therapy-specific"}[reason]||reason);
     const save=()=>{
       const r=evaluateLab(labForm.test,labForm.value,labForm.unit,ctx,(labForm.low&&labForm.high)?{low:labForm.low,high:labForm.high}:null);
       if(!r.ok){notify(r.reason==="unknown-unit"||r.reason==="missing-unit"?(L?"⚠️ Birim tanınmadı — sonuç kaydedilmedi":"⚠️ Unknown unit"):(L?"Geçersiz değer":"Invalid value"));return;}
@@ -5254,7 +5279,7 @@ return(<div style={{display:"flex",flexDirection:"column",gap:10}}>
         : <div style={{background:dark?"#0e1620":"#f4f7fa",borderRadius:9,padding:"8px 10px",fontSize:fs-2,marginBottom:6}}>
             <div style={{color:mt,fontSize:fs-3}}>{L?"Normalize":"Normalized"}: <b style={{color:tc}}>{preview.norm.value} {preview.norm.unit}</b></div>
             {preview.cls.applicable
-              ? <div style={{marginTop:3}}><b style={{color:lvlColor(preview.cls.level)}}>{lvlLabel(preview.cls.level)}</b> <span style={{fontSize:fs-4,color:mt}}>· {preview.kind==="threshold"?(L?"tanısal karar eşiği":"diagnostic threshold"):(preview.ref&&preview.ref.source==="lab-reported"?(L?"raporun aralığı":"report range"):(L?"dahili referans":"internal reference"))}{preview.ref&&preview.ref.ok?` (${preview.ref.low}–${preview.ref.high})`:""}</span></div>
+              ? <div style={{marginTop:3}}><b style={{color:lvlColor(preview.cls.level)}}>{lvlLabel(preview.cls.level)}</b> <span style={{fontSize:fs-4,color:mt}}>· {preview.kind==="threshold"?(L?"tanısal karar eşiği":"diagnostic threshold"):(preview.ref&&preview.ref.source==="lab-reported"?(L?"raporun aralığı":"report range"):preview.cls.note==="paediatric"?(L?"çocuk yaş aralığı":TL("child age range",lang)):preview.cls.note==="pregnancy"?(L?"gebelik aralığı":TL("pregnancy range",lang)):(L?"dahili referans":"internal reference"))}{preview.ref&&preview.ref.ok?` (${preview.ref.low}–${preview.ref.high})`:""}</span>{preview.cls.note==="paediatric"&&<div style={{fontSize:fs-5,color:mt,marginTop:1}}>{L?"Doğrulanmış çocuk yaş aralığı kullanıldı — yine de değerlendirmeyi çocuk doktoruna bırakın.":TL("A verified child age range was used — still leave interpretation to a paediatrician.",lang)}</div>}</div>
               : <div style={{marginTop:3,color:"#e9a23b",fontSize:fs-3}}>⚠️ {naMsg(preview.cls.reason)}</div>}
           </div>)}
       <button onClick={save} disabled={!labForm.value} style={{...BP,width:"100%",padding:"9px",opacity:labForm.value?1:0.5}}>+ {L?"Tahlili Kaydet":"Save Lab"}</button>
