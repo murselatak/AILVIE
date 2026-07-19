@@ -427,10 +427,12 @@ export function patterns(labs, ctx = {}) {
     });
   }
 
-  // Liver injury pattern: cholestatic vs hepatocellular. ALP is not in the catalogue yet, so this
-  // reports the transaminase picture only and says what is missing rather than guessing.
+  // Liver injury pattern: cholestatic vs hepatocellular. ALT/AST speak to hepatocellular injury; ALP
+  // (with bilirubin) to a cholestatic picture. When ALP is present and high we add it and flag the
+  // pattern accordingly; when it's absent we say so, since it's needed to tell the two apart. The
+  // AST:ALT ratio is descriptive only — never a diagnosis.
   const alt = L("alt"), ast = L("ast"), bil = L("bilirubin"), alp = L("alp");
-  if (alt && ast && (lvl(alt) === "high" || lvl(ast) === "high")) {
+  if (alt && ast && (lvl(alt) === "high" || lvl(ast) === "high" || (alp && lvl(alp) === "high"))) {
     const a = Number(alt.canonValue), s = Number(ast.canonValue);
     const ratio = a > 0 ? s / a : null;
     const p = {
@@ -441,7 +443,14 @@ export function patterns(labs, ctx = {}) {
       source: "pattern",
     };
     if (bil && lvl(bil) === "high") p.tests.push("bilirubin");
-    if (!alp) p.missing = ["alp"];   // needed to call cholestatic vs hepatocellular
+    if (alp && lvl(alp) === "high") {
+      p.tests.push("alp");
+      // ALP high with a bilirubin rise leans cholestatic; ALP high but transaminases dominant leans
+      // hepatocellular. Only a hint, and only when we actually have ALP.
+      p.picture = (bil && lvl(bil) === "high") ? "cholestatic-hint" : "mixed-hint";
+    } else if (!alp) {
+      p.missing = ["alp"];   // needed to call cholestatic vs hepatocellular
+    }
     out.push(p);
   }
 

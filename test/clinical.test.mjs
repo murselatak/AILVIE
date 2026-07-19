@@ -121,6 +121,24 @@ const lp = liver.find(p => p.id === "liver-enzymes-raised");
 ok("karaciger enzim tablosu", !!lp, liver);
 ok("AST/ALT orani hesaplandi", lp && lp.astAltRatio === 2, lp);
 ok("eksik ALP bildiriliyor (tahmin etmiyor)", lp && lp.missing && lp.missing.includes("alp"), lp);
+// ALP present and high + bilirubin high -> cholestatic hint
+const liverAlp = patterns([
+  { id: "a", ts: T0, test: "alt", canonValue: 55, level: "high" },
+  { id: "b", ts: T0, test: "ast", canonValue: 60, level: "high" },
+  { id: "c", ts: T0, test: "alp", canonValue: 300, level: "high" },
+  { id: "d", ts: T0, test: "bilirubin", canonValue: 3, level: "high" },
+], {});
+const lap = liverAlp.find(p => p.id === "liver-enzymes-raised");
+ok("ALP varsa karaciğer örüntüsüne dahil", lap && lap.tests.includes("alp"), lap);
+ok("ALP+bilirubin yüksek → kolestatik ipucu", lap && lap.picture === "cholestatic-hint");
+ok("ALP dahilken missing yok", lap && !lap.missing);
+// ALP high alone (transaminases normal but present) still triggers via ALP
+const liverAlpOnly = patterns([
+  { id: "a", ts: T0, test: "alt", canonValue: 20, level: "normal" },
+  { id: "b", ts: T0, test: "ast", canonValue: 22, level: "normal" },
+  { id: "c", ts: T0, test: "alp", canonValue: 300, level: "high" },
+], {});
+ok("sadece ALP yüksek → örüntü tetiklenir", liverAlpOnly.some(p => p.id === "liver-enzymes-raised"), liverAlpOnly);
 
 console.log("=== 4b) Yeni örüntüler ===");
 // Kidney: low eGFR (from ctx) + high UACR

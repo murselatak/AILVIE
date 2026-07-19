@@ -1078,7 +1078,7 @@ const UNIT_CONV={
   tsh:{canon:"mU/L",f:{"mU/L":1,"mIU/L":1,"uIU/mL":1,"µIU/mL":1,"mIU/mL":1000,"uU/mL":1}},
   ft4:{canon:"ng/dL",f:{"ng/dL":1,"pmol/L":1/12.87}},
   albumin:{canon:"g/dL",f:{"g/dL":1,"g/L":0.1}},
-  alt:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},ast:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},
+  alt:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},ast:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},alp:{canon:"U/L",f:{"U/L":1,"IU/L":1,"u/L":1,"U/l":1}},
   sodium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},potassium:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},chloride:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},bicarbonate:{canon:"mmol/L",f:{"mmol/L":1,"mEq/L":1}},
   platelet:{canon:"x10^9/L",f:{"x10^9/L":1,"10^9/L":1,"10*9/L":1,"K/uL":1,"K/µL":1,"10^3/uL":1,"10^3/µL":1,"10*3/uL":1,"x10^3/uL":1,"thousand/uL":1,"/uL":0.001,"/µL":0.001}},
   uricAcid:{canon:"mg/dL",f:{"mg/dL":1,"mmol/L":16.81}},
@@ -1125,6 +1125,7 @@ const REF_LIB={
   albumin:{unit:"g/dL",adult:{any:[3.5,5.5]}},
   alt:{unit:"U/L",adult:{any:[10,40]}},
   ast:{unit:"U/L",adult:{any:[10,40]}},
+  alp:{unit:"U/L",adult:{male:[40,129],female:[35,104]},peds:[[0.041,[83,248]],[1,[122,469]],[10,[142,335]],[13,[129,468]],[16,[55,331]]]},
   bilirubin:{unit:"mg/dL",adult:{any:[0.3,1.0]}},
   tsh:{unit:"mU/L",adult:{any:[0.5,4.0]}},
   ft4:{unit:"ng/dL",adult:{any:[0.8,1.8]}},
@@ -1422,6 +1423,7 @@ const LAB_TESTS=[
   {k:"calcium",tr:"Kalsiyum",en:"Calcium",units:["mg/dL","mmol/L"],sys:"kidney"},
   {k:"alt",tr:"ALT",en:"ALT",units:["U/L","IU/L"],sys:"liver"},
   {k:"ast",tr:"AST",en:"AST",units:["U/L","IU/L"],sys:"liver"},
+  {k:"alp",tr:"ALP (Alkalen Fosfataz)",en:"ALP (Alkaline Phosphatase)",units:["U/L","IU/L"],sys:"liver"},
   {k:"albumin",tr:"Albümin",en:"Albumin",units:["g/dL","g/L"],sys:"liver"},
   {k:"bilirubin",tr:"Bilirubin",en:"Bilirubin",units:["mg/dL","umol/L"],sys:"liver"},
   {k:"cholesterol",tr:"Total Kolesterol",en:"Total Cholesterol",units:["mg/dL","mmol/L"],sys:"lipid"},
@@ -5829,6 +5831,7 @@ const renderPCard=()=>{
             {p.details&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{p.details.map(x=>testName(x.test)+" "+levelLbl(x.level)).join(", ")}</div>}
             {p.direction&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{p.direction==="tsh-high"?(lang==="tr"?"TSH yüksek":TL("TSH high",lang)):(lang==="tr"?"TSH düşük":TL("TSH low",lang))}{p.ft4Level?" · "+testName("ft4")+" "+levelLbl(p.ft4Level):""}</div>}
             {p.morphology&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{p.morphology==="microcytic"?(lang==="tr"?"Mikrositik (küçük hücreler, MCV "+p.mcvValue+") — demir eksikliği/talasemi düşündürebilir":TL("Microcytic (small cells) — may suggest iron deficiency/thalassaemia",lang)):p.morphology==="macrocytic"?(lang==="tr"?"Makrositik (büyük hücreler, MCV "+p.mcvValue+") — B12/folat eksikliği düşündürebilir":TL("Macrocytic (large cells) — may suggest B12/folate deficiency",lang)):(lang==="tr"?"Normositik (normal boyut, MCV "+p.mcvValue+") — kronik hastalık/kan kaybı düşündürebilir":TL("Normocytic (normal size) — may suggest chronic disease/blood loss",lang))}</div>}
+            {p.picture&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{p.picture==="cholestatic-hint"?(lang==="tr"?"ALP + bilirubin yüksek — safra akışıyla ilgili (kolestatik) tablo düşündürebilir":TL("ALP + bilirubin high — may point to a cholestatic (bile-flow) picture",lang)):(lang==="tr"?"ALP yüksek — karaciğer ve kemik kaynağı ayrımı için değerlendirme gerekebilir":TL("ALP high — may need review to separate liver vs bone source",lang))}</div>}
             {p.caveat&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>⚠️ {caveatLbl(p.caveat)}</div>}
             {p.missing&&<div style={{fontSize:fs-4,color:mt,marginTop:1}}>{lang==="tr"?"Tam ayrım için eksik: ":TL("Missing for full picture: ",lang)}{p.missing.map(testName).join(", ")}</div>}
             {p.source&&<SrcTag k={p.source}/>}

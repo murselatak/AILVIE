@@ -10,6 +10,7 @@
 const REF = {
   creatinine: { unit: "mg/dL", adult: { male: [0.70, 1.30], female: [0.50, 1.10] }, peds: [[0.041, [0.40, 1.00]], [2, [0.20, 0.40]], [4, [0.30, 0.50]], [12, [0.40, 0.70]], [16, [0.50, 0.90]]] },
   hemoglobin: { unit: "g/L", adult: { male: [130, 180], female: [115, 165] }, peds: [[0.5, [100, 140]], [5, [110, 150]], [12, [115, 155]]] },
+  alp: { unit: "U/L", adult: { male: [40, 129], female: [35, 104] }, peds: [[0.041, [83, 248]], [1, [122, 469]], [10, [142, 335]], [13, [129, 468]], [16, [55, 331]]] },
   alt: { unit: "U/L", adult: { any: [10, 40] } },   // deliberately no peds -> caveat
 };
 
@@ -45,6 +46,12 @@ console.log("=== Pediatrik hemoglobin bantları ===");
 ok("3 ay [100,140]", (r => r.ok && r.low === 100 && r.high === 140)(selectReference("hemoglobin", { band: "infant", ageYears: 0.25 })));
 ok("3 yaş [110,150]", (r => r.ok && r.low === 110 && r.high === 150)(selectReference("hemoglobin", { band: "child", ageYears: 3 })));
 ok("8 yaş [115,155]", (r => r.ok && r.low === 115 && r.high === 155)(selectReference("hemoglobin", { band: "child", ageYears: 8 })));
+
+console.log("=== Pediatrik ALP bantları (büyümeyle yüksek — normal) ===");
+ok("6 ay ALP [122,469] (bebek yüksek)", (r => r.ok && r.low === 122 && r.high === 469)(selectReference("alp", { band: "infant", ageYears: 0.5 })));
+ok("5 yaş ALP [142,335]", (r => r.ok && r.low === 142 && r.high === 335)(selectReference("alp", { band: "child", ageYears: 5 })));
+ok("11 yaş ALP [129,468] (puberte artışı)", (r => r.ok && r.low === 129 && r.high === 468)(selectReference("alp", { band: "child", ageYears: 11 })));
+ok("17 yaş ALP -> erişkin [40,129]", (r => r.ok && r.low === 40 && r.high === 129)(selectReference("alp", { band: "adolescent", ageYears: 17, sex: "male" })));
 
 console.log("=== Uyarılar (aralık yoksa) ===");
 ok("çocuk ALT -> pediatrik uyarı", (r => !r.ok && r.reason === "paediatric-adult-range-may-not-apply")(selectReference("alt", { band: "child", ageYears: 8 })));
