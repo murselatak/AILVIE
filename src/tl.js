@@ -655,6 +655,14 @@ export const TLD = {
   "tilt angle": {de:"Neigungswinkel",ru:"угол наклона",zh:"倾斜角度",hi:"झुकाव कोण",nl:"kantelhoek",es:"ángulo de inclinación",ar:"زاوية الميل",fr:"angle d'inclinaison",pt:"ângulo de inclinação",id:"sudut kemiringan",bn:"হেলানোর কোণ"},
   "e.g. 5 mg": {de:"z. B. 5 mg",ru:"напр. 5 мг",zh:"例如 5 mg",hi:"जैसे 5 mg",nl:"bijv. 5 mg",es:"p. ej. 5 mg",ar:"مثال: 5 ملغ",fr:"ex. 5 mg",pt:"ex.: 5 mg",id:"mis. 5 mg",bn:"যেমন ৫ মিগ্রা"},
 
+  // ---- Batch 57: arterial blood gas (ABG) test names ----
+  "Blood pH (Arterial)": {de:"Blut-pH (arteriell)",ru:"pH крови (артериальная)",zh:"血液 pH（动脉）",hi:"रक्त pH (धमनी)",nl:"Bloed-pH (arterieel)",es:"pH sanguíneo (arterial)",ar:"درجة حموضة الدم (شرياني)",fr:"pH sanguin (artériel)",pt:"pH sanguíneo (arterial)",id:"pH darah (arteri)",bn:"রক্তের pH (ধমনী)"},
+  "pCO2": {de:"pCO2",ru:"pCO2",zh:"二氧化碳分压 (pCO2)",hi:"pCO2",nl:"pCO2",es:"pCO2",ar:"pCO2",fr:"pCO2",pt:"pCO2",id:"pCO2",bn:"pCO2"},
+  "pO2": {de:"pO2",ru:"pO2",zh:"氧分压 (pO2)",hi:"pO2",nl:"pO2",es:"pO2",ar:"pO2",fr:"pO2",pt:"pO2",id:"pO2",bn:"pO2"},
+  "HCO3 (Bicarbonate)": {de:"HCO3 (Bikarbonat)",ru:"HCO3 (бикарбонат)",zh:"碳酸氢盐 (HCO3)",hi:"HCO3 (बाइकार्बोनेट)",nl:"HCO3 (bicarbonaat)",es:"HCO3 (bicarbonato)",ar:"HCO3 (البيكربونات)",fr:"HCO3 (bicarbonate)",pt:"HCO3 (bicarbonato)",id:"HCO3 (bikarbonat)",bn:"HCO3 (বাইকার্বনেট)"},
+  "Base Excess (BE)": {de:"Basenüberschuss (BE)",ru:"Избыток оснований (BE)",zh:"碱剩余 (BE)",hi:"बेस एक्सेस (BE)",nl:"Base-excess (BE)",es:"Exceso de base (BE)",ar:"فائض القاعدة (BE)",fr:"Excès de base (BE)",pt:"Excesso de base (BE)",id:"Kelebihan basa (BE)",bn:"বেস এক্সেস (BE)"},
+  "Oxygen Saturation (SaO2)": {de:"Sauerstoffsättigung (SaO2)",ru:"Сатурация кислорода (SaO2)",zh:"血氧饱和度 (SaO2)",hi:"ऑक्सीजन संतृप्ति (SaO2)",nl:"Zuurstofsaturatie (SaO2)",es:"Saturación de oxígeno (SaO2)",ar:"تشبع الأكسجين (SaO2)",fr:"Saturation en oxygène (SaO2)",pt:"Saturação de oxigênio (SaO2)",id:"Saturasi oksigen (SaO2)",bn:"অক্সিজেন স্যাচুরেশন (SaO2)"},
+
   // ---- Batch 56: reproductive/pituitary hormones + tumor markers ----
   "Estradiol (E2)": {de:"Östradiol (E2)",ru:"Эстрадиол (E2)",zh:"雌二醇 (E2)",hi:"एस्ट्राडियोल (E2)",nl:"Oestradiol (E2)",es:"Estradiol (E2)",ar:"الإستراديول (E2)",fr:"Œstradiol (E2)",pt:"Estradiol (E2)",id:"Estradiol (E2)",bn:"এস্ট্রাডিওল (E2)"},
   "Progesterone": {de:"Progesteron",ru:"Прогестерон",zh:"孕酮",hi:"प्रोजेस्टेरोन",nl:"Progesteron",es:"Progesterona",ar:"البروجستيرون",fr:"Progestérone",pt:"Progesterona",id:"Progesteron",bn:"প্রোজেস্টেরন"},
